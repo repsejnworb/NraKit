@@ -9,11 +9,14 @@ ns.moduleOrder = {}
 --   name        label shown in the settings panel
 --   description tooltip shown in the settings panel
 --   default     whether the module is enabled on a fresh install
---   options     optional list of sub-options { key, name, description, default },
---               shown indented under the module's checkbox
+--   options     optional list of sub-options, shown indented under the module's checkbox:
+--               { key, name, description, default }                 checkbox
+--               { key, name, description, default, type = "number",
+--                 min, max, step }                                  slider
+--               An option with `parent = <option key>` is nested under that checkbox.
 --   OnInitialize(self)                   called once on PLAYER_LOGIN
 --   OnEnabledChanged(self, on)           called when the module is toggled
---   OnOptionChanged(self, key, value)    called when a sub-option is toggled
+--   OnOptionChanged(self, key, value)    called when a sub-option changes
 function ns:RegisterModule(module)
 	assert(module.key and not self.modules[module.key], "NraKit: invalid or duplicate module key")
 	self.modules[module.key] = module
@@ -28,8 +31,16 @@ function ns:GetOption(key)
 	return NraKitDB and NraKitDB[key] == true
 end
 
-local function SetDefault(key, default)
-	if NraKitDB[key] == nil then
+function ns:GetValue(key)
+	return NraKitDB and NraKitDB[key]
+end
+
+local function SetDefault(key, default, isNumber)
+	if isNumber then
+		if type(NraKitDB[key]) ~= "number" then
+			NraKitDB[key] = default
+		end
+	elseif NraKitDB[key] == nil then
 		NraKitDB[key] = default and true or false
 	end
 end
@@ -39,7 +50,7 @@ local function InitializeDB()
 	for _, module in ipairs(ns.moduleOrder) do
 		SetDefault(module.key, module.default)
 		for _, option in ipairs(module.options or {}) do
-			SetDefault(option.key, option.default)
+			SetDefault(option.key, option.default, option.type == "number")
 		end
 	end
 end
