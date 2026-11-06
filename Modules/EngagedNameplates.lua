@@ -9,9 +9,10 @@ local _, ns = ...
 -- code keeps re-showing them. Addons cannot change a plate's click area in
 -- combat, so a name-only plate can still be clicked where its bar would be.
 --
--- Overhead names (what you see with nameplates off) are drawn by the engine, and
--- the engine stops drawing them for any unit that has a nameplate. So name-only
--- plates restyle the plate's own name text to look like an overhead name instead.
+-- Idle enemies are hidden completely by default. Optionally they keep just their
+-- name instead: overhead names (what you see with nameplates off) are drawn by the
+-- engine, which stops drawing them for any unit that has a nameplate, so the
+-- plate's own name text is restyled and re-anchored to resemble one.
 
 local module = {
 	key = "engagedNameplates",
@@ -26,20 +27,22 @@ local module = {
 			default = true,
 		},
 		{
-			key = "engagedNameplatesFixedSize",
-			name = "Don't shrink or fade nameplates with distance",
-			description = "Keeps all nameplates at full size and opacity regardless of distance, like overhead names. Affects every nameplate, not just name-only ones.",
-			default = true,
+			key = "engagedNameplatesShowIdleNames",
+			name = "Show names of idle enemies in combat",
+			description = "Instead of hiding idle enemies completely during combat, show just their name, styled to resemble overhead names. Real overhead names can't be shown for units that have a nameplate.",
+			default = false,
 		},
 	},
 }
 
 -- Style for name-only plates, approximating the engine's overhead names.
 -- UNIT_NAME_FONT is the font Blizzard hands the engine for those names.
-local NAME_FONT_SIZE = 13
+local NAME_FONT_SIZE = 11
 local NAME_FONT_FLAGS = ""
 local NAME_SHADOW_OFFSET_X, NAME_SHADOW_OFFSET_Y = 1, -1
 local NAME_SHADOW_COLOR = { r = 0, g = 0, b = 0, a = 1 }
+-- Vertical offset of the name from the bottom of the plate, which sits above the unit's head.
+local NAME_OFFSET_Y = 0
 
 -- Parts of Blizzard's nameplate unit frame that are faded out on name-only plates.
 -- The name, raid marker, widgets and soft-target icon are left alone.
@@ -58,19 +61,16 @@ local MANAGED_CVARS = {
 	nameplateShowEnemies = "1",
 }
 
--- Additional CVars managed while the fixed-size option is on.
-local FIXED_SIZE_CVARS = {
-	nameplateMinScale = "1",
-	nameplateMaxScale = "1",
-	nameplateMinAlpha = "1",
-}
-
 local SAVED_CVARS_KEY = "engagedNameplatesSavedCVars"
 
 -- nameplate unit token -> UnitFrame we have faded
 local fadedFrames = {}
--- UnitFrame -> Blizzard's original name font, for frames whose name we restyled
+-- nameplate unit token -> true if its plate shows the name, false if hidden completely
+local fadedShowsName = {}
+-- UnitFrame -> Blizzard's original name font/anchors, for frames whose name we restyled
 local styledNames = {}
+-- UnitFrames whose UpdateAnchors we have hooked
+local hookedAnchors = {}
 local pendingCVarUpdate = false
 
 local eventFrame = CreateFrame("Frame")
@@ -141,17 +141,40 @@ local function SetPartsAlpha(unitFrame, alpha)
 	end
 end
 
-local function SaveNameFont(unitFrame)
+local function SaveName(unitFrame)
 	local name = unitFrame.name
 	local path, size, flags = name:GetFont()
 	local r, g, b, a = name:GetShadowColor()
 	local x, y = name:GetShadowOffset()
+	local points = {}
+	for i = 1, name:GetNumPoints() do
+		points[i] = { name:GetPoint(i) }
+	end
 	styledNames[unitFrame] = {
 		fontObject = name:GetFontObject(),
 		path = path, size = size, flags = flags,
 		shadowColor = { r, g, b, a },
 		shadowX = x, shadowY = y,
+		justifyH = name:GetJustifyH(),
+		color = { name:GetVertexColor() },
+		points = points,
 	}
+end
+
+-- Overhead names are colored by reaction; Blizzard's plates may use white instead.
+local function ColorName(unitFrame)
+	local unit = unitFrame.unit
+	if not unit or (CompactUnitFrame_IsTapDenied and CompactUnitFrame_IsTapDenied(unitFrame)) then
+		return -- keep Blizzard's grey for tapped units
+	end
+	unitFrame.name:SetVertexColor(UnitSelectionColor(unit))
+end
+
+local function AnchorName(unitFrame)
+	local name = unitFrame.name
+	name:ClearAllPoints()
+	name:SetPoint("BOTTOM", unitFrame, "BOTTOM", 0, NAME_OFFSET_Y)
+	name:SetJustifyH("CENTER")
 end
 
 local function StyleName(unitFrame)
@@ -159,6 +182,8 @@ local function StyleName(unitFrame)
 	name:SetFont(UNIT_NAME_FONT, NAME_FONT_SIZE, NAME_FONT_FLAGS)
 	name:SetShadowOffset(NAME_SHADOW_OFFSET_X, NAME_SHADOW_OFFSET_Y)
 	name:SetShadowColor(NAME_SHADOW_COLOR.r, NAME_SHADOW_COLOR.g, NAME_SHADOW_COLOR.b, NAME_SHADOW_COLOR.a)
+	AnchorName(unitFrame)
+	ColorName(unitFrame)
 end
 
 local function UnstyleName(unitFrame)
@@ -176,13 +201,44 @@ local function UnstyleName(unitFrame)
 	end
 	name:SetShadowOffset(saved.shadowX, saved.shadowY)
 	name:SetShadowColor(unpack(saved.shadowColor))
+	name:SetJustifyH(saved.justifyH)
+	name:ClearAllPoints()
+	for _, point in ipairs(saved.points) do
+		name:SetPoint(unpack(point))
+	end
+	name:SetVertexColor(unpack(saved.color))
 end
 
-local function FadePlate(unitFrame)
+local function HookAnchors(unitFrame)
+	if hookedAnchors[unitFrame] or not unitFrame.UpdateAnchors then
+		return
+	end
+	hookedAnchors[unitFrame] = true
+	-- Blizzard re-anchors the name on layout changes; keep ours on top.
+	hooksecurefunc(unitFrame, "UpdateAnchors", function(self)
+		if styledNames[self] then
+			local saved = styledNames[self]
+			saved.points = {}
+			for i = 1, self.name:GetNumPoints() do
+				saved.points[i] = { self.name:GetPoint(i) }
+			end
+			saved.justifyH = self.name:GetJustifyH()
+			AnchorName(self)
+		end
+	end)
+end
+
+local function FadePlate(unitFrame, showName)
 	SetPartsAlpha(unitFrame, 0)
-	if unitFrame.name and not styledNames[unitFrame] then
-		SaveNameFont(unitFrame)
-		StyleName(unitFrame)
+	unitFrame:SetAlpha(showName and 1 or 0)
+	if showName then
+		if unitFrame.name and not styledNames[unitFrame] then
+			HookAnchors(unitFrame)
+			SaveName(unitFrame)
+			StyleName(unitFrame)
+		end
+	else
+		UnstyleName(unitFrame)
 	end
 end
 
@@ -190,7 +246,9 @@ local function RestorePlate(unit)
 	local unitFrame = fadedFrames[unit]
 	if unitFrame then
 		fadedFrames[unit] = nil
+		fadedShowsName[unit] = nil
 		SetPartsAlpha(unitFrame, 1)
+		unitFrame:SetAlpha(1)
 		UnstyleName(unitFrame)
 	end
 end
@@ -199,9 +257,25 @@ end
 -- that as the new original and restyle on top of it.
 if CompactUnitFrame_SetUpFrame then
 	hooksecurefunc("CompactUnitFrame_SetUpFrame", function(frame)
-		if styledNames[frame] then
-			SaveNameFont(frame)
+		local saved = styledNames[frame]
+		if saved then
+			-- Anchors and color were already captured by the UpdateAnchors/UpdateName hooks
+			-- during setup and now hold our values, so only re-capture the font.
+			local points, justifyH, color = saved.points, saved.justifyH, saved.color
+			SaveName(frame)
+			saved = styledNames[frame]
+			saved.points, saved.justifyH, saved.color = points, justifyH, color
 			StyleName(frame)
+		end
+	end)
+end
+
+if CompactUnitFrame_UpdateName then
+	hooksecurefunc("CompactUnitFrame_UpdateName", function(frame)
+		local saved = styledNames[frame]
+		if saved then
+			saved.color = { frame.name:GetVertexColor() }
+			ColorName(frame)
 		end
 	end)
 end
@@ -213,12 +287,14 @@ local function UpdatePlate(unit)
 		RestorePlate(unit)
 		return
 	end
-	-- The plate may have been handed a different pooled UnitFrame since we last saw it.
-	if fadedFrames[unit] and fadedFrames[unit] ~= unitFrame then
+	local showName = ns:GetOption("engagedNameplatesShowIdleNames")
+	-- The plate may have been handed a different pooled UnitFrame, or the style changed.
+	if fadedFrames[unit] and (fadedFrames[unit] ~= unitFrame or fadedShowsName[unit] ~= showName) then
 		RestorePlate(unit)
 	end
 	fadedFrames[unit] = unitFrame
-	FadePlate(unitFrame)
+	fadedShowsName[unit] = showName
+	FadePlate(unitFrame, showName)
 end
 
 local function UpdateAllPlates()
@@ -248,11 +324,6 @@ local function ApplyCVars()
 	if ns:IsModuleEnabled(module.key) then
 		for name, value in pairs(MANAGED_CVARS) do
 			desired[name] = value
-		end
-		if ns:GetOption("engagedNameplatesFixedSize") then
-			for name, value in pairs(FIXED_SIZE_CVARS) do
-				desired[name] = value
-			end
 		end
 	end
 
@@ -339,10 +410,7 @@ function module:OnEnabledChanged(enabled)
 	UpdateAllPlates()
 end
 
-function module:OnOptionChanged(key)
-	if key == "engagedNameplatesFixedSize" then
-		ApplyCVars()
-	end
+function module:OnOptionChanged()
 	UpdateAllPlates()
 end
 
