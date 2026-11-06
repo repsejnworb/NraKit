@@ -64,6 +64,9 @@ local IGNORE_KEY = "bagTitheIgnore"
 local SEARCH_BOX_SHRINK = 32
 local DIM_ALPHA = 0.7
 local BUTTON_ICON = "Interface\\Icons\\INV_Misc_Coin_01"
+-- The sort button is 28x26 with its broom drawn at roughly 20px inside a frame.
+local BUTTON_WIDTH, BUTTON_HEIGHT = 28, 26
+local BUTTON_ICON_SIZE = 20
 local IGNORED_ICON = "Interface\\Buttons\\UI-GroupLoot-Pass-Up"
 -- Rank numbers use the standard game font with a thick outline so they stay
 -- readable on top of any item icon.
@@ -321,21 +324,38 @@ end
 
 local function CreateTitheButton()
 	-- Parented to the sort button, so it shows and moves with it in both bag modes.
+	-- Same footprint as the sort button, with the icon inset to the size of its broom.
 	local button = CreateFrame("Button", nil, BagItemAutoSortButton)
-	button:SetSize(24, 24)
+	button:SetSize(BUTTON_WIDTH, BUTTON_HEIGHT)
 	button:SetPoint("RIGHT", BagItemAutoSortButton, "LEFT", -2, 0)
 
 	local icon = button:CreateTexture(nil, "ARTWORK")
 	icon:SetTexture(BUTTON_ICON)
 	icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-	icon:SetAllPoints()
+	icon:SetSize(BUTTON_ICON_SIZE, BUTTON_ICON_SIZE)
+	icon:SetPoint("CENTER")
+	button.icon = icon
 
-	button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+	-- Nudge the icon on press, like Blizzard's buttons.
+	button:SetScript("OnMouseDown", function()
+		icon:SetPoint("CENTER", 1, -1)
+	end)
+	button:SetScript("OnMouseUp", function()
+		icon:SetPoint("CENTER")
+	end)
+
+	-- Same highlight as the sort button.
+	local highlight = button:CreateTexture(nil, "HIGHLIGHT")
+	highlight:SetTexture("Interface\\Buttons\\ButtonHilight-Square")
+	highlight:SetBlendMode("ADD")
+	highlight:SetSize(BUTTON_ICON_SIZE + 4, BUTTON_ICON_SIZE + 4)
+	highlight:SetPoint("CENTER")
 
 	button.activeGlow = button:CreateTexture(nil, "OVERLAY")
 	button.activeGlow:SetTexture("Interface\\Buttons\\CheckButtonHilight")
 	button.activeGlow:SetBlendMode("ADD")
-	button.activeGlow:SetAllPoints()
+	button.activeGlow:SetSize(BUTTON_ICON_SIZE + 4, BUTTON_ICON_SIZE + 4)
+	button.activeGlow:SetPoint("CENTER")
 	button.activeGlow:Hide()
 
 	button:SetScript("OnClick", function()
