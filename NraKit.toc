@@ -11,3 +11,4 @@ Core.lua
 Settings.lua
 
 Modules\ClassColorHealthBars.lua
+Modules\EngagedNameplates.lua
