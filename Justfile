@@ -1,5 +1,9 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
+# Never open a pager for git output (e.g. the commit lists in `next`/`release`).
+export GIT_PAGER := "cat"
+export PAGER := "cat"
+
 # List recipes
 default:
     @just --list
