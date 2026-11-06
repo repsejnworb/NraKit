@@ -4,7 +4,7 @@
 ## Author: Jesper Brown
 ## Version: 0.1.0
 ## Category: Interface Enhancements
-## IconTexture: Interface\Icons\INV_Misc_Gear_01
+## IconTexture: Interface\AddOns\NraKit\Media\Icon.png
 ## SavedVariables: NraKitDB
 
 Core.lua
