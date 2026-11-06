@@ -2,10 +2,11 @@
 ## Title: NraKit
 ## Notes: A collection of small quality-of-life fixes and tweaks.
 ## Author: Jesper Brown
-## Version: 0.1.0
+## Version: @project-version@
 ## Category: Interface Enhancements
 ## IconTexture: Interface\AddOns\NraKit\Media\Icon.png
 ## SavedVariables: NraKitDB
+## X-Curse-Project-ID: 1786796
 
 Core.lua
 Settings.lua

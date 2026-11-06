@@ -49,3 +49,13 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   plates to combat. EngagedNameplates toggles `nameplateShowEnemies` on `PLAYER_REGEN_DISABLED`/`ENABLED` instead.
 - `nameplateMinScaleDistance` and `nameplateMaxScaleDistance` are both 10, so plates are either full size or min scale (no gradient).
 - Modules that change CVars save the user's originals in `NraKitDB` and restore them when turned off.
+
+## Releasing
+
+- CurseForge project ID `1786796` (in the TOC as `X-Curse-Project-ID`). Repo secret `CF_API_KEY` holds the upload token.
+- `.github/workflows/release.yml` runs the BigWigs packager on any pushed tag. It builds the zip, creates a GitHub
+  release and uploads to CurseForge (Forever flavor, detected from `## Interface: 16001`). `## Version: @project-version@`
+  is replaced with the tag. Tags with `alpha`/`beta` upload as alpha/beta files.
+  Release with an annotated tag: `git tag -a v0.2.0 -m v0.2.0 && git push origin v0.2.0`. Only tag when the user asks.
+- `.pkgmeta` leaves `.github/`, `CLAUDE.md` and `README.md` out of the zip. `.github/logo.png` is the full logo; `Media/Icon.png` is the in-game icon.
+- `.github/workflows/interface-version.yml` checks daily (or run it manually) for a new Forever interface number and opens a PR.

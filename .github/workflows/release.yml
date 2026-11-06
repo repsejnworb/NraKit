@@ -1,0 +1,31 @@
+name: Package and release
+
+# Push an annotated tag (e.g. `git tag -a v0.2.0 -m v0.2.0 && git push origin v0.2.0`) to
+# build the addon zip, create a GitHub release and upload to CurseForge. Tags containing
+# "alpha" or "beta" are uploaded as alpha/beta files.
+
+on:
+  push:
+    tags:
+      - "**"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      # The packager docs disagree on the variable names, so provide both.
+      CF_API_KEY: ${{ secrets.CF_API_KEY }}
+      CF_API_TOKEN: ${{ secrets.CF_API_KEY }}
+      GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+      GH_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # full history, needed for the automatic changelog
+
+      - name: Package and release
+        uses: BigWigsMods/packager@v2

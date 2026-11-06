@@ -1,0 +1,33 @@
+name: Update TOC Interface version
+
+# Checks daily for a new WoW Forever interface number and opens a pull request when it changes.
+# Requires Settings -> Actions -> General -> "Allow GitHub Actions to create and approve pull requests".
+
+on:
+  schedule:
+    - cron: "0 12 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v7
+
+      - name: Update TOC Interface version
+        uses: p3lim/toc-interface-updater@v4
+        with:
+          flavor: forever
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v8
+        with:
+          title: "chore: update Interface version"
+          commit-message: "chore: update Interface version"
+          branch: interface-version
+          delete-branch: true

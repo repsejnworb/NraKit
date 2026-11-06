@@ -1,0 +1,6 @@
+package-as: NraKit
+
+ignore:
+  - .github
+  - CLAUDE.md
+  - README.md
