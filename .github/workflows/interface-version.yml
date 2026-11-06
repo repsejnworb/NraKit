@@ -22,7 +22,11 @@ jobs:
       - name: Update TOC Interface version
         uses: p3lim/toc-interface-updater@v4
         with:
-          flavor: forever
+          # Must be a block (trailing newline): the action reads this with `while read`
+          # after stripping the last newline, so a one-line value is silently dropped
+          # and it falls back to Retail.
+          flavor: |
+            forever
 
       - name: Create pull request
         uses: peter-evans/create-pull-request@v8
