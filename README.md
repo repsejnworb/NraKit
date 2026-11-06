@@ -14,5 +14,7 @@ Options live in the game's Settings panel under **AddOns → NraKit**, or open t
 - **Nameplates only for engaged enemies** (off by default): turns off "Always Show Nameplates"
   so enemy plates only appear in combat, then shows full plates only for enemies fighting you
   (optionally your group). Other enemy NPCs show only their name. Target, focus and enemy players
-  always get full plates. Hidden plates can still be clicked where their bar would be, because
+  always get full plates. Name-only plates restyle their name to resemble the engine's
+  overhead names, and an option keeps plates from shrinking/fading with distance.
+  Hidden plates can still be clicked where their bar would be, because
   addons can't change a plate's click area during combat.

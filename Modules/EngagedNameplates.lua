@@ -8,6 +8,10 @@ local _, ns = ...
 -- Plate parts are faded with SetAlpha rather than hidden, because Blizzard's own
 -- code keeps re-showing them. Addons cannot change a plate's click area in
 -- combat, so a name-only plate can still be clicked where its bar would be.
+--
+-- Overhead names (what you see with nameplates off) are drawn by the engine, and
+-- the engine stops drawing them for any unit that has a nameplate. So name-only
+-- plates restyle the plate's own name text to look like an overhead name instead.
 
 local module = {
 	key = "engagedNameplates",
@@ -21,8 +25,21 @@ local module = {
 			description = "Also show full nameplates for enemies that are fighting your party or raid members.",
 			default = true,
 		},
+		{
+			key = "engagedNameplatesFixedSize",
+			name = "Don't shrink or fade nameplates with distance",
+			description = "Keeps all nameplates at full size and opacity regardless of distance, like overhead names. Affects every nameplate, not just name-only ones.",
+			default = true,
+		},
 	},
 }
+
+-- Style for name-only plates, approximating the engine's overhead names.
+-- UNIT_NAME_FONT is the font Blizzard hands the engine for those names.
+local NAME_FONT_SIZE = 13
+local NAME_FONT_FLAGS = ""
+local NAME_SHADOW_OFFSET_X, NAME_SHADOW_OFFSET_Y = 1, -1
+local NAME_SHADOW_COLOR = { r = 0, g = 0, b = 0, a = 1 }
 
 -- Parts of Blizzard's nameplate unit frame that are faded out on name-only plates.
 -- The name, raid marker, widgets and soft-target icon are left alone.
@@ -41,10 +58,19 @@ local MANAGED_CVARS = {
 	nameplateShowEnemies = "1",
 }
 
+-- Additional CVars managed while the fixed-size option is on.
+local FIXED_SIZE_CVARS = {
+	nameplateMinScale = "1",
+	nameplateMaxScale = "1",
+	nameplateMinAlpha = "1",
+}
+
 local SAVED_CVARS_KEY = "engagedNameplatesSavedCVars"
 
 -- nameplate unit token -> UnitFrame we have faded
 local fadedFrames = {}
+-- UnitFrame -> Blizzard's original name font, for frames whose name we restyled
+local styledNames = {}
 local pendingCVarUpdate = false
 
 local eventFrame = CreateFrame("Frame")
@@ -115,12 +141,69 @@ local function SetPartsAlpha(unitFrame, alpha)
 	end
 end
 
+local function SaveNameFont(unitFrame)
+	local name = unitFrame.name
+	local path, size, flags = name:GetFont()
+	local r, g, b, a = name:GetShadowColor()
+	local x, y = name:GetShadowOffset()
+	styledNames[unitFrame] = {
+		fontObject = name:GetFontObject(),
+		path = path, size = size, flags = flags,
+		shadowColor = { r, g, b, a },
+		shadowX = x, shadowY = y,
+	}
+end
+
+local function StyleName(unitFrame)
+	local name = unitFrame.name
+	name:SetFont(UNIT_NAME_FONT, NAME_FONT_SIZE, NAME_FONT_FLAGS)
+	name:SetShadowOffset(NAME_SHADOW_OFFSET_X, NAME_SHADOW_OFFSET_Y)
+	name:SetShadowColor(NAME_SHADOW_COLOR.r, NAME_SHADOW_COLOR.g, NAME_SHADOW_COLOR.b, NAME_SHADOW_COLOR.a)
+end
+
+local function UnstyleName(unitFrame)
+	local saved = styledNames[unitFrame]
+	if not saved then
+		return
+	end
+	styledNames[unitFrame] = nil
+	local name = unitFrame.name
+	if saved.fontObject then
+		name:SetFontObject(saved.fontObject)
+	end
+	if saved.path then
+		name:SetFont(saved.path, saved.size, saved.flags)
+	end
+	name:SetShadowOffset(saved.shadowX, saved.shadowY)
+	name:SetShadowColor(unpack(saved.shadowColor))
+end
+
+local function FadePlate(unitFrame)
+	SetPartsAlpha(unitFrame, 0)
+	if unitFrame.name and not styledNames[unitFrame] then
+		SaveNameFont(unitFrame)
+		StyleName(unitFrame)
+	end
+end
+
 local function RestorePlate(unit)
 	local unitFrame = fadedFrames[unit]
 	if unitFrame then
 		fadedFrames[unit] = nil
 		SetPartsAlpha(unitFrame, 1)
+		UnstyleName(unitFrame)
 	end
+end
+
+-- Blizzard resets the name font whenever it reapplies a plate's options; take
+-- that as the new original and restyle on top of it.
+if CompactUnitFrame_SetUpFrame then
+	hooksecurefunc("CompactUnitFrame_SetUpFrame", function(frame)
+		if styledNames[frame] then
+			SaveNameFont(frame)
+			StyleName(frame)
+		end
+	end)
 end
 
 local function UpdatePlate(unit)
@@ -135,7 +218,7 @@ local function UpdatePlate(unit)
 		RestorePlate(unit)
 	end
 	fadedFrames[unit] = unitFrame
-	SetPartsAlpha(unitFrame, 0)
+	FadePlate(unitFrame)
 end
 
 local function UpdateAllPlates()
@@ -161,23 +244,36 @@ local function ApplyCVars()
 	end
 	pendingCVarUpdate = false
 
+	local desired = {}
 	if ns:IsModuleEnabled(module.key) then
-		if not NraKitDB[SAVED_CVARS_KEY] then
-			local saved = {}
-			for name in pairs(MANAGED_CVARS) do
-				saved[name] = GetCVar(name)
-			end
-			NraKitDB[SAVED_CVARS_KEY] = saved
-		end
 		for name, value in pairs(MANAGED_CVARS) do
-			SetCVar(name, value)
+			desired[name] = value
 		end
-	elseif NraKitDB[SAVED_CVARS_KEY] then
-		for name, value in pairs(NraKitDB[SAVED_CVARS_KEY]) do
-			SetCVar(name, value)
+		if ns:GetOption("engagedNameplatesFixedSize") then
+			for name, value in pairs(FIXED_SIZE_CVARS) do
+				desired[name] = value
+			end
 		end
-		NraKitDB[SAVED_CVARS_KEY] = nil
 	end
+
+	local saved = NraKitDB[SAVED_CVARS_KEY] or {}
+	-- Put back anything we no longer manage.
+	for name, value in pairs(saved) do
+		if not desired[name] then
+			SetCVar(name, value)
+			saved[name] = nil
+		end
+	end
+	for name, value in pairs(desired) do
+		local current = GetCVar(name)
+		if current ~= nil then
+			if saved[name] == nil then
+				saved[name] = current
+			end
+			SetCVar(name, value)
+		end
+	end
+	NraKitDB[SAVED_CVARS_KEY] = next(saved) and saved or nil
 end
 
 local function OnEvent(_, event, unit)
@@ -243,7 +339,10 @@ function module:OnEnabledChanged(enabled)
 	UpdateAllPlates()
 end
 
-function module:OnOptionChanged()
+function module:OnOptionChanged(key)
+	if key == "engagedNameplatesFixedSize" then
+		ApplyCVars()
+	end
 	UpdateAllPlates()
 end
 
