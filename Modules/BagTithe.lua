@@ -118,19 +118,25 @@ end
 -- Ranking
 ---------------------------------------------------------------------------
 
+-- Inline coin icons, sized to the text (0 height = font height).
+local GOLD_ICON = "|TInterface\\MoneyFrame\\UI-GoldIcon:0:0:1:0|t"
+local SILVER_ICON = "|TInterface\\MoneyFrame\\UI-SilverIcon:0:0:1:0|t"
+local COPPER_ICON = "|TInterface\\MoneyFrame\\UI-CopperIcon:0:0:1:0|t"
+
+-- Compact value in the largest coin, e.g. 85[c], 4.2[s], 12[g], to fit on an item icon.
 local function FormatValue(copper)
-	local function compact(amount, suffix)
+	local function compact(amount, icon)
 		if amount >= 10 then
-			return string.format("%d%s", amount, suffix)
+			return string.format("%d%s", amount, icon)
 		end
-		return (string.format("%.1f", amount):gsub("%.0$", "")) .. suffix
+		return (string.format("%.1f", amount):gsub("%.0$", "")) .. icon
 	end
 	if copper >= 10000 then
-		return compact(copper / 10000, "g")
+		return compact(copper / 10000, GOLD_ICON)
 	elseif copper >= 100 then
-		return compact(copper / 100, "s")
+		return compact(copper / 100, SILVER_ICON)
 	end
-	return string.format("%dc", copper)
+	return string.format("%d%s", copper, COPPER_ICON)
 end
 
 local function SlotKey(bag, slot)
