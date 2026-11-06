@@ -9,8 +9,11 @@ ns.moduleOrder = {}
 --   name        label shown in the settings panel
 --   description tooltip shown in the settings panel
 --   default     whether the module is enabled on a fresh install
---   OnInitialize(self)          called once on PLAYER_LOGIN
---   OnEnabledChanged(self, on)  called when the setting is toggled
+--   options     optional list of sub-options { key, name, description, default },
+--               shown indented under the module's checkbox
+--   OnInitialize(self)                   called once on PLAYER_LOGIN
+--   OnEnabledChanged(self, on)           called when the module is toggled
+--   OnOptionChanged(self, key, value)    called when a sub-option is toggled
 function ns:RegisterModule(module)
 	assert(module.key and not self.modules[module.key], "NraKit: invalid or duplicate module key")
 	self.modules[module.key] = module
@@ -21,11 +24,22 @@ function ns:IsModuleEnabled(key)
 	return NraKitDB and NraKitDB[key] == true
 end
 
+function ns:GetOption(key)
+	return NraKitDB and NraKitDB[key] == true
+end
+
+local function SetDefault(key, default)
+	if NraKitDB[key] == nil then
+		NraKitDB[key] = default and true or false
+	end
+end
+
 local function InitializeDB()
 	NraKitDB = NraKitDB or {}
 	for _, module in ipairs(ns.moduleOrder) do
-		if NraKitDB[module.key] == nil then
-			NraKitDB[module.key] = module.default and true or false
+		SetDefault(module.key, module.default)
+		for _, option in ipairs(module.options or {}) do
+			SetDefault(option.key, option.default)
 		end
 	end
 end
