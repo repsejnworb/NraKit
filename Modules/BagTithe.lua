@@ -118,10 +118,11 @@ end
 -- Ranking
 ---------------------------------------------------------------------------
 
--- Inline coin icons, sized to the text (0 height = font height).
-local GOLD_ICON = "|TInterface\\MoneyFrame\\UI-GoldIcon:0:0:1:0|t"
-local SILVER_ICON = "|TInterface\\MoneyFrame\\UI-SilverIcon:0:0:1:0|t"
-local COPPER_ICON = "|TInterface\\MoneyFrame\\UI-CopperIcon:0:0:1:0|t"
+-- Inline coin icons, using the same atlases as Blizzard's money frames.
+local COIN_ICON_SIZE = 11
+local GOLD_ICON = CreateAtlasMarkup("coin-gold", COIN_ICON_SIZE, COIN_ICON_SIZE, 1, 0)
+local SILVER_ICON = CreateAtlasMarkup("coin-silver", COIN_ICON_SIZE, COIN_ICON_SIZE, 1, 0)
+local COPPER_ICON = CreateAtlasMarkup("coin-copper", COIN_ICON_SIZE, COIN_ICON_SIZE, 1, 0)
 
 -- Compact value in the largest coin, e.g. 85[c], 4.2[s], 12[g], to fit on an item icon.
 local function FormatValue(copper)

@@ -13,7 +13,8 @@ local module = {
 	default = false,
 }
 
-local COIN_TEXTURE = "Interface\\MoneyFrame\\UI-GoldIcon"
+-- Same atlas Blizzard's money frames use for gold.
+local COIN_ATLAS = "coin-gold"
 local COIN_SIZE = 14
 
 -- reward button -> coin texture
@@ -23,7 +24,7 @@ local function GetCoin(button)
 	local coin = coins[button]
 	if not coin then
 		coin = button:CreateTexture(nil, "OVERLAY", nil, 7)
-		coin:SetTexture(COIN_TEXTURE)
+		coin:SetAtlas(COIN_ATLAS)
 		coin:SetSize(COIN_SIZE, COIN_SIZE)
 		coin:SetPoint("TOPRIGHT", button.Icon or button, "TOPRIGHT", 2, 2)
 		coins[button] = coin
