@@ -27,3 +27,6 @@ page under NraKit.
   because addons can't change a plate's click area during combat.
 - **Mark most valuable quest reward**: when a quest offers a choice of rewards, a gold coin
   marks the one that sells to a vendor for the most gold (vendor price × stack size).
+
+## License
+[MIT](LICENSE)
