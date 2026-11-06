@@ -1,4 +1,4 @@
-## Interface: 120105
+## Interface: 16001
 ## Title: NraKit
 ## Notes: A collection of small quality-of-life fixes and tweaks.
 ## Author: Jesper Brown
