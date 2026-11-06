@@ -27,6 +27,10 @@ page under NraKit.
   because addons can't change a plate's click area during combat.
 - **Mark most valuable quest reward**: when a quest offers a choice of rewards, a gold coin
   marks the one that sells to a vendor for the most gold (vendor price × stack size).
+- **Bag Tithe**: a button next to the bag sort button (separate or combined bags) highlights
+  your least valuable bag slots (vendor price × stack size), ranked from red to yellow, with
+  rank numbers and sell values. Everything else is dimmed; the bags work as normal underneath.
+  Alt+click an item to leave it out of the ranking; the ignore list is editable in the options.
 
 ## Development
 Requires [just](https://github.com/casey/just), [cocogitto](https://github.com/cocogitto/cocogitto) and `luac`.

@@ -29,6 +29,8 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   Modules with `options` get a subpage; options support `type = "number"` sliders (`min/max/step/format`),
   `header = "..."` subsections, and `parent = <option key>` nesting (greyed out unless the parent is on).
 - `Modules/*.lua` – one feature per file, registered with `ns:RegisterModule(module)`.
+  `module:OnSettingsRegistered(root, subcategory, sublayout)` can add custom controls (e.g. buttons) or extra
+  pages (canvas subcategories, like the Bag Tithe ignore list).
 
 ## Restrictions learned the hard way (Midnight-era client)
 
@@ -41,6 +43,10 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
 - Addons can't change a nameplate's click area in combat, and can't get distances to non-group enemies.
 - Hook Blizzard functions with `hooksecurefunc`. Some are captured by reference (e.g. `QuestInfo_ShowRewards` in
   `QUEST_TEMPLATE_*.elements`), so hook the caller instead (`QuestInfo_Display`).
+- Bag item buttons are protected (they use and equip items). Only add non-mouse overlay frames on top, and use
+  `HookScript` to observe clicks. Alt+left-click has no default action on bag items. Separate and combined
+  ("compact") bags share `BagItemSearchBox`/`BagItemAutoSortButton`, which Blizzard moves between frames;
+  `ContainerFrameUtil_EnumerateContainerFrames()` covers both modes.
 - Overhead names (with nameplates off) are drawn by the engine, not Lua. A unit with a nameplate never gets its engine name back.
 
 ## Forever quirks
