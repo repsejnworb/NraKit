@@ -12,3 +12,4 @@ Settings.lua
 
 Modules\ClassColorHealthBars.lua
 Modules\EngagedNameplates.lua
+Modules\QuestRewardValue.lua

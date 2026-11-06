@@ -17,3 +17,5 @@ Options live in the game's Settings panel under **AddOns → NraKit**, or open t
   their name, restyled to resemble the engine's overhead names. Target, focus and enemy players
   always get full plates. Hidden plates can still be clicked where their bar would be, because
   addons can't change a plate's click area during combat.
+- **Mark most valuable quest reward**: when a quest offers a choice of rewards, a gold coin marks
+  the one that sells to a vendor for the most gold (vendor price × stack size).
