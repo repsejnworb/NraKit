@@ -32,17 +32,37 @@ local module = {
 			description = "Instead of hiding idle enemies completely during combat, show just their name, styled to resemble overhead names. Real overhead names can't be shown for units that have a nameplate.",
 			default = false,
 		},
+		{
+			key = "engagedNameplatesNameSize",
+			parent = "engagedNameplatesShowIdleNames",
+			type = "number",
+			name = "Idle name size",
+			description = "Font size of idle enemy names.",
+			default = 11, min = 6, max = 24, step = 1,
+		},
+		{
+			key = "engagedNameplatesNameOffset",
+			parent = "engagedNameplatesShowIdleNames",
+			type = "number",
+			name = "Idle name height",
+			description = "Moves idle enemy names up or down relative to the unit's head.",
+			default = 0, min = -40, max = 40, step = 1,
+		},
+		{
+			key = "engagedNameplatesNameOutline",
+			parent = "engagedNameplatesShowIdleNames",
+			name = "Outline idle names",
+			description = "Draw a thin outline around idle enemy names.",
+			default = false,
+		},
 	},
 }
 
 -- Style for name-only plates, approximating the engine's overhead names.
--- UNIT_NAME_FONT is the font Blizzard hands the engine for those names.
-local NAME_FONT_SIZE = 11
-local NAME_FONT_FLAGS = ""
+-- UNIT_NAME_FONT is the font Blizzard hands the engine for those names. Size,
+-- height and outline come from the settings.
 local NAME_SHADOW_OFFSET_X, NAME_SHADOW_OFFSET_Y = 1, -1
 local NAME_SHADOW_COLOR = { r = 0, g = 0, b = 0, a = 1 }
--- Vertical offset of the name from the bottom of the plate, which sits above the unit's head.
-local NAME_OFFSET_Y = 0
 
 -- Parts of Blizzard's nameplate unit frame that are faded out on name-only plates.
 -- The name, raid marker, widgets and soft-target icon are left alone.
@@ -173,13 +193,15 @@ end
 local function AnchorName(unitFrame)
 	local name = unitFrame.name
 	name:ClearAllPoints()
-	name:SetPoint("BOTTOM", unitFrame, "BOTTOM", 0, NAME_OFFSET_Y)
+	-- The bottom of the plate sits just above the unit's head.
+	name:SetPoint("BOTTOM", unitFrame, "BOTTOM", 0, ns:GetValue("engagedNameplatesNameOffset") or 0)
 	name:SetJustifyH("CENTER")
 end
 
 local function StyleName(unitFrame)
 	local name = unitFrame.name
-	name:SetFont(UNIT_NAME_FONT, NAME_FONT_SIZE, NAME_FONT_FLAGS)
+	local flags = ns:GetOption("engagedNameplatesNameOutline") and "OUTLINE" or ""
+	name:SetFont(UNIT_NAME_FONT, ns:GetValue("engagedNameplatesNameSize") or 11, flags)
 	name:SetShadowOffset(NAME_SHADOW_OFFSET_X, NAME_SHADOW_OFFSET_Y)
 	name:SetShadowColor(NAME_SHADOW_COLOR.r, NAME_SHADOW_COLOR.g, NAME_SHADOW_COLOR.b, NAME_SHADOW_COLOR.a)
 	AnchorName(unitFrame)
@@ -411,6 +433,9 @@ function module:OnEnabledChanged(enabled)
 end
 
 function module:OnOptionChanged()
+	for unitFrame in pairs(styledNames) do
+		StyleName(unitFrame)
+	end
 	UpdateAllPlates()
 end
 
