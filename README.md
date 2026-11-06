@@ -28,5 +28,14 @@ page under NraKit.
 - **Mark most valuable quest reward**: when a quest offers a choice of rewards, a gold coin
   marks the one that sells to a vendor for the most gold (vendor price × stack size).
 
+## Development
+Requires [just](https://github.com/casey/just), [cocogitto](https://github.com/cocogitto/cocogitto) and `luac`.
+Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
+
+- `just check` syntax-checks the Lua files
+- `just next` shows the next version and the commits going into it
+- `just release` tags the next version and pushes it; CI packages it and uploads to CurseForge and GitHub
+- `just release-pre alpha.1` does the same as an alpha/beta pre-release
+
 ## License
 [MIT](LICENSE)

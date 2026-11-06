@@ -8,7 +8,7 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
 - Work directly in this `main/` worktree, commit, and push to `origin/main`.
 - **Every feature is off by default** (module `default = false`). Sub-options inside a feature may default on.
 - Each feature should be toggleable on the NraKit overview page; anything tunable goes in settings, not code constants.
-- No local test runner: syntax-check with `luac -p <file>`; the user tests in-game and pastes errors/screenshots.
+- No local test runner: syntax-check with `just check` (`luac -p`); the user tests in-game and pastes errors/screenshots.
   Ask them to run `/console scriptErrors 1` when testing. Chat `/run` lines are cut off at 255 characters, so split long diagnostics.
 
 ## Target client
@@ -56,6 +56,8 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
 - `.github/workflows/release.yml` runs the BigWigs packager on any pushed tag. It builds the zip, creates a GitHub
   release and uploads to CurseForge (Forever flavor, detected from `## Interface: 16001`). `## Version: @project-version@`
   is replaced with the tag. Tags with `alpha`/`beta` upload as alpha/beta files.
-  Release with an annotated tag: `git tag -a v0.2.0 -m v0.2.0 && git push origin v0.2.0`. Only tag when the user asks.
+  Release with `just release` (Cocogitto picks the next semver from conventional commits since the last tag, asks
+  for confirmation, creates an annotated tag and pushes it). `just release-pre alpha.1` makes a pre-release, `just next`
+  previews the next version, `just check` syntax-checks the Lua files. Only release when the user asks.
 - `.pkgmeta` leaves `.github/`, `CLAUDE.md` and `README.md` out of the zip. `.github/logo.png` is the full logo; `Media/Icon.png` is the in-game icon.
 - `.github/workflows/interface-version.yml` checks daily (or run it manually) for a new Forever interface number and opens a PR.
