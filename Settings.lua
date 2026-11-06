@@ -64,6 +64,7 @@ local function RegisterModuleOptions(category, module, moduleSetting, moduleInit
 			end)
 		end
 	end
+	return subcategory, layout
 end
 
 function ns:RegisterSettings()
@@ -78,8 +79,13 @@ function ns:RegisterSettings()
 			end
 		end)
 
+		local subcategory, sublayout
 		if module.options and #module.options > 0 then
-			RegisterModuleOptions(category, module, moduleSetting, moduleInitializer)
+			subcategory, sublayout = RegisterModuleOptions(category, module, moduleSetting, moduleInitializer)
+		end
+		-- Lets a module add custom controls or pages (e.g. a canvas page for a list).
+		if module.OnSettingsRegistered then
+			module:OnSettingsRegistered(category, subcategory, sublayout)
 		end
 	end
 

@@ -20,6 +20,8 @@ ns.moduleOrder = {}
 --   OnInitialize(self)                   called once on PLAYER_LOGIN
 --   OnEnabledChanged(self, on)           called when the module is toggled
 --   OnOptionChanged(self, key, value)    called when a sub-option changes
+--   OnSettingsRegistered(self, rootCategory, subcategory, sublayout)
+--                                        optional; add custom settings controls/pages
 function ns:RegisterModule(module)
 	assert(module.key and not self.modules[module.key], "NraKit: invalid or duplicate module key")
 	self.modules[module.key] = module
