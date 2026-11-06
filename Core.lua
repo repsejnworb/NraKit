@@ -6,7 +6,7 @@ ns.moduleOrder = {}
 
 -- Modules register themselves at file load. A module is a table with:
 --   key         unique id, also the SavedVariables key for its enabled flag
---   section     header the module is listed under in the settings panel
+--   section     header on the main settings page, and the name of the module's subpage
 --   name        label shown in the settings panel
 --   description tooltip shown in the settings panel
 --   default     whether the module is enabled on a fresh install

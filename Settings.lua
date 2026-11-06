@@ -1,5 +1,9 @@
 local addonName, ns = ...
 
+-- Layout: the main NraKit page lists one on/off switch per module, grouped
+-- under each module's section header. Modules with options also get their own
+-- subpage (in the tree under NraKit), where options are grouped under headers.
+
 local function RegisterSetting(category, key, name, varType, default, onChanged)
 	local variable = addonName .. "_" .. key
 	local setting = Settings.RegisterAddOnSetting(category, variable, key, NraKitDB, varType, name, default)
@@ -10,7 +14,6 @@ local function RegisterSetting(category, key, name, varType, default, onChanged)
 
 	return setting
 end
-
 
 local function CreateControl(category, entry, onChanged)
 	if entry.type == "number" then
@@ -28,11 +31,46 @@ local function CreateControl(category, entry, onChanged)
 	return setting, Settings.CreateCheckbox(category, setting, entry.description)
 end
 
+local function AddHeader(layout, text)
+	layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(text))
+end
+
+local function RegisterModuleOptions(category, module, moduleSetting, moduleInitializer)
+	local subcategory, layout = Settings.RegisterVerticalLayoutSubcategory(category, module.section or module.name)
+
+	-- option key -> { setting, initializer }, so options can nest under other options
+	local controls = {}
+	for _, option in ipairs(module.options) do
+		if option.header then
+			AddHeader(layout, option.header)
+		end
+		local setting, initializer = CreateControl(subcategory, option, function(value)
+			if module.OnOptionChanged then
+				module:OnOptionChanged(option.key, value)
+			end
+		end)
+		controls[option.key] = { setting = setting, initializer = initializer }
+
+		local parent = option.parent and controls[option.parent]
+		if parent then
+			-- Parent is on this page, so Blizzard indents the option under it.
+			initializer:SetParentInitializer(parent.initializer, function()
+				return moduleSetting:GetValue() and parent.setting:GetValue()
+			end)
+		else
+			-- Parent is the module switch on the main page: greys out without indenting.
+			initializer:SetParentInitializer(moduleInitializer, function()
+				return moduleSetting:GetValue()
+			end)
+		end
+	end
+end
+
 function ns:RegisterSettings()
 	local category, layout = Settings.RegisterVerticalLayoutCategory(addonName)
 
 	for _, module in ipairs(self.moduleOrder) do
-		layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(module.section or module.name))
+		AddHeader(layout, module.section or module.name)
 
 		local moduleSetting, moduleInitializer = CreateControl(category, module, function(value)
 			if module.OnEnabledChanged then
@@ -40,30 +78,8 @@ function ns:RegisterSettings()
 			end
 		end)
 
-		-- option key -> { setting, initializer }, so options can nest under other options
-		local controls = {}
-		for _, option in ipairs(module.options or {}) do
-			if option.header then
-				layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(option.header))
-			end
-			local setting, initializer = CreateControl(category, option, function(value)
-				if module.OnOptionChanged then
-					module:OnOptionChanged(option.key, value)
-				end
-			end)
-			controls[option.key] = { setting = setting, initializer = initializer }
-
-			local parent = option.parent and controls[option.parent]
-			initializer:Indent()
-			if parent then
-				initializer:SetParentInitializer(parent.initializer, function()
-					return moduleSetting:GetValue() and parent.setting:GetValue()
-				end)
-			else
-				initializer:SetParentInitializer(moduleInitializer, function()
-					return moduleSetting:GetValue()
-				end)
-			end
+		if module.options and #module.options > 0 then
+			RegisterModuleOptions(category, module, moduleSetting, moduleInitializer)
 		end
 	end
 
