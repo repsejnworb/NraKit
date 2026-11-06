@@ -39,10 +39,17 @@ local module = {
 			default = 18, min = 10, max = 28, step = 1,
 		},
 		{
+			-- Key kept from when this was the only tint option, so existing settings carry over.
 			key = "bagTitheShowTint",
-			name = "Show red-to-yellow tint",
+			name = "Tint icon border",
 			description = "Color the border of each highlighted slot from red (least valuable) to yellow.",
 			default = true,
+		},
+		{
+			key = "bagTitheTintIcon",
+			name = "Tint whole icon",
+			description = "Wash the whole icon of each highlighted slot in its red-to-yellow color. Can be combined with the border tint.",
+			default = false,
 		},
 		{
 			key = "bagTitheShowValue",
@@ -63,6 +70,7 @@ local module = {
 local IGNORE_KEY = "bagTitheIgnore"
 local SEARCH_BOX_SHRINK = 32
 local DIM_ALPHA = 0.7
+local ICON_TINT_ALPHA = 0.35
 local BUTTON_ICON = "Interface\\Icons\\INV_Misc_Coin_01"
 -- The sort button is 28x26 with its broom drawn at roughly 20px inside a frame.
 local BUTTON_WIDTH, BUTTON_HEIGHT = 28, 26
@@ -212,6 +220,10 @@ local function GetOverlay(itemButton)
 	overlay.dim:SetAllPoints()
 	overlay.dim:SetColorTexture(0, 0, 0, DIM_ALPHA)
 
+	overlay.wash = overlay:CreateTexture(nil, "OVERLAY", nil, 1)
+	overlay.wash:SetAllPoints()
+	overlay.wash:SetColorTexture(1, 1, 1)
+
 	overlay.border = overlay:CreateTexture(nil, "OVERLAY", nil, 2)
 	overlay.border:SetTexture("Interface\\Common\\WhiteIconFrame")
 	overlay.border:SetAllPoints()
@@ -258,6 +270,7 @@ local function ApplyOverlay(itemButton, ranked)
 	if not entry then
 		overlay.dim:Show()
 		overlay.border:Hide()
+		overlay.wash:Hide()
 		overlay.rank:Hide()
 		overlay.value:Hide()
 	else
@@ -265,6 +278,8 @@ local function ApplyOverlay(itemButton, ranked)
 		overlay.dim:Hide()
 		overlay.border:SetVertexColor(r, g, b)
 		overlay.border:SetShown(ns:GetOption("bagTitheShowTint"))
+		overlay.wash:SetVertexColor(r, g, b, ICON_TINT_ALPHA)
+		overlay.wash:SetShown(ns:GetOption("bagTitheTintIcon"))
 		overlay.rank:SetFont(RANK_FONT, ns:GetValue("bagTitheRankSize") or 18, "THICKOUTLINE")
 		overlay.rank:SetText(entry.rank)
 		overlay.rank:SetTextColor(1, 1, 1) -- constant color reads fastest; the border carries the tint
