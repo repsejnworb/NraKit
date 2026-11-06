@@ -49,7 +49,7 @@ local module = {
 			key = "bagTitheTintIcon",
 			name = "Tint whole icon",
 			description = "Wash the whole icon of each highlighted slot in its red-to-yellow color. Can be combined with the border tint.",
-			default = false,
+			default = true,
 		},
 		{
 			key = "bagTitheTintOpacity",
