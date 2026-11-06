@@ -5,6 +5,7 @@ local _, ns = ...
 
 local module = {
 	key = "classColorHealthBars",
+	section = "Unit Frames",
 	name = "Class-colored health bars",
 	description = "Color the health bars on the player, target, target of target, focus and party frames by class when the unit is a player. NPCs keep their default color.",
 	default = true,

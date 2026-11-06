@@ -29,9 +29,11 @@ local function CreateControl(category, entry, onChanged)
 end
 
 function ns:RegisterSettings()
-	local category = Settings.RegisterVerticalLayoutCategory(addonName)
+	local category, layout = Settings.RegisterVerticalLayoutCategory(addonName)
 
 	for _, module in ipairs(self.moduleOrder) do
+		layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(module.section or module.name))
+
 		local moduleSetting, moduleInitializer = CreateControl(category, module, function(value)
 			if module.OnEnabledChanged then
 				module:OnEnabledChanged(value)
@@ -41,6 +43,9 @@ function ns:RegisterSettings()
 		-- option key -> { setting, initializer }, so options can nest under other options
 		local controls = {}
 		for _, option in ipairs(module.options or {}) do
+			if option.header then
+				layout:AddInitializer(CreateSettingsListSectionHeaderInitializer(option.header))
+			end
 			local setting, initializer = CreateControl(category, option, function(value)
 				if module.OnOptionChanged then
 					module:OnOptionChanged(option.key, value)

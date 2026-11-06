@@ -6,6 +6,7 @@ ns.moduleOrder = {}
 
 -- Modules register themselves at file load. A module is a table with:
 --   key         unique id, also the SavedVariables key for its enabled flag
+--   section     header the module is listed under in the settings panel
 --   name        label shown in the settings panel
 --   description tooltip shown in the settings panel
 --   default     whether the module is enabled on a fresh install
@@ -13,7 +14,8 @@ ns.moduleOrder = {}
 --               { key, name, description, default }                 checkbox
 --               { key, name, description, default, type = "number",
 --                 min, max, step }                                  slider
---               An option with `parent = <option key>` is nested under that checkbox.
+--               An option with `parent = <option key>` is nested under that checkbox,
+--               and `header = "..."` starts a new sub-section before the option.
 --   OnInitialize(self)                   called once on PLAYER_LOGIN
 --   OnEnabledChanged(self, on)           called when the module is toggled
 --   OnOptionChanged(self, key, value)    called when a sub-option changes
