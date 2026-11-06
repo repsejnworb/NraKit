@@ -25,6 +25,7 @@ local module = {
 	options = {
 		{
 			key = "engagedNameplatesCombatToggle",
+			header = "General",
 			name = "Only during combat",
 			description = "Turns enemy nameplates on when you enter combat and off when you leave it, so you see normal overhead names outside of combat. While this is on, it manages \"Enemy Units\" and \"Always Show Nameplates\" for you; your previous settings come back when it is turned off.",
 			default = true,
@@ -34,6 +35,13 @@ local module = {
 			name = "Include group's enemies",
 			description = "Also show full nameplates for enemies that are fighting your party or raid members.",
 			default = true,
+		},
+		{
+			key = "engagedNameplatesFarScale",
+			type = "number",
+			name = "Far-away scale",
+			description = "How small nameplates get at a distance, as a percentage of their close-up size. Lower values shrink distant idle names more, like the game's own overhead names. Blizzard's default is 80%. Applies to all nameplates, including engaged ones.",
+			default = 70, min = 10, max = 100, step = 5, format = "%d%%",
 		},
 		{
 			key = "engagedNameplatesShowIdleNames",
@@ -78,13 +86,6 @@ local module = {
 			name = "Fade with distance",
 			description = "Let idle enemy names fade out with distance and when hidden behind objects, like nameplates do. When off, they stay fully visible.",
 			default = false,
-		},
-		{
-			key = "engagedNameplatesFarScale",
-			type = "number",
-			name = "Far-away scale",
-			description = "How small nameplates get at a distance, as a percentage of their close-up size. Lower values shrink distant idle names more, like the game's own overhead names. Blizzard's default is 80%. Applies to all nameplates, including engaged ones.",
-			default = 80, min = 10, max = 100, step = 5, format = "%d%%",
 		},
 	},
 }
@@ -278,7 +279,7 @@ local function ApplyCVars()
 		end
 		-- The engine scales plates linearly between these by distance; our idle names
 		-- are children of the plate, so they follow it.
-		desired.nameplateMinScale = tostring((ns:GetValue("engagedNameplatesFarScale") or 80) / 100)
+		desired.nameplateMinScale = tostring((ns:GetValue("engagedNameplatesFarScale") or 70) / 100)
 		desired.nameplateMaxScale = "1"
 	end
 
