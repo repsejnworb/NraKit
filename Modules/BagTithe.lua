@@ -52,6 +52,14 @@ local module = {
 			default = false,
 		},
 		{
+			key = "bagTitheTintOpacity",
+			parent = "bagTitheTintIcon",
+			type = "number",
+			name = "Icon tint opacity",
+			description = "How strongly the whole-icon tint covers the icon.",
+			default = 35, min = 5, max = 90, step = 5, format = "%d%%",
+		},
+		{
 			key = "bagTitheShowValue",
 			name = "Show sell value",
 			description = "Show what the whole slot sells for (vendor price times stack size).",
@@ -70,7 +78,6 @@ local module = {
 local IGNORE_KEY = "bagTitheIgnore"
 local SEARCH_BOX_SHRINK = 32
 local DIM_ALPHA = 0.7
-local ICON_TINT_ALPHA = 0.35
 local BUTTON_ICON = "Interface\\Icons\\INV_Misc_Coin_01"
 -- The sort button is 28x26 with its broom drawn at roughly 20px inside a frame.
 local BUTTON_WIDTH, BUTTON_HEIGHT = 28, 26
@@ -278,7 +285,7 @@ local function ApplyOverlay(itemButton, ranked)
 		overlay.dim:Hide()
 		overlay.border:SetVertexColor(r, g, b)
 		overlay.border:SetShown(ns:GetOption("bagTitheShowTint"))
-		overlay.wash:SetVertexColor(r, g, b, ICON_TINT_ALPHA)
+		overlay.wash:SetVertexColor(r, g, b, (ns:GetValue("bagTitheTintOpacity") or 35) / 100)
 		overlay.wash:SetShown(ns:GetOption("bagTitheTintIcon"))
 		overlay.rank:SetFont(RANK_FONT, ns:GetValue("bagTitheRankSize") or 18, "THICKOUTLINE")
 		overlay.rank:SetText(entry.rank)
