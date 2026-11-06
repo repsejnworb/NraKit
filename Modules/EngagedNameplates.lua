@@ -3,8 +3,9 @@ local _, ns = ...
 -- Shows full enemy nameplates only for mobs that are actually fighting you
 -- (or your group). Every other enemy NPC plate is hidden during combat.
 --
--- Blizzard's "Always Show Nameplates" off already limits plates to when you are
--- in combat; this module turns that on and then filters which plates stay full.
+-- Optionally the module turns enemy nameplates on when you enter combat and off
+-- again when you leave it, so you see overhead names outside of combat. In
+-- combat it filters which plates stay full.
 -- Idle plates are hidden by setting the Blizzard UnitFrame's alpha to 0; nothing
 -- else on Blizzard's frame is touched. Addons cannot change a plate's click area
 -- in combat, so a hidden plate can still be clicked where its bar would be.
@@ -18,9 +19,15 @@ local _, ns = ...
 local module = {
 	key = "engagedNameplates",
 	name = "Nameplates only for engaged enemies",
-	description = "Turns off \"Always Show Nameplates\" so enemy nameplates only appear in combat, and shows full nameplates only for enemies that are fighting you. Other enemy NPCs are hidden during combat. Your target, focus and enemy players always get full nameplates.",
+	description = "Shows full nameplates only for enemies that are fighting you. Other enemy NPCs are hidden during combat. Your target, focus and enemy players always get full nameplates.",
 	default = false,
 	options = {
+		{
+			key = "engagedNameplatesCombatToggle",
+			name = "Turn enemy nameplates on only during combat",
+			description = "Turns enemy nameplates on when you enter combat and off when you leave it, so you see normal overhead names outside of combat. While this is on, it manages \"Enemy Units\" and \"Always Show Nameplates\" for you; your previous settings come back when it is turned off.",
+			default = true,
+		},
 		{
 			key = "engagedNameplatesIncludeGroup",
 			name = "Include enemies fighting my group",
@@ -65,10 +72,11 @@ local module = {
 local NAME_SHADOW_OFFSET_X, NAME_SHADOW_OFFSET_Y = 1, -1
 local TAPPED_COLOR = { r = 0.5, g = 0.5, b = 0.5 }
 
--- CVars this module takes over while enabled; previous values are restored when disabled.
-local MANAGED_CVARS = {
-	nameplateShowAll = "0",
-	nameplateShowEnemies = "1",
+-- CVars managed by the combat toggle, as { out of combat, in combat }. Previous
+-- values are saved and restored when the toggle or module is turned off.
+local COMBAT_TOGGLE_CVARS = {
+	nameplateShowEnemies = { "0", "1" },
+	nameplateShowAll = { "1", "1" },
 }
 
 local SAVED_CVARS_KEY = "engagedNameplatesSavedCVars"
@@ -77,7 +85,7 @@ local SAVED_CVARS_KEY = "engagedNameplatesSavedCVars"
 local hiddenFrames = {}
 -- nameplate base frame -> our name overlay
 local overlays = {}
-local pendingCVarUpdate = false
+local inCombat = false
 
 local eventFrame = CreateFrame("Frame")
 
@@ -227,16 +235,15 @@ local function IsNamePlateUnit(unit)
 end
 
 local function ApplyCVars()
+	-- CVar changes are deferred during lockdown; PLAYER_REGEN_ENABLED applies them.
 	if InCombatLockdown() then
-		pendingCVarUpdate = true
 		return
 	end
-	pendingCVarUpdate = false
 
 	local desired = {}
-	if ns:IsModuleEnabled(module.key) then
-		for name, value in pairs(MANAGED_CVARS) do
-			desired[name] = value
+	if ns:IsModuleEnabled(module.key) and ns:GetOption("engagedNameplatesCombatToggle") then
+		for name, values in pairs(COMBAT_TOGGLE_CVARS) do
+			desired[name] = values[inCombat and 2 or 1]
 		end
 	end
 
@@ -273,10 +280,14 @@ local function OnEvent(_, event, unit)
 		if IsNamePlateUnit(unit) then
 			UpdatePlate(unit)
 		end
+	elseif event == "PLAYER_REGEN_DISABLED" then
+		-- Fires just before combat lockdown starts, so CVars can still be changed here.
+		inCombat = true
+		ApplyCVars()
+		UpdateAllPlates()
 	elseif event == "PLAYER_REGEN_ENABLED" then
-		if pendingCVarUpdate then
-			ApplyCVars()
-		end
+		inCombat = false
+		ApplyCVars()
 		UpdateAllPlates()
 	elseif event == "PLAYER_TARGET_CHANGED" or event == "PLAYER_FOCUS_CHANGED" then
 		-- Wait a frame so Blizzard's plates have updated their isTarget/isFocus flags.
@@ -313,6 +324,7 @@ end
 eventFrame:SetScript("OnEvent", OnEvent)
 
 function module:OnInitialize()
+	inCombat = InCombatLockdown()
 	-- Undo a deferred CVar change even if the module was switched off mid-combat.
 	eventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 	self:OnEnabledChanged(ns:IsModuleEnabled(self.key))
@@ -325,7 +337,10 @@ function module:OnEnabledChanged(enabled)
 	UpdateAllPlates()
 end
 
-function module:OnOptionChanged()
+function module:OnOptionChanged(key)
+	if key == "engagedNameplatesCombatToggle" then
+		ApplyCVars()
+	end
 	UpdateAllPlates()
 end
 
