@@ -257,7 +257,7 @@ local function ApplyOverlay(itemButton, ranked)
 		overlay.border:SetShown(ns:GetOption("bagTitheShowTint"))
 		overlay.rank:SetFont(RANK_FONT, ns:GetValue("bagTitheRankSize") or 18, "THICKOUTLINE")
 		overlay.rank:SetText(entry.rank)
-		overlay.rank:SetTextColor(r, g, b)
+		overlay.rank:SetTextColor(1, 1, 1) -- constant color reads fastest; the border carries the tint
 		overlay.rank:SetShown(ns:GetOption("bagTitheShowRank"))
 		overlay.value:SetText(FormatValue(entry.value))
 		overlay.value:SetShown(ns:GetOption("bagTitheShowValue"))
