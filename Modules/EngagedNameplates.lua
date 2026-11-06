@@ -1,23 +1,24 @@
 local _, ns = ...
 
 -- Shows full enemy nameplates only for mobs that are actually fighting you
--- (or your group). Every other enemy NPC plate is reduced to just its name.
+-- (or your group). Every other enemy NPC plate is hidden during combat.
 --
 -- Blizzard's "Always Show Nameplates" off already limits plates to when you are
 -- in combat; this module turns that on and then filters which plates stay full.
--- Plate parts are faded with SetAlpha rather than hidden, because Blizzard's own
--- code keeps re-showing them. Addons cannot change a plate's click area in
--- combat, so a name-only plate can still be clicked where its bar would be.
+-- Idle plates are hidden by setting the Blizzard UnitFrame's alpha to 0; nothing
+-- else on Blizzard's frame is touched. Addons cannot change a plate's click area
+-- in combat, so a hidden plate can still be clicked where its bar would be.
 --
--- Idle enemies are hidden completely by default. Optionally they keep just their
--- name instead: overhead names (what you see with nameplates off) are drawn by the
--- engine, which stops drawing them for any unit that has a nameplate, so the
--- plate's own name text is restyled and re-anchored to resemble one.
+-- Optionally idle enemies keep a name. Overhead names (what you see with
+-- nameplates off) are drawn by the engine, which stops drawing them for any unit
+-- that has a nameplate, so we draw our own name text on the plate instead.
+-- Blizzard's name can't be moved instead: nameplate regions are restricted, so
+-- addons can't read their anchors to put them back.
 
 local module = {
 	key = "engagedNameplates",
 	name = "Nameplates only for engaged enemies",
-	description = "Turns off \"Always Show Nameplates\" so enemy nameplates only appear in combat, and shows full nameplates only for enemies that are fighting you. Other enemy NPCs show just their name. Your target, focus and enemy players always get full nameplates.",
+	description = "Turns off \"Always Show Nameplates\" so enemy nameplates only appear in combat, and shows full nameplates only for enemies that are fighting you. Other enemy NPCs are hidden during combat. Your target, focus and enemy players always get full nameplates.",
 	default = false,
 	options = {
 		{
@@ -58,22 +59,11 @@ local module = {
 	},
 }
 
--- Style for name-only plates, approximating the engine's overhead names.
+-- Style for idle names, approximating the engine's overhead names.
 -- UNIT_NAME_FONT is the font Blizzard hands the engine for those names. Size,
 -- height and outline come from the settings.
 local NAME_SHADOW_OFFSET_X, NAME_SHADOW_OFFSET_Y = 1, -1
-local NAME_SHADOW_COLOR = { r = 0, g = 0, b = 0, a = 1 }
-
--- Parts of Blizzard's nameplate unit frame that are faded out on name-only plates.
--- The name, raid marker, widgets and soft-target icon are left alone.
-local FADED_PARTS = {
-	"HealthBarsContainer",
-	"CastBarsContainer",
-	"AurasFrame",
-	"ClassificationFrame",
-	"LevelFrame",
-	"PlayerLevelDiffFrame",
-}
+local TAPPED_COLOR = { r = 0.5, g = 0.5, b = 0.5 }
 
 -- CVars this module takes over while enabled; previous values are restored when disabled.
 local MANAGED_CVARS = {
@@ -83,14 +73,10 @@ local MANAGED_CVARS = {
 
 local SAVED_CVARS_KEY = "engagedNameplatesSavedCVars"
 
--- nameplate unit token -> UnitFrame we have faded
-local fadedFrames = {}
--- nameplate unit token -> true if its plate shows the name, false if hidden completely
-local fadedShowsName = {}
--- UnitFrame -> Blizzard's original name font/anchors, for frames whose name we restyled
-local styledNames = {}
--- UnitFrames whose UpdateAnchors we have hooked
-local hookedAnchors = {}
+-- nameplate unit token -> Blizzard UnitFrame we have hidden
+local hiddenFrames = {}
+-- nameplate base frame -> our name overlay
+local overlays = {}
 local pendingCVarUpdate = false
 
 local eventFrame = CreateFrame("Frame")
@@ -152,154 +138,51 @@ local function ShouldShowFullPlate(unit, unitFrame)
 	return false
 end
 
-local function SetPartsAlpha(unitFrame, alpha)
-	for _, key in ipairs(FADED_PARTS) do
-		local part = unitFrame[key]
-		if part then
-			part:SetAlpha(alpha)
-		end
+local function GetOverlay(plate)
+	local overlay = overlays[plate]
+	if not overlay then
+		overlay = CreateFrame("Frame", nil, plate)
+		overlay:SetAllPoints(plate)
+		overlay.text = overlay:CreateFontString(nil, "OVERLAY")
+		overlay.text:SetShadowColor(0, 0, 0, 1)
+		overlays[plate] = overlay
 	end
+	return overlay
 end
 
-local function SaveName(unitFrame)
-	local name = unitFrame.name
-	local path, size, flags = name:GetFont()
-	local r, g, b, a = name:GetShadowColor()
-	local x, y = name:GetShadowOffset()
-	local points = {}
-	for i = 1, name:GetNumPoints() do
-		points[i] = { name:GetPoint(i) }
-	end
-	styledNames[unitFrame] = {
-		fontObject = name:GetFontObject(),
-		path = path, size = size, flags = flags,
-		shadowColor = { r, g, b, a },
-		shadowX = x, shadowY = y,
-		justifyH = name:GetJustifyH(),
-		color = { name:GetVertexColor() },
-		points = points,
-	}
-end
-
--- Overhead names are colored by reaction; Blizzard's plates may use white instead.
-local function ColorName(unitFrame)
-	local unit = unitFrame.unit
-	if not unit or (CompactUnitFrame_IsTapDenied and CompactUnitFrame_IsTapDenied(unitFrame)) then
-		return -- keep Blizzard's grey for tapped units
-	end
-	unitFrame.name:SetVertexColor(UnitSelectionColor(unit))
-end
-
-local function AnchorName(unitFrame)
-	local name = unitFrame.name
-	name:ClearAllPoints()
-	-- The bottom of the plate sits just above the unit's head.
-	name:SetPoint("BOTTOM", unitFrame, "BOTTOM", 0, ns:GetValue("engagedNameplatesNameOffset") or 0)
-	name:SetJustifyH("CENTER")
-end
-
-local function StyleName(unitFrame)
-	local name = unitFrame.name
+local function StyleOverlay(overlay, unit)
+	local text = overlay.text
 	local flags = ns:GetOption("engagedNameplatesNameOutline") and "OUTLINE" or ""
-	name:SetFont(UNIT_NAME_FONT, ns:GetValue("engagedNameplatesNameSize") or 11, flags)
-	name:SetShadowOffset(NAME_SHADOW_OFFSET_X, NAME_SHADOW_OFFSET_Y)
-	name:SetShadowColor(NAME_SHADOW_COLOR.r, NAME_SHADOW_COLOR.g, NAME_SHADOW_COLOR.b, NAME_SHADOW_COLOR.a)
-	AnchorName(unitFrame)
-	ColorName(unitFrame)
-end
+	text:SetFont(UNIT_NAME_FONT, ns:GetValue("engagedNameplatesNameSize") or 11, flags)
+	text:SetShadowOffset(NAME_SHADOW_OFFSET_X, NAME_SHADOW_OFFSET_Y)
+	text:ClearAllPoints()
+	-- The bottom of the plate sits just above the unit's head.
+	text:SetPoint("BOTTOM", overlay, "BOTTOM", 0, ns:GetValue("engagedNameplatesNameOffset") or 0)
 
-local function UnstyleName(unitFrame)
-	local saved = styledNames[unitFrame]
-	if not saved then
-		return
-	end
-	styledNames[unitFrame] = nil
-	local name = unitFrame.name
-	if saved.fontObject then
-		name:SetFontObject(saved.fontObject)
-	end
-	if saved.path then
-		name:SetFont(saved.path, saved.size, saved.flags)
-	end
-	name:SetShadowOffset(saved.shadowX, saved.shadowY)
-	name:SetShadowColor(unpack(saved.shadowColor))
-	name:SetJustifyH(saved.justifyH)
-	name:ClearAllPoints()
-	for _, point in ipairs(saved.points) do
-		name:SetPoint(unpack(point))
-	end
-	name:SetVertexColor(unpack(saved.color))
-end
-
-local function HookAnchors(unitFrame)
-	if hookedAnchors[unitFrame] or not unitFrame.UpdateAnchors then
-		return
-	end
-	hookedAnchors[unitFrame] = true
-	-- Blizzard re-anchors the name on layout changes; keep ours on top.
-	hooksecurefunc(unitFrame, "UpdateAnchors", function(self)
-		if styledNames[self] then
-			local saved = styledNames[self]
-			saved.points = {}
-			for i = 1, self.name:GetNumPoints() do
-				saved.points[i] = { self.name:GetPoint(i) }
-			end
-			saved.justifyH = self.name:GetJustifyH()
-			AnchorName(self)
-		end
-	end)
-end
-
-local function FadePlate(unitFrame, showName)
-	SetPartsAlpha(unitFrame, 0)
-	unitFrame:SetAlpha(showName and 1 or 0)
-	if showName then
-		if unitFrame.name and not styledNames[unitFrame] then
-			HookAnchors(unitFrame)
-			SaveName(unitFrame)
-			StyleName(unitFrame)
-		end
+	-- Values may be secret; FontStrings accept those, we just never compare them.
+	text:SetText(UnitName(unit))
+	local tapped = UnitIsTapDenied(unit)
+	if not IsSecret(tapped) and tapped then
+		text:SetTextColor(TAPPED_COLOR.r, TAPPED_COLOR.g, TAPPED_COLOR.b)
 	else
-		UnstyleName(unitFrame)
+		text:SetTextColor(UnitSelectionColor(unit))
+	end
+end
+
+local function HideOverlay(plate)
+	local overlay = plate and overlays[plate]
+	if overlay then
+		overlay:Hide()
 	end
 end
 
 local function RestorePlate(unit)
-	local unitFrame = fadedFrames[unit]
+	local unitFrame = hiddenFrames[unit]
 	if unitFrame then
-		fadedFrames[unit] = nil
-		fadedShowsName[unit] = nil
-		SetPartsAlpha(unitFrame, 1)
+		hiddenFrames[unit] = nil
 		unitFrame:SetAlpha(1)
-		UnstyleName(unitFrame)
 	end
-end
-
--- Blizzard resets the name font whenever it reapplies a plate's options; take
--- that as the new original and restyle on top of it.
-if CompactUnitFrame_SetUpFrame then
-	hooksecurefunc("CompactUnitFrame_SetUpFrame", function(frame)
-		local saved = styledNames[frame]
-		if saved then
-			-- Anchors and color were already captured by the UpdateAnchors/UpdateName hooks
-			-- during setup and now hold our values, so only re-capture the font.
-			local points, justifyH, color = saved.points, saved.justifyH, saved.color
-			SaveName(frame)
-			saved = styledNames[frame]
-			saved.points, saved.justifyH, saved.color = points, justifyH, color
-			StyleName(frame)
-		end
-	end)
-end
-
-if CompactUnitFrame_UpdateName then
-	hooksecurefunc("CompactUnitFrame_UpdateName", function(frame)
-		local saved = styledNames[frame]
-		if saved then
-			saved.color = { frame.name:GetVertexColor() }
-			ColorName(frame)
-		end
-	end)
+	HideOverlay(C_NamePlate.GetNamePlateForUnit(unit))
 end
 
 local function UpdatePlate(unit)
@@ -309,18 +192,26 @@ local function UpdatePlate(unit)
 		RestorePlate(unit)
 		return
 	end
-	local showName = ns:GetOption("engagedNameplatesShowIdleNames")
-	-- The plate may have been handed a different pooled UnitFrame, or the style changed.
-	if fadedFrames[unit] and (fadedFrames[unit] ~= unitFrame or fadedShowsName[unit] ~= showName) then
-		RestorePlate(unit)
+	-- The plate may have been handed a different pooled UnitFrame since we last saw it.
+	if hiddenFrames[unit] and hiddenFrames[unit] ~= unitFrame then
+		hiddenFrames[unit]:SetAlpha(1)
 	end
-	fadedFrames[unit] = unitFrame
-	fadedShowsName[unit] = showName
-	FadePlate(unitFrame, showName)
+	hiddenFrames[unit] = unitFrame
+	unitFrame:SetAlpha(0)
+
+	local showName = ns:GetOption("engagedNameplatesShowIdleNames")
+		and Check(UnitShouldDisplayName(unit))
+	if showName then
+		local overlay = GetOverlay(plate)
+		StyleOverlay(overlay, unit)
+		overlay:Show()
+	else
+		HideOverlay(plate)
+	end
 end
 
 local function UpdateAllPlates()
-	for unit in pairs(fadedFrames) do
+	for unit in pairs(hiddenFrames) do
 		UpdatePlate(unit)
 	end
 	for _, plate in pairs(C_NamePlate.GetNamePlates()) do
@@ -378,7 +269,7 @@ local function OnEvent(_, event, unit)
 		end)
 	elseif event == "NAME_PLATE_UNIT_REMOVED" then
 		RestorePlate(unit)
-	elseif event == "UNIT_THREAT_LIST_UPDATE" then
+	elseif event == "UNIT_THREAT_LIST_UPDATE" or event == "UNIT_NAME_UPDATE" or event == "UNIT_FACTION" then
 		if IsNamePlateUnit(unit) then
 			UpdatePlate(unit)
 		end
@@ -400,6 +291,8 @@ local EVENTS = {
 	"NAME_PLATE_UNIT_REMOVED",
 	"UNIT_THREAT_LIST_UPDATE",
 	"UNIT_THREAT_SITUATION_UPDATE",
+	"UNIT_NAME_UPDATE",
+	"UNIT_FACTION",
 	"PLAYER_TARGET_CHANGED",
 	"PLAYER_FOCUS_CHANGED",
 	"PLAYER_REGEN_ENABLED",
@@ -433,9 +326,6 @@ function module:OnEnabledChanged(enabled)
 end
 
 function module:OnOptionChanged()
-	for unitFrame in pairs(styledNames) do
-		StyleName(unitFrame)
-	end
 	UpdateAllPlates()
 end
 
