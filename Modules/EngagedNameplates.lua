@@ -79,6 +79,13 @@ local module = {
 			description = "Let idle enemy names fade out with distance and when hidden behind objects, like nameplates do. When off, they stay fully visible.",
 			default = false,
 		},
+		{
+			key = "engagedNameplatesFarScale",
+			type = "number",
+			name = "Far-away scale",
+			description = "How small nameplates get at a distance, as a percentage of their close-up size. Lower values shrink distant idle names more, like the game's own overhead names. Blizzard's default is 80%. Applies to all nameplates, including engaged ones.",
+			default = 80, min = 10, max = 100, step = 5, format = "%d%%",
+		},
 	},
 }
 
@@ -263,10 +270,16 @@ local function ApplyCVars()
 	end
 
 	local desired = {}
-	if ns:IsModuleEnabled(module.key) and ns:GetOption("engagedNameplatesCombatToggle") then
-		for name, values in pairs(COMBAT_TOGGLE_CVARS) do
-			desired[name] = values[inCombat and 2 or 1]
+	if ns:IsModuleEnabled(module.key) then
+		if ns:GetOption("engagedNameplatesCombatToggle") then
+			for name, values in pairs(COMBAT_TOGGLE_CVARS) do
+				desired[name] = values[inCombat and 2 or 1]
+			end
 		end
+		-- The engine scales plates linearly between these by distance; our idle names
+		-- are children of the plate, so they follow it.
+		desired.nameplateMinScale = tostring((ns:GetValue("engagedNameplatesFarScale") or 80) / 100)
+		desired.nameplateMaxScale = "1"
 	end
 
 	local saved = NraKitDB[SAVED_CVARS_KEY] or {}
@@ -360,7 +373,7 @@ function module:OnEnabledChanged(enabled)
 end
 
 function module:OnOptionChanged(key)
-	if key == "engagedNameplatesCombatToggle" then
+	if key == "engagedNameplatesCombatToggle" or key == "engagedNameplatesFarScale" then
 		ApplyCVars()
 	end
 	UpdateAllPlates()

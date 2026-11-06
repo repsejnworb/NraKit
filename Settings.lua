@@ -11,15 +11,15 @@ local function RegisterSetting(category, key, name, varType, default, onChanged)
 	return setting
 end
 
-local function FormatNumber(value)
-	return string.format("%d", value)
-end
 
 local function CreateControl(category, entry, onChanged)
 	if entry.type == "number" then
 		local setting = RegisterSetting(category, entry.key, entry.name, Settings.VarType.Number, entry.default, onChanged)
 		local options = Settings.CreateSliderOptions(entry.min, entry.max, entry.step)
-		options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, FormatNumber)
+		local format = entry.format or "%d"
+		options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, function(value)
+			return string.format(format, value)
+		end)
 		return setting, Settings.CreateSlider(category, setting, options, entry.description)
 	end
 

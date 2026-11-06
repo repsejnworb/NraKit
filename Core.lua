@@ -13,7 +13,7 @@ ns.moduleOrder = {}
 --   options     optional list of sub-options, shown indented under the module's checkbox:
 --               { key, name, description, default }                 checkbox
 --               { key, name, description, default, type = "number",
---                 min, max, step }                                  slider
+--                 min, max, step, format? }                         slider
 --               An option with `parent = <option key>` is nested under that checkbox,
 --               and `header = "..."` starts a new sub-section before the option.
 --   OnInitialize(self)                   called once on PLAYER_LOGIN
