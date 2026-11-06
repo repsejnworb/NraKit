@@ -18,25 +18,27 @@ local _, ns = ...
 
 local module = {
 	key = "engagedNameplates",
-	name = "Nameplates only for engaged enemies",
+	section = "Nameplates",
+	name = "Engaged-only nameplates",
 	description = "Shows full nameplates only for enemies that are fighting you. Other enemy NPCs are hidden during combat. Your target, focus and enemy players always get full nameplates.",
 	default = false,
 	options = {
 		{
 			key = "engagedNameplatesCombatToggle",
-			name = "Turn enemy nameplates on only during combat",
+			name = "Only during combat",
 			description = "Turns enemy nameplates on when you enter combat and off when you leave it, so you see normal overhead names outside of combat. While this is on, it manages \"Enemy Units\" and \"Always Show Nameplates\" for you; your previous settings come back when it is turned off.",
 			default = true,
 		},
 		{
 			key = "engagedNameplatesIncludeGroup",
-			name = "Include enemies fighting my group",
+			name = "Include group's enemies",
 			description = "Also show full nameplates for enemies that are fighting your party or raid members.",
 			default = true,
 		},
 		{
 			key = "engagedNameplatesShowIdleNames",
-			name = "Show names of idle enemies in combat",
+			header = "Idle enemies in combat",
+			name = "Show names",
 			description = "Instead of hiding idle enemies completely during combat, show just their name, styled to resemble overhead names. Real overhead names can't be shown for units that have a nameplate.",
 			default = false,
 		},
@@ -44,7 +46,7 @@ local module = {
 			key = "engagedNameplatesNameSize",
 			parent = "engagedNameplatesShowIdleNames",
 			type = "number",
-			name = "Idle name size",
+			name = "Name size",
 			description = "Font size of idle enemy names.",
 			default = 11, min = 6, max = 24, step = 1,
 		},
@@ -52,23 +54,37 @@ local module = {
 			key = "engagedNameplatesNameOffset",
 			parent = "engagedNameplatesShowIdleNames",
 			type = "number",
-			name = "Idle name height",
+			name = "Name height",
 			description = "Moves idle enemy names up or down relative to the unit's head.",
 			default = 0, min = -40, max = 40, step = 1,
 		},
 		{
 			key = "engagedNameplatesNameOutline",
 			parent = "engagedNameplatesShowIdleNames",
-			name = "Outline idle names",
+			name = "Outline",
 			description = "Draw a thin outline around idle enemy names.",
+			default = false,
+		},
+		{
+			key = "engagedNameplatesNameShadow",
+			parent = "engagedNameplatesShowIdleNames",
+			name = "Shadow",
+			description = "Draw a drop shadow behind idle enemy names. Real overhead names have no visible shadow.",
+			default = false,
+		},
+		{
+			key = "engagedNameplatesNameFade",
+			parent = "engagedNameplatesShowIdleNames",
+			name = "Fade with distance",
+			description = "Let idle enemy names fade out with distance and when hidden behind objects, like nameplates do. When off, they stay fully visible.",
 			default = false,
 		},
 	},
 }
 
 -- Style for idle names, approximating the engine's overhead names.
--- UNIT_NAME_FONT is the font Blizzard hands the engine for those names. Size,
--- height and outline come from the settings.
+-- UNIT_NAME_FONT is the font Blizzard hands the engine for those names, and
+-- UnitSelectionColor matches their reaction color. The rest comes from settings.
 local NAME_SHADOW_OFFSET_X, NAME_SHADOW_OFFSET_Y = 1, -1
 local TAPPED_COLOR = { r = 0.5, g = 0.5, b = 0.5 }
 
@@ -152,7 +168,6 @@ local function GetOverlay(plate)
 		overlay = CreateFrame("Frame", nil, plate)
 		overlay:SetAllPoints(plate)
 		overlay.text = overlay:CreateFontString(nil, "OVERLAY")
-		overlay.text:SetShadowColor(0, 0, 0, 1)
 		overlays[plate] = overlay
 	end
 	return overlay
@@ -162,7 +177,14 @@ local function StyleOverlay(overlay, unit)
 	local text = overlay.text
 	local flags = ns:GetOption("engagedNameplatesNameOutline") and "OUTLINE" or ""
 	text:SetFont(UNIT_NAME_FONT, ns:GetValue("engagedNameplatesNameSize") or 11, flags)
-	text:SetShadowOffset(NAME_SHADOW_OFFSET_X, NAME_SHADOW_OFFSET_Y)
+	if ns:GetOption("engagedNameplatesNameShadow") then
+		text:SetShadowColor(0, 0, 0, 1)
+		text:SetShadowOffset(NAME_SHADOW_OFFSET_X, NAME_SHADOW_OFFSET_Y)
+	else
+		text:SetShadowOffset(0, 0)
+	end
+	-- The engine fades whole plates with distance and occlusion; opt out of that.
+	overlay:SetIgnoreParentAlpha(not ns:GetOption("engagedNameplatesNameFade"))
 	text:ClearAllPoints()
 	-- The bottom of the plate sits just above the unit's head.
 	text:SetPoint("BOTTOM", overlay, "BOTTOM", 0, ns:GetValue("engagedNameplatesNameOffset") or 0)
