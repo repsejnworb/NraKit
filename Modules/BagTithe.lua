@@ -31,6 +31,14 @@ local module = {
 			default = true,
 		},
 		{
+			key = "bagTitheRankSize",
+			parent = "bagTitheShowRank",
+			type = "number",
+			name = "Rank number size",
+			description = "Font size of the rank number.",
+			default = 18, min = 10, max = 28, step = 1,
+		},
+		{
 			key = "bagTitheShowTint",
 			name = "Show red-to-yellow tint",
 			description = "Color the border of each highlighted slot from red (least valuable) to yellow.",
@@ -57,6 +65,9 @@ local SEARCH_BOX_SHRINK = 32
 local DIM_ALPHA = 0.7
 local BUTTON_ICON = "Interface\\Icons\\INV_Misc_Coin_01"
 local IGNORED_ICON = "Interface\\Buttons\\UI-GroupLoot-Pass-Up"
+-- Rank numbers use the standard game font with a thick outline so they stay
+-- readable on top of any item icon.
+local RANK_FONT = STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
 
 local active = false
 local refreshQueued = false
@@ -200,8 +211,11 @@ local function GetOverlay(itemButton)
 	overlay.ignored:SetSize(14, 14)
 	overlay.ignored:SetPoint("TOPRIGHT", -1, -1)
 
-	overlay.rank = overlay:CreateFontString(nil, "OVERLAY", "NumberFontNormalLarge")
-	overlay.rank:SetPoint("BOTTOMLEFT", 2, 2)
+	overlay.rank = overlay:CreateFontString(nil, "OVERLAY")
+	overlay.rank:SetFont(RANK_FONT, 18, "THICKOUTLINE")
+	overlay.rank:SetShadowColor(0, 0, 0, 1)
+	overlay.rank:SetShadowOffset(1, -1)
+	overlay.rank:SetPoint("BOTTOMLEFT", 1, 1)
 
 	overlay.value = overlay:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
 	overlay.value:SetPoint("TOP", 0, -2)
@@ -241,6 +255,7 @@ local function ApplyOverlay(itemButton, ranked)
 		overlay.dim:Hide()
 		overlay.border:SetVertexColor(r, g, b)
 		overlay.border:SetShown(ns:GetOption("bagTitheShowTint"))
+		overlay.rank:SetFont(RANK_FONT, ns:GetValue("bagTitheRankSize") or 18, "THICKOUTLINE")
 		overlay.rank:SetText(entry.rank)
 		overlay.rank:SetTextColor(r, g, b)
 		overlay.rank:SetShown(ns:GetOption("bagTitheShowRank"))
