@@ -31,6 +31,10 @@ page under NraKit.
   your least valuable bag slots (vendor price × stack size), ranked from red to yellow, with
   rank numbers and sell values. Everything else is dimmed; the bags work as normal underneath.
   Alt+click an item to leave it out of the ranking; the ignore list is editable in the options.
+- **Potential Upgrades**: arrows on bag items and quest rewards, plus a tooltip line, for items
+  that beat what you have equipped. Green = clear upgrade (usable now and at least as good on every
+  stat that matters for your class, plus armor or weapon DPS). Yellow = likely upgrade (better by a
+  simple per-class stat priority). Grey = upgrade once you reach the required level.
 
 ## Development
 Requires [just](https://github.com/casey/just), [cocogitto](https://github.com/cocogitto/cocogitto) and `luac`.
