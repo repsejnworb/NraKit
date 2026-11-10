@@ -248,8 +248,10 @@ local function ShowTooltip(self)
 	else
 		GameTooltip_AddDisabledLine(GameTooltip, "Nothing to open.")
 	end
-	if InCombatLockdown() then
-		GameTooltip_AddErrorLine(GameTooltip, "Moves on to the next item after combat.")
+	-- In combat the button keeps opening the kind of item it had (which works fine for a
+	-- stack of clams); it can only switch to a different kind once combat ends.
+	if InCombatLockdown() and nextItem and openButton:GetAttribute("item") ~= "item:" .. nextItem.itemID then
+		GameTooltip_AddErrorLine(GameTooltip, "Switches to this item after combat.")
 	end
 	local key = GetBindingKey(BINDING)
 	if key then
