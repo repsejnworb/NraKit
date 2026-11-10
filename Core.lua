@@ -40,6 +40,30 @@ function ns:GetValue(key)
 	return NraKitDB and NraKitDB[key]
 end
 
+-- Calls fn(itemButton) for every item button in the open bags (separate or combined).
+-- Reads Blizzard's frames directly instead of using ContainerFrameUtil_EnumerateContainerFrames
+-- or frame:EnumerateValidItems(): both fill lazy caches (the frame list, frame.size) when
+-- first called, and if our code is the one filling them they're tainted. Blizzard's own
+-- bag code then reads them, and using an item from the bags gets blocked as "NraKit".
+function ns:ForEachBagItemButton(fn)
+	local seen = {}
+	local function visit(frame)
+		if not frame or not frame:IsShown() or not frame.Items then
+			return
+		end
+		for _, itemButton in ipairs(frame.Items) do
+			if not seen[itemButton] and itemButton:IsShown() and itemButton:GetBagID() then
+				seen[itemButton] = true
+				fn(itemButton)
+			end
+		end
+	end
+	visit(ContainerFrameCombinedBags)
+	for _, frame in ipairs(ContainerFrameContainer.ContainerFrames) do
+		visit(frame)
+	end
+end
+
 local function SetDefault(key, default, isNumber)
 	if isNumber then
 		if type(NraKitDB[key]) ~= "number" then

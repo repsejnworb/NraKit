@@ -46,8 +46,12 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   `QUEST_TEMPLATE_*.elements`), so hook the caller instead (`QuestInfo_Display`).
 - Bag item buttons are protected (they use and equip items). Only add non-mouse overlay frames on top, and use
   `HookScript` to observe clicks. Alt+left-click has no default action on bag items. Separate and combined
-  ("compact") bags share `BagItemSearchBox`/`BagItemAutoSortButton`, which Blizzard moves between frames;
-  `ContainerFrameUtil_EnumerateContainerFrames()` covers both modes.
+  ("compact") bags share `BagItemSearchBox`/`BagItemAutoSortButton`, which Blizzard moves between frames.
+- **Taint:** never call Blizzard code that lazily caches Lua state from our code. Calling
+  `ContainerFrameUtil_EnumerateContainerFrames()`, `frame:EnumerateValidItems()` (via `GetBagSize`) or
+  `UpdateSearchBox()` let our code fill Blizzard's caches, and using bag items (e.g. learning a recipe) then
+  got blocked as "NraKit". Use `ns:ForEachBagItemButton(fn)` (reads `frame.Items` directly). Reading
+  Blizzard state is safe; writing it (or making Blizzard write it on our call stack) is not.
 - Using items is protected: it needs a `SecureActionButtonTemplate` button (`type = "item"`), one hardware click
   or key press per use, and its attributes/position/Show/Hide can only change out of combat (defer to
   `PLAYER_REGEN_ENABLED`). Use items by `"item:<id>"`, not bag slot, so a stale button can't use whatever moved in.

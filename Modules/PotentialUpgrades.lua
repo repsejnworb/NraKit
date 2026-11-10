@@ -389,21 +389,17 @@ end
 ---------------------------------------------------------------------------
 
 local function UpdateBags()
-	for _, frame in ContainerFrameUtil_EnumerateContainerFrames() do
-		if frame:IsShown() then
-			for _, itemButton in frame:EnumerateValidItems() do
-				local result
-				if ns:IsModuleEnabled(module.key) and ns:GetOption("potentialUpgradesBags") then
-					local bag, slot = itemButton:GetBagID(), itemButton:GetID()
-					local link = bag and slot and C_Container.GetContainerItemLink(bag, slot)
-					if link then
-						result = Evaluate(link, C_TooltipInfo.GetBagItem(bag, slot))
-					end
-				end
-				SetArrow(itemButton, result, itemButton.icon or itemButton.Icon)
+	ns:ForEachBagItemButton(function(itemButton)
+		local result
+		if ns:IsModuleEnabled(module.key) and ns:GetOption("potentialUpgradesBags") then
+			local bag, slot = itemButton:GetBagID(), itemButton:GetID()
+			local link = C_Container.GetContainerItemLink(bag, slot)
+			if link then
+				result = Evaluate(link, C_TooltipInfo.GetBagItem(bag, slot))
 			end
 		end
-	end
+		SetArrow(itemButton, result, itemButton.icon or itemButton.Icon)
+	end)
 end
 
 ---------------------------------------------------------------------------

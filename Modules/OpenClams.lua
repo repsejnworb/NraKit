@@ -114,16 +114,11 @@ local function UpdateGlows(slots)
 	if not ns:IsModuleEnabled(module.key) or not ns:GetOption("openClamsGlow") then
 		return
 	end
-	for _, frame in ContainerFrameUtil_EnumerateContainerFrames() do
-		if frame:IsShown() then
-			for _, itemButton in frame:EnumerateValidItems() do
-				local bag, slot = itemButton:GetBagID(), itemButton:GetID()
-				if bag and slot and slots[bag * 1000 + slot] then
-					GetGlow(itemButton):Show()
-				end
-			end
+	ns:ForEachBagItemButton(function(itemButton)
+		if slots[itemButton:GetBagID() * 1000 + itemButton:GetID()] then
+			GetGlow(itemButton):Show()
 		end
-	end
+	end)
 end
 
 ---------------------------------------------------------------------------

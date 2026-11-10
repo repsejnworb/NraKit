@@ -316,13 +316,9 @@ local function Refresh()
 		return
 	end
 	HideAllOverlays()
-	for _, frame in ContainerFrameUtil_EnumerateContainerFrames() do
-		if frame:IsShown() then
-			for _, itemButton in frame:EnumerateValidItems() do
-				ApplyOverlay(itemButton, ranked)
-			end
-		end
-	end
+	ns:ForEachBagItemButton(function(itemButton)
+		ApplyOverlay(itemButton, ranked)
+	end)
 end
 
 function module:QueueRefresh()
@@ -428,10 +424,12 @@ local function HookContainerFrame(frame)
 	end
 end
 
+-- Re-applies the search box size (our hook runs after Blizzard's SetSearchBoxPoint).
+-- Not UpdateSearchBox: that writes Lua state (anchorBag), which would be tainted by us.
 local function UpdateSearchBoxLayout()
 	local anchorBag = BagItemSearchBox and BagItemSearchBox.anchorBag
-	if anchorBag and anchorBag.UpdateSearchBox then
-		anchorBag:UpdateSearchBox()
+	if anchorBag and anchorBag.SetSearchBoxPoint then
+		anchorBag:SetSearchBoxPoint(BagItemSearchBox)
 	end
 end
 
