@@ -135,6 +135,65 @@ local function UpdateLook()
 	openButton.count:SetText(totalCount > 0 and totalCount or "")
 end
 
+-- The bag that holds the sort button (backpack or combined bags) has the money row we sit in.
+local function GetMoneyFrame()
+	local bag = BagItemSearchBox and BagItemSearchBox.anchorBag
+	return bag and bag:IsVisible() and bag.MoneyFrame
+end
+
+-- The secure button is never parented or anchored to Blizzard's bag frames: a protected
+-- frame inside them makes them protected too, which can stop Blizzard from closing the
+-- bags. It lives on UIParent and is moved over the left of the money row (where there's
+-- free space; the money is drawn on the right) by absolute position. Out of combat only;
+-- in combat we can only fade it out when the bags close, and fix it up afterwards.
+local lastLeft, lastBottom
+local function PlaceButton()
+	local moneyFrame = GetMoneyFrame()
+	local wanted = ns:IsModuleEnabled(module.key) and moneyFrame
+		and (nextItem ~= nil or not ns:GetOption("openClamsHideEmpty"))
+	if InCombatLockdown() then
+		pendingSecureUpdate = true
+		openButton:SetAlpha(wanted and 1 or 0)
+		return
+	end
+	local left, bottom = moneyFrame and moneyFrame:GetLeft(), moneyFrame and moneyFrame:GetBottom()
+	if not wanted or not left then
+		lastLeft, lastBottom = nil, nil
+		openButton:Hide()
+		return
+	end
+	lastLeft, lastBottom = left, bottom
+
+	local moneyScale = moneyFrame:GetEffectiveScale()
+	openButton:SetScale(moneyScale / UIParent:GetEffectiveScale())
+	local toButton = moneyScale / openButton:GetEffectiveScale()
+	openButton:ClearAllPoints()
+	openButton:SetPoint("LEFT", UIParent, "BOTTOMLEFT",
+		left * toButton, (bottom + moneyFrame:GetHeight() / 2) * toButton)
+	openButton:SetFrameStrata(moneyFrame:GetFrameStrata())
+	openButton:SetFrameLevel(moneyFrame:GetFrameLevel() + 5)
+	openButton:SetAlpha(1)
+	openButton:Show()
+end
+
+-- Follows the bags: an ordinary (not protected) frame on the sort button, so it's shown
+-- exactly while the bag with the sort button is, and notices when that bag moves.
+local function CreateWatcher()
+	local watcher = CreateFrame("Frame", nil, BagItemAutoSortButton)
+	watcher:SetScript("OnShow", PlaceButton)
+	watcher:SetScript("OnHide", PlaceButton)
+	watcher:SetScript("OnUpdate", function()
+		if InCombatLockdown() then
+			return
+		end
+		local moneyFrame = GetMoneyFrame()
+		local left, bottom = moneyFrame and moneyFrame:GetLeft(), moneyFrame and moneyFrame:GetBottom()
+		if left ~= lastLeft or bottom ~= lastBottom then
+			PlaceButton()
+		end
+	end)
+end
+
 -- Attributes, position and visibility: protected, so out of combat only.
 local function UpdateSecure()
 	if InCombatLockdown() then
@@ -152,16 +211,7 @@ local function UpdateSecure()
 		openButton:SetAttribute("item", nil)
 	end
 
-	-- Bottom left of the bag that holds the sort button (backpack or combined bags),
-	-- where the money row has free space; the money is drawn on the right.
-	local bag = BagItemSearchBox and BagItemSearchBox.anchorBag
-	local moneyFrame = bag and bag.MoneyFrame
-	openButton:ClearAllPoints()
-	if moneyFrame then
-		openButton:SetPoint("LEFT", moneyFrame, "LEFT", 0, 0)
-	end
-	openButton:SetShown(enabled and moneyFrame ~= nil
-		and (nextItem ~= nil or not ns:GetOption("openClamsHideEmpty")))
+	PlaceButton()
 end
 
 local function Refresh()
@@ -209,9 +259,8 @@ local function ShowTooltip(self)
 end
 
 local function CreateOpenButton()
-	-- Parented to the sort button so it shows and hides with the bag that has it, in both bag modes.
-	-- The keybind clicks it even while the bags are closed.
-	local button = CreateFrame("Button", BUTTON_NAME, BagItemAutoSortButton, "SecureActionButtonTemplate")
+	-- See PlaceButton for why this is on UIParent. The keybind clicks it even while hidden.
+	local button = CreateFrame("Button", BUTTON_NAME, UIParent, "SecureActionButtonTemplate")
 	button:SetSize(BUTTON_SIZE, BUTTON_SIZE)
 	-- Mouse clicks act on release; key presses follow the "cast on key down" setting.
 	button:RegisterForClicks("AnyUp", "AnyDown")
@@ -278,10 +327,7 @@ function module:OnInitialize()
 	for _, frame in ipairs(ContainerFrameContainer.ContainerFrames) do
 		HookContainerFrame(frame)
 	end
-	-- Re-place the button when the bags open, e.g. after switching to combined bags.
-	BagItemAutoSortButton:HookScript("OnShow", function()
-		module:QueueRefresh()
-	end)
+	CreateWatcher()
 	self:OnEnabledChanged(ns:IsModuleEnabled(self.key))
 end
 

@@ -52,6 +52,8 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   or key press per use, and its attributes/position/Show/Hide can only change out of combat (defer to
   `PLAYER_REGEN_ENABLED`). Use items by `"item:<id>"`, not bag slot, so a stale button can't use whatever moved in.
   `ContainerItemInfo.hasLoot` marks openable items (lockboxes too; their tooltip shows `LOCKED` until picked).
+  Never parent or anchor a secure button to Blizzard's bag frames: it made `ToggleAllBags` fail its
+  `assert(IsAnyBagOpen() == false)`. Put it on UIParent and position it absolutely (see OpenClams.lua).
 - Overhead names (with nameplates off) are drawn by the engine, not Lua. A unit with a nameplate never gets its engine name back.
 
 ## Forever quirks
