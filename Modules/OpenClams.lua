@@ -42,6 +42,7 @@ local DEFAULT_ICON = "Interface\\Icons\\INV_Misc_Shell_03"
 -- Fits the money row, which is only about 16px tall.
 local BUTTON_SIZE = 18
 local BUTTON_ICON_SIZE = 16
+local BUTTON_STRATA = "HIGH" -- the bags are MEDIUM
 local LOCKED_TEXT = LOCKED or "Locked"
 
 local openButton
@@ -146,7 +147,7 @@ end
 -- bags. It lives on UIParent and is moved over the left of the money row (where there's
 -- free space; the money is drawn on the right) by absolute position. Out of combat only;
 -- in combat we can only fade it out when the bags close, and fix it up afterwards.
-local lastLeft, lastBottom
+local lastLeft, lastBottom, lastShown
 local function PlaceButton()
 	local moneyFrame = GetMoneyFrame()
 	local wanted = ns:IsModuleEnabled(module.key) and moneyFrame
@@ -157,12 +158,11 @@ local function PlaceButton()
 		return
 	end
 	local left, bottom = moneyFrame and moneyFrame:GetLeft(), moneyFrame and moneyFrame:GetBottom()
-	if not wanted or not left then
-		lastLeft, lastBottom = nil, nil
+	lastLeft, lastBottom, lastShown = left, bottom, (wanted and left) and true or false
+	if not lastShown then
 		openButton:Hide()
 		return
 	end
-	lastLeft, lastBottom = left, bottom
 
 	local moneyScale = moneyFrame:GetEffectiveScale()
 	openButton:SetScale(moneyScale / UIParent:GetEffectiveScale())
@@ -170,8 +170,9 @@ local function PlaceButton()
 	openButton:ClearAllPoints()
 	openButton:SetPoint("LEFT", UIParent, "BOTTOMLEFT",
 		left * toButton, (bottom + moneyFrame:GetHeight() / 2) * toButton)
-	openButton:SetFrameStrata(moneyFrame:GetFrameStrata())
-	openButton:SetFrameLevel(moneyFrame:GetFrameLevel() + 5)
+	-- The bags are "toplevel" (raised above their whole strata when shown or clicked),
+	-- so we draw one strata above them to stay on top.
+	openButton:SetFrameStrata(BUTTON_STRATA)
 	openButton:SetAlpha(1)
 	openButton:Show()
 end
@@ -182,13 +183,14 @@ local function CreateWatcher()
 	local watcher = CreateFrame("Frame", nil, BagItemAutoSortButton)
 	watcher:SetScript("OnShow", PlaceButton)
 	watcher:SetScript("OnHide", PlaceButton)
+	-- Also catches the bag finishing its layout after it was shown, and bags moving.
 	watcher:SetScript("OnUpdate", function()
 		if InCombatLockdown() then
 			return
 		end
 		local moneyFrame = GetMoneyFrame()
 		local left, bottom = moneyFrame and moneyFrame:GetLeft(), moneyFrame and moneyFrame:GetBottom()
-		if left ~= lastLeft or bottom ~= lastBottom then
+		if left ~= lastLeft or bottom ~= lastBottom or openButton:IsShown() ~= lastShown then
 			PlaceButton()
 		end
 	end)
