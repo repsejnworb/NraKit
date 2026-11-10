@@ -28,6 +28,7 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
 - `Settings.lua` – Blizzard Settings API. Main page = one header plus an on/off switch per module (`module.section`).
   Modules with `options` get a subpage; options support `type = "number"` sliders (`min/max/step/format`),
   `header = "..."` subsections, and `parent = <option key>` nesting (greyed out unless the parent is on).
+- `Bindings.xml` – keybindings (auto-loaded by the game, not listed in the TOC); binding names are set in Lua.
 - `Modules/*.lua` – one feature per file, registered with `ns:RegisterModule(module)`.
   `module:OnSettingsRegistered(root, subcategory, sublayout)` can add custom controls (e.g. buttons) or extra
   pages (canvas subcategories, like the Bag Tithe ignore list).
@@ -47,6 +48,10 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   `HookScript` to observe clicks. Alt+left-click has no default action on bag items. Separate and combined
   ("compact") bags share `BagItemSearchBox`/`BagItemAutoSortButton`, which Blizzard moves between frames;
   `ContainerFrameUtil_EnumerateContainerFrames()` covers both modes.
+- Using items is protected: it needs a `SecureActionButtonTemplate` button (`type = "item"`), one hardware click
+  or key press per use, and its attributes/position/Show/Hide can only change out of combat (defer to
+  `PLAYER_REGEN_ENABLED`). Use items by `"item:<id>"`, not bag slot, so a stale button can't use whatever moved in.
+  `ContainerItemInfo.hasLoot` marks openable items (lockboxes too; their tooltip shows `LOCKED` until picked).
 - Overhead names (with nameplates off) are drawn by the engine, not Lua. A unit with a nameplate never gets its engine name back.
 
 ## Forever quirks

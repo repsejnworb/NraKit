@@ -17,3 +17,4 @@ Modules\QuestRewardValue.lua
 Modules\BagTithe.lua
 Modules\BagTitheIgnoreList.lua
 Modules\PotentialUpgrades.lua
+Modules\OpenClams.lua

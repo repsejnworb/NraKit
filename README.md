@@ -35,6 +35,9 @@ page under NraKit.
   that beat what you have equipped. Green = clear upgrade (usable now and at least as good on every
   stat that matters for your class, plus armor or weapon DPS). Yellow = likely upgrade (better by a
   simple per-class stat priority). Grey = upgrade once you reach the required level.
+- **Open Clams**: a button next to the bag sort button opens the next clam (or any other
+  "Right Click to Open" container, except locked boxes) one per click, showing its icon and how
+  many are left. Bindable under Keybindings → AddOns → NraKit. Openable items get a green border.
 
 ## Development
 Requires [just](https://github.com/casey/just), [cocogitto](https://github.com/cocogitto/cocogitto) and `luac`.
