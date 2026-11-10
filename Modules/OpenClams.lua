@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Open Clams: a button next to the bag sort button that opens the next clam (or any
+-- Open Clams: a button in the bag's money row (bottom left) that opens the next clam (or any
 -- other "Right Click to Open" item) in your bags, one per click. It shows the next
 -- item's icon and how many are left. Also bindable to a key.
 --
@@ -14,7 +14,7 @@ local module = {
 	key = "openClams",
 	section = "Bags",
 	name = "Open Clams",
-	description = "Adds a button next to the bag sort button that opens the next clam or other openable container in your bags, one per click. You can also bind it to a key under Keybindings > AddOns > NraKit.",
+	description = "Adds a button at the bottom left of your bags, next to your money, that opens the next clam or other openable container in your bags, one per click. You can also bind it to a key under Keybindings > AddOns > NraKit.",
 	default = false,
 	options = {
 		{
@@ -38,12 +38,10 @@ local BINDING = "CLICK " .. BUTTON_NAME .. ":LeftButton"
 BINDING_HEADER_NRAKIT = "NraKit"
 _G["BINDING_NAME_" .. BINDING] = "Open next clam or container"
 
-local SEARCH_BOX_SHRINK = 32
 local DEFAULT_ICON = "Interface\\Icons\\INV_Misc_Shell_03"
--- Same footprint as the sort button (and the Bag Tithe button).
-local BUTTON_WIDTH, BUTTON_HEIGHT = 28, 26
-local BUTTON_ICON_SIZE = 20
-local BUTTON_GAP = 2
+-- Fits the money row, which is only about 16px tall.
+local BUTTON_SIZE = 18
+local BUTTON_ICON_SIZE = 16
 local LOCKED_TEXT = LOCKED or "Locked"
 
 local openButton
@@ -134,7 +132,7 @@ end
 local function UpdateLook()
 	openButton.icon:SetTexture(nextItem and nextItem.icon or DEFAULT_ICON)
 	openButton.icon:SetDesaturated(not nextItem)
-	openButton.count:SetText(totalCount > 1 and totalCount or "")
+	openButton.count:SetText(totalCount > 0 and totalCount or "")
 end
 
 -- Attributes, position and visibility: protected, so out of combat only.
@@ -154,14 +152,16 @@ local function UpdateSecure()
 		openButton:SetAttribute("item", nil)
 	end
 
-	-- Left of the sort button, or left of the Bag Tithe button when that's on.
-	local offset = -BUTTON_GAP
-	if ns:IsModuleEnabled("bagTithe") then
-		offset = offset - BUTTON_WIDTH - BUTTON_GAP
-	end
+	-- Bottom left of the bag that holds the sort button (backpack or combined bags),
+	-- where the money row has free space; the money is drawn on the right.
+	local bag = BagItemSearchBox and BagItemSearchBox.anchorBag
+	local moneyFrame = bag and bag.MoneyFrame
 	openButton:ClearAllPoints()
-	openButton:SetPoint("RIGHT", BagItemAutoSortButton, "LEFT", offset, 0)
-	openButton:SetShown(enabled and (nextItem ~= nil or not ns:GetOption("openClamsHideEmpty")))
+	if moneyFrame then
+		openButton:SetPoint("LEFT", moneyFrame, "LEFT", 0, 0)
+	end
+	openButton:SetShown(enabled and moneyFrame ~= nil
+		and (nextItem ~= nil or not ns:GetOption("openClamsHideEmpty")))
 end
 
 local function Refresh()
@@ -209,10 +209,10 @@ local function ShowTooltip(self)
 end
 
 local function CreateOpenButton()
-	-- Parented to the sort button so it shows and moves with it in both bag modes.
+	-- Parented to the sort button so it shows and hides with the bag that has it, in both bag modes.
 	-- The keybind clicks it even while the bags are closed.
 	local button = CreateFrame("Button", BUTTON_NAME, BagItemAutoSortButton, "SecureActionButtonTemplate")
-	button:SetSize(BUTTON_WIDTH, BUTTON_HEIGHT)
+	button:SetSize(BUTTON_SIZE, BUTTON_SIZE)
 	-- Mouse clicks act on release; key presses follow the "cast on key down" setting.
 	button:RegisterForClicks("AnyUp", "AnyDown")
 	button:Hide()
@@ -224,7 +224,7 @@ local function CreateOpenButton()
 	button.icon = icon
 
 	button.count = button:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
-	button.count:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", 2, -1)
+	button.count:SetPoint("LEFT", button, "RIGHT", 2, 0)
 
 	-- Nudge the icon on press, like Blizzard's buttons.
 	button:SetScript("OnMouseDown", function()
@@ -245,32 +245,15 @@ local function CreateOpenButton()
 	return button
 end
 
--- Make room for our button by narrowing the search box.
-local function OnSetSearchBoxPoint(_, searchBox)
-	if ns:IsModuleEnabled(module.key) then
-		searchBox:SetWidth(searchBox:GetWidth() - SEARCH_BOX_SHRINK)
-	end
-end
-
 local function HookContainerFrame(frame)
 	if not frame or hookedFrames[frame] then
 		return
 	end
 	hookedFrames[frame] = true
-	if frame.SetSearchBoxPoint then
-		hooksecurefunc(frame, "SetSearchBoxPoint", OnSetSearchBoxPoint)
-	end
 	if frame.UpdateItems then
 		hooksecurefunc(frame, "UpdateItems", function()
 			module:QueueRefresh()
 		end)
-	end
-end
-
-local function UpdateSearchBoxLayout()
-	local anchorBag = BagItemSearchBox and BagItemSearchBox.anchorBag
-	if anchorBag and anchorBag.UpdateSearchBox then
-		anchorBag:UpdateSearchBox()
 	end
 end
 
@@ -295,7 +278,7 @@ function module:OnInitialize()
 	for _, frame in ipairs(ContainerFrameContainer.ContainerFrames) do
 		HookContainerFrame(frame)
 	end
-	-- Re-place the button when the bags open, e.g. after Bag Tithe was turned on or off.
+	-- Re-place the button when the bags open, e.g. after switching to combined bags.
 	BagItemAutoSortButton:HookScript("OnShow", function()
 		module:QueueRefresh()
 	end)
@@ -313,9 +296,6 @@ function module:OnEnabledChanged(enabled)
 	end
 	if openButton then
 		Refresh()
-	end
-	if not InCombatLockdown() then
-		UpdateSearchBoxLayout()
 	end
 end
 
