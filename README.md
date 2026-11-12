@@ -27,6 +27,8 @@ page under NraKit.
   because addons can't change a plate's click area during combat.
 - **Mark most valuable quest reward**: when a quest offers a choice of rewards, a gold coin
   marks the one that sells to a vendor for the most gold (vendor price × stack size).
+- **Show quest level**: the quest's level in front of its title in the quest dialog and quest
+  details, e.g. "[24] The Defias Brotherhood", colored by difficulty like the quest log.
 - **Bag Tithe**: a button next to the bag sort button (separate or combined bags) highlights
   your least valuable bag slots (vendor price × stack size), ranked from red to yellow, with
   rank numbers and sell values. Everything else is dimmed; the bags work as normal underneath.
