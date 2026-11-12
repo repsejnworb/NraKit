@@ -58,6 +58,10 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   `ContainerItemInfo.hasLoot` marks openable items (lockboxes too; their tooltip shows `LOCKED` until picked).
   Never parent or anchor a secure button to Blizzard's bag frames: doing so (likely) made `ToggleAllBags` fail its
   `assert(IsAnyBagOpen() == false)`. Put it on UIParent and position it absolutely (see OpenClams.lua).
+- Profession recipe rows (`ProfessionsRecipeListRecipeMixin`, in the load-on-demand Blizzard_ProfessionsTemplates)
+  copy the mixin's `Init` when created: hook the mixin on `ADDON_LOADED`, and hook rows created earlier one by one.
+  Blizzard re-runs `SetScript("OnEnter")` on every init, so use the `Professions.RecipeListOnEnter` EventRegistry
+  event for row tooltips. Recipe data (`C_TradeSkillUI.*`) is only readable while the profession window is open.
 - Overhead names (with nameplates off) are drawn by the engine, not Lua. A unit with a nameplate never gets its engine name back.
 
 ## Forever quirks

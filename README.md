@@ -38,6 +38,11 @@ page under NraKit.
 - **Open Clams**: a button at the bottom left of your bags (next to your money) opens the next clam (or any other
   "Right Click to Open" container, except locked boxes) one per click, showing its icon and how
   many are left. Bindable under Keybindings → AddOns → NraKit. Openable items get a green border.
+- **Sous Chef**: in the cooking window, recipes where you have the main ingredient (the meat,
+  fish...) but are missing vendor-bought secondaries (spices, water, flour...) get an icon of what
+  to buy, and the row tooltip says how much. Item tooltips on a main ingredient list what it cooks
+  into and what's missing. Vendor items are recognised from a built-in list plus what you see at
+  merchants. Open cooking once per character so it knows your recipes. Optionally all professions.
 
 ## Development
 Requires [just](https://github.com/casey/just), [cocogitto](https://github.com/cocogitto/cocogitto) and `luac`.
