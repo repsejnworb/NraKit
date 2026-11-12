@@ -286,7 +286,10 @@ local function ApplyMark(row)
 		return
 	end
 	local reagents = ReadReagents(recipeInfo.recipeID)
-	local crafts, missing = reagents and Evaluate(reagents)
+	if not reagents then
+		return
+	end
+	local crafts, missing = Evaluate(reagents)
 	if not crafts or #missing == 0 then
 		return
 	end
