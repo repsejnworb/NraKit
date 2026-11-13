@@ -5,7 +5,8 @@ local _, ns = ...
 --
 -- Optionally the module turns enemy nameplates on when you enter combat and off
 -- again when you leave it, so you see overhead names outside of combat. In
--- combat it filters which plates stay full.
+-- combat it filters which plates stay full. If you turn enemy plates on yourself
+-- (V key), they stay on after combat and look normal out of combat.
 -- Idle plates are hidden by setting the Blizzard UnitFrame's alpha to 0; nothing
 -- else on Blizzard's frame is touched. Addons cannot change a plate's click area
 -- in combat, so a hidden plate can still be clicked where its bar would be.
@@ -27,7 +28,7 @@ local module = {
 			key = "engagedNameplatesCombatToggle",
 			header = "General",
 			name = "Only during combat",
-			description = "Turns enemy nameplates on when you enter combat and off when you leave it, so you see normal overhead names outside of combat. While this is on, it manages \"Enemy Units\" and \"Always Show Nameplates\" for you; your previous settings come back when it is turned off.",
+			description = "Turns enemy nameplates on when you enter combat and off when you leave it, so you see normal overhead names outside of combat. If enemy nameplates were already on (e.g. you pressed V), they stay on after combat, so you can switch back to normal nameplates out of combat at any time. While this is on, it also manages \"Always Show Nameplates\" for you; your previous setting comes back when it is turned off.",
 			default = true,
 		},
 		{
@@ -99,11 +100,19 @@ local TAPPED_COLOR = { r = 0.5, g = 0.5, b = 0.5 }
 -- CVars managed by the combat toggle, as { out of combat, in combat }. Previous
 -- values are saved and restored when the toggle or module is turned off.
 local COMBAT_TOGGLE_CVARS = {
-	nameplateShowEnemies = { "0", "1" },
 	nameplateShowAll = { "1", "1" },
 }
 
 local SAVED_CVARS_KEY = "engagedNameplatesSavedCVars"
+
+-- Enemy plates are handled separately: the combat toggle turns them on for combat
+-- (or for the Unit Scanner) and only turns them off again if it was the one that
+-- turned them on. Plates you turn on yourself (V key, settings) are yours: they stay
+-- on and show normally out of combat. NraKitDB[OWNS_PLATES_KEY] is true while the
+-- current "on" is ours; CVAR_UPDATE from anything but us hands them back to you.
+local ENEMY_PLATES_CVAR = "nameplateShowEnemies"
+local OWNS_PLATES_KEY = "engagedNameplatesOwnsEnemyPlates"
+local settingCVar = false
 
 -- nameplate unit token -> Blizzard UnitFrame we have hidden
 local hiddenFrames = {}
@@ -223,10 +232,17 @@ local function RestorePlate(unit)
 	HideOverlay(C_NamePlate.GetNamePlateForUnit(unit))
 end
 
+-- Idle plates are hidden in combat, and out of combat only while the plates are on
+-- because of us (for the Unit Scanner); plates you turned on yourself look normal.
+local function IsFiltering()
+	return inCombat or NraKitDB[OWNS_PLATES_KEY] == true
+end
+
 local function UpdatePlate(unit)
 	local plate = C_NamePlate.GetNamePlateForUnit(unit)
 	local unitFrame = plate and plate.UnitFrame
-	if not unitFrame or not ns:IsModuleEnabled(module.key) or ShouldShowFullPlate(unit, unitFrame) then
+	if not unitFrame or not ns:IsModuleEnabled(module.key) or not IsFiltering()
+		or ShouldShowFullPlate(unit, unitFrame) then
 		RestorePlate(unit)
 		return
 	end
@@ -271,12 +287,11 @@ local function ApplyCVars()
 	end
 
 	local desired = {}
+	local managePlates = ns:IsModuleEnabled(module.key) and ns:GetOption("engagedNameplatesCombatToggle")
 	if ns:IsModuleEnabled(module.key) then
-		if ns:GetOption("engagedNameplatesCombatToggle") then
-			-- The Unit Scanner needs enemy plates to see units, so keep them on for it.
-			local wantPlates = inCombat or (ns.UnitScanWantsEnemyNameplates and ns:UnitScanWantsEnemyNameplates())
+		if managePlates then
 			for name, values in pairs(COMBAT_TOGGLE_CVARS) do
-				desired[name] = values[wantPlates and 2 or 1]
+				desired[name] = values[inCombat and 2 or 1]
 			end
 		end
 		-- The engine scales plates linearly between these by distance; our idle names
@@ -303,12 +318,52 @@ local function ApplyCVars()
 		end
 	end
 	NraKitDB[SAVED_CVARS_KEY] = next(saved) and saved or nil
+
+	-- The Unit Scanner needs enemy plates to see units, so keep them on for it.
+	local wantPlates = managePlates
+		and (inCombat or (ns.UnitScanWantsEnemyNameplates and ns:UnitScanWantsEnemyNameplates()))
+	local platesOn = GetCVar(ENEMY_PLATES_CVAR) == "1"
+	settingCVar = true
+	if wantPlates and not platesOn then
+		SetCVar(ENEMY_PLATES_CVAR, "1")
+		NraKitDB[OWNS_PLATES_KEY] = true
+	elseif not wantPlates and platesOn and NraKitDB[OWNS_PLATES_KEY] then
+		SetCVar(ENEMY_PLATES_CVAR, "0")
+		NraKitDB[OWNS_PLATES_KEY] = nil
+	end
+	settingCVar = false
+	if not platesOn and not wantPlates then
+		NraKitDB[OWNS_PLATES_KEY] = nil
+	end
+end
+
+-- Older versions saved and restored the enemy plates setting like the other CVars.
+-- Work out from that whether the current "on" was ours, then forget it.
+local function MigrateSavedEnemyPlates()
+	local saved = NraKitDB[SAVED_CVARS_KEY]
+	if saved and saved[ENEMY_PLATES_CVAR] ~= nil then
+		if saved[ENEMY_PLATES_CVAR] == "0" and GetCVar(ENEMY_PLATES_CVAR) == "1" then
+			NraKitDB[OWNS_PLATES_KEY] = true
+		end
+		saved[ENEMY_PLATES_CVAR] = nil
+		NraKitDB[SAVED_CVARS_KEY] = next(saved) and saved or nil
+	end
+end
+
+local function OnCVarUpdate(name)
+	if settingCVar or type(name) ~= "string" or name:lower() ~= ENEMY_PLATES_CVAR:lower() then
+		return
+	end
+	-- Changed by you (V key, settings) or another addon: from now on it's yours.
+	NraKitDB[OWNS_PLATES_KEY] = nil
+	UpdateAllPlates()
 end
 
 -- Called by the Unit Scanner when it starts or stops needing enemy nameplates.
 -- Out of combat only; in combat the plates are on anyway and REGEN_ENABLED re-applies.
 function ns:RefreshEngagedNameplateCVars()
 	ApplyCVars()
+	UpdateAllPlates()
 end
 
 local function OnEvent(_, event, unit)
@@ -333,6 +388,8 @@ local function OnEvent(_, event, unit)
 		inCombat = false
 		ApplyCVars()
 		UpdateAllPlates()
+	elseif event == "CVAR_UPDATE" then
+		OnCVarUpdate(unit)
 	elseif event == "PLAYER_TARGET_CHANGED" or event == "PLAYER_FOCUS_CHANGED" then
 		-- Wait a frame so Blizzard's plates have updated their isTarget/isFocus flags.
 		C_Timer.After(0, UpdateAllPlates)
@@ -353,6 +410,7 @@ local EVENTS = {
 	"PLAYER_REGEN_ENABLED",
 	"PLAYER_REGEN_DISABLED",
 	"GROUP_ROSTER_UPDATE",
+	"CVAR_UPDATE",
 }
 
 local function SetActive(active)
@@ -369,6 +427,7 @@ eventFrame:SetScript("OnEvent", OnEvent)
 
 function module:OnInitialize()
 	inCombat = InCombatLockdown()
+	MigrateSavedEnemyPlates()
 	-- Undo a deferred CVar change even if the module was switched off mid-combat.
 	eventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 	self:OnEnabledChanged(ns:IsModuleEnabled(self.key))
