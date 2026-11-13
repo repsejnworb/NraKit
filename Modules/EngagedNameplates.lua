@@ -273,8 +273,10 @@ local function ApplyCVars()
 	local desired = {}
 	if ns:IsModuleEnabled(module.key) then
 		if ns:GetOption("engagedNameplatesCombatToggle") then
+			-- The Unit Scanner needs enemy plates to see units, so keep them on for it.
+			local wantPlates = inCombat or (ns.UnitScanWantsEnemyNameplates and ns:UnitScanWantsEnemyNameplates())
 			for name, values in pairs(COMBAT_TOGGLE_CVARS) do
-				desired[name] = values[inCombat and 2 or 1]
+				desired[name] = values[wantPlates and 2 or 1]
 			end
 		end
 		-- The engine scales plates linearly between these by distance; our idle names
@@ -301,6 +303,12 @@ local function ApplyCVars()
 		end
 	end
 	NraKitDB[SAVED_CVARS_KEY] = next(saved) and saved or nil
+end
+
+-- Called by the Unit Scanner when it starts or stops needing enemy nameplates.
+-- Out of combat only; in combat the plates are on anyway and REGEN_ENABLED re-applies.
+function ns:RefreshEngagedNameplateCVars()
+	ApplyCVars()
 end
 
 local function OnEvent(_, event, unit)

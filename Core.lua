@@ -102,8 +102,26 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
 	end
 end)
 
+function ns:Print(message)
+	print("|cff33ccffNraKit|r: " .. message)
+end
+
+-- Subcommands of /nrakit and /nra, e.g. "/nra scan list". Registered by modules:
+-- handler(rest) gets everything after the subcommand, trimmed.
+local slashCommands = {}
+
+function ns:RegisterSlashCommand(name, handler)
+	slashCommands[name:lower()] = handler
+end
+
 SLASH_NRAKIT1 = "/nrakit"
 SLASH_NRAKIT2 = "/nra"
-SlashCmdList.NRAKIT = function()
-	ns:OpenSettings()
+SlashCmdList.NRAKIT = function(input)
+	local command, rest = strtrim(input or ""):match("^(%S*)%s*(.-)$")
+	local handler = command and slashCommands[command:lower()]
+	if handler then
+		handler(rest)
+	else
+		ns:OpenSettings()
+	end
 end

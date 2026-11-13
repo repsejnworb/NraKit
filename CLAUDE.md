@@ -62,6 +62,9 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   copy the mixin's `Init` when created: hook the mixin on `ADDON_LOADED`, and hook rows created earlier one by one.
   Blizzard re-runs `SetScript("OnEnter")` on every init, so use the `Professions.RecipeListOnEnter` EventRegistry
   event for row tooltips. Recipe data (`C_TradeSkillUI.*`) is only readable while the profession window is open.
+- Units can't be probed by name any more (`TargetUnit` is protected), so a unit scanner only sees nameplates,
+  mouseover, targets and vignettes (see UnitScanner.lua). `UnitName`/`UnitGUID` can be secret.
+- `/nra <subcommand>` is dispatched through `ns:RegisterSlashCommand(name, handler)` in Core.lua; plain `/nra` opens settings.
 - Overhead names (with nameplates off) are drawn by the engine, not Lua. A unit with a nameplate never gets its engine name back.
 
 ## Forever quirks

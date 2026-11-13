@@ -47,6 +47,12 @@ page under NraKit.
   merchants. Open cooking once per character so it knows your recipes. Optionally all professions.
 - **Unspent talent points**: a reminder in the middle of the screen while you have talent points
   to spend (hidden while dead and, optionally, in combat). Size and position are adjustable.
+- **Unit Scanner**: alerts you (sound, on-screen text, chat line, taskbar flash) when a mob or
+  player from your list shows up in nameplate range, on mouseover, as your or your party's target,
+  or as a minimap marker (rares). Target a unit and type `/nra scan` to add or remove it, or use
+  `/nra scan <name or NPC ID>`, `/nra scan list`, `/nra scan remove <# or name>` and
+  `/nra scan clear`. Addons can only see units the game already shows you, so enemy nameplates
+  should be on (with Engaged-only nameplates, the scanner keeps them on while the list isn't empty).
 
 ## Development
 Requires [just](https://github.com/casey/just), [cocogitto](https://github.com/cocogitto/cocogitto) and `luac`.
