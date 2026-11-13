@@ -20,3 +20,4 @@ Modules\BagTitheIgnoreList.lua
 Modules\PotentialUpgrades.lua
 Modules\OpenClams.lua
 Modules\SousChef.lua
+Modules\UnspentTalents.lua

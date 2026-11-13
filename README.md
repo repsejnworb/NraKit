@@ -45,6 +45,8 @@ page under NraKit.
   to buy, and the row tooltip says how much. Item tooltips on a main ingredient list what it cooks
   into and what's missing. Vendor items are recognised from a built-in list plus what you see at
   merchants. Open cooking once per character so it knows your recipes. Optionally all professions.
+- **Unspent talent points**: a reminder in the middle of the screen while you have talent points
+  to spend (hidden while dead and, optionally, in combat). Size and position are adjustable.
 
 ## Development
 Requires [just](https://github.com/casey/just), [cocogitto](https://github.com/cocogitto/cocogitto) and `luac`.
