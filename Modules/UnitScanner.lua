@@ -81,7 +81,7 @@ local module = {
 		{
 			key = "unitScanKeepPlates",
 			name = "Keep enemy nameplates on",
-			description = "While your list isn't empty, keep enemy nameplates on outside combat when Engaged-only nameplates would turn them off: nameplates are the scanner's main way of seeing units. Out of combat, enemies then look like they do in combat with that module (hidden, or just their name if \"Show names\" is on).",
+			description = "While your list isn't empty, keep enemy nameplates on outside combat when Engaged-only nameplates would turn them off: nameplates are the scanner's main way of seeing units. Idle enemies then show as that module draws them (hidden, or just their name if \"Show names\" is on).",
 			default = true,
 		},
 	},

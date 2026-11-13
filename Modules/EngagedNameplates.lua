@@ -1,12 +1,12 @@
 local _, ns = ...
 
 -- Shows full enemy nameplates only for mobs that are actually fighting you
--- (or your group). Every other enemy NPC plate is hidden during combat.
+-- (or your group). Every other enemy NPC plate is hidden, in or out of combat.
 --
 -- Optionally the module turns enemy nameplates on when you enter combat and off
 -- again when you leave it, so you see overhead names outside of combat. In
 -- combat it filters which plates stay full. If you turn enemy plates on yourself
--- (V key), they stay on after combat and look normal out of combat.
+-- (V key), they stay on after combat.
 -- Idle plates are hidden by setting the Blizzard UnitFrame's alpha to 0; nothing
 -- else on Blizzard's frame is touched. Addons cannot change a plate's click area
 -- in combat, so a hidden plate can still be clicked where its bar would be.
@@ -21,14 +21,14 @@ local module = {
 	key = "engagedNameplates",
 	section = "Nameplates",
 	name = "Engaged-only nameplates",
-	description = "Shows full nameplates only for enemies that are fighting you. Other enemy NPCs are hidden during combat. Your target, focus and enemy players always get full nameplates.",
+	description = "Shows full nameplates only for enemies that are fighting you. Other enemy NPCs are hidden, in or out of combat. Your target, focus and enemy players always get full nameplates.",
 	default = false,
 	options = {
 		{
 			key = "engagedNameplatesCombatToggle",
 			header = "General",
 			name = "Only during combat",
-			description = "Turns enemy nameplates on when you enter combat and off when you leave it, so you see normal overhead names outside of combat. If enemy nameplates were already on (e.g. you pressed V), they stay on after combat, so you can switch back to normal nameplates out of combat at any time. While this is on, it also manages \"Always Show Nameplates\" for you; your previous setting comes back when it is turned off.",
+			description = "Turns enemy nameplates on when you enter combat and off when you leave it, so you see normal overhead names outside of combat. If enemy nameplates were already on (e.g. you pressed V), they stay on after combat. While this is on, it also manages \"Always Show Nameplates\" for you; your previous setting comes back when it is turned off.",
 			default = true,
 		},
 		{
@@ -46,9 +46,9 @@ local module = {
 		},
 		{
 			key = "engagedNameplatesShowIdleNames",
-			header = "Idle enemies in combat",
+			header = "Idle enemies",
 			name = "Show names",
-			description = "Instead of hiding idle enemies completely during combat, show just their name, styled to resemble overhead names. Real overhead names can't be shown for units that have a nameplate.",
+			description = "Instead of hiding idle enemies completely, show just their name, styled to resemble overhead names. Real overhead names can't be shown for units that have a nameplate, so turn this on if you keep enemy nameplates on outside combat (e.g. for the Unit Scanner).",
 			default = false,
 		},
 		{
@@ -108,7 +108,7 @@ local SAVED_CVARS_KEY = "engagedNameplatesSavedCVars"
 -- Enemy plates are handled separately: the combat toggle turns them on for combat
 -- (or for the Unit Scanner) and only turns them off again if it was the one that
 -- turned them on. Plates you turn on yourself (V key, settings) are yours: they stay
--- on and show normally out of combat. NraKitDB[OWNS_PLATES_KEY] is true while the
+-- on after combat. NraKitDB[OWNS_PLATES_KEY] is true while the
 -- current "on" is ours; CVAR_UPDATE from anything but us hands them back to you.
 local ENEMY_PLATES_CVAR = "nameplateShowEnemies"
 local OWNS_PLATES_KEY = "engagedNameplatesOwnsEnemyPlates"
@@ -232,17 +232,10 @@ local function RestorePlate(unit)
 	HideOverlay(C_NamePlate.GetNamePlateForUnit(unit))
 end
 
--- Idle plates are hidden in combat, and out of combat only while the plates are on
--- because of us (for the Unit Scanner); plates you turned on yourself look normal.
-local function IsFiltering()
-	return inCombat or NraKitDB[OWNS_PLATES_KEY] == true
-end
-
 local function UpdatePlate(unit)
 	local plate = C_NamePlate.GetNamePlateForUnit(unit)
 	local unitFrame = plate and plate.UnitFrame
-	if not unitFrame or not ns:IsModuleEnabled(module.key) or not IsFiltering()
-		or ShouldShowFullPlate(unit, unitFrame) then
+	if not unitFrame or not ns:IsModuleEnabled(module.key) or ShouldShowFullPlate(unit, unitFrame) then
 		RestorePlate(unit)
 		return
 	end

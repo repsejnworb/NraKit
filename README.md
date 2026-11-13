@@ -20,12 +20,12 @@ page under NraKit.
 - **Class-colored health bars**: player, target, target of target, focus and party frames
   show class-colored health bars when the unit is a player. NPCs keep the default color.
 - **Engaged-only nameplates**: shows full nameplates only for enemies that are actually
-  fighting you (optionally your group). Other enemy NPCs are hidden during combat, or
+  fighting you (optionally your group). Other enemy NPCs are hidden (in or out of combat), or
   optionally show just their name, styled like the game's own overhead names. Target, focus
   and enemy players always get full plates. Optionally turns enemy nameplates on when entering
-  combat and off when leaving it; if you turned them on yourself (V key), they stay on and look
-  normal out of combat. Hidden plates can still be clicked where their bar would be,
-  because addons can't change a plate's click area during combat.
+  combat and off when leaving it; if you turned them on yourself (V key), they stay on. Hidden
+  plates can still be clicked where their bar would be, because addons can't change a plate's
+  click area during combat.
 - **Mark most valuable quest reward**: when a quest offers a choice of rewards, a gold coin
   marks the one that sells to a vendor for the most gold (vendor price × stack size).
 - **Show quest level**: the quest's level in front of its title in the quest dialog and quest
