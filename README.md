@@ -48,6 +48,8 @@ page under NraKit.
   merchants. Open cooking once per character so it knows your recipes. Optionally all professions.
 - **Unspent talent points**: a reminder in the middle of the screen while you have talent points
   to spend (hidden while dead and, optionally, in combat). Size and position are adjustable.
+- **/leave leaves your group**: type `/leave` (with nothing after it) or `/leavegroup` to leave
+  your party, raid or instance group. `/leave <channel>` still leaves a chat channel.
 - **Unit Scanner**: alerts you (sound, on-screen text, chat line, taskbar flash) when a mob or
   player from your list shows up in nameplate range, on mouseover, as your target, focus or a group
   member's target, as a minimap marker (rares), or when an NPC yells, says or emotes. Optionally
