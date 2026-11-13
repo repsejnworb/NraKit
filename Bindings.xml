@@ -1,4 +1,6 @@
 <Bindings>
 	<!-- Clicks the Open Clams button (Modules/OpenClams.lua); names are set in Lua. -->
 	<Binding name="CLICK NraKitOpenClamsButton:LeftButton" header="NRAKIT" category="ADDONS"/>
+	<!-- Clicks the Unit Scanner target button (Modules/UnitScanner.lua). -->
+	<Binding name="CLICK NraKitScanTargetButton:LeftButton" category="ADDONS"/>
 </Bindings>

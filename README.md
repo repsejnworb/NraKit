@@ -53,7 +53,9 @@ page under NraKit.
 - **Unit Scanner**: alerts you (sound, on-screen text, chat line, taskbar flash) when a mob or
   player from your list shows up in nameplate range, on mouseover, as your target, focus or a group
   member's target, as a minimap marker (rares), or when an NPC yells, says or emotes. Optionally
-  raises the nameplate range while scanning. Target a unit and type `/nra scan` to add or remove it, or use
+  raises the nameplate range while scanning. Found units get a raid marker (Moon by default) and a
+  button with the marker and their name: click it (or its keybind) to target them, right-click to
+  dismiss, Shift-drag to move. Target a unit and type `/nra scan` to add or remove it, or use
   `/nra scan <name or NPC ID>`, `/nra scan list`, `/nra scan remove <# or name>` and
   `/nra scan clear`. Addons can only see units the game already shows you, so enemy nameplates
   should be on (with Engaged-only nameplates, the scanner keeps them on while the list isn't empty).

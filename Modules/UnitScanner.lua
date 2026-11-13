@@ -20,6 +20,8 @@ local _, ns = ...
 -- The list lives in NraKitDB.unitScanTargets (account-wide) as { name = , npcID = }
 -- entries; either may be missing until the unit has been seen.
 
+local MarkerLabel
+
 local module = {
 	key = "unitScanner",
 	section = "Unit Scanner",
@@ -60,6 +62,30 @@ local module = {
 			default = 60, min = 10, max = 600, step = 10, format = "%ds",
 		},
 		{
+			key = "unitScanMark",
+			header = "When found",
+			name = "Put a raid marker on it",
+			description = "Mark the unit with a raid target icon when it's found, unless it already has one. Only possible when the unit itself was seen (nameplate, mouseover, a target), not from a minimap marker or a yell; targeting it with the button marks it then. In a raid you need to be leader or assistant.",
+			default = true,
+		},
+		{
+			key = "unitScanMarker",
+			parent = "unitScanMark",
+			type = "number",
+			name = "Marker",
+			description = "Which raid target icon to use.",
+			default = 5, min = 1, max = 8, step = 1,
+			format = function(value)
+				return MarkerLabel(value)
+			end,
+		},
+		{
+			key = "unitScanButton",
+			name = "Show a target button",
+			description = "Show a button with the marker icon and the unit's name; click it to target the unit (it runs /targetexact <name>). Right-click to dismiss it, Shift-drag to move it. Can also be bound to a key under Keybindings -> AddOns -> NraKit. Buttons that target can't be changed in combat, so a unit found in combat gets its button when combat ends.",
+			default = true,
+		},
+		{
 			key = "unitScanVignettes",
 			header = "Scanning",
 			name = "Minimap markers",
@@ -94,6 +120,16 @@ local SCREEN_TEXT_HOLD = 5
 local SCREEN_TEXT_FADE = 1.5
 
 local ApplyRange
+
+local MARKER_NAMES = { "Star", "Circle", "Diamond", "Triangle", "Moon", "Square", "Cross", "Skull" }
+
+local function MarkerTexture(index)
+	return "Interface\\TargetingFrame\\UI-RaidTargetingIcon_" .. index
+end
+
+MarkerLabel = function(index)
+	return string.format("|T%s:0|t %s", MarkerTexture(index), MARKER_NAMES[index] or index)
+end
 
 -- Chat events from NPCs, and the source label for each.
 local CHAT_SOURCES = {
@@ -192,6 +228,166 @@ local function ShowScreenText(message)
 	screenFrame.fade:Play()
 end
 
+---------------------------------------------------------------------------
+-- Raid marker
+---------------------------------------------------------------------------
+
+-- GUIDs we've already handled, so we mark each unit once and never fight a
+-- marker someone moved or removed afterwards.
+local markedGUIDs = {}
+
+local function TryMark(unit)
+	if not ns:GetOption("unitScanMark") then
+		return
+	end
+	local guid = UnitGUID(unit)
+	if not guid or IsSecret(guid) or markedGUIDs[guid] then
+		return
+	end
+	if IsInRaid() and not (UnitIsGroupLeader("player") or UnitIsGroupAssistant("player")) then
+		return
+	end
+	-- Setting the icon a unit already has removes it, so never touch marked units.
+	local current = GetRaidTargetIndex(unit)
+	local canMark = CanBeRaidTarget(unit)
+	if IsSecret(current) or IsSecret(canMark) then
+		return
+	end
+	markedGUIDs[guid] = true
+	if current or not canMark then
+		return
+	end
+	SetRaidTarget(unit, ns:GetValue("unitScanMarker") or 5)
+end
+
+---------------------------------------------------------------------------
+-- Target button
+---------------------------------------------------------------------------
+
+local BUTTON_NAME = "NraKitScanTargetButton"
+local BUTTON_SIZE = 36
+local BUTTON_POSITION_KEY = "unitScanButtonPosition"
+local DEFAULT_BUTTON_POSITION = { "CENTER", 0, 240 }
+
+_G["BINDING_NAME_CLICK " .. BUTTON_NAME .. ":LeftButton"] = "Target the unit Unit Scanner found"
+
+local targetButton
+-- Secure attributes, Show and Hide can't change in combat; these wait for REGEN_ENABLED.
+local pendingName
+local pendingHide = false
+
+local function UpdateButtonIcon()
+	if targetButton then
+		targetButton.icon:SetTexture(MarkerTexture(ns:GetValue("unitScanMarker") or 5))
+	end
+end
+
+-- A hidden button still answers its keybind, so forget the unit too.
+local function ClearTarget()
+	targetButton.name = nil
+	targetButton:SetAttribute("macrotext", nil)
+end
+
+local function HideTargetButton()
+	if not targetButton then
+		return
+	end
+	pendingName = nil
+	if InCombatLockdown() then
+		-- Can't hide a secure button in combat; make it invisible until combat ends.
+		targetButton:SetAlpha(0)
+		pendingHide = true
+	else
+		targetButton:Hide()
+		ClearTarget()
+	end
+end
+
+local function SaveButtonPosition()
+	local point, _, _, x, y = targetButton:GetPoint()
+	NraKitDB[BUTTON_POSITION_KEY] = { point, x, y }
+end
+
+local function CreateTargetButton()
+	local button = CreateFrame("Button", BUTTON_NAME, UIParent, "SecureActionButtonTemplate")
+	button:SetSize(BUTTON_SIZE, BUTTON_SIZE)
+	button:SetFrameStrata("HIGH")
+	button:SetClampedToScreen(true)
+	button:SetMovable(true)
+	button:RegisterForClicks("AnyUp", "AnyDown")
+	button:RegisterForDrag("LeftButton")
+	local position = NraKitDB[BUTTON_POSITION_KEY] or DEFAULT_BUTTON_POSITION
+	button:SetPoint(position[1], UIParent, position[1], position[2], position[3])
+
+	button.icon = button:CreateTexture(nil, "ARTWORK")
+	button.icon:SetAllPoints()
+	button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+	button.label = button:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+	button.label:SetPoint("TOP", button, "BOTTOM", 0, -2)
+
+	button:SetAttribute("type", "macro")
+	-- Right-click only dismisses (see PostClick); it must not target too.
+	button:SetAttribute("type2", ATTRIBUTE_NOOP)
+
+	button:SetScript("OnDragStart", function(self)
+		if IsShiftKeyDown() and not InCombatLockdown() then
+			self:StartMoving()
+		end
+	end)
+	button:SetScript("OnDragStop", function(self)
+		self:StopMovingOrSizing()
+		SaveButtonPosition()
+	end)
+	button:SetScript("PostClick", function(_, mouseButton, down)
+		if mouseButton == "RightButton" and not down then
+			HideTargetButton()
+		end
+	end)
+	button:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+		GameTooltip:AddLine("Unit Scanner")
+		GameTooltip:AddLine("Click to target: " .. (self.name or "?"), 1, 1, 1)
+		GameTooltip:AddLine("Right-click to dismiss, Shift-drag to move.", 0.7, 0.7, 0.7)
+		local key = GetBindingKey("CLICK " .. BUTTON_NAME .. ":LeftButton")
+		if key then
+			GameTooltip:AddLine("Key: " .. GetBindingText(key), 0.7, 0.7, 0.7)
+		end
+		GameTooltip:Show()
+	end)
+	button:SetScript("OnLeave", GameTooltip_Hide)
+	button:Hide()
+	targetButton = button
+	UpdateButtonIcon()
+end
+
+local function ShowTargetButton(name)
+	if not targetButton then
+		CreateTargetButton()
+	end
+	if InCombatLockdown() then
+		pendingName = name
+		return
+	end
+	pendingName = nil
+	pendingHide = false
+	targetButton.name = name
+	targetButton:SetAttribute("macrotext", "/targetexact " .. name)
+	targetButton.label:SetText(name)
+	targetButton:SetAlpha(1)
+	targetButton:Show()
+end
+
+local function OnCombatEnded()
+	if pendingName then
+		ShowTargetButton(pendingName)
+	elseif pendingHide then
+		pendingHide = false
+		targetButton:Hide()
+		targetButton:SetAlpha(1)
+		ClearTarget()
+	end
+end
+
 local function Alert(entry, source)
 	local now = GetTime()
 	if lastAlert[entry] and now - lastAlert[entry] < (ns:GetValue("unitScanCooldown") or 60) then
@@ -212,10 +408,13 @@ local function Alert(entry, source)
 	if ns:GetOption("unitScanFlash") then
 		FlashClientIcon()
 	end
+	if ns:GetOption("unitScanButton") and entry.name then
+		ShowTargetButton(entry.name)
+	end
 end
 
 -- Checks one name / GUID pair against the list.
-local function Check(name, guid, source)
+local function Check(name, guid, source, unit)
 	if name and IsSecret(name) then
 		name = nil
 	end
@@ -235,6 +434,9 @@ local function Check(name, guid, source)
 	if npcID and not entry.npcID then
 		entry.npcID = npcID
 	end
+	if unit then
+		TryMark(unit)
+	end
 	Alert(entry, source)
 end
 
@@ -246,7 +448,7 @@ local function CheckUnit(unit, source)
 	if not IsSecret(dead) and dead then
 		return
 	end
-	Check(UnitName(unit), UnitGUID(unit), source)
+	Check(UnitName(unit), UnitGUID(unit), source, unit)
 end
 
 local function CheckVignette(vignetteGUID)
@@ -366,6 +568,9 @@ end
 local function RemoveAt(index)
 	local entry = table.remove(GetTargets(), index)
 	lastAlert[entry] = nil
+	if targetButton and entry.name and (targetButton.name == entry.name or pendingName == entry.name) then
+		HideTargetButton()
+	end
 	ns:Print("No longer scanning for " .. DisplayName(entry) .. ".")
 	NameplateNeedsChanged()
 end
@@ -426,6 +631,7 @@ local function Clear(argument)
 	end
 	wipe(GetTargets())
 	wipe(lastAlert)
+	HideTargetButton()
 	ns:Print("The scan list is now empty.")
 	NameplateNeedsChanged()
 end
@@ -472,6 +678,7 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1, arg2, ...)
 	local arg12 = select(10, ...)
 	if event == "PLAYER_REGEN_ENABLED" then
 		ApplyRange()
+		OnCombatEnded()
 		return
 	end
 	if #GetTargets() == 0 then
@@ -526,6 +733,9 @@ function module:OnEnabledChanged(enabled)
 	end
 	-- Restore a deferred range change even if the module was switched off mid-combat.
 	eventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+	if not enabled then
+		HideTargetButton()
+	end
 	NameplateNeedsChanged()
 	ScanAll()
 end
@@ -533,6 +743,10 @@ end
 function module:OnOptionChanged(key)
 	if key == "unitScanKeepPlates" or key == "unitScanMaxRange" then
 		NameplateNeedsChanged()
+	elseif key == "unitScanMarker" then
+		UpdateButtonIcon()
+	elseif key == "unitScanButton" and not ns:GetOption("unitScanButton") then
+		HideTargetButton()
 	end
 end
 

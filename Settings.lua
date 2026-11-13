@@ -21,6 +21,9 @@ local function CreateControl(category, entry, onChanged)
 		local options = Settings.CreateSliderOptions(entry.min, entry.max, entry.step)
 		local format = entry.format or "%d"
 		options:SetLabelFormatter(MinimalSliderWithSteppersMixin.Label.Right, function(value)
+			if type(format) == "function" then
+				return format(value)
+			end
 			return string.format(format, value)
 		end)
 		return setting, Settings.CreateSlider(category, setting, options, entry.description)
