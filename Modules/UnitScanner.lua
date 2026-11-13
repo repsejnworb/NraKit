@@ -4,14 +4,18 @@ local _, ns = ...
 --
 -- Addons can no longer probe for units by name (the old unitscan TargetUnit trick
 -- is protected), so we only look at units the client already gives us: nameplates
--- as they appear, mouseover, target, party members' targets and minimap markers
--- (vignettes, which only rares and special objects have). Units are matched by
+-- as they appear, mouseover, target, focus, group members' targets, minimap markers
+-- (vignettes, which only rares and special objects have) and NPC yells, says and
+-- emotes (yells reach the whole zone). The combat log is closed to addons on this
+-- client (COMBAT_LOG_EVENT_UNFILTERED is restricted). Units are matched by
 -- name or by NPC ID (from the GUID). Names and GUIDs can be secret values when a
 -- unit's identity is restricted (mostly in instances); those units are skipped.
 --
 -- Nameplates are the main source, so enemy nameplates must be on. Engaged-only
 -- nameplates turns them off outside combat; it asks UnitScanWantsEnemyNameplates()
--- and keeps them on while there is something to scan for.
+-- and keeps them on while there is something to scan for. Optionally the nameplate
+-- range (nameplateMaxDistance) is raised while scanning; the user's value is saved
+-- in NraKitDB and put back afterwards.
 --
 -- The list lives in NraKitDB.unitScanTargets (account-wide) as { name = , npcID = }
 -- entries; either may be missing until the unit has been seen.
@@ -63,6 +67,18 @@ local module = {
 			default = true,
 		},
 		{
+			key = "unitScanChatSources",
+			name = "NPC yells, says and emotes",
+			description = "Also check who is talking: many rares and named mobs yell or emote, and yells reach the whole zone.",
+			default = true,
+		},
+		{
+			key = "unitScanMaxRange",
+			name = "Maximize nameplate range",
+			description = "While your list isn't empty, raise the nameplate range to the game's maximum so units are seen from further away. This applies to all nameplates. Your own setting comes back when the list is empty or this is turned off.",
+			default = false,
+		},
+		{
 			key = "unitScanKeepPlates",
 			name = "Keep enemy nameplates on",
 			description = "While your list isn't empty, keep enemy nameplates on outside combat when Engaged-only nameplates would turn them off: nameplates are the scanner's main way of seeing units. Out of combat, enemies then look like they do in combat with that module (hidden, or just their name if \"Show names\" is on).",
@@ -77,11 +93,25 @@ local SCREEN_TEXT_Y = 300
 local SCREEN_TEXT_HOLD = 5
 local SCREEN_TEXT_FADE = 1.5
 
+local ApplyRange
+
+-- Chat events from NPCs, and the source label for each.
+local CHAT_SOURCES = {
+	CHAT_MSG_MONSTER_YELL = "yell",
+	CHAT_MSG_MONSTER_SAY = "say",
+	CHAT_MSG_MONSTER_EMOTE = "emote",
+	CHAT_MSG_RAID_BOSS_EMOTE = "emote",
+}
+
 local SOURCE_LABELS = {
 	nameplate = "nearby",
 	mouseover = "mouseover",
 	target = "target",
-	party = "a party member's target",
+	focus = "focus",
+	group = "a group member's target",
+	yell = "yell",
+	say = "say",
+	emote = "emote",
 	vignette = "minimap marker",
 }
 
@@ -254,10 +284,39 @@ function ns:UnitScanWantsEnemyNameplates()
 	return ns:IsModuleEnabled(module.key) and ns:GetOption("unitScanKeepPlates") and #GetTargets() > 0
 end
 
+---------------------------------------------------------------------------
+-- Nameplate range
+---------------------------------------------------------------------------
+
+local RANGE_CVAR = "nameplateMaxDistance"
+-- Above any client's limit; the game clamps it to its own maximum.
+local MAX_RANGE = "100"
+local SAVED_RANGE_KEY = "unitScanSavedPlateRange"
+
+-- Raises the nameplate range while there's something to scan for, and puts the
+-- user's value back otherwise. CVars can't change in combat; REGEN_ENABLED retries.
+ApplyRange = function()
+	if InCombatLockdown() or GetCVar(RANGE_CVAR) == nil then
+		return
+	end
+	local want = ns:IsModuleEnabled(module.key) and ns:GetOption("unitScanMaxRange") and #GetTargets() > 0
+	local saved = NraKitDB[SAVED_RANGE_KEY]
+	if want then
+		if saved == nil then
+			NraKitDB[SAVED_RANGE_KEY] = GetCVar(RANGE_CVAR)
+		end
+		SetCVar(RANGE_CVAR, MAX_RANGE)
+	elseif saved ~= nil then
+		SetCVar(RANGE_CVAR, saved)
+		NraKitDB[SAVED_RANGE_KEY] = nil
+	end
+end
+
 local function NameplateNeedsChanged()
 	if ns.RefreshEngagedNameplateCVars then
 		ns:RefreshEngagedNameplateCVars()
 	end
+	ApplyRange()
 end
 
 ---------------------------------------------------------------------------
@@ -409,7 +468,12 @@ end
 ---------------------------------------------------------------------------
 
 local eventFrame = CreateFrame("Frame")
-eventFrame:SetScript("OnEvent", function(_, event, arg1)
+eventFrame:SetScript("OnEvent", function(_, event, arg1, arg2, ...)
+	local arg12 = select(10, ...)
+	if event == "PLAYER_REGEN_ENABLED" then
+		ApplyRange()
+		return
+	end
 	if #GetTargets() == 0 then
 		return
 	end
@@ -419,9 +483,16 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1)
 		CheckUnit("mouseover", "mouseover")
 	elseif event == "PLAYER_TARGET_CHANGED" then
 		CheckUnit("target", "target")
+	elseif event == "PLAYER_FOCUS_CHANGED" then
+		CheckUnit("focus", "focus")
 	elseif event == "UNIT_TARGET" then
-		if type(arg1) == "string" and arg1:match("^party%d$") then
-			CheckUnit(arg1 .. "target", "party")
+		if type(arg1) == "string" and (arg1:match("^party%d$") or arg1:match("^raid%d+$")) then
+			CheckUnit(arg1 .. "target", "group")
+		end
+	elseif CHAT_SOURCES[event] then
+		if ns:GetOption("unitScanChatSources") then
+			-- Payload: text, sender name, ..., sender GUID (12th).
+			Check(arg2, arg12, CHAT_SOURCES[event])
 		end
 	elseif event == "VIGNETTE_MINIMAP_UPDATED" then
 		if ns:GetOption("unitScanVignettes") then
@@ -433,9 +504,12 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1)
 end)
 
 local EVENTS = {
-	"NAME_PLATE_UNIT_ADDED", "UPDATE_MOUSEOVER_UNIT", "PLAYER_TARGET_CHANGED", "UNIT_TARGET",
-	"VIGNETTE_MINIMAP_UPDATED", "PLAYER_ENTERING_WORLD",
+	"NAME_PLATE_UNIT_ADDED", "UPDATE_MOUSEOVER_UNIT", "PLAYER_TARGET_CHANGED", "PLAYER_FOCUS_CHANGED",
+	"UNIT_TARGET", "VIGNETTE_MINIMAP_UPDATED", "PLAYER_ENTERING_WORLD", "PLAYER_REGEN_ENABLED",
 }
+for event in pairs(CHAT_SOURCES) do
+	table.insert(EVENTS, event)
+end
 
 function module:OnInitialize()
 	ns:RegisterSlashCommand("scan", OnSlashCommand)
@@ -450,12 +524,14 @@ function module:OnEnabledChanged(enabled)
 			eventFrame:UnregisterEvent(event)
 		end
 	end
+	-- Restore a deferred range change even if the module was switched off mid-combat.
+	eventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 	NameplateNeedsChanged()
 	ScanAll()
 end
 
 function module:OnOptionChanged(key)
-	if key == "unitScanKeepPlates" then
+	if key == "unitScanKeepPlates" or key == "unitScanMaxRange" then
 		NameplateNeedsChanged()
 	end
 end

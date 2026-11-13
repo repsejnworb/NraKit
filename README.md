@@ -23,7 +23,8 @@ page under NraKit.
   fighting you (optionally your group). Other enemy NPCs are hidden during combat, or
   optionally show just their name, styled like the game's own overhead names. Target, focus
   and enemy players always get full plates. Optionally turns enemy nameplates on when entering
-  combat and off when leaving it. Hidden plates can still be clicked where their bar would be,
+  combat and off when leaving it; if you turned them on yourself (V key), they stay on and look
+  normal out of combat. Hidden plates can still be clicked where their bar would be,
   because addons can't change a plate's click area during combat.
 - **Mark most valuable quest reward**: when a quest offers a choice of rewards, a gold coin
   marks the one that sells to a vendor for the most gold (vendor price × stack size).
@@ -48,8 +49,9 @@ page under NraKit.
 - **Unspent talent points**: a reminder in the middle of the screen while you have talent points
   to spend (hidden while dead and, optionally, in combat). Size and position are adjustable.
 - **Unit Scanner**: alerts you (sound, on-screen text, chat line, taskbar flash) when a mob or
-  player from your list shows up in nameplate range, on mouseover, as your or your party's target,
-  or as a minimap marker (rares). Target a unit and type `/nra scan` to add or remove it, or use
+  player from your list shows up in nameplate range, on mouseover, as your target, focus or a group
+  member's target, as a minimap marker (rares), or when an NPC yells, says or emotes. Optionally
+  raises the nameplate range while scanning. Target a unit and type `/nra scan` to add or remove it, or use
   `/nra scan <name or NPC ID>`, `/nra scan list`, `/nra scan remove <# or name>` and
   `/nra scan clear`. Addons can only see units the game already shows you, so enemy nameplates
   should be on (with Engaged-only nameplates, the scanner keeps them on while the list isn't empty).
