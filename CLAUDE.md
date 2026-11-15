@@ -83,5 +83,7 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   Release with `just release` (Cocogitto picks the next semver from conventional commits since the last tag, asks
   for confirmation, creates an annotated tag and pushes it). `just release-pre alpha.1` makes a pre-release, `just next`
   previews the next version, `just check` syntax-checks the Lua files. Only release when the user asks.
+- `.github/CURSEFORGE.md` is the CurseForge project description (Markdown). CurseForge has no API for it, so the
+  user pastes it in by hand. Keep it in sync with README.md when features change.
 - `.pkgmeta` leaves `.github/`, `CLAUDE.md` and `README.md` out of the zip. `.github/logo.png` is the full logo; `Media/Icon.png` is the in-game icon.
 - `.github/workflows/interface-version.yml` checks daily (or run it manually) for a new Forever interface number and opens a PR.
