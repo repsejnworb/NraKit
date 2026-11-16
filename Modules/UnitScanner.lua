@@ -65,7 +65,7 @@ local module = {
 			key = "unitScanMark",
 			header = "When found",
 			name = "Put a raid marker on it",
-			description = "Mark the unit with a raid target icon when it's found, unless it already has one. Only possible when the unit itself was seen (nameplate, mouseover, a target), not from a minimap marker or a yell; targeting it with the button marks it then. In a raid you need to be leader or assistant.",
+			description = "Mark the unit with a raid target icon when it's found, unless it already has one. Only possible when the unit itself was seen (nameplate, mouseover, a target), not from a minimap marker or a yell; targeting it with the button marks it then. In a raid you need to be leader or assistant. Addons can't set markers in combat, so a unit found in combat is marked when combat ends if it's still in view.",
 			default = true,
 		},
 		{
@@ -247,6 +247,11 @@ local function TryMark(unit)
 	if IsInRaid() and not (UnitIsGroupLeader("player") or UnitIsGroupAssistant("player")) then
 		return
 	end
+	-- SetRaidTarget is protected in combat. Not remembering the GUID lets the
+	-- rescan on PLAYER_REGEN_ENABLED mark it once combat ends.
+	if InCombatLockdown() then
+		return
+	end
 	-- Setting the icon a unit already has removes it, so never touch marked units.
 	local current = GetRaidTargetIndex(unit)
 	local canMark = CanBeRaidTarget(unit)
@@ -361,12 +366,13 @@ local function CreateTargetButton()
 end
 
 local function ShowTargetButton(name)
-	if not targetButton then
-		CreateTargetButton()
-	end
+	-- Creating the button sets its position and attributes, so it waits for combat to end too.
 	if InCombatLockdown() then
 		pendingName = name
 		return
+	end
+	if not targetButton then
+		CreateTargetButton()
 	end
 	pendingName = nil
 	pendingHide = false
@@ -679,6 +685,8 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1, arg2, ...)
 	if event == "PLAYER_REGEN_ENABLED" then
 		ApplyRange()
 		OnCombatEnded()
+		-- Mark units found during combat (the alert cooldown keeps this quiet).
+		ScanAll()
 		return
 	end
 	if #GetTargets() == 0 then
