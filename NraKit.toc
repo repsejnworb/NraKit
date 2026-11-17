@@ -25,3 +25,4 @@ Modules\SousChef.lua
 Modules\UnspentTalents.lua
 Modules\UnitScanner.lua
 Modules\LeaveGroup.lua
+Modules\OpenSelectedMail.lua
