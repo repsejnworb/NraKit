@@ -57,6 +57,9 @@ page under NraKit.
   merchants. Open cooking once per character so it knows your recipes. Optionally all professions.
 - **Unspent talent points**: a reminder in the middle of the screen while you have talent points
   to spend (hidden while dead and, optionally, in combat). Size and position are adjustable.
+- **Campfire timer**: a progress bar in the middle of the screen while you rest at a Welcoming
+  Campfire, with the time left. It turns green (with a sound) when Camp Benefits is ready. Width
+  and position are adjustable; `/nra campfire` shows a 10-second preview.
 - **/leave leaves your group**: type `/leave` (with nothing after it) or `/leavegroup` to leave
   your party, raid or instance group. `/leave <channel>` still leaves a chat channel.
 - **Open selected mail**: a checkbox on each mail in your inbox. Tick some and the Open All button

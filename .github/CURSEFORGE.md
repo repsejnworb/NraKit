@@ -60,6 +60,11 @@ Have the meat but not the spices? In the cooking window, recipes where you have 
 ### Unspent talent points
 A **reminder in the middle of the screen** while you have talent points to spend. Size and position are adjustable, and it can hide in combat.
 
+### Campfire timer
+A **progress bar in the middle of the screen** while you rest at a Welcoming Campfire, with the time left. It turns green (with a sound) when Camp Benefits is ready.
+- Width and position are adjustable.
+- **/nra campfire** shows a 10-second preview.
+
 ### /leave leaves your group
 Type **/leave** (with nothing after it) or **/leavegroup** to leave your party, raid or instance group. **/leave &lt;channel&gt;** still leaves a chat channel.
 
