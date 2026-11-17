@@ -61,6 +61,7 @@ page under NraKit.
   your party, raid or instance group. `/leave <channel>` still leaves a chat channel.
 - **Open selected mail**: a checkbox on each mail in your inbox. Tick some and the Open All button
   turns into "Open Selected (N)" and only opens those. The selection is cleared when you close the mailbox.
+- **Hide micro menu notifications**: hides the blue "new" dot on the Shop button.
 - **Unit Scanner**: alerts you (sound, on-screen text, chat line, taskbar flash) when a mob or
   player from your list shows up in nameplate range, on mouseover, as your target, focus or a group
   member's target, as a minimap marker (rares), or when an NPC yells, says or emotes. Optionally

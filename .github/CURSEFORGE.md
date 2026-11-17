@@ -66,6 +66,9 @@ Type **/leave** (with nothing after it) or **/leavegroup** to leave your party, 
 ### Open selected mail
 A **checkbox on each mail** in your inbox. Tick the ones you want and the **Open All** button becomes **Open Selected**, opening only those.
 
+### Hide micro menu notifications
+Hides the blue notification dot on the **Shop** button that never goes away.
+
 ### Unit Scanner
 Get alerted when a **mob or player from your own list** shows up.
 - **Sound, on-screen text, chat line** and a flashing taskbar icon, each optional.
