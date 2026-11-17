@@ -35,6 +35,12 @@ Find out what to throw away when your bags are full.
 - **Yellow**: likely upgrade, using a simple per-class stat priority.
 - **Grey**: an upgrade once you reach the required level.
 
+### Known recipes
+No more mousing over every recipe at a vendor. Recipes you **already know get a green check** and a greyed-out icon at vendors, and a check in your bags.
+- Optionally marks recipes for your professions that you **can learn now (green +)** or **once your skill is high enough (yellow +)**.
+- Works for anything the game calls "Already known".
+- Optionally makes **Bag Tithe** rank known recipes as junk.
+
 ### Open Clams
 A small button at the bottom of your bags, next to your money, **opens the next clam** (or any other "Right Click to Open" container, except locked boxes) **one click at a time**, and shows how many are left.
 - Can be **bound to a key** (Keybindings → AddOns → NraKit).

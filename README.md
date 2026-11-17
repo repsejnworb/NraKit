@@ -38,6 +38,10 @@ page under NraKit.
   that beat what you have equipped. Green = clear upgrade (usable now and at least as good on every
   stat that matters for your class, plus armor or weapon DPS). Yellow = likely upgrade (better by a
   simple per-class stat priority). Grey = upgrade once you reach the required level.
+- **Known recipes**: recipes you already know get a green check at vendors (with a greyed-out icon)
+  and in your bags, so you don't have to mouse over each one. Works for anything the game calls
+  "Already known". Optionally marks recipes for your professions you can learn now (green +) or once
+  your skill is high enough (yellow +), and can make Bag Tithe rank known recipes as junk.
 - **Open Clams**: a button at the bottom left of your bags (next to your money) opens the next clam (or any other
   "Right Click to Open" container, except locked boxes) one per click, showing its icon and how
   many are left. Bindable under Keybindings → AddOns → NraKit. Openable items get a green border.

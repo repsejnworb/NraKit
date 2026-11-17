@@ -18,6 +18,7 @@ Modules\QuestLevel.lua
 Modules\BagTithe.lua
 Modules\BagTitheIgnoreList.lua
 Modules\PotentialUpgrades.lua
+Modules\KnownRecipes.lua
 Modules\OpenClams.lua
 Modules\SousChef.lua
 Modules\UnspentTalents.lua

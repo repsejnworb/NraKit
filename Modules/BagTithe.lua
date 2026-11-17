@@ -169,7 +169,11 @@ local function RankSlots()
 	for bag = Enum.BagIndex.Backpack, NUM_TOTAL_EQUIPPED_BAG_SLOTS do
 		for slot = 1, C_Container.GetContainerNumSlots(bag) do
 			local info = C_Container.GetContainerItemInfo(bag, slot)
-			if info and not info.hasNoValue and not tithe:IsIgnored(info.itemID) then
+			if info and not tithe:IsIgnored(info.itemID) and ns.KnownRecipeIsJunk
+				and ns:KnownRecipeIsJunk(bag, slot, info.itemID) then
+				-- Known recipes (Known recipes module option) rank first, whatever they sell for.
+				table.insert(candidates, { key = SlotKey(bag, slot), value = 0, known = true })
+			elseif info and not info.hasNoValue and not tithe:IsIgnored(info.itemID) then
 				local sellPrice = select(11, C_Item.GetItemInfo(info.hyperlink or info.itemID))
 				if sellPrice == nil then
 					pending = true
@@ -193,7 +197,7 @@ local function RankSlots()
 	local ranked = {}
 	local count = math.min(ns:GetValue("bagTitheCount") or 5, #candidates)
 	for rank = 1, count do
-		ranked[candidates[rank].key] = { rank = rank, value = candidates[rank].value, total = count }
+		ranked[candidates[rank].key] = { rank = rank, value = candidates[rank].value, known = candidates[rank].known, total = count }
 	end
 	return ranked, pending
 end
@@ -291,7 +295,7 @@ local function ApplyOverlay(itemButton, ranked)
 		overlay.rank:SetText(entry.rank)
 		overlay.rank:SetTextColor(1, 1, 1) -- constant color reads fastest; the border carries the tint
 		overlay.rank:SetShown(ns:GetOption("bagTitheShowRank"))
-		overlay.value:SetText(FormatValue(entry.value))
+		overlay.value:SetText(entry.known and "known" or FormatValue(entry.value))
 		overlay.value:SetShown(ns:GetOption("bagTitheShowValue"))
 	end
 	overlay:Show()
