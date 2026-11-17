@@ -67,7 +67,7 @@ Type **/leave** (with nothing after it) or **/leavegroup** to leave your party, 
 A **checkbox on each mail** in your inbox. Tick the ones you want and the **Open All** button becomes **Open Selected**, opening only those.
 
 ### Hide micro menu notifications
-Hides the blue notification dot on the **Shop** button that never goes away.
+Hides the blue notification dot on the **Shop** button that never goes away, and makes the **Legacy** button's dot show only when you have **unspent Legacy points**, not for every new challenge.
 
 ### Unit Scanner
 Get alerted when a **mob or player from your own list** shows up.

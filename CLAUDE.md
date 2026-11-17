@@ -16,7 +16,8 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
 - WoW Forever is built on the **Retail (mainline) UI**, not Classic. TOC `## Interface: 16001`
   (build range 16000–19999). Using the Retail number from `version.txt` (120105) shows "incompatible".
 - References live outside the repo, in `../tmp/`:
-  - `../tmp/wow-ui-source/` – Blizzard UI source (Retail 12.x). `Interface/AddOns/Blizzard_APIDocumentationGenerated/` documents
+  - `../tmp/wow-ui-source/` – Blizzard UI source, on the **`forever` branch** (Forever's own UI, incl. Forever-only
+    systems like `Blizzard_LegacySystem`). Read it before guessing at Forever APIs. `Interface/AddOns/Blizzard_APIDocumentationGenerated/` documents
     APIs, including secret-value rules (`SecretPredicatesDocumentation.lua`).
   - `../tmp/Chattynator/` – a known-working Forever addon (see `Core/Constants.lua` for flavor detection).
   - `../tmp/screenshots/` – in-game screenshots the user provides.
