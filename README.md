@@ -42,6 +42,11 @@ page under NraKit.
   and in your bags, so you don't have to mouse over each one. Works for anything the game calls
   "Already known". Optionally marks recipes for your professions you can learn now (green +) or once
   your skill is high enough (yellow +), and can make Bag Tithe rank known recipes as junk.
+- **Inventory Tracker**: item tooltips list how many of the item each of your characters has and
+  where, e.g. "Bob 12 (Bags 5, Bank 7)", with a total. Bags and equipment are tracked as they change;
+  the bank and mailbox are read while open, so visit them once per character. Items you mail to your
+  own characters show up in their mail right away. `/nra inv` lists tracked characters and
+  `/nra inv forget <name>` removes one.
 - **Open Clams**: a button at the bottom left of your bags (next to your money) opens the next clam (or any other
   "Right Click to Open" container, except locked boxes) one per click, showing its icon and how
   many are left. Bindable under Keybindings → AddOns → NraKit. Openable items get a green border.
