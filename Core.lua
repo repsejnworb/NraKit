@@ -98,7 +98,9 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
 		self:UnregisterEvent("PLAYER_LOGIN")
 		for _, module in ipairs(ns.moduleOrder) do
 			if module.OnInitialize then
-				module:OnInitialize()
+				-- One module's error (e.g. a Blizzard function missing on this client)
+				-- must not stop the modules after it from starting.
+				xpcall(module.OnInitialize, geterrorhandler(), module)
 			end
 		end
 	end

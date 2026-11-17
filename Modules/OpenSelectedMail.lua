@@ -160,7 +160,12 @@ function module:OnInitialize()
 	end
 	CreateCheckboxes()
 	WrapOpenAll()
-	hooksecurefunc("InboxFrame_Update", UpdateCheckboxes)
+	-- Forever's inbox is InboxMixin:Update(); older clients have a global InboxFrame_Update().
+	if InboxFrame and InboxFrame.Update then
+		hooksecurefunc(InboxFrame, "Update", UpdateCheckboxes)
+	elseif InboxFrame_Update then
+		hooksecurefunc("InboxFrame_Update", UpdateCheckboxes)
+	end
 	eventFrame:RegisterEvent("MAIL_CLOSED")
 end
 
