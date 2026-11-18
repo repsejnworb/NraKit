@@ -74,6 +74,11 @@ A **checkbox on each mail** in your inbox. Tick the ones you want and the **Open
 ### Hide micro menu notifications
 Hides the blue notification dot on the **Shop** button that never goes away, and makes the **Legacy** button's dot show only when you have **unspent Legacy points**, not for every new challenge.
 
+### Copy Wowhead link
+Hover an **item, spell, NPC, quest, achievement or currency** and press **Ctrl+C**. A box opens with its **wowhead.com/forever** link selected; press **Ctrl+C again** to copy it (addons can't reach the clipboard directly).
+- Works on bag items, chat links, NPCs in the world, the quest log, achievements and the objective tracker.
+- Ctrl+C is bound on first use if it's free; change it under Key Bindings > AddOns.
+
 ### Unit Scanner
 Get alerted when a **mob or player from your own list** shows up.
 - **Sound, on-screen text, chat line** and a flashing taskbar icon, each optional.

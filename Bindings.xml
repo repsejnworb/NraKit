@@ -3,4 +3,6 @@
 	<Binding name="CLICK NraKitOpenClamsButton:LeftButton" header="NRAKIT" category="ADDONS"/>
 	<!-- Clicks the Unit Scanner target button (Modules/UnitScanner.lua). -->
 	<Binding name="CLICK NraKitScanTargetButton:LeftButton" category="ADDONS"/>
+	<!-- Copies a Wowhead link to what's under the mouse (Modules/WowheadLink.lua). -->
+	<Binding name="NRAKIT_WOWHEAD_LINK" category="ADDONS">NraKit_CopyWowheadLink()</Binding>
 </Bindings>

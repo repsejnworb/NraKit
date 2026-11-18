@@ -28,3 +28,4 @@ Modules\UnitScanner.lua
 Modules\LeaveGroup.lua
 Modules\OpenSelectedMail.lua
 Modules\MicroMenuNotifications.lua
+Modules\WowheadLink.lua

@@ -66,6 +66,10 @@ page under NraKit.
   turns into "Open Selected (N)" and only opens those. The selection is cleared when you close the mailbox.
 - **Hide micro menu notifications**: hides the blue "new" dot on the Shop button, and shows the
   Legacy button's dot only while you have unspent Legacy Tree points (not for every new challenge).
+- **Copy Wowhead link**: hover an item, spell, NPC, quest, achievement or currency and press Ctrl+C.
+  A box opens with its wowhead.com/forever link selected; press Ctrl+C again to copy it (addons
+  can't reach the clipboard directly). Works in bags, chat links, quest log, achievements and the
+  objective tracker. Ctrl+C is bound on first use if it's free; change it under Key Bindings > AddOns.
 - **Unit Scanner**: alerts you (sound, on-screen text, chat line, taskbar flash) when a mob or
   player from your list shows up in nameplate range, on mouseover, as your target, focus or a group
   member's target, as a minimap marker (rares), or when an NPC yells, says or emotes. Optionally
