@@ -16,7 +16,8 @@ Type `/nrakit` (`/nra`) to open NraKit's window: features grouped in a sidebar, 
 on/off switch per feature and its options right underneath. Everything is off until you turn it on.
 The same settings are also in the game's Settings panel under **AddOns → NraKit**.
 NraKit is also in the addon button by the minimap: left-click for settings, right-click for the
-inventory browser.
+inventory browser. `/nra help` lists the chat commands; add `help` after one for details
+(e.g. `/nra goal help`).
 
 Sounds (Campfire timer, Unit Scanner, Farm goals) can be changed: pick from a short list of good
 ones (hover to hear them) or **More sounds...** to search every game sound, plus any sounds other
@@ -75,10 +76,14 @@ addons share through LibSharedMedia.
   hour and time left. Chimes at 25/50/75% and a fanfare with a message in the middle of the screen
   when a goal is done. Item goals count what you loot (banking, mailing or selling never changes
   them) and can start from what you already have in your bags, bank, mail or on other characters.
-  `/nra goal` opens the goals window (new goal, active goals, history); `/nra goal 4000` plus a
-  shift-clicked item adds one directly. Right-click a goal to pause, edit, reset or remove it.
-  **Edit** fixes a goal's target, item, starting count or sounds without starting over, and each
-  goal can have its own milestone and finish sounds.
+  The tracker has three views (switch with its F / C / I button): **Full**, **Compact** (one line
+  per goal) and **Icons** (a tile per goal with a bar and the amount). Right-click a goal to pause,
+  edit, **shelve** (hide it from the tracker, paused, until you bring it back from the goals window),
+  reset or remove it. **Edit** fixes a goal's target, item, starting count or sounds without starting
+  over, and each goal can have its own milestone and finish sounds.
+  `/nra goal` opens the goals window (new goal, active and shelved goals, history). Goals can also be
+  added from chat: `/nra goal 4000 [item]`, `/nra goal level 40`, `/nra goal rep revered timbermaw`,
+  `/nra goal skill swords`, `/nra goal currency 2000 honor`, ... (`/nra goal help` lists them all).
 - **/leave leaves your group**: type `/leave` (with nothing after it) or `/leavegroup` to leave
   your party, raid or instance group. `/leave <channel>` still leaves a chat channel.
 - **Open selected mail**: a checkbox on each mail in your inbox. Tick some and the Open All button

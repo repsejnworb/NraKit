@@ -21,6 +21,13 @@ local function ClearGoals(ns)
 	end
 end
 
+-- The tracker's goal rows or tiles that are showing.
+local function TrackedWidgets(wow)
+	return wow.findAll(function(frame)
+		return frame.shown and type(rawget(frame, "goal")) == "table" and rawget(frame, "flash") ~= nil
+	end)
+end
+
 local function Played(wow, id)
 	for _, played in ipairs(wow.played) do
 		if played == id then
@@ -115,7 +122,7 @@ return {
 			wow.fire("CHAT_MSG_LOOT", "You receive loot: " .. SILK_LINK .. "x2.")
 			t.ok(goal.completed, "completed")
 			t.ok(Played(wow, SOUNDKIT.MAP_PING), "own sound played")
-			t.ok(not Played(wow, SOUNDKIT.UI_EPICLOOT_TOAST), "default fanfare not played")
+			t.ok(not Played(wow, SOUNDKIT.UI_WORLDQUEST_COMPLETE), "default fanfare not played")
 			local before = #ns.goals.GetData().history
 			ns.goals.RemoveGoal(goal.id)
 			t.equal(#ns.goals.GetData().history, before + 1, "history entries")
@@ -125,7 +132,7 @@ return {
 			wow.played = {}
 			local goal = ns.goals.AddGoal({ type = "item", itemID = SILK, target = 1 })
 			wow.fire("CHAT_MSG_LOOT", "You receive loot: " .. SILK_LINK .. ".")
-			t.ok(Played(wow, SOUNDKIT.UI_EPICLOOT_TOAST), "default fanfare")
+			t.ok(Played(wow, SOUNDKIT.UI_WORLDQUEST_COMPLETE), "default fanfare (World quest complete)")
 			ns.goals.RemoveGoal(goal.id)
 			wow.played = {}
 			goal = ns.goals.AddGoal({ type = "item", itemID = SILK, target = 1, sounds = { complete = "none" } })
@@ -211,6 +218,41 @@ return {
 			wow.data.money = 2000
 			wow.fire("PLAYER_MONEY")
 			t.equal(goal.gained, 4000, "gained")
+		end)
+
+		t.test("shelving hides a goal from the tracker and stops counting", function()
+			ClearGoals(ns)
+			local kept = ns.goals.AddGoal({ type = "item", itemID = SILK, target = 1000 })
+			local shelved = ns.goals.AddGoal({ type = "item", itemID = SILK, target = 2000 })
+			ns.goals.SetShelved(shelved, true)
+			t.ok(shelved.paused, "shelved goals are paused")
+			wow.fire("CHAT_MSG_LOOT", "You receive loot: " .. SILK_LINK .. "x5.")
+			t.equal(kept.gained, 5, "the other goal counts")
+			t.equal(shelved.gained, 0, "the shelved goal doesn't")
+			local shown = TrackedWidgets(wow)
+			t.equal(#shown, 1, "goals in the tracker")
+			t.equal(shown[1].goal, kept, "the unshelved one")
+			ns:OpenGoalsWindow("active")
+			t.ok(wow.click("Unshelve"), "Unshelve button in the goals window")
+			t.ok(not shelved.shelved and not shelved.paused, "back and counting")
+			t.equal(#TrackedWidgets(wow), 2, "both in the tracker again")
+		end)
+
+		t.test("all three tracker views show the goals", function()
+			for _, view in ipairs({ "compact", "icons", "full" }) do
+				t.ok(wow.click(NraKitDB.farmGoalsView == nil and "F" or ({ full = "F", compact = "C", icons = "I" })[NraKitDB.farmGoalsView]), "clicked the view button")
+				t.equal(NraKitDB.farmGoalsView, view, "switched view")
+				t.equal(#TrackedWidgets(wow), 2, view .. ": goals shown")
+			end
+		end)
+
+		t.test("the icons view shows short amounts", function()
+			ClearGoals(ns)
+			NraKitDB.farmGoalsView = "icons"
+			ns.goals.AddGoal({ type = "item", itemID = SILK, target = 4000, start = 1500 })
+			local tile = TrackedWidgets(wow)[1]
+			t.equal(tile.count.text, "1.5k", "count under the icon")
+			NraKitDB.farmGoalsView = "full"
 		end)
 
 		t.test("active and history pages render", function()

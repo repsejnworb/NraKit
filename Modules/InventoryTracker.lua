@@ -410,9 +410,17 @@ end
 function module:OnInitialize()
 	realm = GetNormalizedRealmName() or GetRealmName():gsub("[%s%-']", "")
 	playerName = UnitName("player")
-	ns:RegisterSlashCommand("inv", OnSlashCommand)
-	ns:RegisterSlashCommand("inventory", OnSlashCommand)
-	ns:RegisterSlashCommand("bank", OnSlashCommand)
+	local help = {
+		summary = "Inventory browser: every character's bags, bank, mail and equipped items",
+		usage = {
+			"/nra inv - open the inventory browser (also /nra bank, /nra inventory)",
+			"/nra inv list - list the tracked characters in chat",
+			"/nra inv forget <name> - remove a character (e.g. a deleted one); also right-click it in the browser",
+		},
+	}
+	ns:RegisterSlashCommand("inv", OnSlashCommand, help)
+	ns:RegisterSlashCommand("inventory", OnSlashCommand, help)
+	ns:RegisterSlashCommand("bank", OnSlashCommand, help)
 	hooksecurefunc("SendMail", function(recipient)
 		if ns:IsModuleEnabled(module.key) then
 			OnSendMail(recipient)

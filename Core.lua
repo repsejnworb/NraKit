@@ -119,21 +119,71 @@ end
 
 -- Subcommands of /nrakit and /nra, e.g. "/nra scan list". Registered by modules:
 -- handler(rest) gets everything after the subcommand, trimmed.
-local slashCommands = {}
+--
+-- help = { summary = "one line for /nra help", usage = { "/nra goal level <n> - reach a level", ... } }.
+-- Aliases pass the same help table; "/nra <name> help" (or "?") prints it.
+local slashCommands, slashHelp, helpOrder = {}, {}, {}
 
-function ns:RegisterSlashCommand(name, handler)
-	slashCommands[name:lower()] = handler
+function ns:RegisterSlashCommand(name, handler, help)
+	name = name:lower()
+	slashCommands[name] = handler
+	if help then
+		slashHelp[name] = help
+		if not help.name then
+			help.name = name
+			table.insert(helpOrder, help)
+		end
+	end
+end
+
+-- "/nra goal level <n> - reach a level" -> command in gold, description in white.
+local function PrintUsageLine(line)
+	local command, description = line:match("^(.-) %- (.+)$")
+	if command then
+		print("  |cffffd100" .. command .. "|r  " .. description)
+	else
+		print("  " .. line)
+	end
+end
+
+function ns:PrintCommandHelp(name)
+	local help = slashHelp[name]
+	if not help then
+		return false
+	end
+	ns:Print(help.summary)
+	for _, line in ipairs(help.usage or {}) do
+		PrintUsageLine(line)
+	end
+	return true
+end
+
+local function PrintAllHelp()
+	ns:Print("commands (add |cffffd100help|r after one for details, e.g. /nra goal help):")
+	PrintUsageLine("/nra - open the NraKit settings window")
+	for _, help in ipairs(helpOrder) do
+		PrintUsageLine("/nra " .. help.name .. " - " .. help.summary)
+	end
 end
 
 SLASH_NRAKIT1 = "/nrakit"
 SLASH_NRAKIT2 = "/nra"
 SlashCmdList.NRAKIT = function(input)
 	local command, rest = strtrim(input or ""):match("^(%S*)%s*(.-)$")
-	local handler = command and slashCommands[command:lower()]
-	if handler then
+	command = command:lower()
+	local handler = slashCommands[command]
+	if command == "" then
+		ns:OpenSettings()
+	elseif command == "help" or command == "?" then
+		if rest == "" or not ns:PrintCommandHelp(rest:lower()) then
+			PrintAllHelp()
+		end
+	elseif handler and (rest:lower() == "help" or rest == "?") and slashHelp[command] then
+		ns:PrintCommandHelp(command)
+	elseif handler then
 		handler(rest)
 	else
-		ns:OpenSettings()
+		ns:Print("Unknown command \"" .. command .. "\". Type /nra help for the list.")
 	end
 end
 

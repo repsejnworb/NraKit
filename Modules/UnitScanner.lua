@@ -548,11 +548,10 @@ local USAGE = {
 	"/nra scan clear - empty the list",
 }
 
+local HELP = { summary = "Unit Scanner: the list of mobs and players to look for", usage = USAGE }
+
 local function PrintUsage()
-	ns:Print("Unit Scanner commands:")
-	for _, line in ipairs(USAGE) do
-		print("  " .. line)
-	end
+	ns:PrintCommandHelp("scan")
 end
 
 local function WarnIfInactive()
@@ -735,7 +734,7 @@ for event in pairs(CHAT_SOURCES) do
 end
 
 function module:OnInitialize()
-	ns:RegisterSlashCommand("scan", OnSlashCommand)
+	ns:RegisterSlashCommand("scan", OnSlashCommand, HELP)
 	self:OnEnabledChanged(ns:IsModuleEnabled(self.key))
 end
 

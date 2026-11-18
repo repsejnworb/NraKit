@@ -1,6 +1,6 @@
 -- Runs one test file against NraKit in the stand-in client (tests/wow.lua).
 --   lua tests/run.lua tests/farm_goals_test.lua
--- A test file returns { enable = { module keys }, run = function(t, ns, wow) ... end }.
+-- A test file returns { enable = { module keys }, db = { saved values }?, run = function(t, ns, wow) ... end }.
 -- The addon is loaded file by file in NraKit.toc order, then ADDON_LOADED and
 -- PLAYER_LOGIN are fired, like logging in. Exits non-zero if anything failed.
 
@@ -10,7 +10,8 @@ local wow = dofile("tests/wow.lua")
 wow.install()
 
 local spec = dofile(testFile)
-NraKitDB = {}
+-- Saved variables as the client would load them: spec.db, plus the features to turn on.
+NraKitDB = spec.db or {}
 for _, key in ipairs(spec.enable or {}) do
 	NraKitDB[key] = true
 end

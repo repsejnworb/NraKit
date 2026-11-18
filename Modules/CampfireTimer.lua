@@ -255,7 +255,10 @@ eventFrame:SetScript("OnEvent", Update)
 function module:OnInitialize()
 	eventFrame:RegisterUnitEvent("UNIT_AURA", "player")
 	eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-	ns:RegisterSlashCommand("campfire", Preview)
+	ns:RegisterSlashCommand("campfire", Preview, {
+		summary = "Campfire timer: show a 10-second preview of the bar",
+		usage = { "/nra campfire - preview the campfire bar (to check its look and position)" },
+	})
 	Update()
 end
 

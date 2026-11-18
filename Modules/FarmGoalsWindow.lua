@@ -124,60 +124,104 @@ local function AcquireCard()
 	end)
 end
 
+-- Identifies the list as shown (goals, finished, shelved), to know when cards must be rebuilt.
+local function Signature(goals)
+	local ids = {}
+	for _, goal in ipairs(goals) do
+		table.insert(ids, goal.id .. (goal.completed and "c" or "") .. (goal.shelved and "s" or "") .. (goal.paused and "p" or ""))
+	end
+	return table.concat(ids, ",")
+end
+
+local function AddCard(content, goal, y, width)
+	local card = AcquireCard()
+	card:SetPoint("TOPLEFT", content, "TOPLEFT", PAD, y)
+	card:SetWidth(width)
+	UpdateCard(card, goal)
+	cards[goal.id] = card
+
+	-- Buttons, right to left.
+	local anchor
+	local function Add(label, onClick)
+		local button = CardButton(card, label, onClick)
+		if anchor then
+			button:SetPoint("RIGHT", anchor, "LEFT", -4, 0)
+		else
+			button:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT", -10, 8)
+		end
+		anchor = button
+	end
+	local id = goal.id
+	if goal.completed then
+		Add("Clear", function()
+			G().RemoveGoal(id)
+		end)
+	elseif goal.shelved then
+		Add("Remove", function()
+			G().RemoveGoal(id)
+		end)
+		Add("Edit", function()
+			ns:OpenGoalsWindow("edit", id)
+		end)
+		Add("Unshelve", function()
+			G().SetShelved(goal, false)
+		end)
+	else
+		Add("Remove", function()
+			G().RemoveGoal(id)
+		end)
+		Add("Reset", function()
+			goal.gained, goal.active, goal.milestone = 0, 0, 0
+			if goal.type == "level" then
+				goal.startLevel = UnitLevel("player") + UnitXP("player") / math.max(UnitXPMax("player"), 1)
+			end
+			G().Update()
+		end)
+		Add("Edit", function()
+			ns:OpenGoalsWindow("edit", id)
+		end)
+		Add("Shelve", function()
+			G().SetShelved(goal, true)
+		end)
+		Add(goal.paused and "Resume" or "Pause", function()
+			goal.paused = not goal.paused or nil
+			G().Update()
+		end)
+	end
+	return y - 76 - 8
+end
+
+local function AddGroupHeading(content, text, y)
+	local heading = pool:Acquire("groupHeading", function()
+		local label = content:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+		label:SetJustifyH("LEFT")
+		label:SetTextColor(unpack(UI.ACCENT))
+		return label
+	end)
+	heading:SetText(text)
+	heading:SetPoint("TOPLEFT", content, "TOPLEFT", PAD + 2, y - 6)
+	return y - 26
+end
+
 local function RenderActive(content, width)
 	local goals = G().GetData().goals
 	local y = -PAD
 	wipe(cards)
-	local ids = {}
+	local shelved = {}
 	for _, goal in ipairs(goals) do
-		local card = AcquireCard()
-		card:SetPoint("TOPLEFT", content, "TOPLEFT", PAD, y)
-		card:SetWidth(width)
-		UpdateCard(card, goal)
-		cards[goal.id] = card
-		table.insert(ids, goal.id .. (goal.completed and "c" or ""))
-
-		-- Buttons, right to left.
-		local anchor
-		local function Add(label, onClick)
-			local button = CardButton(card, label, onClick)
-			if anchor then
-				button:SetPoint("RIGHT", anchor, "LEFT", -4, 0)
-			else
-				button:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT", -10, 8)
-			end
-			anchor = button
-		end
-		local id = goal.id
-		if goal.completed then
-			Add("Clear", function()
-				G().RemoveGoal(id)
-			end)
+		if goal.shelved then
+			table.insert(shelved, goal)
 		else
-			Add("Remove", function()
-				G().RemoveGoal(id)
-			end)
-			Add("Reset", function()
-				goal.gained, goal.active, goal.milestone = 0, 0, 0
-				if goal.type == "level" then
-					goal.startLevel = UnitLevel("player") + UnitXP("player") / math.max(UnitXPMax("player"), 1)
-				end
-				G().Update()
-			end)
-			if goal.type == "item" or goal.type == "gold" then
-				Add("Edit", function()
-					ns:OpenGoalsWindow("edit", id)
-				end)
-			end
-			Add(goal.paused and "Resume" or "Pause", function()
-				goal.paused = not goal.paused or nil
-				G().Update()
-				Render()
-			end)
+			y = AddCard(content, goal, y, width)
 		end
-		y = y - 76 - 8
 	end
-	cardSignature = table.concat(ids, ",")
+	if #shelved > 0 then
+		y = AddGroupHeading(content, "SHELVED  |cff808080not in the tracker, paused|r", y - 6)
+		for _, goal in ipairs(shelved) do
+			y = AddCard(content, goal, y, width)
+		end
+	end
+	cardSignature = Signature(goals)
 
 	if #goals == 0 then
 		local heading = pool:Acquire("emptyHeading", function()
@@ -1102,11 +1146,7 @@ local function OnGoalsChanged()
 		end
 		return
 	end
-	local ids = {}
-	for _, goal in ipairs(G().GetData().goals) do
-		table.insert(ids, goal.id .. (goal.completed and "c" or ""))
-	end
-	if table.concat(ids, ",") ~= cardSignature then
+	if Signature(G().GetData().goals) ~= cardSignature then
 		Render()
 		return
 	end

@@ -24,7 +24,7 @@ return {
 		t.test("options default to the old sounds", function()
 			t.equal(NraKitDB.campfireTimerSoundChoice, "kit:READY_CHECK", "campfire")
 			t.equal(NraKitDB.unitScanSoundChoice, "kit:RAID_WARNING", "scanner")
-			t.equal(NraKitDB.farmGoalsCompleteSoundChoice, "kit:UI_EPICLOOT_TOAST", "goal done")
+			t.equal(NraKitDB.farmGoalsCompleteSoundChoice, "kit:UI_WORLDQUEST_COMPLETE", "goal done")
 		end)
 
 		t.test("a chosen sound plays, a missing one falls back to the default", function()

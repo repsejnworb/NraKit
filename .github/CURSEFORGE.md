@@ -2,7 +2,7 @@
 
 **Small quality-of-life tweaks for WoW Forever. Every feature is off by default, so turn on only what you want.**
 
-Type **/nrakit** (or **/nra**) to open NraKit's own window: features grouped in a sidebar, **search**, an on/off switch per feature and its options right underneath. Everything is off until you turn it on. The same settings are also under **Options → AddOns → NraKit**. NraKit is also in the **addon button by the minimap** (no extra minimap button): left-click for settings, right-click for the inventory browser.
+Type **/nrakit** (or **/nra**) to open NraKit's own window: features grouped in a sidebar, **search**, an on/off switch per feature and its options right underneath. Everything is off until you turn it on. The same settings are also under **Options → AddOns → NraKit**. NraKit is also in the **addon button by the minimap** (no extra minimap button): left-click for settings, right-click for the inventory browser. **/nra help** lists the chat commands.
 
 Alert **sounds are yours to choose** (Campfire timer, Unit Scanner, Farm goals): a short list of good ones (hover to hear them), or **More sounds...** to search every game sound and any sounds other addons share through LibSharedMedia.
 
@@ -73,8 +73,9 @@ Just want to farm something? Set a goal like **loot 4000 Silk Cloth**, **reach l
 - **Chimes at 25/50/75%**, and a **fanfare** with a message in the middle of the screen when a goal is done.
 - Item goals count **what you loot**, so banking, mailing or selling never throws them off.
 - Optionally **start from what you already have**: bags, bank, mail and other characters (with a live preview).
-- **/nra goal** opens the goals window (new goal, active goals, history of finished ones). **/nra goal 4000** plus a shift-clicked item adds one directly.
-- Right-click a goal to pause, **edit**, reset or remove it. Edit fixes the target, item, starting count or sounds without starting over.
+- Three tracker views: **Full**, **Compact** (one line per goal) and **Icons** (a tile per goal with a bar and the amount). Switch with the tracker's F / C / I button.
+- Right-click a goal to pause, **edit**, **shelve** (hide it from the tracker, paused, until you bring it back), reset or remove it. Edit fixes the target, item, starting count or sounds without starting over.
+- **/nra goal** opens the goals window (new goal, active and shelved goals, history). Or add goals from chat: **/nra goal 4000** plus a shift-clicked item, **/nra goal level 40**, **/nra goal rep revered timbermaw**, **/nra goal skill swords**, **/nra goal currency 2000 honor**... (**/nra goal help** lists them all).
 - Each goal can have **its own sounds** for milestones and for finishing.
 
 ### /leave leaves your group

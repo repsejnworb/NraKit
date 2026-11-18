@@ -53,7 +53,7 @@ local module = {
 			type = "sound",
 			name = "Sound",
 			description = "Which sound plays when a goal is done.",
-			default = "kit:UI_EPICLOOT_TOAST",
+			default = "kit:UI_WORLDQUEST_COMPLETE",
 		},
 		{
 			key = "farmGoalsTickSound",
@@ -98,9 +98,30 @@ local module = {
 		{
 			key = "farmGoalsWidth",
 			type = "number",
-			name = "Width",
-			description = "Width of the tracker.",
+			name = "Width (Full view)",
+			description = "Width of the tracker in the Full view. Switch views with the tracker's F / C / I button.",
 			default = 260, min = 180, max = 420, step = 10,
+		},
+		{
+			key = "farmGoalsCompactWidth",
+			type = "number",
+			name = "Width (Compact view)",
+			description = "Width of the tracker in the Compact view (one line per goal).",
+			default = 210, min = 150, max = 400, step = 10,
+		},
+		{
+			key = "farmGoalsIconSize",
+			type = "number",
+			name = "Icon size (Icons view)",
+			description = "Size of each goal's icon in the Icons view.",
+			default = 32, min = 20, max = 56, step = 2,
+		},
+		{
+			key = "farmGoalsIconsPerRow",
+			type = "number",
+			name = "Icons per row",
+			description = "How many goals per row in the Icons view before it wraps.",
+			default = 6, min = 2, max = 12, step = 1,
 		},
 		{
 			key = "farmGoalsScale",
@@ -131,14 +152,13 @@ local ICONS = {
 -- Goal sounds: which -> { on/off option, sound option, default sound }.
 local SOUNDS = {
 	milestone = { "farmGoalsMilestoneSound", "farmGoalsMilestoneSoundChoice", "kit:UI_QUEST_ROLLING_FORWARD_01" },
-	complete = { "farmGoalsCompleteSound", "farmGoalsCompleteSoundChoice", "kit:UI_EPICLOOT_TOAST" },
+	complete = { "farmGoalsCompleteSound", "farmGoalsCompleteSoundChoice", "kit:UI_WORLDQUEST_COMPLETE" },
 	tick = { "farmGoalsTickSound", "farmGoalsTickSoundChoice", "kit:LOOT_WINDOW_COIN_SOUND" },
 }
 
 local characterKey
 local lastXP, lastXPMax, lastLevel, lastMoney
 local tracker, toast
-local rows = {}
 local nextID = 0
 
 ------------------------------------------------------------------------------
@@ -666,12 +686,57 @@ end
 -- Tracker
 ------------------------------------------------------------------------------
 
-local function OpenMenu(row)
-	local goal = row.goal and FindGoal(row.goal.id)
+-- Views, cycled with the header's view button: one-line-per-goal sizes and how many fit.
+local VIEWS = { "full", "compact", "icons" }
+local VIEW_LABELS = { full = "Full", compact = "Compact", icons = "Icons" }
+local VIEW_LETTERS = { full = "F", compact = "C", icons = "I" }
+local COMPACT_HEIGHT = 24
+local MAX_COMPACT_ROWS = 12
+local MAX_ICONS = 30
+
+local function GetView()
+	local view = NraKitDB.farmGoalsView
+	return VIEW_LABELS[view] and view or "full"
+end
+
+local function SetShelved(goal, shelved)
+	goal.shelved = shelved or nil
+	goal.paused = shelved or nil
+	UpdateTracker()
+end
+
+-- Short amount for the icon view: "1.5k", "12g", "Lv 31".
+local function ShortAmount(goal)
+	local value
+	if goal.type == "level" then
+		return "Lv " .. UnitLevel("player")
+	elseif goal.mode == "gain" or goal.type == "xp" then
+		value = goal.gained or 0
+	elseif goal.type == "item" or goal.type == "gold" then
+		value = (goal.start or 0) + (goal.gained or 0)
+	elseif TYPES[goal.type].read then
+		value = TYPES[goal.type].read(goal) or 0
+		if goal.type == "rep" then
+			local data = C_Reputation.GetFactionDataByID(goal.key)
+			value = data and value - data.currentReactionThreshold or value
+		end
+	end
+	if goal.type == "gold" then
+		return FormatNumber(math.floor(value / 10000)) .. "g"
+	elseif value >= 10000 then
+		return math.floor(value / 1000) .. "k"
+	elseif value >= 1000 then
+		return string.format("%.1fk", value / 1000)
+	end
+	return tostring(math.floor(value))
+end
+
+local function OpenMenu(widget)
+	local goal = widget.goal and FindGoal(widget.goal.id)
 	if not (goal and MenuUtil and MenuUtil.CreateContextMenu) then
 		return
 	end
-	MenuUtil.CreateContextMenu(row, function(_, root)
+	MenuUtil.CreateContextMenu(widget, function(_, root)
 		root:CreateTitle((Describe(goal)))
 		if goal.completed then
 			root:CreateButton("Clear (move to history)", function()
@@ -682,6 +747,10 @@ local function OpenMenu(row)
 		root:CreateButton(goal.paused and "Resume" or "Pause", function()
 			goal.paused = not goal.paused or nil
 			UpdateTracker()
+		end)
+		root:CreateButton("Shelve (hide and pause)", function()
+			SetShelved(goal, true)
+			ns:Print((Describe(goal)) .. " is shelved. Find it in the goals window (/nra goal) to bring it back.")
 		end)
 		root:CreateButton("Edit goal...", function()
 			ns:OpenGoalsWindow("edit", goal.id)
@@ -700,57 +769,41 @@ local function OpenMenu(row)
 	end)
 end
 
-local function CreateRow(index)
-	local row = CreateFrame("Button", nil, tracker)
-	row:SetHeight(ROW_HEIGHT)
-	row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-	-- Dragging a row moves the whole tracker.
-	row:RegisterForDrag("LeftButton")
-	row:SetScript("OnDragStart", function()
+local function ShowGoalTooltip(widget)
+	local goal = widget.goal
+	if not goal then
+		return
+	end
+	GameTooltip:SetOwner(widget, "ANCHOR_LEFT")
+	if goal.itemID then
+		GameTooltip:SetItemByID(goal.itemID)
+		GameTooltip:AddLine(" ")
+	else
+		GameTooltip_SetTitle(GameTooltip, (Describe(goal)))
+	end
+	local _, value = GetProgress(goal)
+	GameTooltip:AddDoubleLine("Progress", value, 1, 0.82, 0, 1, 1, 1)
+	GameTooltip:AddLine(DescribeRate(goal), 0.8, 0.8, 0.8, true)
+	if goal.start and goal.start > 0 then
+		GameTooltip:AddDoubleLine("Started from", TYPES[goal.type].format(goal.start), 1, 0.82, 0, 1, 1, 1)
+	end
+	GameTooltip:AddDoubleLine("Running for", FormatDuration(goal.active or 0), 1, 0.82, 0, 1, 1, 1)
+	GameTooltip:AddLine("Right-click for options", 0.5, 0.5, 0.5)
+	GameTooltip:Show()
+end
+
+-- What every goal widget does, whatever the view: menu, tooltip, chat link, drag, flash.
+local function SetupGoalWidget(widget)
+	widget:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	-- Dragging a goal moves the whole tracker.
+	widget:RegisterForDrag("LeftButton")
+	widget:SetScript("OnDragStart", function()
 		tracker:GetScript("OnDragStart")(tracker)
 	end)
-	row:SetScript("OnDragStop", function()
+	widget:SetScript("OnDragStop", function()
 		tracker:GetScript("OnDragStop")(tracker)
 	end)
-
-	row.bg = row:CreateTexture(nil, "BACKGROUND")
-	row.bg:SetAllPoints()
-	row.bg:SetColorTexture(1, 1, 1, index % 2 == 0 and 0.03 or 0)
-	row.flash = row:CreateTexture(nil, "BACKGROUND", nil, 1)
-	row.flash:SetAllPoints()
-	row.flash:SetColorTexture(UI.ACCENT[1], UI.ACCENT[2], UI.ACCENT[3], 0.18)
-	row.flash:SetAlpha(0)
-
-	row.icon = row:CreateTexture(nil, "ARTWORK")
-	row.icon:SetSize(30, 30)
-	row.icon:SetPoint("LEFT", 8, 0)
-	row.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-
-	row.value = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	row.value:SetPoint("TOPRIGHT", -8, -7)
-	row.name = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-	row.name:SetPoint("TOPLEFT", row.icon, "TOPRIGHT", 8, 1)
-	row.name:SetPoint("RIGHT", row.value, "LEFT", -6, 0)
-	row.name:SetJustifyH("LEFT")
-	row.name:SetWordWrap(false)
-
-	row.track = CreateFrame("StatusBar", nil, row)
-	row.track:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
-	row.track:SetMinMaxValues(0, 1)
-	row.track:SetHeight(4)
-	row.track:SetPoint("LEFT", row.icon, "RIGHT", 8, -2)
-	row.track:SetPoint("RIGHT", -8, 0)
-	row.track.bg = row.track:CreateTexture(nil, "BACKGROUND")
-	row.track.bg:SetAllPoints()
-	row.track.bg:SetColorTexture(1, 1, 1, 0.12)
-
-	row.info = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	row.info:SetPoint("BOTTOMLEFT", row.icon, "BOTTOMRIGHT", 8, -2)
-	row.info:SetPoint("RIGHT", -8, 0)
-	row.info:SetJustifyH("LEFT")
-	row.info:SetWordWrap(false)
-
-	row:SetScript("OnClick", function(self, button)
+	widget:SetScript("OnClick", function(self, button)
 		if button == "RightButton" then
 			OpenMenu(self)
 		elseif IsModifiedClick("CHATLINK") and self.goal and self.goal.itemID then
@@ -760,37 +813,217 @@ local function CreateRow(index)
 			end
 		end
 	end)
-	row:SetScript("OnEnter", function(self)
-		local goal = self.goal
-		if not goal then
-			return
-		end
-		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-		if goal.itemID then
-			GameTooltip:SetItemByID(goal.itemID)
-			GameTooltip:AddLine(" ")
-		else
-			GameTooltip_SetTitle(GameTooltip, (Describe(goal)))
-		end
-		if goal.start and goal.start > 0 then
-			GameTooltip:AddDoubleLine("Started from", TYPES[goal.type].format(goal.start), 1, 0.82, 0, 1, 1, 1)
-		end
-		GameTooltip:AddDoubleLine("Running for", FormatDuration(goal.active or 0), 1, 0.82, 0, 1, 1, 1)
-		GameTooltip:AddLine("Right-click for options", 0.5, 0.5, 0.5)
-		GameTooltip:Show()
-	end)
-	row:SetScript("OnLeave", GameTooltip_Hide)
-	row:SetScript("OnUpdate", function(self)
+	widget:SetScript("OnEnter", ShowGoalTooltip)
+	widget:SetScript("OnLeave", GameTooltip_Hide)
+	widget.flash = widget:CreateTexture(nil, "BACKGROUND", nil, 1)
+	widget.flash:SetAllPoints()
+	widget.flash:SetColorTexture(UI.ACCENT[1], UI.ACCENT[2], UI.ACCENT[3], 0.25)
+	widget.flash:SetAlpha(0)
+	widget:SetScript("OnUpdate", function(self)
 		local flashAt = self.goal and self.goal.flashAt
 		local age = flashAt and GetTime() - flashAt
 		self.flash:SetAlpha(age and age < 0.6 and (1 - age / 0.6) or 0)
 	end)
+end
+
+local function MakeTrack(parent, height)
+	local track = CreateFrame("StatusBar", nil, parent)
+	track:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
+	track:SetMinMaxValues(0, 1)
+	track:SetHeight(height)
+	track.bg = track:CreateTexture(nil, "BACKGROUND")
+	track.bg:SetAllPoints()
+	track.bg:SetColorTexture(1, 1, 1, 0.12)
+	return track
+end
+
+-- Colours a widget's name and bar for done / paused / running.
+local function ApplyState(widget, goal)
+	local fraction = GetProgress(goal)
+	widget.track:SetValue(math.min(math.max(fraction, 0), 1))
+	widget.icon:SetDesaturated(goal.paused and true or false)
+	local color = goal.completed and DONE_COLOR or goal.paused and PAUSED_COLOR or UI.ACCENT
+	widget.track:SetStatusBarColor(unpack(color))
+	if widget.name then
+		widget.name:SetTextColor(unpack(goal.completed and DONE_COLOR or goal.paused and UI.GREY or UI.GOLD))
+	end
+end
+
+-- Full: icon, name, value, bar, rate line.
+local function CreateFullRow(index)
+	local row = CreateFrame("Button", nil, tracker)
+	row:SetHeight(ROW_HEIGHT)
+	row.bg = row:CreateTexture(nil, "BACKGROUND")
+	row.bg:SetAllPoints()
+	row.bg:SetColorTexture(1, 1, 1, index % 2 == 0 and 0.03 or 0)
+	SetupGoalWidget(row)
+
+	row.icon = row:CreateTexture(nil, "ARTWORK")
+	row.icon:SetSize(30, 30)
+	row.icon:SetPoint("LEFT", 8, 0)
+	row.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	row.value = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	row.value:SetPoint("TOPRIGHT", -8, -7)
+	row.name = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+	row.name:SetPoint("TOPLEFT", row.icon, "TOPRIGHT", 8, 1)
+	row.name:SetPoint("RIGHT", row.value, "LEFT", -6, 0)
+	row.name:SetJustifyH("LEFT")
+	row.name:SetWordWrap(false)
+	row.track = MakeTrack(row, 4)
+	row.track:SetPoint("LEFT", row.icon, "RIGHT", 8, -2)
+	row.track:SetPoint("RIGHT", -8, 0)
+	row.info = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+	row.info:SetPoint("BOTTOMLEFT", row.icon, "BOTTOMRIGHT", 8, -2)
+	row.info:SetPoint("RIGHT", -8, 0)
+	row.info:SetJustifyH("LEFT")
+	row.info:SetWordWrap(false)
 	return row
+end
+
+-- Compact: one line (small icon, name, value) with a hairline bar under it.
+local function CreateCompactRow(index)
+	local row = CreateFrame("Button", nil, tracker)
+	row:SetHeight(COMPACT_HEIGHT)
+	row.bg = row:CreateTexture(nil, "BACKGROUND")
+	row.bg:SetAllPoints()
+	row.bg:SetColorTexture(1, 1, 1, index % 2 == 0 and 0.03 or 0)
+	SetupGoalWidget(row)
+
+	row.icon = row:CreateTexture(nil, "ARTWORK")
+	row.icon:SetSize(16, 16)
+	row.icon:SetPoint("LEFT", 6, 1)
+	row.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	row.value = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	row.value:SetPoint("RIGHT", -6, 1)
+	row.name = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+	row.name:SetPoint("LEFT", row.icon, "RIGHT", 6, 0)
+	row.name:SetPoint("RIGHT", row.value, "LEFT", -6, 0)
+	row.name:SetJustifyH("LEFT")
+	row.name:SetWordWrap(false)
+	row.track = MakeTrack(row, 2)
+	row.track:SetPoint("BOTTOMLEFT", 6, 2)
+	row.track:SetPoint("BOTTOMRIGHT", -6, 2)
+	return row
+end
+
+-- Icons: the goal's icon with a bar along its bottom edge and the amount under it.
+local function CreateIconTile()
+	local tile = CreateFrame("Button", nil, tracker)
+	SetupGoalWidget(tile)
+	tile.icon = tile:CreateTexture(nil, "ARTWORK")
+	tile.icon:SetPoint("TOPLEFT")
+	tile.icon:SetPoint("TOPRIGHT")
+	tile.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	tile.track = MakeTrack(tile, 3)
+	tile.track:SetPoint("BOTTOMLEFT", tile.icon, "BOTTOMLEFT")
+	tile.track:SetPoint("BOTTOMRIGHT", tile.icon, "BOTTOMRIGHT")
+	tile.track:SetFrameLevel(tile:GetFrameLevel() + 2)
+	tile.count = tile:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	tile.count:SetPoint("BOTTOM", 0, 0)
+	-- Green frame when done.
+	tile.done = CreateFrame("Frame", nil, tile)
+	tile.done:SetAllPoints(tile.icon)
+	tile.done:SetFrameLevel(tile:GetFrameLevel() + 3)
+	for _, side in ipairs({ "TOP", "BOTTOM", "LEFT", "RIGHT" }) do
+		local line = UI.AddLine(tile.done, side)
+		line:SetColorTexture(DONE_COLOR[1], DONE_COLOR[2], DONE_COLOR[3], 1)
+	end
+	return tile
+end
+
+local widgets = { full = {}, compact = {}, icons = {} }
+local CREATE = { full = CreateFullRow, compact = CreateCompactRow, icons = CreateIconTile }
+
+local function GetWidget(view, index)
+	local list = widgets[view]
+	list[index] = list[index] or CREATE[view](index)
+	return list[index]
+end
+
+-- Lays out the goals in a view; returns the tracker's width and the height below the header.
+local LAYOUT = {}
+
+function LAYOUT.full(goals)
+	local shown = math.min(#goals, MAX_ROWS)
+	for index = 1, shown do
+		local goal, row = goals[index], GetWidget("full", index)
+		row.goal = goal
+		row:ClearAllPoints()
+		row:SetPoint("TOPLEFT", 0, -HEADER_HEIGHT - (index - 1) * ROW_HEIGHT)
+		row:SetPoint("TOPRIGHT", 0, -HEADER_HEIGHT - (index - 1) * ROW_HEIGHT)
+		local name, icon = Describe(goal)
+		local _, value = GetProgress(goal)
+		row.icon:SetTexture(icon)
+		row.name:SetText(name)
+		row.value:SetText(value)
+		row.info:SetText(DescribeRate(goal))
+		ApplyState(row, goal)
+		row:Show()
+	end
+	return ns:GetValue("farmGoalsWidth") or 260, shown * ROW_HEIGHT, shown
+end
+
+function LAYOUT.compact(goals)
+	local shown = math.min(#goals, MAX_COMPACT_ROWS)
+	for index = 1, shown do
+		local goal, row = goals[index], GetWidget("compact", index)
+		row.goal = goal
+		row:ClearAllPoints()
+		row:SetPoint("TOPLEFT", 0, -HEADER_HEIGHT - (index - 1) * COMPACT_HEIGHT)
+		row:SetPoint("TOPRIGHT", 0, -HEADER_HEIGHT - (index - 1) * COMPACT_HEIGHT)
+		local name, icon = Describe(goal)
+		local _, value = GetProgress(goal)
+		row.icon:SetTexture(icon)
+		row.name:SetText(name)
+		row.value:SetText(value)
+		ApplyState(row, goal)
+		row:Show()
+	end
+	return ns:GetValue("farmGoalsCompactWidth") or 210, shown * COMPACT_HEIGHT, shown
+end
+
+function LAYOUT.icons(goals)
+	local size = ns:GetValue("farmGoalsIconSize") or 32
+	local perRow = ns:GetValue("farmGoalsIconsPerRow") or 6
+	local gap, pad, labelHeight = 6, 6, 13
+	local shown = math.min(#goals, MAX_ICONS)
+	local columns = math.min(perRow, math.max(shown, 1))
+	for index = 1, shown do
+		local goal, tile = goals[index], GetWidget("icons", index)
+		tile.goal = goal
+		tile:SetSize(size, size + labelHeight)
+		tile.icon:SetHeight(size)
+		local column, row = (index - 1) % columns, math.floor((index - 1) / columns)
+		tile:ClearAllPoints()
+		tile:SetPoint("TOPLEFT", pad + column * (size + gap), -HEADER_HEIGHT - pad - row * (size + labelHeight + gap))
+		local _, icon = Describe(goal)
+		tile.icon:SetTexture(icon)
+		tile.icon:SetAlpha(goal.paused and 0.6 or 1)
+		tile.count:SetText(ShortAmount(goal))
+		tile.done:SetShown(goal.completed ~= nil)
+		ApplyState(tile, goal)
+		tile:Show()
+	end
+	local rows = math.ceil(shown / columns)
+	local width = math.max(120, pad * 2 + columns * size + (columns - 1) * gap)
+	return width, pad * 2 + rows * (size + labelHeight) + math.max(rows - 1, 0) * gap, shown
 end
 
 local function SavePosition()
 	local point, _, relativePoint, x, y = tracker:GetPoint()
 	NraKitDB.farmGoalsPosition = { point = point, relativePoint = relativePoint, x = x, y = y }
+end
+
+local function HeaderButton(header, label, tooltipTitle, tooltipText, onClick)
+	local button = UI.CreateFlatButton(header, label, 16)
+	button:SetWidth(18)
+	button:SetScript("OnClick", onClick)
+	button:SetScript("OnEnter", function(self)
+		UI.ShowTooltip(self, type(tooltipTitle) == "function" and tooltipTitle() or tooltipTitle,
+			type(tooltipText) == "function" and tooltipText() or tooltipText)
+	end)
+	button:SetScript("OnLeave", GameTooltip_Hide)
+	return button
 end
 
 local function CreateTracker()
@@ -830,35 +1063,45 @@ local function CreateTracker()
 	tracker.title:SetPoint("LEFT", 8, 0)
 	tracker.title:SetTextColor(unpack(UI.ACCENT))
 
-	local add = UI.CreateFlatButton(header, "+", 16)
-	add:SetWidth(18)
-	add:SetPoint("RIGHT", -3, 0)
-	add:SetScript("OnClick", function()
+	local add = HeaderButton(header, "+", "New goal", "Open the goals window.", function()
 		ns:OpenGoalsWindow("new")
 	end)
-	add:SetScript("OnEnter", function(self)
-		UI.ShowTooltip(self, "New goal", "Open the goals window.")
-	end)
-	add:SetScript("OnLeave", GameTooltip_Hide)
+	add:SetPoint("RIGHT", -3, 0)
 
-	local collapse = UI.CreateFlatButton(header, "-", 16)
-	collapse:SetWidth(18)
-	collapse:SetPoint("RIGHT", add, "LEFT", -2, 0)
-	collapse:SetScript("OnClick", function()
+	tracker.collapse = HeaderButton(header, "-", function()
+		return NraKitDB.farmGoalsCollapsed and "Expand" or "Collapse"
+	end, "Show just this header, or the goals again.", function()
 		NraKitDB.farmGoalsCollapsed = not NraKitDB.farmGoalsCollapsed or nil
 		UpdateTracker()
 	end)
-	tracker.collapse = collapse
+	tracker.collapse:SetPoint("RIGHT", add, "LEFT", -2, 0)
+
+	tracker.view = HeaderButton(header, "F", function()
+		return "View: " .. VIEW_LABELS[GetView()]
+	end, "Click to switch between Full, Compact (one line per goal) and Icons.", function()
+		local current = GetView()
+		for index, view in ipairs(VIEWS) do
+			if view == current then
+				NraKitDB.farmGoalsView = VIEWS[index % #VIEWS + 1]
+			end
+		end
+		UpdateTracker()
+		GameTooltip_Hide()
+	end)
+	tracker.view:SetPoint("RIGHT", tracker.collapse, "LEFT", -2, 0)
 
 	tracker.more = tracker:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	tracker.more:SetPoint("BOTTOM", 0, 4)
 end
 
--- Unfinished goals first (pinned order otherwise), then finished ones.
-local function SortedGoals()
+-- Unfinished goals first (in the order they were made), then finished ones. Shelved
+-- goals aren't shown.
+local function TrackedGoals()
 	local list = {}
 	for _, goal in ipairs(GetData().goals) do
-		table.insert(list, goal)
+		if not goal.shelved then
+			table.insert(list, goal)
+		end
 	end
 	table.sort(list, function(a, b)
 		if (a.completed ~= nil) ~= (b.completed ~= nil) then
@@ -876,7 +1119,7 @@ function UpdateTracker()
 	if not characterKey then
 		return
 	end
-	local goals = SortedGoals()
+	local goals = TrackedGoals()
 	local show = ns:IsModuleEnabled(module.key) and #goals > 0
 		and not (ns:GetOption("farmGoalsHideInCombat") and InCombatLockdown())
 	if not show then
@@ -888,60 +1131,41 @@ function UpdateTracker()
 	if not tracker then
 		CreateTracker()
 	end
-
-	local width = ns:GetValue("farmGoalsWidth") or 260
-	tracker:SetWidth(width)
 	tracker:SetScale((ns:GetValue("farmGoalsScale") or 100) / 100)
 
-	local running = 0
+	local done = 0
 	for _, goal in ipairs(goals) do
-		if not goal.completed then
-			running = running + 1
+		if goal.completed then
+			done = done + 1
 		end
 	end
-	tracker.title:SetText(string.format("GOALS  |cff808080%d/%d|r", #goals - running, #goals))
+	local view = GetView()
+	tracker.title:SetText(string.format(view == "icons" and "GOALS" or "GOALS  |cff808080%d/%d|r", done, #goals))
 	local collapsed = NraKitDB.farmGoalsCollapsed
 	tracker.collapse.text:SetText(collapsed and "+" or "-")
+	tracker.view.text:SetText(VIEW_LETTERS[view])
 
-	local shown = collapsed and 0 or math.min(#goals, MAX_ROWS)
-	for index = 1, math.max(shown, #rows) do
-		local row = rows[index]
-		local goal = goals[index]
-		if index <= shown then
-			row = row or CreateRow(index)
-			rows[index] = row
-			row.goal = goal
-			row:ClearAllPoints()
-			row:SetPoint("TOPLEFT", 0, -HEADER_HEIGHT - (index - 1) * ROW_HEIGHT)
-			row:SetPoint("TOPRIGHT", 0, -HEADER_HEIGHT - (index - 1) * ROW_HEIGHT)
-
-			local name, icon = Describe(goal)
-			local fraction, value = GetProgress(goal)
-			row.icon:SetTexture(icon)
-			row.icon:SetDesaturated(goal.paused and true or false)
-			row.name:SetText(name)
-			row.value:SetText(value)
-			row.track:SetValue(math.min(math.max(fraction, 0), 1))
-			row.info:SetText(DescribeRate(goal))
-			if goal.completed then
-				row.track:SetStatusBarColor(unpack(DONE_COLOR))
-				row.name:SetTextColor(unpack(DONE_COLOR))
-			elseif goal.paused then
-				row.track:SetStatusBarColor(unpack(PAUSED_COLOR))
-				row.name:SetTextColor(unpack(UI.GREY))
-			else
-				row.track:SetStatusBarColor(unpack(UI.ACCENT))
-				row.name:SetTextColor(unpack(UI.GOLD))
+	local width, height, shown = 0, 0, 0
+	if not collapsed then
+		width, height, shown = LAYOUT[view](goals)
+	end
+	-- Hide what the layout didn't use (other views, and rows past the last goal).
+	for name, list in pairs(widgets) do
+		for index, widget in ipairs(list) do
+			if collapsed or name ~= view or index > shown then
+				widget:Hide()
+				widget.goal = nil
 			end
-			row:Show()
-		elseif row then
-			row:Hide()
 		end
 	end
 
 	local hidden = collapsed and 0 or #goals - shown
 	tracker.more:SetText(hidden > 0 and string.format("+%d more  (/nra goal)", hidden) or "")
-	tracker:SetHeight(HEADER_HEIGHT + shown * ROW_HEIGHT + (hidden > 0 and 18 or 0))
+	if collapsed then
+		width = view == "icons" and 120 or (ns:GetValue(view == "compact" and "farmGoalsCompactWidth" or "farmGoalsWidth") or 260)
+	end
+	tracker:SetWidth(width)
+	tracker:SetHeight(HEADER_HEIGHT + height + (hidden > 0 and 18 or 0))
 	tracker:Show()
 end
 
@@ -1047,6 +1271,9 @@ end
 
 ns.goals = {
 	EditGoal = EditGoal,
+	SetShelved = function(goal, shelved)
+		SetShelved(goal, shelved)
+	end,
 	GetData = function()
 		return GetData()
 	end,
@@ -1070,7 +1297,92 @@ ns.goals = {
 	end,
 }
 
--- /nra goal 4000 [Silk Cloth] | /nra goal level 40 | /nra goal xp 50000 | /nra goal gold 100
+-- Finds a faction, skill or currency by name: an exact match first, else the first that
+-- contains the text. Returns the API's data table and its ID.
+local function FindByName(text, count, get, idOf)
+	text = text:lower()
+	local partial, partialID
+	for index = 1, count do
+		local data = get(index)
+		local id = data and idOf(data, index)
+		if id and data.name then
+			local name = data.name:lower()
+			if name == text then
+				return data, id
+			elseif not partial and name:find(text, 1, true) then
+				partial, partialID = data, id
+			end
+		end
+	end
+	return partial, partialID
+end
+
+local function FindFaction(text)
+	return FindByName(text, C_Reputation.GetNumFactions(), C_Reputation.GetFactionDataByIndex, function(data)
+		return (not data.isHeader or data.isHeaderWithRep) and data.factionID and data.factionID > 0 and data.factionID or nil
+	end)
+end
+
+local function FindSkill(text)
+	return FindByName(text, C_SkillInfo.GetNumSkillLines(), C_SkillInfo.GetSkillLineInfo, function(data)
+		return not data.isHeader and data.skillID or nil
+	end)
+end
+
+local function FindCurrency(text)
+	return FindByName(text, C_CurrencyInfo.GetCurrencyListSize(), C_CurrencyInfo.GetCurrencyListInfo, function(data, index)
+		local link = not data.isHeader and C_CurrencyInfo.GetCurrencyListLink(index)
+		return link and tonumber(link:match("currency:(%d+)"))
+	end)
+end
+
+-- "revered" (or "Revered", in the game's language) -> 7
+local function FindStanding(text)
+	text = text:lower()
+	for reaction = 1, #REP_THRESHOLDS do
+		if StandingLabel(reaction):lower() == text then
+			return reaction
+		end
+	end
+end
+
+-- Prints the goals, numbered, with where they stand.
+local function ListGoals()
+	local goals = GetData().goals
+	if #goals == 0 then
+		ns:Print("No goals yet. /nra goal help shows how to add one.")
+		return
+	end
+	ns:Print("Your goals:")
+	for index, goal in ipairs(goals) do
+		local _, value = GetProgress(goal)
+		local state = goal.shelved and "  |cff808080(shelved)|r" or goal.paused and "  |cff808080(paused)|r"
+			or goal.completed and "  |cff4cd94c(done)|r" or ""
+		print(string.format("  %d. %s  |cffffffff%s|r%s", index, (Describe(goal)), value, state))
+	end
+end
+
+local SLASH_HELP = {
+	summary = "Farm goals: open the goals window, or add a goal straight from chat",
+	usage = {
+		"/nra goal - open the goals window",
+		"/nra goal list - list your goals and where they stand",
+		"/nra goal <count> <item> - loot that many of an item (shift-click the item to paste it)",
+		"/nra goal level <level> - reach a level",
+		"/nra goal xp <amount> - gain that much XP",
+		"/nra goal gold <amount> - have that much gold (counting what you gain from now)",
+		"/nra goal rep <standing> <faction> - reach a standing, e.g. /nra goal rep revered timbermaw",
+		"/nra goal rep +<amount> <faction> - gain that much reputation",
+		"/nra goal skill <skill> [rank] - raise a skill to a rank, or to its cap if no rank, e.g. /nra goal skill swords",
+		"/nra goal currency <amount> <currency> - have that much of a currency (+<amount> to gain it)",
+		"Names can be partial; the goals window can do everything here and more (starting counts, sounds).",
+	},
+}
+
+local function SlashError(message)
+	ns:Print(message .. " See /nra goal help.")
+end
+
 local function OnSlashCommand(input)
 	if not ns:IsModuleEnabled(module.key) then
 		ns:Print("Turn on Farm goals first (/nra).")
@@ -1078,25 +1390,101 @@ local function OnSlashCommand(input)
 	end
 	local first, rest = input:match("^(%S*)%s*(.-)$")
 	first = first:lower()
-	local amount = tonumber(rest and rest:match("^(%d+)"))
-	if first == "level" and amount then
-		AddGoal({ type = "level", target = amount })
-	elseif first == "xp" and amount then
-		AddGoal({ type = "xp", target = amount })
-	elseif first == "gold" and amount then
-		AddGoal({ type = "gold", target = amount * 10000 })
-	elseif tonumber(first) and rest ~= "" then
-		local itemID = tonumber(rest:match("item:(%d+)")) or C_Item.GetItemInfoInstant(rest)
-		if not itemID then
-			ns:Print("Unknown item \"" .. rest .. "\". Shift-click the item to paste its link, or use the goals window.")
-			return
-		end
-		AddGoal({ type = "item", itemID = itemID, target = tonumber(first) })
-	else
+	local goal
+
+	if first == "" then
 		ns:OpenGoalsWindow()
 		return
+	elseif first == "list" then
+		ListGoals()
+		return
+	elseif first == "level" or first == "xp" or first == "gold" then
+		local amount = tonumber(rest:match("^(%d+)"))
+		if not amount then
+			SlashError("Give a number, e.g. /nra goal " .. first .. " " .. (first == "level" and "40" or "100") .. ".")
+			return
+		elseif first == "level" and amount <= UnitLevel("player") then
+			SlashError("You're already level " .. UnitLevel("player") .. ".")
+			return
+		end
+		goal = { type = first, target = first == "gold" and amount * 10000 or amount }
+	elseif first == "rep" then
+		local target, name = rest:match("^(%S+)%s+(.+)$")
+		if not target then
+			SlashError("Give a standing (or +amount) and a faction.")
+			return
+		end
+		local data, id = FindFaction(name)
+		if not data then
+			SlashError("No faction called \"" .. name .. "\" in your reputation list.")
+			return
+		end
+		local gain = tonumber(target:match("^%+(%d+)$"))
+		local standing = FindStanding(target)
+		if gain then
+			goal = { type = "rep", key = id, name = data.name, mode = "gain", target = gain }
+		elseif standing then
+			if standing <= data.reaction then
+				SlashError("You're already " .. StandingLabel(data.reaction) .. " with " .. data.name .. ".")
+				return
+			end
+			goal = { type = "rep", key = id, name = data.name, mode = "reach", target = standing }
+		else
+			SlashError("\"" .. target .. "\" isn't a standing (friendly, honored, revered, exalted) or +amount.")
+			return
+		end
+	elseif first == "skill" then
+		local name, target = rest:match("^(.-)%s+(%S+)$")
+		if not (target and (tonumber(target) or target:lower() == "max")) then
+			name, target = rest, nil
+		end
+		local data, id
+		if name ~= "" then
+			data, id = FindSkill(name)
+		end
+		if not data then
+			SlashError("No skill called \"" .. rest .. "\" in your skills.")
+			return
+		end
+		local rank = tonumber(target or "")
+		if rank and rank <= data.rank then
+			SlashError(data.name .. " is already " .. data.rank .. ".")
+			return
+		end
+		goal = { type = "skill", key = id, name = data.name, mode = "reach", target = rank or data.maxRank, toMax = not rank }
+	elseif first == "currency" then
+		local amount, name = rest:match("^(%+?%d+)%s+(.+)$")
+		if not amount then
+			SlashError("Give an amount and a currency.")
+			return
+		end
+		local data, id = FindCurrency(name)
+		if not data then
+			SlashError("No currency called \"" .. name .. "\".")
+			return
+		end
+		local gain = amount:sub(1, 1) == "+"
+		goal = { type = "currency", key = id, name = data.name, mode = gain and "gain" or "reach", target = tonumber(amount:match("%d+")) }
+	else
+		-- /nra goal [item] <count> <item link or name>
+		if first == "item" then
+			first, rest = rest:match("^(%S*)%s*(.-)$")
+		end
+		local count = tonumber(first)
+		if not count or rest == "" then
+			SlashError("Unknown goal \"" .. input .. "\".")
+			return
+		end
+		local itemID = tonumber(rest:match("item:(%d+)")) or C_Item.GetItemInfoInstant(rest)
+		if not itemID then
+			SlashError("Unknown item \"" .. rest .. "\". Shift-click the item to paste its link.")
+			return
+		end
+		goal = { type = "item", itemID = itemID, target = count }
 	end
-	ns:Print("Goal added. Right-click it in the tracker for options.")
+
+	AddGoal(goal)
+	ns:Print("Goal added: " .. (Describe(goal)) .. ". Right-click it in the tracker for options.")
 end
 
 ------------------------------------------------------------------------------
@@ -1142,8 +1530,16 @@ end
 
 function module:OnInitialize()
 	characterKey = UnitName("player") .. "-" .. (GetNormalizedRealmName() or GetRealmName())
-	ns:RegisterSlashCommand("goal", OnSlashCommand)
-	ns:RegisterSlashCommand("goals", OnSlashCommand)
+	-- The finish sound's default changed from Epic loot to World quest complete; move
+	-- anyone still on the old default (once).
+	if not NraKitDB.farmGoalsFinishSoundUpdated then
+		if NraKitDB.farmGoalsCompleteSoundChoice == "kit:UI_EPICLOOT_TOAST" then
+			NraKitDB.farmGoalsCompleteSoundChoice = "kit:UI_WORLDQUEST_COMPLETE"
+		end
+		NraKitDB.farmGoalsFinishSoundUpdated = true
+	end
+	ns:RegisterSlashCommand("goal", OnSlashCommand, SLASH_HELP)
+	ns:RegisterSlashCommand("goals", OnSlashCommand, SLASH_HELP)
 	self:OnEnabledChanged(ns:IsModuleEnabled(self.key))
 end
 

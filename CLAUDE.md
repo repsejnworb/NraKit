@@ -80,7 +80,9 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   event for row tooltips. Recipe data (`C_TradeSkillUI.*`) is only readable while the profession window is open.
 - Units can't be probed by name any more (`TargetUnit` is protected), so a unit scanner only sees nameplates,
   mouseover, targets and vignettes (see UnitScanner.lua). `UnitName`/`UnitGUID` can be secret.
-- `/nra <subcommand>` is dispatched through `ns:RegisterSlashCommand(name, handler)` in Core.lua; plain `/nra` toggles the NraKit window.
+- `/nra <subcommand>` is dispatched through `ns:RegisterSlashCommand(name, handler, help)` in Core.lua; plain `/nra` toggles
+  the NraKit window. Always pass `help = { summary, usage = { "/nra x <arg> - what it does", ... } }`: `/nra help` lists
+  summaries, `/nra x help` / `/nra x ?` print the usage (Core handles both).
 - Overhead names (with nameplates off) are drawn by the engine, not Lua. A unit with a nameplate never gets its engine name back.
 
 ## Forever quirks
