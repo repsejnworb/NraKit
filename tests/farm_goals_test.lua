@@ -260,6 +260,19 @@ return {
 			ns.goals.AddGoal({ type = "xp", target = 4000 })
 			t.equal(NraKitGoalsTracker:GetWidth(), pad * 2 + 3 * size + 2 * gap, "a fourth wraps")
 			t.ok(NraKitGoalsTracker:GetHeight() > oneRow, "second row")
+			-- Hover shows the header; it lingers after the mouse leaves, then goes.
+			local tracker = NraKitGoalsTracker
+			wow.now = 1000
+			tracker.mouseOver = true
+			tracker.scripts.OnUpdate(tracker)
+			t.ok(tracker.header:IsShown(), "shown on hover")
+			tracker.mouseOver = false
+			wow.now = 1002
+			tracker.scripts.OnUpdate(tracker)
+			t.ok(tracker.header:IsShown(), "still there 2 seconds later")
+			wow.now = 1004
+			tracker.scripts.OnUpdate(tracker)
+			t.ok(not tracker.header:IsShown(), "gone after lingering and fading")
 			NraKitDB.farmGoalsView = "full"
 			ns.goals.Update()
 			t.ok(NraKitGoalsTracker.header:IsShown(), "header back in the full view")

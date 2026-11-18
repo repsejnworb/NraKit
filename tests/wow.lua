@@ -156,8 +156,8 @@ local methods = {
 	IsForbidden = function()
 		return false
 	end,
-	IsMouseOver = function()
-		return false
+	IsMouseOver = function(self)
+		return rawget(self, "mouseOver") == true
 	end,
 }
 

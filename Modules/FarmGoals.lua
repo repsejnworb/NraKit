@@ -840,6 +840,7 @@ local VIEWS = { "full", "compact", "icons" }
 local VIEW_LABELS = { full = "Full", compact = "Compact", icons = "Icons" }
 local VIEW_LETTERS = { full = "F", compact = "C", icons = "I" }
 local COMPACT_HEIGHT = 24
+local HEADER_LINGER, HEADER_FADE = 2.5, 0.4 -- Icons view: the floating header after the mouse leaves
 local MAX_COMPACT_ROWS = 12
 local MAX_ICONS = 30
 
@@ -936,7 +937,11 @@ local function ShowGoalTooltip(widget)
 	if not goal then
 		return
 	end
-	GameTooltip:SetOwner(widget, "ANCHOR_LEFT")
+	-- Beside the goal, top-aligned: never over the space above the tracker (the Icons
+	-- view's header shows there).
+	GameTooltip:SetOwner(widget, "ANCHOR_NONE")
+	GameTooltip:ClearAllPoints()
+	GameTooltip:SetPoint("TOPRIGHT", widget, "TOPLEFT", -6, 0)
 	if goal.itemID then
 		GameTooltip:SetItemByID(goal.itemID)
 		GameTooltip:AddLine(" ")
@@ -1311,9 +1316,21 @@ local function CreateTracker()
 	tracker:SetScript("OnUpdate", function(self)
 		Pulse(self.headerGlow, self.unseenWhileCollapsed == true)
 		if self.floatingHeader then
-			-- Shown while the mouse is on the tiles, and kept while it's on the header itself.
-			local hover = self:IsMouseOver() or (self.header:IsShown() and self.header:IsMouseOver())
-			self.header:SetShown(hover)
+			-- Shown while the mouse is on the tiles or the header, then lingers a moment and
+			-- fades, so it can still be reached past a goal's tooltip.
+			local now = GetTime()
+			if self:IsMouseOver() or (self.header:IsShown() and self.header:IsMouseOver()) then
+				self.headerHoverAt = now
+			end
+			local since = now - (self.headerHoverAt or -math.huge)
+			if since < HEADER_LINGER then
+				self.header:SetAlpha(1)
+				self.header:Show()
+			elseif since < HEADER_LINGER + HEADER_FADE then
+				self.header:SetAlpha(1 - (since - HEADER_LINGER) / HEADER_FADE)
+			else
+				self.header:Hide()
+			end
 		end
 	end)
 	tracker:SetScript("OnEnter", function(self)
@@ -1393,7 +1410,9 @@ function UpdateTracker()
 	if floating then
 		header:SetPoint("BOTTOMLEFT", tracker, "TOPLEFT", 0, 1)
 		header:SetWidth(64)
-		header:Hide()
+		if not tracker.headerHoverAt then
+			header:Hide()
+		end
 	else
 		header:SetPoint("TOPLEFT")
 		header:SetPoint("TOPRIGHT")
