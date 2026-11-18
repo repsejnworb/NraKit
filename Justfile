@@ -12,12 +12,14 @@ default:
 check:
     for f in *.lua Modules/*.lua tests/*.lua; do luac -p "$f"; done
 
-# Run the tests (each file in a fresh stand-in client, see tests/run.lua)
+# Run the tests (each file in a fresh stand-in client, see tests/run.lua). LuaJIT runs
+# Lua 5.1 like the game; plain lua (5.4) is stricter in places (e.g. %d with decimals).
 test: check
     #!/usr/bin/env bash
     set -uo pipefail
+    runner=$(command -v luajit || command -v lua)
     status=0
-    for f in tests/*_test.lua; do lua tests/run.lua "$f" || status=1; done
+    for f in tests/*_test.lua; do "$runner" tests/run.lua "$f" || status=1; done
     exit $status
 
 # Show the version the next release would get, and the commits going into it

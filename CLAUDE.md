@@ -8,7 +8,7 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
 - Work directly in this `main/` worktree, commit, and push to `origin/main`.
 - **Every feature is off by default** (module `default = false`). Sub-options inside a feature may default on.
 - Each feature should be toggleable on the NraKit overview page; anything tunable goes in settings, not code constants.
-- Run `just test` before committing (it also syntax-checks). `tests/run.lua` loads the whole addon in TOC order into a
+- Run `just test` before committing (it also syntax-checks). It uses LuaJIT (Lua 5.1, like the game). `tests/run.lua` loads the whole addon in TOC order into a
   stand-in client (`tests/wow.lua`), logs in and runs a `tests/*_test.lua` file; each file is a fresh process. Tests
   click through windows (`wow.click("Create goal")`, `wow.type`, `wow.tick`, `wow.fire(event, ...)`) and assert on
   saved data. Add tests for new logic and windows, and a regression test for each bug found. The stand-in only

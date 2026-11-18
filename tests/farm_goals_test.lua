@@ -255,6 +255,71 @@ return {
 			NraKitDB.farmGoalsView = "full"
 		end)
 
+		t.test("go again: the run goes to the history and the goal starts over", function()
+			ClearGoals(ns)
+			local goal = ns.goals.AddGoal({ type = "item", itemID = SILK, target = 3 })
+			wow.fire("CHAT_MSG_LOOT", "You receive loot: " .. SILK_LINK .. "x3.")
+			t.ok(goal.completed, "finished")
+			t.equal(ns.goals.GoAgainAmount(goal), "3 Silk Cloth", "menu label amount")
+			local before = #ns.goals.GetData().history
+			ns:OpenGoalsWindow("active")
+			t.ok(wow.click("Go again"), "Go again button")
+			t.equal(#ns.goals.GetData().history, before + 1, "run recorded")
+			t.equal(ns.goals.GetData().history[1].goal, nil, "a run record isn't restorable")
+			t.ok(not goal.completed, "running again")
+			t.equal(goal.gained, 0, "from zero")
+			wow.fire("CHAT_MSG_LOOT", "You receive loot: " .. SILK_LINK .. ".")
+			t.equal(goal.gained, 1, "counting again")
+		end)
+
+		t.test("a finished reach goal offers a new target instead", function()
+			ClearGoals(ns)
+			wow.data.level = 31
+			local goal = ns.goals.AddGoal({ type = "level", target = 31 })
+			t.ok(goal.completed, "already reached")
+			t.ok(not ns.goals.CanGoAgain(goal), "can't go again")
+			ns:OpenGoalsWindow("active")
+			t.ok(wow.click("New target"), "New target button")
+			wow.type(wow.amountBox(), "35")
+			t.ok(wow.click("Save changes"), "saved")
+			t.equal(goal.target, 35, "new target")
+			t.ok(not goal.completed, "running again")
+		end)
+
+		t.test("a finished goal glows until you hover it, and a click clears it", function()
+			ClearGoals(ns)
+			NraKitDB.farmGoalsView = "full"
+			local goal = ns.goals.AddGoal({ type = "item", itemID = SILK, target = 1 })
+			wow.fire("CHAT_MSG_LOOT", "You receive loot: " .. SILK_LINK .. ".")
+			local row = TrackedWidgets(wow)[1]
+			row.scripts.OnUpdate(row)
+			t.ok(row.glow.shown, "glowing")
+			row.scripts.OnEnter(row)
+			row.scripts.OnUpdate(row)
+			t.ok(not row.glow.shown, "glow stops once seen")
+			row.scripts.OnClick(row, "LeftButton")
+			t.equal(#Goals(ns), 0, "cleared")
+			local entry = ns.goals.GetData().history[1]
+			t.ok(entry.goal ~= nil, "restorable")
+			ns:OpenGoalsWindow("history")
+			t.ok(wow.click("Restore"), "Restore button")
+			t.equal(#Goals(ns), 1, "back")
+			t.ok(Goals(ns)[1].completed, "still finished")
+		end)
+
+		t.test("a goal finished in combat is shown again after the fight", function()
+			ClearGoals(ns)
+			wow.data.inCombat = true
+			ns.goals.AddGoal({ type = "item", itemID = SILK, target = 1 })
+			wow.fire("CHAT_MSG_LOOT", "You receive loot: " .. SILK_LINK .. ".")
+			wow.data.inCombat = false
+			wow.fire("PLAYER_REGEN_ENABLED")
+			local found = wow.findAll(function(frame)
+				return frame.text == "while you were fighting"
+			end)
+			t.equal(#found, 1, "replayed message")
+		end)
+
 		t.test("active and history pages render", function()
 			ns:OpenGoalsWindow("active")
 			ns:OpenGoalsWindow("history")

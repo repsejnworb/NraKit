@@ -70,6 +70,21 @@ local module = {
 			default = "kit:LOOT_WINDOW_COIN_SOUND",
 		},
 		{
+			key = "farmGoalsToastSize",
+			header = "Finish message",
+			type = "number",
+			name = "Size",
+			description = "Size of the \"Goal complete\" message in the middle of the screen.",
+			default = 100, min = 60, max = 200, step = 10, format = "%d%%",
+		},
+		{
+			key = "farmGoalsToastDuration",
+			type = "number",
+			name = "Time on screen",
+			description = "How long the message stays before it fades (longer while the mouse is on it). A goal finished in combat is shown again when the fight ends.",
+			default = 6, min = 2, max = 15, step = 1, format = "%d s",
+		},
+		{
 			key = "farmGoalsCountCrafted",
 			header = "Counting",
 			name = "Count crafted items",
@@ -311,7 +326,7 @@ TYPES.level = {
 		local start = goal.startLevel or level
 		local fraction = level >= goal.target and 1 or ReachFraction(now, start, goal.target)
 		local remaining = math.max(0, (max - xp) + (goal.target - level - 1) * max)
-		return fraction, string.format("Level %d (%d%%) / %d", level, max > 0 and xp / max * 100 or 0, goal.target), remaining
+		return fraction, string.format("Level %d (%d%%) / %d", level, math.floor(max > 0 and xp / max * 100 or 0), goal.target), remaining
 	end,
 }
 
@@ -443,40 +458,94 @@ end
 -- Completion message
 ------------------------------------------------------------------------------
 
-local function ShowToast(goal)
-	if not toast then
-		toast = CreateFrame("Frame", nil, UIParent)
-		toast:SetSize(600, 80)
-		toast:SetPoint("CENTER", 0, 260)
-		toast:SetFrameStrata("HIGH")
-		toast.heading = toast:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-		toast.heading:SetPoint("TOP")
-		toast.heading:SetTextColor(unpack(DONE_COLOR))
-		toast.heading:SetText("GOAL COMPLETE")
-		toast.text = toast:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
-		toast.text:SetPoint("TOP", toast.heading, "BOTTOM", 0, -6)
-		toast.text:SetTextColor(1, 1, 1)
-		toast.detail = toast:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-		toast.detail:SetPoint("TOP", toast.text, "BOTTOM", 0, -6)
-		toast.detail:SetTextColor(unpack(UI.TEXT))
-		toast:SetScript("OnUpdate", function(self)
-			local age = GetTime() - self.shownAt
-			if age > 5 then
-				self:Hide()
-			elseif age > 4 then
-				self:SetAlpha(5 - age)
-			end
-		end)
+-- Pops in big, bounces to its size, holds (longer while the mouse is on it) and fades.
+-- A goal finished in combat is shown again when the fight ends.
+local TOAST_FADE = 1
+local combatFinished = {} -- goals finished during the current fight
+
+-- Scale over the first 0.35s: 1.35 -> 0.95 -> 1.
+local function PopScale(age)
+	if age < 0.18 then
+		return 1.35 - 0.4 * (age / 0.18)
+	elseif age < 0.35 then
+		return 0.95 + 0.05 * ((age - 0.18) / 0.17)
 	end
-	local name = Describe(goal)
+	return 1
+end
+
+local function CreateToast()
+	-- The holder stays put; the inner frame is scaled around its centre for the pop.
+	toast = CreateFrame("Frame", nil, UIParent)
+	toast:SetSize(640, 110)
+	toast:SetPoint("CENTER", 0, 260)
+	toast:SetFrameStrata("HIGH")
+	local inner = CreateFrame("Frame", nil, toast)
+	inner:SetSize(640, 110)
+	inner:SetPoint("CENTER")
+	toast.inner = inner
+
+	toast.icon = inner:CreateTexture(nil, "ARTWORK")
+	toast.icon:SetSize(44, 44)
+	toast.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	toast.heading = inner:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+	toast.heading:SetTextColor(unpack(DONE_COLOR))
+	toast.text = inner:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
+	toast.text:SetTextColor(1, 1, 1)
+	toast.detail = inner:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	toast.detail:SetTextColor(unpack(UI.TEXT))
+	-- Icon left of the name, both centred together.
+	toast.heading:SetPoint("TOP", 0, 0)
+	toast.text:SetPoint("TOP", toast.heading, "BOTTOM", 26, -8)
+	toast.icon:SetPoint("RIGHT", toast.text, "LEFT", -10, 0)
+	toast.detail:SetPoint("TOP", toast.text, "BOTTOM", -26, -8)
+
+	toast:SetScript("OnUpdate", function(self)
+		local now = GetTime()
+		-- Hovering it keeps it up.
+		if self:IsMouseOver() and now - self.shownAt > 0.35 then
+			self.holdUntil = math.max(self.holdUntil, now + 1)
+		end
+		local age = now - self.shownAt
+		self.inner:SetScale(PopScale(age) * self.size)
+		if now > self.holdUntil + TOAST_FADE then
+			self:Hide()
+		elseif now > self.holdUntil then
+			self:SetAlpha(1 - (now - self.holdUntil) / TOAST_FADE)
+		else
+			self:SetAlpha(1)
+		end
+	end)
+end
+
+-- Shows the message for a goal (or a summary for several finished in one fight).
+local function ShowToast(goal, detail, count)
+	if not toast then
+		CreateToast()
+	end
+	local name, icon = Describe(goal)
 	if goal.type == "item" then
 		name = FormatNumber(goal.target) .. " " .. name
 	end
+	toast.heading:SetText(count and count > 1 and (count .. " GOALS COMPLETE") or "GOAL COMPLETE")
 	toast.text:SetText(name)
-	toast.detail:SetText("in " .. FormatDuration(goal.active or 0))
+	toast.icon:SetTexture(icon)
+	toast.detail:SetText(detail or ("in " .. FormatDuration(goal.active or 0)))
+	toast.size = (ns:GetValue("farmGoalsToastSize") or 100) / 100
 	toast.shownAt = GetTime()
+	toast.holdUntil = toast.shownAt + (ns:GetValue("farmGoalsToastDuration") or 6)
 	toast:SetAlpha(1)
 	toast:Show()
+end
+
+-- Called when combat ends: show again what finished during the fight.
+local function ReplayCombatToasts()
+	local last = combatFinished[#combatFinished]
+	if last then
+		local count = #combatFinished
+		ShowToast(last, count > 1 and ("and " .. (count - 1) .. " more, while you were fighting")
+			or "while you were fighting", count)
+		wipe(combatFinished)
+	end
 end
 
 ------------------------------------------------------------------------------
@@ -494,6 +563,24 @@ local function FindGoal(id)
 end
 
 -- Moves a goal out of the list; finished goals go to the history.
+-- Records a finished run in the history. A cleared goal keeps a copy so it can be
+-- restored from there; a "Go again" run is just a record.
+local function Archive(goal, restorable)
+	local copy
+	if restorable then
+		copy = {}
+		for key, value in pairs(goal) do
+			copy[key] = value
+		end
+	end
+	table.insert(GetData().history, 1, {
+		type = goal.type, name = (Describe(goal)), target = goal.target, itemID = goal.itemID, key = goal.key,
+		mode = goal.mode, toMax = goal.toMax, created = goal.created, completed = goal.completed,
+		active = goal.active, goal = copy,
+	})
+end
+
+-- Moves a goal out of the list; finished goals go to the history.
 local function RemoveGoal(id)
 	local data = GetData()
 	local goal, index = FindGoal(id)
@@ -502,13 +589,55 @@ local function RemoveGoal(id)
 	end
 	table.remove(data.goals, index)
 	if goal.completed then
-		local name = Describe(goal)
-		table.insert(data.history, 1, {
-			type = goal.type, name = name, target = goal.target, itemID = goal.itemID, key = goal.key,
-			mode = goal.mode, toMax = goal.toMax, created = goal.created, completed = goal.completed,
-			active = goal.active,
-		})
+		Archive(goal, true)
 	end
+	UpdateTracker()
+end
+
+-- Puts a cleared goal back from the history, as it was.
+local function RestoreGoal(entry)
+	local data = GetData()
+	for index, candidate in ipairs(data.history) do
+		if candidate == entry and entry.goal then
+			table.remove(data.history, index)
+			entry.goal.seen = true
+			table.insert(data.goals, entry.goal)
+			UpdateTracker()
+			return true
+		end
+	end
+	return false
+end
+
+-- Gain-type goals ("loot 1000", "+5000 rep", "50k XP") can simply go again; "reach"
+-- goals (level 40, Revered, Swords 300) need a new target instead.
+local function CanGoAgain(goal)
+	return goal.type == "item" or goal.type == "xp" or goal.type == "gold" or goal.mode == "gain"
+end
+
+-- "1,000 Silk Cloth", "50,000 XP", "100g", "5,000 Timbermaw Hold rep": what one more run is.
+local function GoAgainAmount(goal)
+	local amount = TYPES[goal.type].format(goal.target)
+	if goal.type == "item" then
+		return amount .. " " .. ItemName(goal.itemID)
+	elseif goal.type == "xp" then
+		return amount .. " XP"
+	elseif goal.type == "gold" then
+		return amount
+	end
+	return amount .. " " .. (goal.name or "")
+end
+
+-- "Go again": the finished run goes to the history and the same goal starts from zero.
+local function GoAgain(goal)
+	Archive(goal, false)
+	goal.completed, goal.seen, goal.flashAt = nil, nil, nil
+	goal.gained, goal.active, goal.milestone, goal.start = 0, 0, 0, 0
+	local read = TYPES[goal.type].read
+	if read then
+		goal.last = read(goal)
+	end
+	goal.created = time()
 	UpdateTracker()
 end
 
@@ -522,6 +651,9 @@ local function Evaluate(goal)
 		goal.completed = time()
 		PlayGoalSound(goal, "complete")
 		ShowToast(goal)
+		if InCombatLockdown() then
+			table.insert(combatFinished, goal)
+		end
 		local name = Describe(goal)
 		ns:Print("Goal complete: " .. name .. " (" .. FormatDuration(goal.active or 0) .. ").")
 		if ns:GetOption("farmGoalsAutoClear") then
@@ -739,6 +871,15 @@ local function OpenMenu(widget)
 	MenuUtil.CreateContextMenu(widget, function(_, root)
 		root:CreateTitle((Describe(goal)))
 		if goal.completed then
+			if CanGoAgain(goal) then
+				root:CreateButton("Go again (another " .. GoAgainAmount(goal) .. ")", function()
+					GoAgain(goal)
+				end)
+			else
+				root:CreateButton("New target...", function()
+					ns:OpenGoalsWindow("edit", goal.id)
+				end)
+			end
 			root:CreateButton("Clear (move to history)", function()
 				RemoveGoal(goal.id)
 			end)
@@ -788,8 +929,44 @@ local function ShowGoalTooltip(widget)
 		GameTooltip:AddDoubleLine("Started from", TYPES[goal.type].format(goal.start), 1, 0.82, 0, 1, 1, 1)
 	end
 	GameTooltip:AddDoubleLine("Running for", FormatDuration(goal.active or 0), 1, 0.82, 0, 1, 1, 1)
-	GameTooltip:AddLine("Right-click for options", 0.5, 0.5, 0.5)
+	if goal.completed then
+		GameTooltip:AddLine("Click to clear it (it goes to the history). Right-click to go again.", 0.3, 0.85, 0.3, true)
+	else
+		GameTooltip:AddLine("Right-click for options", 0.5, 0.5, 0.5)
+	end
 	GameTooltip:Show()
+	-- The glow has done its job once you've looked.
+	if goal.completed and not goal.seen then
+		goal.seen = true
+	end
+end
+
+-- A pulsing green frame for finished goals nobody has looked at yet.
+local function MakeGlow(parent)
+	local glow = CreateFrame("Frame", nil, parent)
+	glow:SetAllPoints()
+	glow:SetFrameLevel(parent:GetFrameLevel() + 4)
+	local fill = glow:CreateTexture(nil, "BACKGROUND")
+	fill:SetAllPoints()
+	fill:SetColorTexture(DONE_COLOR[1], DONE_COLOR[2], DONE_COLOR[3], 0.12)
+	for _, side in ipairs({ "TOP", "BOTTOM", "LEFT", "RIGHT" }) do
+		local line = UI.AddLine(glow, side)
+		line:SetColorTexture(DONE_COLOR[1], DONE_COLOR[2], DONE_COLOR[3], 1)
+		if side == "TOP" or side == "BOTTOM" then
+			line:SetHeight(2)
+		else
+			line:SetWidth(2)
+		end
+	end
+	glow:Hide()
+	return glow
+end
+
+local function Pulse(glow, on)
+	glow:SetShown(on)
+	if on then
+		glow:SetAlpha(0.35 + 0.65 * (0.5 + 0.5 * math.sin(GetTime() * 4)))
+	end
 end
 
 -- What every goal widget does, whatever the view: menu, tooltip, chat link, drag, flash.
@@ -806,6 +983,12 @@ local function SetupGoalWidget(widget)
 	widget:SetScript("OnClick", function(self, button)
 		if button == "RightButton" then
 			OpenMenu(self)
+		elseif self.goal and self.goal.completed and not IsModifiedClick() then
+			-- A finished goal is cleared with a click; the history can restore it.
+			local name = Describe(self.goal)
+			RemoveGoal(self.goal.id)
+			GameTooltip_Hide()
+			ns:Print(name .. " moved to the history. Restore it there (/nra goal) if that was a mistake.")
 		elseif IsModifiedClick("CHATLINK") and self.goal and self.goal.itemID then
 			local link = select(2, C_Item.GetItemInfo(self.goal.itemID))
 			if link then
@@ -819,10 +1002,13 @@ local function SetupGoalWidget(widget)
 	widget.flash:SetAllPoints()
 	widget.flash:SetColorTexture(UI.ACCENT[1], UI.ACCENT[2], UI.ACCENT[3], 0.25)
 	widget.flash:SetAlpha(0)
+	widget.glow = MakeGlow(widget)
 	widget:SetScript("OnUpdate", function(self)
-		local flashAt = self.goal and self.goal.flashAt
+		local goal = self.goal
+		local flashAt = goal and goal.flashAt
 		local age = flashAt and GetTime() - flashAt
 		self.flash:SetAlpha(age and age < 0.6 and (1 - age / 0.6) or 0)
+		Pulse(self.glow, goal ~= nil and goal.completed ~= nil and not goal.seen)
 	end)
 end
 
@@ -918,6 +1104,8 @@ local function CreateIconTile()
 	tile.track:SetPoint("BOTTOMLEFT", tile.icon, "BOTTOMLEFT")
 	tile.track:SetPoint("BOTTOMRIGHT", tile.icon, "BOTTOMRIGHT")
 	tile.track:SetFrameLevel(tile:GetFrameLevel() + 2)
+	tile.glow:ClearAllPoints()
+	tile.glow:SetAllPoints(tile.icon)
 	tile.count = tile:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	tile.count:SetPoint("BOTTOM", 0, 0)
 	-- Green frame when done.
@@ -1092,6 +1280,22 @@ local function CreateTracker()
 
 	tracker.more = tracker:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	tracker.more:SetPoint("BOTTOM", 0, 4)
+
+	-- When collapsed, the header glows for unseen finished goals; hovering it counts as seeing them.
+	tracker.headerGlow = MakeGlow(header)
+	tracker:SetScript("OnUpdate", function(self)
+		Pulse(self.headerGlow, self.unseenWhileCollapsed == true)
+	end)
+	tracker:SetScript("OnEnter", function(self)
+		if self.unseenWhileCollapsed then
+			for _, goal in ipairs(GetData().goals) do
+				if goal.completed then
+					goal.seen = true
+				end
+			end
+			self.unseenWhileCollapsed = nil
+		end
+	end)
 end
 
 -- Unfinished goals first (in the order they were made), then finished ones. Shelved
@@ -1143,6 +1347,13 @@ function UpdateTracker()
 	tracker.title:SetText(string.format(view == "icons" and "GOALS" or "GOALS  |cff808080%d/%d|r", done, #goals))
 	local collapsed = NraKitDB.farmGoalsCollapsed
 	tracker.collapse.text:SetText(collapsed and "+" or "-")
+	local unseen = false
+	for _, goal in ipairs(goals) do
+		if goal.completed and not goal.seen then
+			unseen = true
+		end
+	end
+	tracker.unseenWhileCollapsed = collapsed and unseen or nil
 	tracker.view.text:SetText(VIEW_LETTERS[view])
 
 	local width, height, shown = 0, 0, 0
@@ -1271,6 +1482,10 @@ end
 
 ns.goals = {
 	EditGoal = EditGoal,
+	GoAgain = GoAgain,
+	GoAgainAmount = GoAgainAmount,
+	CanGoAgain = CanGoAgain,
+	RestoreGoal = RestoreGoal,
 	SetShelved = function(goal, shelved)
 		SetShelved(goal, shelved)
 	end,
@@ -1518,6 +1733,9 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 	elseif POLL_EVENTS[event] then
 		Poll(POLL_EVENTS[event])
 	else -- combat start/end
+		if event == "PLAYER_REGEN_ENABLED" then
+			ReplayCombatToasts()
+		end
 		UpdateTracker()
 	end
 end)

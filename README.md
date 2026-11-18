@@ -73,8 +73,10 @@ addons share through LibSharedMedia.
 - **Farm goals**: set goals like "loot 4000 Silk Cloth", "reach level 40", "gain 50,000 XP",
   "earn 100 gold", "reach Revered with Timbermaw Hold", "Swords to 300 (or to its cap)" or a
   currency amount (reach a level or gain an amount), and track them in a small movable window: progress bar, amount gained, rate per
-  hour and time left. Chimes at 25/50/75% and a fanfare with a message in the middle of the screen
-  when a goal is done. Item goals count what you loot (banking, mailing or selling never changes
+  hour and time left. Chimes at 25/50/75% and a fanfare with a big message in the middle of the screen
+  when a goal is done (shown again after the fight if it happened in combat); the finished goal glows
+  in the tracker until you hover it. Click a finished goal to clear it to the history (Restore brings
+  it back), or right-click it to **go again** (another run of the same amount) or set a new target. Item goals count what you loot (banking, mailing or selling never changes
   them) and can start from what you already have in your bags, bank, mail or on other characters.
   The tracker has three views (switch with its F / C / I button): **Full**, **Compact** (one line
   per goal) and **Icons** (a tile per goal with a bar and the amount). Right-click a goal to pause,
@@ -105,7 +107,7 @@ addons share through LibSharedMedia.
   should be on (with Engaged-only nameplates, the scanner keeps them on while the list isn't empty).
 
 ## Development
-Requires [just](https://github.com/casey/just), [cocogitto](https://github.com/cocogitto/cocogitto) and Lua 5.4 (`lua`, `luac`).
+Requires [just](https://github.com/casey/just), [cocogitto](https://github.com/cocogitto/cocogitto) and Lua (`luac` for the syntax check; LuaJIT for the tests, since it runs Lua 5.1 like the game).
 Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
 
 - `just check` syntax-checks the Lua files

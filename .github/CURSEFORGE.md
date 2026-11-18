@@ -70,7 +70,8 @@ A **progress bar in the middle of the screen** while you rest at a Welcoming Cam
 
 ### Farm goals
 Just want to farm something? Set a goal like **loot 4000 Silk Cloth**, **reach level 40**, **gain 50,000 XP**, **earn 100 gold**, **reach Revered with a faction**, **get Swords to 300** (or to whatever your cap is) or **collect a currency**, and a small **movable tracker** shows the progress, how much you've gained, your **rate per hour** and **time left**.
-- **Chimes at 25/50/75%**, and a **fanfare** with a message in the middle of the screen when a goal is done.
+- **Chimes at 25/50/75%**, and a **fanfare** with a big message in the middle of the screen when a goal is done (shown again after the fight if you finished it in combat). The finished goal **glows in the tracker** until you hover it.
+- Finished? **Click** it to clear it to the history (you can restore it), or right-click to **go again** (another run of the same amount) or set a new target.
 - Item goals count **what you loot**, so banking, mailing or selling never throws them off.
 - Optionally **start from what you already have**: bags, bank, mail and other characters (with a live preview).
 - Three tracker views: **Full**, **Compact** (one line per goal) and **Icons** (a tile per goal with a bar and the amount). Switch with the tracker's F / C / I button.

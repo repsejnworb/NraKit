@@ -156,6 +156,15 @@ local function AddCard(content, goal, y, width)
 		Add("Clear", function()
 			G().RemoveGoal(id)
 		end)
+		if G().CanGoAgain(goal) then
+			Add("Go again", function()
+				G().GoAgain(goal)
+			end)
+		else
+			Add("New target", function()
+				ns:OpenGoalsWindow("edit", id)
+			end)
+		end
 	elseif goal.shelved then
 		Add("Remove", function()
 			G().RemoveGoal(id)
@@ -287,8 +296,17 @@ local function RenderHistory(content, width)
 			r.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 			r.name = r:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 			r.name:SetPoint("LEFT", r.icon, "RIGHT", 8, 0)
+			r.restore = UI.CreateFlatButton(r, "Restore", 20)
+			r.restore:SetPoint("RIGHT", -6, 0)
+			r.restore:SetScript("OnClick", function(self)
+				G().RestoreGoal(self:GetParent().entry)
+				Render()
+			end)
+			r.restore:SetScript("OnEnter", function(self)
+				UI.ShowTooltip(self, "Restore", "Put this goal back in the tracker, as it was when you cleared it.")
+			end)
+			r.restore:SetScript("OnLeave", GameTooltip_Hide)
 			r.when = r:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-			r.when:SetPoint("RIGHT", -10, 0)
 			return r
 		end)
 		row:SetPoint("TOPLEFT", content, "TOPLEFT", PAD, y)
@@ -301,6 +319,11 @@ local function RenderHistory(content, width)
 			name = G().FormatNumber(entry.target) .. " " .. name
 		end
 		row.name:SetText(name)
+		row.entry = entry
+		-- Cleared goals can come back; "Go again" runs are just a record.
+		row.restore:SetShown(entry.goal ~= nil)
+		row.when:ClearAllPoints()
+		row.when:SetPoint("RIGHT", entry.goal and row.restore or row, entry.goal and "LEFT" or "RIGHT", -10, 0)
 		row.when:SetText(string.format("took %s  ·  %s", G().FormatDuration(entry.active or 0),
 			date("%Y-%m-%d", entry.completed)))
 		y = y - 32
@@ -1226,6 +1249,7 @@ function ns:OpenGoalsWindow(toPage, goalID)
 	if toPage == "recount" then
 		toPage = "edit"
 	end
+	local focusTarget
 	if toPage == "edit" then
 		local goal = G().FindGoal(goalID)
 		if not goal then
@@ -1233,6 +1257,8 @@ function ns:OpenGoalsWindow(toPage, goalID)
 		end
 		editID = goalID
 		LoadGoal(goal)
+		-- "New target" on a finished goal: straight to typing the new number.
+		focusTarget = goal.completed ~= nil
 		form.area:SetScroll(0)
 	elseif toPage == "new" and page == "edit" then
 		ResetForm()
@@ -1247,4 +1273,8 @@ function ns:OpenGoalsWindow(toPage, goalID)
 	end
 	frame:Show()
 	Render()
+	if focusTarget and form.amount:IsShown() then
+		form.amount:SetFocus()
+		form.amount:HighlightText()
+	end
 end
