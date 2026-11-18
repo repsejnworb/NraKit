@@ -611,6 +611,17 @@ function wow.findAll(predicate)
 end
 
 
+-- Moves the clock on and runs every shown frame's OnUpdate, like frames being drawn.
+function wow.advance(seconds)
+	wow.now = (wow.now or 1000) + seconds
+	for _, frame in ipairs(wow.frames) do
+		local onUpdate = frame.shown and frame.scripts.OnUpdate
+		if onUpdate then
+			onUpdate(frame, seconds)
+		end
+	end
+end
+
 -- The goal amount box: the edit box created for numbers (it takes text for money goals).
 function wow.amountBox()
 	for _, frame in ipairs(wow.frames) do

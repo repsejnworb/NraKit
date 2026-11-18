@@ -31,7 +31,7 @@ local module = {
 			header = "Sounds",
 			name = "Milestone chimes",
 			description = "Play a sound at 25%, 50% and 75% of a goal. A goal can have its own sound (Edit in the goals window).",
-			default = true,
+			default = false,
 		},
 		{
 			key = "farmGoalsMilestoneSoundChoice",
@@ -70,17 +70,23 @@ local module = {
 			default = "kit:LOOT_WINDOW_COIN_SOUND",
 		},
 		{
+			key = "farmGoalsMilestoneMessage",
+			header = "Messages",
+			name = "Milestone message",
+			description = "Show a small message (\"Silk Cloth · 50%\") at 25%, 50% and 75% of a goal.",
+			default = false,
+		},
+		{
 			key = "farmGoalsToastSize",
-			header = "Finish message",
 			type = "number",
-			name = "Size",
+			name = "Finish message size",
 			description = "Size of the \"Goal complete\" message in the middle of the screen.",
 			default = 100, min = 60, max = 200, step = 10, format = "%d%%",
 		},
 		{
 			key = "farmGoalsToastDuration",
 			type = "number",
-			name = "Time on screen",
+			name = "Finish message time",
 			description = "How long the message stays before it fades (longer while the mouse is on it). A goal finished in combat is shown again when the fight ends.",
 			default = 6, min = 2, max = 15, step = 1, format = "%d s",
 		},
@@ -554,6 +560,54 @@ local function ShowToast(goal, detail, count)
 	toast:Show()
 end
 
+-- The milestone message: a quieter cousin of the finish message. Smaller, lower, a
+-- gentle pop, gone in a few seconds, and never over a finish message.
+local milestoneToast
+local MILESTONE_HOLD, MILESTONE_FADE = 2.5, 0.6
+
+local function ShowMilestone(goal, percent)
+	if toast and toast:IsShown() then
+		return
+	end
+	if not milestoneToast then
+		milestoneToast = CreateFrame("Frame", nil, UIParent)
+		milestoneToast:SetSize(500, 50)
+		milestoneToast:SetPoint("CENTER", 0, 200)
+		milestoneToast:SetFrameStrata("HIGH")
+		local inner = CreateFrame("Frame", nil, milestoneToast)
+		inner:SetSize(500, 50)
+		inner:SetPoint("CENTER")
+		milestoneToast.inner = inner
+		milestoneToast.heading = inner:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+		milestoneToast.heading:SetPoint("TOP")
+		milestoneToast.heading:SetTextColor(unpack(UI.ACCENT))
+		milestoneToast.heading:SetText("MILESTONE")
+		milestoneToast.text = inner:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+		milestoneToast.text:SetPoint("TOP", milestoneToast.heading, "BOTTOM", 12, -4)
+		milestoneToast.text:SetTextColor(1, 1, 1)
+		milestoneToast.icon = inner:CreateTexture(nil, "ARTWORK")
+		milestoneToast.icon:SetSize(20, 20)
+		milestoneToast.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+		milestoneToast.icon:SetPoint("RIGHT", milestoneToast.text, "LEFT", -6, 0)
+		milestoneToast:SetScript("OnUpdate", function(self)
+			local age = GetTime() - self.shownAt
+			self.inner:SetScale(age < 0.2 and (1.12 - 0.12 * age / 0.2) or 1)
+			if age > MILESTONE_HOLD + MILESTONE_FADE then
+				self:Hide()
+			elseif age > MILESTONE_HOLD then
+				self:SetAlpha(1 - (age - MILESTONE_HOLD) / MILESTONE_FADE)
+			else
+				self:SetAlpha(1)
+			end
+		end)
+	end
+	local name, icon = Describe(goal)
+	milestoneToast.text:SetText(name .. "  ·  " .. percent .. "%")
+	milestoneToast.icon:SetTexture(icon)
+	milestoneToast.shownAt = GetTime()
+	milestoneToast:Show()
+end
+
 -- Called when combat ends: show again what finished during the fight.
 local function ReplayCombatToasts()
 	local last = combatFinished[#combatFinished]
@@ -685,6 +739,9 @@ local function Evaluate(goal)
 	if milestone > (goal.milestone or 0) then
 		goal.milestone = milestone
 		PlayGoalSound(goal, "milestone")
+		if ns:GetOption("farmGoalsMilestoneMessage") then
+			ShowMilestone(goal, milestone * 25)
+		end
 	end
 end
 
@@ -938,6 +995,12 @@ local function OpenMenu(widget)
 	end)
 end
 
+-- "1,512 / 4,000  (38%)"
+local function ProgressWithPercent(goal)
+	local fraction, value = GetProgress(goal)
+	return string.format("%s  (%d%%)", value, math.floor(math.min(math.max(fraction, 0), 1) * 100))
+end
+
 local function ShowGoalTooltip(widget)
 	local goal = widget.goal
 	if not goal then
@@ -955,7 +1018,7 @@ local function ShowGoalTooltip(widget)
 		GameTooltip_SetTitle(GameTooltip, (Describe(goal)))
 	end
 	local _, value = GetProgress(goal)
-	GameTooltip:AddDoubleLine("Progress", value, 1, 0.82, 0, 1, 1, 1)
+	GameTooltip:AddDoubleLine("Progress", ProgressWithPercent(goal), 1, 0.82, 0, 1, 1, 1)
 	GameTooltip:AddLine(DescribeRate(goal), 0.8, 0.8, 0.8, true)
 	if goal.start and goal.start > 0 then
 		GameTooltip:AddDoubleLine("Started from", TYPES[goal.type].format(goal.start), 1, 0.82, 0, 1, 1, 1)
@@ -1052,6 +1115,7 @@ local function MakeTrack(parent, height)
 	track.bg = track:CreateTexture(nil, "BACKGROUND")
 	track.bg:SetAllPoints()
 	track.bg:SetColorTexture(1, 1, 1, 0.12)
+	UI.AddMilestoneTicks(track)
 	return track
 end
 
@@ -1585,6 +1649,9 @@ ns.goals = {
 	end,
 	GoAgain = GoAgain,
 	GoAgainAmount = GoAgainAmount,
+	ProgressWithPercent = function(goal)
+		return ProgressWithPercent(goal)
+	end,
 	CanGoAgain = CanGoAgain,
 	RestoreGoal = RestoreGoal,
 	SetShelved = function(goal, shelved)
@@ -1859,6 +1926,11 @@ function module:OnInitialize()
 	characterKey = UnitName("player") .. "-" .. (GetNormalizedRealmName() or GetRealmName())
 	-- The finish sound's default changed from Epic loot to World quest complete; move
 	-- anyone still on the old default (once).
+	-- Milestone chimes are now off by default; turn off the old default once.
+	if not NraKitDB.farmGoalsMilestoneSoundUpdated then
+		NraKitDB.farmGoalsMilestoneSound = false
+		NraKitDB.farmGoalsMilestoneSoundUpdated = true
+	end
 	-- Icons per row's default went from 6 to 3, likewise.
 	if not NraKitDB.farmGoalsIconsPerRowUpdated then
 		if NraKitDB.farmGoalsIconsPerRow == 6 then

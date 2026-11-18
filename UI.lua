@@ -239,6 +239,28 @@ function UI.CreateFlatButton(parent, label, height)
 	return button
 end
 
+-- Thin dark notches at 25%, 50% and 75% of a progress bar (kept in place as it resizes).
+function UI.AddMilestoneTicks(bar)
+	local ticks = {}
+	for index, fraction in ipairs({ 0.25, 0.5, 0.75 }) do
+		local tick = bar:CreateTexture(nil, "OVERLAY")
+		tick:SetColorTexture(0.04, 0.04, 0.06, 0.9)
+		tick:SetWidth(1)
+		tick.fraction = fraction
+		ticks[index] = tick
+	end
+	local function Place(self, width)
+		for _, tick in ipairs(ticks) do
+			tick:ClearAllPoints()
+			tick:SetPoint("TOP", self, "TOPLEFT", (width or self:GetWidth()) * tick.fraction, 0)
+			tick:SetPoint("BOTTOM", self, "BOTTOMLEFT", (width or self:GetWidth()) * tick.fraction, 0)
+		end
+	end
+	bar:HookScript("OnSizeChanged", Place)
+	Place(bar)
+	bar.ticks = ticks
+end
+
 -- A search box; onChange(text) gets the trimmed, lower-case text.
 function UI.CreateSearchBox(parent, width, onChange)
 	local box = CreateFrame("EditBox", nil, parent, "SearchBoxTemplate")

@@ -142,7 +142,22 @@ return {
 			ns.goals.RemoveGoal(goal.id)
 		end)
 
+		t.test("milestone sound and message are off by default", function()
+			t.equal(NraKitDB.farmGoalsMilestoneSound, false, "milestone sound")
+			t.equal(NraKitDB.farmGoalsMilestoneMessage, false, "milestone message")
+			wow.played = {}
+			local goal = ns.goals.AddGoal({ type = "item", itemID = SILK, target = 100 })
+			wow.fire("CHAT_MSG_LOOT", "You receive loot: " .. SILK_LINK .. "x30.")
+			t.equal(goal.milestone, 1, "passed 25%")
+			t.ok(not Played(wow, SOUNDKIT.UI_QUEST_ROLLING_FORWARD_01), "no chime")
+			t.equal(#wow.findAll(function(frame)
+				return frame.text == "Silk Cloth  ·  25%"
+			end), 0, "no message")
+			ns.goals.RemoveGoal(goal.id)
+		end)
+
 		t.test("milestones chime once each, not for ones already passed", function()
+			ns:SetSetting("farmGoalsMilestoneSound", true)
 			wow.played = {}
 			local goal = ns.goals.AddGoal({ type = "item", itemID = SILK, target = 100, start = 30 })
 			t.equal(goal.milestone, 1, "starts past 25%")
@@ -150,6 +165,7 @@ return {
 			t.equal(goal.milestone, 2, "reached 50%")
 			t.ok(Played(wow, SOUNDKIT.UI_QUEST_ROLLING_FORWARD_01), "milestone chime")
 			ns.goals.RemoveGoal(goal.id)
+			ns:SetSetting("farmGoalsMilestoneSound", false)
 		end)
 
 		t.test("reputation goal: reach a standing from the form", function()
@@ -389,6 +405,25 @@ return {
 			ns.goals.Update()
 			t.equal(TrackedWidgets(wow)[1].count.text, "45s", "icon amount")
 			NraKitDB.farmGoalsView = "full"
+		end)
+
+		t.test("the milestone message shows when turned on", function()
+			ClearGoals(ns)
+			wow.advance(30) -- let earlier finish messages fade
+			ns:SetSetting("farmGoalsMilestoneMessage", true)
+			local goal = ns.goals.AddGoal({ type = "item", itemID = SILK, target = 100 })
+			wow.fire("CHAT_MSG_LOOT", "You receive loot: " .. SILK_LINK .. "x55.")
+			t.equal(#wow.findAll(function(frame)
+				return frame.text == "Silk Cloth  ·  50%"
+			end), 1, "message for 50%")
+			t.equal(ns.goals.ProgressWithPercent(goal), "55 / 100  (55%)", "tooltip progress with percent")
+			ns:SetSetting("farmGoalsMilestoneMessage", false)
+		end)
+
+		t.test("progress bars have milestone markers", function()
+			for _, widget in ipairs(TrackedWidgets(wow)) do
+				t.equal(#widget.track.ticks, 3, "markers at 25/50/75%")
+			end
 		end)
 
 		t.test("money parsing", function()
