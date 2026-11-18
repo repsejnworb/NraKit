@@ -84,7 +84,7 @@ function UI.CreatePool()
 	return pool
 end
 
--- A movable window with a title bar and a left sidebar. Esc closes it.
+-- A movable window with a title bar and a left sidebar (none if sidebarWidth is 0). Esc closes it.
 -- Returns the frame; frame.titleBar, frame.title, frame.sidebar and frame.body
 -- (the area right of the sidebar) are for the caller to fill.
 function UI.CreateWindow(globalName, titleText, width, height, sidebarWidth)
@@ -131,15 +131,17 @@ function UI.CreateWindow(globalName, titleText, width, height, sidebarWidth)
 		frame:Hide()
 	end)
 
-	local sidebar = CreateFrame("Frame", nil, frame)
-	sidebar:SetPoint("TOPLEFT", 0, -UI.TITLE_HEIGHT)
-	sidebar:SetPoint("BOTTOMLEFT")
-	sidebar:SetWidth(sidebarWidth)
-	local sidebarBg = sidebar:CreateTexture(nil, "BACKGROUND")
-	sidebarBg:SetAllPoints()
-	sidebarBg:SetColorTexture(unpack(UI.PANEL))
-	UI.AddLine(sidebar, "RIGHT")
-	frame.sidebar = sidebar
+	if sidebarWidth > 0 then
+		local sidebar = CreateFrame("Frame", nil, frame)
+		sidebar:SetPoint("TOPLEFT", 0, -UI.TITLE_HEIGHT)
+		sidebar:SetPoint("BOTTOMLEFT")
+		sidebar:SetWidth(sidebarWidth)
+		local sidebarBg = sidebar:CreateTexture(nil, "BACKGROUND")
+		sidebarBg:SetAllPoints()
+		sidebarBg:SetColorTexture(unpack(UI.PANEL))
+		UI.AddLine(sidebar, "RIGHT")
+		frame.sidebar = sidebar
+	end
 
 	local body = CreateFrame("Frame", nil, frame)
 	body:SetPoint("TOPLEFT", sidebarWidth, -UI.TITLE_HEIGHT - 1)

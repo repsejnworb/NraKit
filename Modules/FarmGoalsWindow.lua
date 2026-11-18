@@ -7,7 +7,8 @@ local _, ns = ...
 -- slot, shift-clicked while the name box has focus, or typed. Item and gold goals can
 -- start from what you already have: tick bags, bank, mail and other characters (the
 -- last two need Inventory Tracker's data) and the starting count updates live.
--- "Recount" reuses the same section to change an existing goal's starting count.
+-- "Edit" fills the same form with an existing goal (type fixed) to fix its target,
+-- item, starting count or sounds without recreating it.
 
 local UI = ns.UI
 local WIDTH, HEIGHT = 720, 560
@@ -16,8 +17,8 @@ local PAD = UI.PAD
 
 local frame, scroll, form
 local navButtons = {}
-local page = "active" -- "active", "new", "history" or "recount"
-local recountID
+local page = "active" -- "active", "new", "history" or "edit"
+local editID
 local pool = UI.CreatePool()
 local cards = {} -- goal id -> card widgets on the active page
 local cardSignature
@@ -164,8 +165,8 @@ local function RenderActive(content, width)
 				G().Update()
 			end)
 			if goal.type == "item" or goal.type == "gold" then
-				Add("Recount", function()
-					ns:OpenGoalsWindow("recount", id)
+				Add("Edit", function()
+					ns:OpenGoalsWindow("edit", id)
 				end)
 			end
 			Add(goal.paused and "Resume" or "Pause", function()
@@ -283,7 +284,7 @@ local function RenderHistory(content, width)
 end
 
 ------------------------------------------------------------------------------
--- New goal / recount form
+-- New goal / edit form
 ------------------------------------------------------------------------------
 
 local formType = "item"
@@ -292,6 +293,7 @@ local formKey, formKeyName -- picked faction, skill or currency
 local formMode = "reach"
 local formStanding -- rep "reach": target reaction (5 = Friendly ... 8 = Exalted)
 local formToMax = false -- skill "reach": follow the skill's cap
+local formSounds = { milestone = "default", complete = "default" }
 local pickerQuery = ""
 local pickerOffset = 0
 local pickerEntries = {}
@@ -389,15 +391,16 @@ end
 local function ReadForm()
 	local amount = tonumber(form.amount:GetText())
 	local holdings = form.holdings
-	local start = 0
+	local start, ticked = 0, false
 	if holdings and (formType == "item" or formType == "gold") then
 		for _, seed in ipairs(form.seeds) do
 			if seed:IsShown() and seed:GetChecked() and seed:IsEnabled() then
 				start = start + (seed.count or 0)
+				ticked = true
 			end
 		end
 	end
-	return amount, start
+	return amount, start, ticked
 end
 
 local UpdateForm
@@ -448,35 +451,41 @@ local function UpdateTargetChips(goalType, entry)
 end
 
 function UpdateForm()
-	local recounting = page == "recount"
-	local goal = recounting and G().FindGoal(recountID)
-	if recounting and not goal then
+	local editing = page == "edit"
+	local goal = editing and G().FindGoal(editID)
+	if editing and not goal then
 		page = "active"
 		Render()
 		return
 	end
-	local goalType = recounting and goal.type or formType
-	formType = goalType
-	local itemID = recounting and goal.itemID or formItemID
-	local picking = PICKER_TYPES[goalType] and not recounting
+	local goalType = formType
+	local itemID = formItemID
+	local picking = PICKER_TYPES[goalType]
 
+	-- 1. Type (fixed when editing)
 	for _, chip in ipairs(form.typeChips) do
 		chip:SetSelected(chip.key == goalType)
-		chip:SetShown(not recounting)
+		chip:SetShown(not editing)
 	end
-	form.title:SetText(recounting and ("Recount: " .. (G().Describe(goal))) or "New goal")
-	form.typeHeading:SetShown(not recounting)
-	form.typeHelp:SetShown(not recounting)
+	form.title:SetText(editing and ("Edit goal: " .. (G().Describe(goal))) or "New goal")
+	local typeLabel
+	for _, info in ipairs(GOAL_TYPES) do
+		if info.key == goalType then
+			typeLabel = info.label
+		end
+	end
+	form.typeHeading:SetText(editing and ("Type: " .. typeLabel):upper() or "1. WHAT DO YOU WANT TO TRACK?")
 	form.typeHelp:SetText(TYPE_HELP[goalType] or "")
 
-	-- Numbered steps: 1. type, 2. which one (item/rep/skill/currency), then the target.
-	local hasPick = PICK_HEADINGS[goalType] ~= nil and not recounting
-	local step = hasPick and 3 or 2
+	-- Numbered steps: (1. type), 2. which one (item/rep/skill/currency), then the target.
+	local first = editing and 1 or 2
+	local hasPick = PICK_HEADINGS[goalType] ~= nil
+	local step = hasPick and first + 1 or first
 	form.pickHeading:SetShown(hasPick)
-	form.pickHeading:SetText(hasPick and ("2. " .. PICK_HEADINGS[goalType]):upper() or "")
+	form.pickHeading:SetText(hasPick and (first .. ". " .. PICK_HEADINGS[goalType]):upper() or "")
 
 	-- Item picker
-	local isItem = goalType == "item" and not recounting
+	local isItem = goalType == "item"
 	form.slot:SetShown(isItem)
 	form.itemName:SetShown(isItem)
 	form.itemHint:SetShown(isItem)
@@ -507,7 +516,6 @@ function UpdateForm()
 	form.amountHeading:ClearAllPoints()
 	form.amountHeading:SetPoint("TOPLEFT", 2, targetY)
 	form.amountHeading:SetText((step .. ". " .. (picking and "Target" or HOW_MUCH[goalType] or "")):upper())
-	form.amountHeading:SetShown(not recounting)
 	form.amountLabel:ClearAllPoints()
 	form.amountLabel:SetPoint("TOPLEFT", 2, targetY - (picking and 54 or 22))
 	local amountLabels = {
@@ -517,10 +525,9 @@ function UpdateForm()
 		currency = formMode == "gain" and "Amount to gain" or "Amount to have",
 	}
 	form.amountLabel:SetText(amountLabels[goalType])
-	form.amountLabel:SetShown(not recounting)
 	form.amountHint:SetText("")
 	local standingTarget = goalType == "rep" and formMode == "reach"
-	form.amount:SetShown(not recounting and not standingTarget)
+	form.amount:SetShown(not standingTarget)
 	form.amount:SetEnabled(not (goalType == "skill" and formMode == "reach" and formToMax))
 	if goalType == "skill" and formMode == "reach" and formToMax and entry
 		and form.amount:GetText() ~= tostring(entry.maxRank) then
@@ -542,7 +549,14 @@ function UpdateForm()
 		{ label = "Mail", count = holdings and holdings.mail, show = not isGold, needsTracker = true },
 		{ label = "Other characters", count = holdings and holdings.othersTotal, show = true, needsTracker = true },
 	}
-	form.seedHeading:SetText(((recounting and "" or (step + 1) .. ". ") .. "Start from what I have (optional)"):upper())
+	local sameThing = editing and goal.itemID == itemID
+	if editing and sameThing then
+		form.seedHeading:SetText(((step + 1) .. ". Starting count (now " .. format(goal.start or 0) .. ")"):upper())
+		form.seedHelp:SetText("Tick to recount from what you have now. Leave all unticked to keep it.")
+	else
+		form.seedHeading:SetText(((step + 1) .. ". Start from what I have (optional)"):upper())
+		form.seedHelp:SetText("Ticked counts are added as already done; only new loot is counted after that.")
+	end
 	form.seedHelp:SetShown(seeding)
 	local lastSeed = form.seedHelp
 	for index, seed in ipairs(form.seeds) do
@@ -580,9 +594,9 @@ function UpdateForm()
 		form.othersText:SetText(table.concat(others, "  ·  "))
 	end
 
-	local amount, start = ReadForm()
-	if recounting then
-		amount = isGold and goal.target / 10000 or goal.target
+	local amount, start, ticked = ReadForm()
+	if editing and sameThing and not ticked then
+		start = goal.start or 0
 	end
 	if seeding then
 		local target = amount and (isGold and amount * 10000 or amount)
@@ -591,45 +605,50 @@ function UpdateForm()
 	end
 	form.startText:SetShown(seeding)
 
-	if recounting then
-		form.amountLabel:ClearAllPoints()
-		form.amountLabel:SetPoint("TOPLEFT", 2, -20)
+	-- Sounds, under whatever came last
+	local last = seeding and form.startText or (picking and form.amountHint or form.amountLabel)
+	form.soundHeading:ClearAllPoints()
+	form.soundHeading:SetPoint("TOPLEFT", last, "BOTTOMLEFT", 0, -26)
+	form.soundHeading:SetText(((seeding and step + 2 or step + 1) .. ". Sounds (optional)"):upper())
+	for _, row in ipairs(form.soundRows) do
+		row.select:Refresh()
 	end
 
-	-- Create / update button, with why it's disabled
+	-- Create / save button, with why it's disabled
 	local hint = ""
 	local valid
-	if recounting then
-		valid = true
-		form.create:SetText("Update starting count")
-	else
-		if goalType == "item" then
-			valid = amount and amount > 0 and itemID ~= nil
-			hint = not itemID and "Pick an item first." or (not valid and "Enter how many." or "")
-		elseif goalType == "level" then
-			valid = amount and amount > UnitLevel("player")
-			hint = not valid and ("Enter a level above " .. UnitLevel("player") .. ".") or ""
-		elseif picking then
-			if not entry then
-				valid = false
-				hint = "Pick one from the list."
-			elseif standingTarget then
-				valid = formStanding ~= nil and formStanding > (entry.reaction or 0)
-				hint = not valid and "Pick the standing to reach." or ""
-			elseif goalType == "skill" and formMode == "reach" then
-				valid = formToMax and entry.rank < entry.maxRank or (amount and amount > entry.rank)
-				hint = not valid and ("Enter a rank above " .. entry.rank .. ", or pick Max.") or ""
-			else
-				valid = amount and amount > 0
-				hint = not valid and "Enter an amount." or ""
-			end
+	if goalType == "item" then
+		valid = amount and amount > 0 and itemID ~= nil
+		hint = not itemID and "Pick an item first." or (not valid and "Enter how many." or "")
+	elseif goalType == "level" then
+		valid = amount and amount > UnitLevel("player")
+		hint = not valid and ("Enter a level above " .. UnitLevel("player") .. ".") or ""
+	elseif picking then
+		if not entry then
+			valid = false
+			hint = "Pick one from the list."
+		elseif standingTarget then
+			valid = formStanding ~= nil and formStanding > (entry.reaction or 0)
+			hint = not valid and "Pick the standing to reach." or ""
+		elseif goalType == "skill" and formMode == "reach" then
+			valid = formToMax and entry.rank < entry.maxRank or (amount and amount > entry.rank)
+			hint = not valid and ("Enter a rank above " .. entry.rank .. ", or pick Max.") or ""
 		else
 			valid = amount and amount > 0
 			hint = not valid and "Enter an amount." or ""
 		end
-		form.create:SetText("Create goal")
+	else
+		valid = amount and amount > 0
+		hint = not valid and "Enter an amount." or ""
 	end
+	if editing and valid and (goal.itemID ~= itemID or goal.key ~= formKey or (goal.mode or "reach") ~= formMode) then
+		hint = "Changing what's tracked starts its progress over."
+	end
+	form.create:SetText(editing and "Save changes" or "Create goal")
 	form.create:SetEnabled(valid and true or false)
+	form.cancel:SetShown(editing)
+	form.createHint:ClearAllPoints()
+	form.createHint:SetPoint("LEFT", editing and form.cancel or form.create, "RIGHT", 12, 0)
 	form.createHint:SetText(hint)
 end
 
@@ -653,40 +672,70 @@ local function SetType(goalType)
 	UpdateForm()
 end
 
+-- Clears the form for a new goal (keeps the chosen type).
+local function ResetForm()
+	formItemID = nil
+	formSounds.milestone, formSounds.complete = "default", "default"
+	for _, seed in ipairs(form.seeds) do
+		seed:SetChecked(false)
+	end
+	SetType(formType)
+end
+
+-- Fills the form with an existing goal, for Edit.
+local function LoadGoal(goal)
+	formType = goal.type
+	formItemID, formKey, formKeyName = goal.itemID, goal.key, goal.name
+	formMode = goal.mode or "reach"
+	formStanding = goal.type == "rep" and formMode == "reach" and goal.target or nil
+	formToMax = goal.toMax or false
+	formSounds.milestone = goal.sounds and goal.sounds.milestone or "default"
+	formSounds.complete = goal.sounds and goal.sounds.complete or "default"
+	pickerQuery, pickerOffset = "", 0
+	form.pickerSearch:SetText("")
+	pickerEntries = BuildPickerEntries(goal.type)
+	for _, seed in ipairs(form.seeds) do
+		seed:SetChecked(false)
+	end
+	local amount = goal.target
+	if goal.type == "gold" then
+		amount = math.floor(goal.target / 10000)
+	elseif formStanding then
+		amount = nil
+	end
+	form.amount:SetText(amount and tostring(amount) or "")
+end
+
 local function SubmitForm()
-	local amount, start = ReadForm()
-	if page == "recount" then
-		local goal = G().FindGoal(recountID)
-		if goal then
-			goal.start = start
-			G().Update()
-		end
-		page = "active"
-		Render()
+	if not form.create:IsEnabled() then
 		return
 	end
-	local goal = { type = formType }
+	local amount, start, ticked = ReadForm()
+	local spec = { type = formType, sounds = { milestone = formSounds.milestone, complete = formSounds.complete } }
 	if formType == "item" then
-		goal.itemID, goal.target, goal.start = formItemID, amount, start
+		spec.itemID, spec.target, spec.start = formItemID, amount, start
 	elseif formType == "gold" then
-		goal.target, goal.start = amount * 10000, start
+		spec.target, spec.start = amount * 10000, start
 	elseif PICKER_TYPES[formType] then
 		local entry = PickedEntry()
-		goal.key, goal.name, goal.mode = entry.id, entry.name, formMode
+		spec.key, spec.name, spec.mode = entry.id, entry.name, formMode
 		if formType == "rep" and formMode == "reach" then
-			goal.target = formStanding
+			spec.target = formStanding
 		elseif formType == "skill" and formMode == "reach" and formToMax then
-			goal.toMax, goal.target = true, entry.maxRank
+			spec.toMax, spec.target = true, entry.maxRank
 		else
-			goal.target = amount
+			spec.target = amount
 		end
 	else
-		goal.target = amount
+		spec.target = amount
 	end
-	G().AddGoal(goal)
-	form.amount:SetText("")
-	formItemID, formKey = nil, nil
+	if page == "edit" then
+		G().EditGoal(editID, spec, ticked)
+	else
+		G().AddGoal(spec)
+	end
 	page = "active"
+	ResetForm()
 	Render()
 end
 
@@ -794,11 +843,27 @@ local function CreatePicker()
 	end)
 end
 
+local FOOTER_HEIGHT = 46
+
 local function CreateForm(body)
-	form = CreateFrame("Frame", nil, body)
+	-- The form scrolls; the Create/Save button sits in a footer that always shows.
+	local area = UI.CreateScrollArea(body)
+	area:SetPoint("TOPLEFT")
+	area:SetPoint("BOTTOMRIGHT", -13, FOOTER_HEIGHT + 1)
+	area.content:SetSize(WIDTH - SIDEBAR_WIDTH - 15, 760)
+	area:Hide()
+	form = CreateFrame("Frame", nil, area.content)
 	form:SetPoint("TOPLEFT", PAD, -PAD)
-	form:SetPoint("BOTTOMRIGHT", -PAD, PAD)
-	form:Hide()
+	form:SetSize(WIDTH - SIDEBAR_WIDTH - 15 - 2 * PAD, 730)
+	form.area = area
+
+	local footer = CreateFrame("Frame", nil, body)
+	footer:SetPoint("BOTTOMLEFT")
+	footer:SetPoint("BOTTOMRIGHT")
+	footer:SetHeight(FOOTER_HEIGHT)
+	UI.AddLine(footer, "TOP")
+	footer:Hide()
+	form.footer = footer
 
 	form.title = MakeLabel(form, "New goal", "GameFontNormalLarge")
 	form.title:SetPoint("TOPLEFT", 2, 0)
@@ -927,11 +992,48 @@ local function CreateForm(body)
 	form.othersText:SetPoint("RIGHT", form, "RIGHT")
 	form.startText = MakeLabel(form, "", "GameFontNormal")
 
-	form.create = CreateFrame("Button", nil, form, "UIPanelButtonTemplate")
-	form.create:SetSize(190, 26)
-	form.create:SetPoint("BOTTOMLEFT", 0, 0)
+	-- Sounds (per goal; "Default" follows the settings)
+	form.soundHeading = MakeHeading(form, "")
+	form.soundRows = {}
+	local soundAnchor = form.soundHeading
+	for _, info in ipairs({ { "milestone", "Milestones (25/50/75%)" }, { "complete", "When it's done" } }) do
+		local which = info[1]
+		local label = MakeLabel(form, info[2])
+		label:SetPoint("TOPLEFT", soundAnchor, "BOTTOMLEFT", 0, soundAnchor == form.soundHeading and -12 or -16)
+		local select = UI.CreateSoundSelect(form, {
+			width = 190,
+			get = function()
+				return formSounds[which]
+			end,
+			set = function(value)
+				formSounds[which] = value
+				ns.sounds.Play(value == "default" and G().DefaultSound(which) or value)
+			end,
+			defaultLabel = function()
+				return G().DefaultSoundLabel(which)
+			end,
+			resolveDefault = function()
+				return G().DefaultSound(which)
+			end,
+		})
+		select:SetPoint("LEFT", label, "LEFT", 160, 0)
+		table.insert(form.soundRows, { label = label, select = select })
+		soundAnchor = label
+	end
+
+	form.create = CreateFrame("Button", nil, footer, "UIPanelButtonTemplate")
+	form.create:SetSize(160, 26)
+	form.create:SetPoint("LEFT", PAD, 0)
 	form.create:SetScript("OnClick", SubmitForm)
-	form.createHint = MakeLabel(form, "", "GameFontDisableSmall")
+	form.cancel = UI.CreateFlatButton(footer, "Cancel", 26)
+	form.cancel:SetWidth(80)
+	form.cancel:SetPoint("LEFT", form.create, "RIGHT", 6, 0)
+	form.cancel:SetScript("OnClick", function()
+		page = "active"
+		ResetForm()
+		Render()
+	end)
+	form.createHint = MakeLabel(footer, "", "GameFontDisableSmall")
 	form.createHint:SetPoint("LEFT", form.create, "RIGHT", 12, 0)
 
 	-- Shift-clicking an item while the name box has focus picks it.
@@ -969,8 +1071,9 @@ function Render()
 	end
 	UpdateNav()
 	pool:ReleaseAll()
-	local showForm = page == "new" or page == "recount"
-	form:SetShown(showForm)
+	local showForm = page == "new" or page == "edit"
+	form.area:SetShown(showForm)
+	form.footer:SetShown(showForm)
 	scroll:SetShown(not showForm)
 	if showForm then
 		-- Standings, skills and currencies may have changed since the list was built.
@@ -1067,7 +1170,7 @@ local function CreateGoalsWindow()
 	ns.goals.onChanged = OnGoalsChanged
 end
 
--- /nra goal, the tracker's "+" and "Recount". With a page, always shows it.
+-- /nra goal, the tracker's "+" and "Edit". With a page ("new", "edit", ...), always shows it.
 function ns:OpenGoalsWindow(toPage, goalID)
 	if not ns:IsModuleEnabled("farmGoals") then
 		ns:Print("Turn on Farm goals first (/nra).")
@@ -1080,9 +1183,22 @@ function ns:OpenGoalsWindow(toPage, goalID)
 		frame:Hide()
 		return
 	end
+	if toPage == "recount" then
+		toPage = "edit"
+	end
+	if toPage == "edit" then
+		local goal = G().FindGoal(goalID)
+		if not goal then
+			return
+		end
+		editID = goalID
+		LoadGoal(goal)
+		form.area:SetScroll(0)
+	elseif toPage == "new" and page == "edit" then
+		ResetForm()
+	end
 	if toPage then
 		page = toPage
-		recountID = goalID
 	elseif #G().GetData().goals == 0 then
 		page = "new"
 	end

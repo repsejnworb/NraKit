@@ -33,8 +33,16 @@ local module = {
 			key = "unitScanSound",
 			header = "Alerts",
 			name = "Play a sound",
-			description = "Play the raid warning sound when a unit is found.",
+			description = "Play a sound when a unit is found.",
 			default = true,
+		},
+		{
+			key = "unitScanSoundChoice",
+			parent = "unitScanSound",
+			type = "sound",
+			name = "Sound",
+			description = "Which sound to play when a unit is found.",
+			default = "kit:RAID_WARNING",
 		},
 		{
 			key = "unitScanScreenText",
@@ -403,7 +411,7 @@ local function Alert(entry, source)
 
 	local name = entry.name or DisplayName(entry)
 	if ns:GetOption("unitScanSound") then
-		PlaySound(SOUNDKIT.RAID_WARNING, "Master")
+		ns.sounds.PlayOption("unitScanSoundChoice", "kit:RAID_WARNING")
 	end
 	if ns:GetOption("unitScanScreenText") then
 		ShowScreenText(name .. " found!")

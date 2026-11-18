@@ -66,7 +66,38 @@ local function RegisterSetting(category, key, name, varType, default, onChanged)
 	return setting
 end
 
+-- Dropdown choices for a sound option: the curated sounds, plus the current one if it
+-- came from "More sounds..." in the NraKit window.
+local function SoundOptions(key)
+	return function()
+		local container = Settings.CreateControlTextContainer()
+		container:Add("none", "None")
+		local current = NraKitDB[key]
+		local found = current == "none"
+		for _, group in ipairs(ns.sounds.CURATED) do
+			for _, entry in ipairs(group.entries) do
+				local value = "kit:" .. entry[2]
+				if SOUNDKIT[entry[2]] then
+					container:Add(value, group.group .. ": " .. entry[1])
+					found = found or value == current
+				end
+			end
+		end
+		if not found and type(current) == "string" then
+			container:Add(current, ns.sounds.Label(current))
+		end
+		return container:GetData()
+	end
+end
+
 local function CreateControl(category, entry, onChanged)
+	if entry.type == "sound" then
+		local setting = RegisterSetting(category, entry.key, entry.name, Settings.VarType.String, entry.default, function(value)
+			ns.sounds.Play(value)
+			onChanged(value)
+		end)
+		return setting, Settings.CreateDropdown(category, setting, SoundOptions(entry.key), entry.description)
+	end
 	if entry.type == "number" then
 		local setting = RegisterSetting(category, entry.key, entry.name, Settings.VarType.Number, entry.default, onChanged)
 		local options = Settings.CreateSliderOptions(entry.min, entry.max, entry.step)

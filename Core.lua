@@ -13,6 +13,8 @@ ns.moduleOrder = {}
 --               feature is opt-in)
 --   options     optional list of sub-options, shown indented under the module's checkbox:
 --               { key, name, description, default }                 checkbox
+--               { key, name, description, default = "kit:READY_CHECK",
+--                 type = "sound" }                                  sound picker (Sounds.lua)
 --               { key, name, description, default, type = "number",
 --                 min, max, step, format? }                         slider (format: a
 --                                                                   string.format pattern, or
@@ -67,9 +69,13 @@ function ns:ForEachBagItemButton(fn)
 	end
 end
 
-local function SetDefault(key, default, isNumber)
-	if isNumber then
+local function SetDefault(key, default, optionType)
+	if optionType == "number" then
 		if type(NraKitDB[key]) ~= "number" then
+			NraKitDB[key] = default
+		end
+	elseif optionType == "sound" then
+		if type(NraKitDB[key]) ~= "string" then
 			NraKitDB[key] = default
 		end
 	elseif NraKitDB[key] == nil then
@@ -82,7 +88,7 @@ local function InitializeDB()
 	for _, module in ipairs(ns.moduleOrder) do
 		SetDefault(module.key, module.default)
 		for _, option in ipairs(module.options or {}) do
-			SetDefault(option.key, option.default, option.type == "number")
+			SetDefault(option.key, option.default, option.type)
 		end
 	end
 end

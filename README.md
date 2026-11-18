@@ -18,6 +18,10 @@ The same settings are also in the game's Settings panel under **AddOns → NraKi
 NraKit is also in the addon button by the minimap: left-click for settings, right-click for the
 inventory browser.
 
+Sounds (Campfire timer, Unit Scanner, Farm goals) can be changed: pick from a short list of good
+ones (hover to hear them) or **More sounds...** to search every game sound, plus any sounds other
+addons share through LibSharedMedia.
+
 ## Features
 - **Class-colored health bars**: player, target, target of target, focus and party frames
   show class-colored health bars when the unit is a player. NPCs keep the default color.
@@ -72,7 +76,9 @@ inventory browser.
   when a goal is done. Item goals count what you loot (banking, mailing or selling never changes
   them) and can start from what you already have in your bags, bank, mail or on other characters.
   `/nra goal` opens the goals window (new goal, active goals, history); `/nra goal 4000` plus a
-  shift-clicked item adds one directly. Right-click a goal to pause, reset or remove it.
+  shift-clicked item adds one directly. Right-click a goal to pause, edit, reset or remove it.
+  **Edit** fixes a goal's target, item, starting count or sounds without starting over, and each
+  goal can have its own milestone and finish sounds.
 - **/leave leaves your group**: type `/leave` (with nothing after it) or `/leavegroup` to leave
   your party, raid or instance group. `/leave <channel>` still leaves a chat channel.
 - **Open selected mail**: a checkbox on each mail in your inbox. Tick some and the Open All button

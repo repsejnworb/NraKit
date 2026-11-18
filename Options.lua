@@ -205,6 +205,36 @@ local function AddOption(module, option, byKey, x, y, width)
 		y = y - 22
 	end
 
+	if option.type == "sound" then
+		local label = AcquireText("GameFontHighlight")
+		label:SetText(option.name)
+		label:SetWidth(200)
+		label:SetWordWrap(false)
+		label:SetTextColor(unpack(active and TEXT or TEXT_DIM))
+		label:SetPoint("TOPLEFT", content, "TOPLEFT", x + 4, y - 7)
+
+		local select = Acquire("sound", function()
+			local widget
+			widget = UI.CreateSoundSelect(content, {
+				width = 190,
+				get = function()
+					-- Also called while the widget is being created, before it has a key.
+					return widget and widget.optionKey and NraKitDB[widget.optionKey]
+				end,
+				set = function(value)
+					ns:SetSetting(widget.optionKey, value)
+				end,
+			})
+			widget:SetFrameLevel(content:GetFrameLevel() + 3)
+			return widget
+		end)
+		select.optionKey = option.key
+		select:Refresh()
+		select:SetEnabled(active)
+		select:SetPoint("TOPLEFT", content, "TOPLEFT", math.min(x + 210, x + width - 300), y - 2)
+		return y - 30
+	end
+
 	if option.type == "number" then
 		local label = AcquireText("GameFontHighlight")
 		label:SetText(option.name)

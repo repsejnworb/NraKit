@@ -13,6 +13,7 @@
 
 Core.lua
 UI.lua
+Sounds.lua
 Settings.lua
 Options.lua
 

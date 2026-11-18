@@ -21,6 +21,14 @@ local module = {
 			default = true,
 		},
 		{
+			key = "campfireTimerSoundChoice",
+			parent = "campfireTimerSound",
+			type = "sound",
+			name = "Sound",
+			description = "Which sound to play when the rest is finished.",
+			default = "kit:READY_CHECK",
+		},
+		{
 			key = "campfireTimerWidth",
 			header = "Appearance",
 			type = "number",
@@ -187,7 +195,7 @@ local function ShowDone()
 	bar.track:SetStatusBarColor(unpack(DONE_COLOR))
 	bar.spark:Hide()
 	if ns:GetOption("campfireTimerSound") then
-		PlaySound(SOUNDKIT.READY_CHECK, "Master")
+		ns.sounds.PlayOption("campfireTimerSoundChoice", "kit:READY_CHECK")
 	end
 end
 

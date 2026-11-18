@@ -30,20 +30,44 @@ local module = {
 			key = "farmGoalsMilestoneSound",
 			header = "Sounds",
 			name = "Milestone chimes",
-			description = "Play a sound at 25%, 50% and 75% of a goal.",
+			description = "Play a sound at 25%, 50% and 75% of a goal. A goal can have its own sound (Edit in the goals window).",
 			default = true,
+		},
+		{
+			key = "farmGoalsMilestoneSoundChoice",
+			parent = "farmGoalsMilestoneSound",
+			type = "sound",
+			name = "Sound",
+			description = "Which sound plays at milestones.",
+			default = "kit:UI_QUEST_ROLLING_FORWARD_01",
 		},
 		{
 			key = "farmGoalsCompleteSound",
 			name = "Fanfare when a goal is done",
-			description = "Play a sound when you finish a goal.",
+			description = "Play a sound when you finish a goal. A goal can have its own sound (Edit in the goals window).",
 			default = true,
+		},
+		{
+			key = "farmGoalsCompleteSoundChoice",
+			parent = "farmGoalsCompleteSound",
+			type = "sound",
+			name = "Sound",
+			description = "Which sound plays when a goal is done.",
+			default = "kit:UI_EPICLOOT_TOAST",
 		},
 		{
 			key = "farmGoalsTickSound",
 			name = "Sound on every gain",
-			description = "Play a soft coin sound whenever a goal goes up. Gets busy when farming fast.",
+			description = "Play a sound whenever a goal goes up. Gets busy when farming fast.",
 			default = false,
+		},
+		{
+			key = "farmGoalsTickSoundChoice",
+			parent = "farmGoalsTickSound",
+			type = "sound",
+			name = "Sound",
+			description = "Which sound plays on every gain.",
+			default = "kit:LOOT_WINDOW_COIN_SOUND",
 		},
 		{
 			key = "farmGoalsCountCrafted",
@@ -104,9 +128,12 @@ local ICONS = {
 	currency = "Interface\\Icons\\INV_Misc_Token_ArgentDawn",
 }
 
-local SOUND_TICK = SOUNDKIT.LOOT_WINDOW_COIN_SOUND
-local SOUND_MILESTONE = SOUNDKIT.UI_QUEST_ROLLING_FORWARD_01
-local SOUND_COMPLETE = SOUNDKIT.UI_EPICLOOT_TOAST
+-- Goal sounds: which -> { on/off option, sound option, default sound }.
+local SOUNDS = {
+	milestone = { "farmGoalsMilestoneSound", "farmGoalsMilestoneSoundChoice", "kit:UI_QUEST_ROLLING_FORWARD_01" },
+	complete = { "farmGoalsCompleteSound", "farmGoalsCompleteSoundChoice", "kit:UI_EPICLOOT_TOAST" },
+	tick = { "farmGoalsTickSound", "farmGoalsTickSoundChoice", "kit:LOOT_WINDOW_COIN_SOUND" },
+}
 
 local characterKey
 local lastXP, lastXPMax, lastLevel, lastMoney
@@ -128,10 +155,36 @@ local function GetData()
 	return data
 end
 
-local function Play(sound, option)
-	if sound and ns:GetOption(option) then
-		PlaySound(sound, "Master")
+-- A goal's own sound wins ("none" silences it); "default" (or no choice) follows the settings.
+local function PlayGoalSound(goal, which)
+	local own = goal and goal.sounds and goal.sounds[which]
+	if own and own ~= "default" and ns.sounds.IsValid(own) then
+		ns.sounds.Play(own)
+		return
 	end
+	local toggle, choice, default = unpack(SOUNDS[which])
+	if ns:GetOption(toggle) then
+		ns.sounds.PlayOption(choice, default)
+	end
+end
+
+-- "Default (Epic loot)" / "Default (off)", for the per-goal sound pickers.
+local function DefaultSoundLabel(which)
+	local toggle, choice, default = unpack(SOUNDS[which])
+	if not ns:GetOption(toggle) then
+		return "Default (off)"
+	end
+	local value = ns:GetValue(choice)
+	return "Default (" .. ns.sounds.Label(ns.sounds.IsValid(value) and value or default) .. ")"
+end
+
+local function DefaultSound(which)
+	local toggle, choice, default = unpack(SOUNDS[which])
+	if not ns:GetOption(toggle) then
+		return "none"
+	end
+	local value = ns:GetValue(choice)
+	return ns.sounds.IsValid(value) and value or default
 end
 
 local function FormatNumber(value)
@@ -447,7 +500,7 @@ local function Evaluate(goal)
 	local fraction = GetProgress(goal)
 	if fraction >= 1 then
 		goal.completed = time()
-		Play(SOUND_COMPLETE, "farmGoalsCompleteSound")
+		PlayGoalSound(goal, "complete")
 		ShowToast(goal)
 		local name = Describe(goal)
 		ns:Print("Goal complete: " .. name .. " (" .. FormatDuration(goal.active or 0) .. ").")
@@ -462,7 +515,7 @@ local function Evaluate(goal)
 	local milestone = math.min(3, math.floor(fraction * 4))
 	if milestone > (goal.milestone or 0) then
 		goal.milestone = milestone
-		Play(SOUND_MILESTONE, "farmGoalsMilestoneSound")
+		PlayGoalSound(goal, "milestone")
 	end
 end
 
@@ -482,7 +535,7 @@ local function Gain(goalType, amount, itemID)
 		end
 	end
 	if changed then
-		Play(SOUND_TICK, "farmGoalsTickSound")
+		PlayGoalSound(nil, "tick")
 		UpdateTracker()
 	end
 end
@@ -575,7 +628,7 @@ local function Poll(goalType)
 		end
 	end
 	if changed then
-		Play(SOUND_TICK, "farmGoalsTickSound")
+		PlayGoalSound(nil, "tick")
 	end
 	if any then
 		UpdateTracker()
@@ -630,11 +683,9 @@ local function OpenMenu(row)
 			goal.paused = not goal.paused or nil
 			UpdateTracker()
 		end)
-		if goal.type == "item" or goal.type == "gold" then
-			root:CreateButton("Recount what I have...", function()
-				ns:OpenGoalsWindow("recount", goal.id)
-			end)
-		end
+		root:CreateButton("Edit goal...", function()
+			ns:OpenGoalsWindow("edit", goal.id)
+		end)
 		root:CreateButton("Reset progress", function()
 			goal.gained, goal.active, goal.milestone = 0, 0, 0
 			if goal.type == "level" then
@@ -964,11 +1015,44 @@ local function AddGoal(goal)
 	return goal
 end
 
+-- Applies the goals window's Edit form. If the tracked thing (item, faction, skill,
+-- currency or gain/reach mode) changed, progress starts over; otherwise it's kept and
+-- only the target, sounds and (if recount) the starting count change.
+local function EditGoal(id, changes, recount)
+	local goal = FindGoal(id)
+	if not goal then
+		return
+	end
+	local changedThing = goal.itemID ~= changes.itemID or goal.key ~= changes.key
+		or (goal.mode or "reach") ~= (changes.mode or "reach")
+	goal.itemID, goal.key, goal.name, goal.mode = changes.itemID, changes.key, changes.name or goal.name, changes.mode
+	goal.target, goal.toMax, goal.sounds = changes.target, changes.toMax, changes.sounds
+	local read = TYPES[goal.type].read
+	if changedThing then
+		goal.gained, goal.active, goal.flashAt = 0, 0, nil
+		goal.last = read and read(goal) or nil
+		goal.start = changes.start or goal.last or 0
+	elseif recount and changes.start then
+		goal.start = changes.start
+	end
+	-- Re-check where it stands, without chiming for milestones it was already past.
+	local fraction = GetProgress(goal)
+	if goal.completed and fraction < 1 then
+		goal.completed = nil
+	end
+	goal.milestone = math.min(3, math.floor(math.max(fraction, 0) * 4))
+	Evaluate(goal)
+	UpdateTracker()
+end
+
 ns.goals = {
+	EditGoal = EditGoal,
 	GetData = function()
 		return GetData()
 	end,
 	TYPES = TYPES,
+	DefaultSoundLabel = DefaultSoundLabel,
+	DefaultSound = DefaultSound,
 	REP_THRESHOLDS = REP_THRESHOLDS,
 	StandingLabel = StandingLabel,
 	Describe = Describe,
