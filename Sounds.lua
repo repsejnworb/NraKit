@@ -99,8 +99,10 @@ end
 function sounds.IsValid(value)
 	if value == "none" then
 		return true
+	elseif type(value) ~= "string" then
+		return false
 	end
-	local source, name = type(value) == "string" and value:match("^(%a+):(.+)$")
+	local source, name = value:match("^(%a+):(.+)$")
 	if source == "kit" then
 		return SOUNDKIT[name] ~= nil
 	elseif source == "lsm" then
