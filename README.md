@@ -79,7 +79,8 @@ addons share through LibSharedMedia.
   it back), or right-click it to **go again** (another run of the same amount) or set a new target. Item goals count what you loot (banking, mailing or selling never changes
   them) and can start from what you already have in your bags, bank, mail or on other characters.
   The tracker has three views (switch with its F / C / I button): **Full**, **Compact** (one line
-  per goal) and **Icons** (a tile per goal with a bar and the amount). Right-click a goal to pause,
+  per goal) and **Icons** (a tile per goal with a bar and the amount; the box is just the tiles, growing
+  sideways up to 3 per row, with the buttons appearing above it on hover). Right-click a goal to pause,
   edit, **shelve** (hide it from the tracker, paused, until you bring it back from the goals window),
   reset or remove it. **Edit** fixes a goal's target, item, starting count or sounds without starting
   over, and each goal can have its own milestone and finish sounds.

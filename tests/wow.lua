@@ -128,6 +128,22 @@ local methods = {
 		rawset(self, "events", events)
 		events[event] = true
 	end,
+	SetWidth = function(self, width)
+		rawset(self, "width", width)
+	end,
+	SetHeight = function(self, height)
+		rawset(self, "height", height)
+	end,
+	SetSize = function(self, width, height)
+		rawset(self, "width", width)
+		rawset(self, "height", height)
+	end,
+	GetWidth = function(self)
+		return rawget(self, "width") or 100
+	end,
+	GetHeight = function(self)
+		return rawget(self, "height") or 100
+	end,
 	GetParent = function(self)
 		return rawget(self, "parent")
 	end,

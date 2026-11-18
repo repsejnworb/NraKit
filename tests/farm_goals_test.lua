@@ -246,6 +246,25 @@ return {
 			end
 		end)
 
+		t.test("the icons view box is one icon per goal, three per row, then wraps", function()
+			ClearGoals(ns)
+			NraKitDB.farmGoalsView = "icons"
+			local size, gap, pad = NraKitDB.farmGoalsIconSize, 6, 6
+			ns.goals.AddGoal({ type = "xp", target = 1000 })
+			t.equal(NraKitGoalsTracker:GetWidth(), pad * 2 + size, "one goal: one icon wide")
+			t.ok(not NraKitGoalsTracker.header:IsShown(), "header hidden until hover")
+			ns.goals.AddGoal({ type = "xp", target = 2000 })
+			ns.goals.AddGoal({ type = "xp", target = 3000 })
+			t.equal(NraKitGoalsTracker:GetWidth(), pad * 2 + 3 * size + 2 * gap, "three side by side")
+			local oneRow = NraKitGoalsTracker:GetHeight()
+			ns.goals.AddGoal({ type = "xp", target = 4000 })
+			t.equal(NraKitGoalsTracker:GetWidth(), pad * 2 + 3 * size + 2 * gap, "a fourth wraps")
+			t.ok(NraKitGoalsTracker:GetHeight() > oneRow, "second row")
+			NraKitDB.farmGoalsView = "full"
+			ns.goals.Update()
+			t.ok(NraKitGoalsTracker.header:IsShown(), "header back in the full view")
+		end)
+
 		t.test("the icons view shows short amounts", function()
 			ClearGoals(ns)
 			NraKitDB.farmGoalsView = "icons"

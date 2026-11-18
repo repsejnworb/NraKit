@@ -135,8 +135,8 @@ local module = {
 			key = "farmGoalsIconsPerRow",
 			type = "number",
 			name = "Icons per row",
-			description = "How many goals per row in the Icons view before it wraps.",
-			default = 6, min = 2, max = 12, step = 1,
+			description = "How many goals side by side in the Icons view before it starts a new row.",
+			default = 3, min = 1, max = 12, step = 1,
 		},
 		{
 			key = "farmGoalsScale",
@@ -1152,14 +1152,14 @@ end
 -- Lays out the goals in a view; returns the tracker's width and the height below the header.
 local LAYOUT = {}
 
-function LAYOUT.full(goals)
+function LAYOUT.full(goals, top)
 	local shown = math.min(#goals, MAX_ROWS)
 	for index = 1, shown do
 		local goal, row = goals[index], GetWidget("full", index)
 		row.goal = goal
 		row:ClearAllPoints()
-		row:SetPoint("TOPLEFT", 0, -HEADER_HEIGHT - (index - 1) * ROW_HEIGHT)
-		row:SetPoint("TOPRIGHT", 0, -HEADER_HEIGHT - (index - 1) * ROW_HEIGHT)
+		row:SetPoint("TOPLEFT", 0, -top - (index - 1) * ROW_HEIGHT)
+		row:SetPoint("TOPRIGHT", 0, -top - (index - 1) * ROW_HEIGHT)
 		local name, icon = Describe(goal)
 		local _, value = GetProgress(goal)
 		row.icon:SetTexture(icon)
@@ -1172,14 +1172,14 @@ function LAYOUT.full(goals)
 	return ns:GetValue("farmGoalsWidth") or 260, shown * ROW_HEIGHT, shown
 end
 
-function LAYOUT.compact(goals)
+function LAYOUT.compact(goals, top)
 	local shown = math.min(#goals, MAX_COMPACT_ROWS)
 	for index = 1, shown do
 		local goal, row = goals[index], GetWidget("compact", index)
 		row.goal = goal
 		row:ClearAllPoints()
-		row:SetPoint("TOPLEFT", 0, -HEADER_HEIGHT - (index - 1) * COMPACT_HEIGHT)
-		row:SetPoint("TOPRIGHT", 0, -HEADER_HEIGHT - (index - 1) * COMPACT_HEIGHT)
+		row:SetPoint("TOPLEFT", 0, -top - (index - 1) * COMPACT_HEIGHT)
+		row:SetPoint("TOPRIGHT", 0, -top - (index - 1) * COMPACT_HEIGHT)
 		local name, icon = Describe(goal)
 		local _, value = GetProgress(goal)
 		row.icon:SetTexture(icon)
@@ -1191,9 +1191,10 @@ function LAYOUT.compact(goals)
 	return ns:GetValue("farmGoalsCompactWidth") or 210, shown * COMPACT_HEIGHT, shown
 end
 
-function LAYOUT.icons(goals)
+-- Just the tiles: one goal is one icon wide; it grows sideways up to "Icons per row", then wraps.
+function LAYOUT.icons(goals, top)
 	local size = ns:GetValue("farmGoalsIconSize") or 32
-	local perRow = ns:GetValue("farmGoalsIconsPerRow") or 6
+	local perRow = ns:GetValue("farmGoalsIconsPerRow") or 3
 	local gap, pad, labelHeight = 6, 6, 13
 	local shown = math.min(#goals, MAX_ICONS)
 	local columns = math.min(perRow, math.max(shown, 1))
@@ -1204,7 +1205,7 @@ function LAYOUT.icons(goals)
 		tile.icon:SetHeight(size)
 		local column, row = (index - 1) % columns, math.floor((index - 1) / columns)
 		tile:ClearAllPoints()
-		tile:SetPoint("TOPLEFT", pad + column * (size + gap), -HEADER_HEIGHT - pad - row * (size + labelHeight + gap))
+		tile:SetPoint("TOPLEFT", pad + column * (size + gap), -top - pad - row * (size + labelHeight + gap))
 		local _, icon = Describe(goal)
 		tile.icon:SetTexture(icon)
 		tile.icon:SetAlpha(goal.paused and 0.6 or 1)
@@ -1214,7 +1215,7 @@ function LAYOUT.icons(goals)
 		tile:Show()
 	end
 	local rows = math.ceil(shown / columns)
-	local width = math.max(120, pad * 2 + columns * size + (columns - 1) * gap)
+	local width = pad * 2 + columns * size + (columns - 1) * gap
 	return width, pad * 2 + rows * (size + labelHeight) + math.max(rows - 1, 0) * gap, shown
 end
 
@@ -1264,10 +1265,13 @@ local function CreateTracker()
 	UI.AddBorder(tracker)
 
 	local header = CreateFrame("Frame", nil, tracker)
-	header:SetPoint("TOPLEFT")
-	header:SetPoint("TOPRIGHT")
 	header:SetHeight(HEADER_HEIGHT)
 	UI.AddLine(header, "BOTTOM")
+	-- In the Icons view the header floats above the tiles (shown on hover) and needs its own background.
+	header.bg = header:CreateTexture(nil, "BACKGROUND")
+	header.bg:SetAllPoints()
+	header.bg:SetColorTexture(0.04, 0.04, 0.06, 0.85)
+	tracker.header = header
 	tracker.title = header:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
 	tracker.title:SetPoint("LEFT", 8, 0)
 	tracker.title:SetTextColor(unpack(UI.ACCENT))
@@ -1306,6 +1310,11 @@ local function CreateTracker()
 	tracker.headerGlow = MakeGlow(header)
 	tracker:SetScript("OnUpdate", function(self)
 		Pulse(self.headerGlow, self.unseenWhileCollapsed == true)
+		if self.floatingHeader then
+			-- Shown while the mouse is on the tiles, and kept while it's on the header itself.
+			local hover = self:IsMouseOver() or (self.header:IsShown() and self.header:IsMouseOver())
+			self.header:SetShown(hover)
+		end
 	end)
 	tracker:SetScript("OnEnter", function(self)
 		if self.unseenWhileCollapsed then
@@ -1377,9 +1386,27 @@ function UpdateTracker()
 	tracker.unseenWhileCollapsed = collapsed and unseen or nil
 	tracker.view.text:SetText(VIEW_LETTERS[view])
 
+	-- Icons: the box is just the tiles, with the header floating above them on hover.
+	local floating = view == "icons" and not collapsed
+	local header = tracker.header
+	header:ClearAllPoints()
+	if floating then
+		header:SetPoint("BOTTOMLEFT", tracker, "TOPLEFT", 0, 1)
+		header:SetWidth(64)
+		header:Hide()
+	else
+		header:SetPoint("TOPLEFT")
+		header:SetPoint("TOPRIGHT")
+		header:Show()
+	end
+	header.bg:SetShown(floating)
+	tracker.title:SetShown(not floating)
+	tracker.floatingHeader = floating
+	local top = floating and 0 or HEADER_HEIGHT
+
 	local width, height, shown = 0, 0, 0
 	if not collapsed then
-		width, height, shown = LAYOUT[view](goals)
+		width, height, shown = LAYOUT[view](goals, top)
 	end
 	-- Hide what the layout didn't use (other views, and rows past the last goal).
 	for name, list in pairs(widgets) do
@@ -1397,7 +1424,7 @@ function UpdateTracker()
 		width = view == "icons" and 120 or (ns:GetValue(view == "compact" and "farmGoalsCompactWidth" or "farmGoalsWidth") or 260)
 	end
 	tracker:SetWidth(width)
-	tracker:SetHeight(HEADER_HEIGHT + height + (hidden > 0 and 18 or 0))
+	tracker:SetHeight(top + height + (hidden > 0 and 18 or 0))
 	tracker:Show()
 end
 
@@ -1779,6 +1806,13 @@ function module:OnInitialize()
 	characterKey = UnitName("player") .. "-" .. (GetNormalizedRealmName() or GetRealmName())
 	-- The finish sound's default changed from Epic loot to World quest complete; move
 	-- anyone still on the old default (once).
+	-- Icons per row's default went from 6 to 3, likewise.
+	if not NraKitDB.farmGoalsIconsPerRowUpdated then
+		if NraKitDB.farmGoalsIconsPerRow == 6 then
+			NraKitDB.farmGoalsIconsPerRow = 3
+		end
+		NraKitDB.farmGoalsIconsPerRowUpdated = true
+	end
 	if not NraKitDB.farmGoalsFinishSoundUpdated then
 		if NraKitDB.farmGoalsCompleteSoundChoice == "kit:UI_EPICLOOT_TOAST" then
 			NraKitDB.farmGoalsCompleteSoundChoice = "kit:UI_WORLDQUEST_COMPLETE"
