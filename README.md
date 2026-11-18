@@ -100,10 +100,12 @@ addons share through LibSharedMedia.
   should be on (with Engaged-only nameplates, the scanner keeps them on while the list isn't empty).
 
 ## Development
-Requires [just](https://github.com/casey/just), [cocogitto](https://github.com/cocogitto/cocogitto) and `luac`.
+Requires [just](https://github.com/casey/just), [cocogitto](https://github.com/cocogitto/cocogitto) and Lua 5.4 (`lua`, `luac`).
 Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
 
 - `just check` syntax-checks the Lua files
+- `just test` runs the tests: the addon is loaded into a stand-in WoW client (`tests/wow.lua`) and its
+  windows are clicked through (`tests/*_test.lua`). They also run on every push (GitHub Actions)
 - `just next` shows the next version and the commits going into it
 - `just release` tags the next version and pushes it; CI packages it and uploads to CurseForge and GitHub
 - `just release-pre alpha.1` does the same as an alpha/beta pre-release

@@ -8,7 +8,12 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
 - Work directly in this `main/` worktree, commit, and push to `origin/main`.
 - **Every feature is off by default** (module `default = false`). Sub-options inside a feature may default on.
 - Each feature should be toggleable on the NraKit overview page; anything tunable goes in settings, not code constants.
-- No local test runner: syntax-check with `just check` (`luac -p`); the user tests in-game and pastes errors/screenshots.
+- Run `just test` before committing (it also syntax-checks). `tests/run.lua` loads the whole addon in TOC order into a
+  stand-in client (`tests/wow.lua`), logs in and runs a `tests/*_test.lua` file; each file is a fresh process. Tests
+  click through windows (`wow.click("Create goal")`, `wow.type`, `wow.tick`, `wow.fire(event, ...)`) and assert on
+  saved data. Add tests for new logic and windows, and a regression test for each bug found. The stand-in only
+  catches Lua errors and logic; looks and real API behaviour still need the user in game (they paste
+  errors/screenshots). Unknown WoW functions do nothing there: give the stand-in real data where a test depends on it.
   Ask them to run `/console scriptErrors 1` when testing. Chat `/run` lines are cut off at 255 characters, so split long diagnostics.
 
 ## Target client
@@ -95,8 +100,8 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   is replaced with the tag. Tags with `alpha`/`beta` upload as alpha/beta files.
   Release with `just release` (Cocogitto picks the next semver from conventional commits since the last tag, asks
   for confirmation, creates an annotated tag and pushes it). `just release-pre alpha.1` makes a pre-release, `just next`
-  previews the next version, `just check` syntax-checks the Lua files. Only release when the user asks.
+  previews the next version, `just check` syntax-checks the Lua files, `just test` runs the tests (release runs it first). Only release when the user asks.
 - `.github/CURSEFORGE.md` is the CurseForge project description (Markdown). CurseForge has no API for it, so the
   user pastes it in by hand. Keep it in sync with README.md when features change.
-- `.pkgmeta` leaves `.github/`, `CLAUDE.md` and `README.md` out of the zip. `.github/logo.png` is the full logo; `Media/Icon.png` is the in-game icon.
+- `.pkgmeta` leaves `.github/`, `CLAUDE.md`, `README.md` and `tests/` out of the zip. `.github/logo.png` is the full logo; `Media/Icon.png` is the in-game icon.
 - `.github/workflows/interface-version.yml` checks daily (or run it manually) for a new Forever interface number and opens a PR.

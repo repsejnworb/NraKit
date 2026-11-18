@@ -10,7 +10,15 @@ default:
 
 # Syntax-check all Lua files
 check:
-    for f in *.lua Modules/*.lua; do luac -p "$f"; done
+    for f in *.lua Modules/*.lua tests/*.lua; do luac -p "$f"; done
+
+# Run the tests (each file in a fresh stand-in client, see tests/run.lua)
+test: check
+    #!/usr/bin/env bash
+    set -uo pipefail
+    status=0
+    for f in tests/*_test.lua; do lua tests/run.lua "$f" || status=1; done
+    exit $status
 
 # Show the version the next release would get, and the commits going into it
 next:
@@ -21,10 +29,10 @@ next:
     git log --oneline ${last:+"$last"..HEAD}
 
 # Release: pick the next version from conventional commits, tag it and push (CI publishes to CurseForge)
-release: check (_release "")
+release: test (_release "")
 
 # Pre-release, e.g. `just release-pre alpha.1` or `just release-pre beta.1` (CurseForge alpha/beta file)
-release-pre pre: check (_release pre)
+release-pre pre: test (_release pre)
 
 _release pre:
     #!/usr/bin/env bash

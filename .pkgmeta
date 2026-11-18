@@ -4,3 +4,4 @@ ignore:
   - .github
   - CLAUDE.md
   - README.md
+  - tests
