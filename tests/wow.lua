@@ -125,6 +125,9 @@ local methods = {
 		rawset(self, "events", events)
 		events[event] = true
 	end,
+	GetParent = function(self)
+		return rawget(self, "parent")
+	end,
 	GetPoint = function()
 		return "CENTER", nil, "CENTER", 0, 0
 	end,
@@ -220,9 +223,10 @@ function wow.install()
 		end
 		return function() end
 	end })
-	G.CreateFrame = function(kind, name, _, template)
+	G.CreateFrame = function(kind, name, parent, template)
 		local frame = NewObject(kind)
 		frame.template = template
+		frame.parent = parent
 		if kind == "CheckButton" then
 			frame.Text = NewObject("FontString")
 		end
@@ -431,7 +435,7 @@ function wow.install()
 	end
 	G.GetRealmName = G.GetNormalizedRealmName
 	G.InCombatLockdown = function()
-		return false
+		return wow.data.inCombat == true
 	end
 	G.GetInboxNumItems = function()
 		return 0
@@ -466,12 +470,12 @@ function wow.install()
 				parts[index] = nil
 			end
 		end
-		return table.unpack(parts)
+		return (unpack or table.unpack)(parts)
 	end
 	G.strfind = string.find
 	G.format = string.format
 	G.tinsert = table.insert
-	G.unpack = table.unpack
+	G.unpack = unpack or table.unpack
 	G.wipe = function(t)
 		for key in pairs(t) do
 			t[key] = nil

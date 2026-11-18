@@ -2,7 +2,7 @@
 local keys = {}
 for line in io.lines("NraKit.toc") do
 	if line:match("^Modules") then
-		local text = io.open((line:gsub("\\", "/"))):read("a")
+		local text = io.open((line:gsub("\\", "/"))):read("*a")
 		local key = text:match("\n%s*key = \"([%w]+)\",\n%s*section")
 		if key then
 			table.insert(keys, key)
