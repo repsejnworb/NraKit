@@ -3,8 +3,9 @@ local _, ns = ...
 -- Wowhead link: hover an item, spell, NPC, quest, achievement or currency and press
 -- Ctrl+C (a key binding) for a wowhead.com/forever link to it.
 --
--- Addons can't write to the system clipboard, so the key opens a small box with the
--- URL selected; a second Ctrl+C copies it for real and closes the box.
+-- Addons can't write to the system clipboard, so the key opens a box in the middle of
+-- the screen with the URL selected, for the OS's own copy (Ctrl+C, or Cmd+C on a Mac).
+-- That key press also closes the box.
 --
 -- What's hovered comes from the tooltip data of GameTooltip/ItemRefTooltip (type + ID,
 -- or a GUID for units). Quest log entries, the achievement frame and the objective
@@ -21,6 +22,8 @@ local module = {
 local BINDING = "NRAKIT_WOWHEAD_LINK"
 local DEFAULT_KEY = "CTRL-C"
 local URL = "https://www.wowhead.com/forever/%s=%d"
+local IS_MAC = IsMacClient and IsMacClient()
+local COPY_KEY = IS_MAC and "Cmd+C" or "Ctrl+C"
 
 _G["BINDING_NAME_" .. BINDING] = "Copy Wowhead link of what's under the mouse"
 
@@ -69,7 +72,9 @@ local function OnTooltipData(tooltip, data)
 	else
 		page, id = PAGES[data.type], Plain(data.id)
 	end
-	shown[tooltip] = page and type(id) == "number" and id > 0 and { page = page, id = id } or nil
+	local line = data.lines and data.lines[1]
+	local name = line and Plain(line.leftText)
+	shown[tooltip] = page and type(id) == "number" and id > 0 and { page = page, id = id, name = name } or nil
 end
 
 local function ClearTooltip(tooltip)
@@ -106,7 +111,7 @@ local function GetHovered()
 		local entry = shown[tooltip]
 		-- A chat link's tooltip stays open, so it only counts while the mouse is on it.
 		if entry and tooltip:IsShown() and (tooltip == GameTooltip or tooltip:IsMouseOver()) then
-			return entry.page, entry.id
+			return entry.page, entry.id, entry.name
 		end
 	end
 	local focus = GetMouseFoci and GetMouseFoci()[1]
@@ -119,25 +124,25 @@ local box
 
 local function CreateBox()
 	box = CreateFrame("Frame", nil, UIParent, "TooltipBackdropTemplate")
-	box:SetSize(360, 58)
+	box:SetSize(440, 66)
 	box:SetFrameStrata("DIALOG")
 	box:SetClampedToScreen(true)
 	box:EnableMouse(true)
 	box:Hide()
 
-	box.title = box:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-	box.title:SetPoint("TOPLEFT", 10, -8)
-	box.title:SetPoint("RIGHT", -10, 0)
+	box.title = box:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+	box.title:SetPoint("TOPLEFT", 12, -10)
+	box.title:SetPoint("RIGHT", box, "TOPRIGHT", -170, 0)
 	box.title:SetJustifyH("LEFT")
 	box.title:SetWordWrap(false)
 
 	box.hint = box:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	box.hint:SetPoint("TOPRIGHT", -10, -9)
-	box.hint:SetText("Ctrl+C to copy, Esc to close")
+	box.hint:SetPoint("TOPRIGHT", -12, -13)
+	box.hint:SetText(COPY_KEY .. " to copy, Esc to close")
 
 	local edit = CreateFrame("EditBox", nil, box, "InputBoxTemplate")
-	edit:SetPoint("BOTTOMLEFT", 15, 8)
-	edit:SetPoint("BOTTOMRIGHT", -10, 8)
+	edit:SetPoint("BOTTOMLEFT", 17, 10)
+	edit:SetPoint("BOTTOMRIGHT", -12, 10)
 	edit:SetHeight(20)
 	edit:SetAutoFocus(false)
 	edit:SetScript("OnEscapePressed", function()
@@ -156,19 +161,19 @@ local function CreateBox()
 			self:HighlightText()
 		end
 	end)
-	-- The copy happens on this key press; close right after it.
+	-- The OS copies on this key press; close right after it.
 	edit:SetScript("OnKeyDown", function(_, key)
-		if key == "C" and IsControlKeyDown() then
+		local copyModifier = IS_MAC and IsMetaKeyDown() or not IS_MAC and IsControlKeyDown()
+		if key == "C" and copyModifier then
 			C_Timer.After(0, function()
 				box:Hide()
-				ns:Print("Copied " .. box.url)
 			end)
 		end
 	end)
 	box.edit = edit
 end
 
-local function ShowBox(page, id)
+local function ShowBox(page, id, tooltipName)
 	if not box then
 		CreateBox()
 	end
@@ -183,14 +188,12 @@ local function ShowBox(page, id)
 	elseif page == "achievement" then
 		title = title .. ": " .. (select(2, GetAchievementInfo(id)) or id)
 	else
-		title = title .. " " .. id
+		title = title .. ": " .. (tooltipName or id)
 	end
 	box.title:SetText(title)
 
-	local scale = UIParent:GetEffectiveScale()
-	local x, y = GetCursorPosition()
 	box:ClearAllPoints()
-	box:SetPoint("BOTTOM", UIParent, "BOTTOMLEFT", x / scale, y / scale + 20)
+	box:SetPoint("CENTER", UIParent, "CENTER", 0, 150)
 	box:Show()
 	box.edit:SetText(box.url)
 	box.edit:SetFocus()
@@ -203,9 +206,9 @@ function NraKit_CopyWowheadLink()
 	if not ns:IsModuleEnabled(module.key) then
 		return
 	end
-	local page, id = GetHovered()
+	local page, id, name = GetHovered()
 	if page and id then
-		ShowBox(page, id)
+		ShowBox(page, id, name)
 	end
 end
 
