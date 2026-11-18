@@ -841,6 +841,7 @@ local VIEW_LABELS = { full = "Full", compact = "Compact", icons = "Icons" }
 local VIEW_LETTERS = { full = "F", compact = "C", icons = "I" }
 local COMPACT_HEIGHT = 24
 local HEADER_LINGER, HEADER_FADE = 2.5, 0.4 -- Icons view: the floating header after the mouse leaves
+local HEADER_MARGIN = 12 -- Icons view: extra hover area around the tiles and the header
 local MAX_COMPACT_ROWS = 12
 local MAX_ICONS = 30
 
@@ -1318,8 +1319,12 @@ local function CreateTracker()
 		if self.floatingHeader then
 			-- Shown while the mouse is on the tiles or the header, then lingers a moment and
 			-- fades, so it can still be reached past a goal's tooltip.
+			-- The hover area is generous: the tiles plus the strip above them where the header
+			-- sits, and a margin around the header, so reaching for a button never hides it.
 			local now = GetTime()
-			if self:IsMouseOver() or (self.header:IsShown() and self.header:IsMouseOver()) then
+			local margin = HEADER_MARGIN
+			if self:IsMouseOver(HEADER_HEIGHT + margin, -margin, -margin, margin)
+				or (self.header:IsShown() and self.header:IsMouseOver(margin, -margin, -margin, margin)) then
 				self.headerHoverAt = now
 			end
 			local since = now - (self.headerHoverAt or -math.huge)
