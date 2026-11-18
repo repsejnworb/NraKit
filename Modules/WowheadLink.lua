@@ -161,12 +161,14 @@ local function CreateBox()
 			self:HighlightText()
 		end
 	end)
-	-- The OS copies on this key press; close right after it.
+	-- The OS copies (or cuts; OnTextChanged puts the text back) on this key press, so
+	-- we can't see the clipboard but know it happened. Close right after it.
 	edit:SetScript("OnKeyDown", function(_, key)
-		local copyModifier = IS_MAC and IsMetaKeyDown() or not IS_MAC and IsControlKeyDown()
-		if key == "C" and copyModifier then
+		local modifier = IS_MAC and IsMetaKeyDown() or not IS_MAC and IsControlKeyDown()
+		if (key == "C" or key == "X") and modifier then
 			C_Timer.After(0, function()
 				box:Hide()
+				ns:Print("Copied " .. box.url)
 			end)
 		end
 	end)
