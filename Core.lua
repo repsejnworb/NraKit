@@ -130,3 +130,27 @@ SlashCmdList.NRAKIT = function(input)
 		ns:OpenSettings()
 	end
 end
+
+-- Addon compartment (the addon button by the minimap); wired up in the TOC.
+-- Left-click: settings window. Right-click: inventory browser.
+function NraKit_OnCompartmentClick(_, mouseButton)
+	if mouseButton == "RightButton" then
+		ns:OpenInventoryBrowser()
+	else
+		ns:OpenSettings()
+	end
+end
+
+function NraKit_OnCompartmentEnter(_, button)
+	GameTooltip:SetOwner(button, "ANCHOR_LEFT")
+	GameTooltip_SetTitle(GameTooltip, addonName)
+	GameTooltip_AddInstructionLine(GameTooltip, "Left-click: settings")
+	if ns:IsModuleEnabled("inventoryTracker") then
+		GameTooltip_AddInstructionLine(GameTooltip, "Right-click: inventory browser")
+	end
+	GameTooltip:Show()
+end
+
+function NraKit_OnCompartmentLeave()
+	GameTooltip:Hide()
+end

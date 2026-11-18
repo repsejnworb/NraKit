@@ -5,6 +5,9 @@
 ## Version: @project-version@
 ## Category: Interface Enhancements
 ## IconTexture: Interface\AddOns\NraKit\Media\Icon.png
+## AddonCompartmentFunc: NraKit_OnCompartmentClick
+## AddonCompartmentFuncOnEnter: NraKit_OnCompartmentEnter
+## AddonCompartmentFuncOnLeave: NraKit_OnCompartmentLeave
 ## SavedVariables: NraKitDB
 ## X-Curse-Project-ID: 1786796
 

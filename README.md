@@ -15,6 +15,8 @@ Clone or symlink this repo into `World of Warcraft/_<flavor>_/Interface/AddOns/N
 Type `/nrakit` (`/nra`) to open NraKit's window: features grouped in a sidebar, a search box, an
 on/off switch per feature and its options right underneath. Everything is off until you turn it on.
 The same settings are also in the game's Settings panel under **AddOns → NraKit**.
+NraKit is also in the addon button by the minimap: left-click for settings, right-click for the
+inventory browser.
 
 ## Features
 - **Class-colored health bars**: player, target, target of target, focus and party frames
