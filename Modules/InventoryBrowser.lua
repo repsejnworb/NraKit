@@ -31,9 +31,10 @@ local CATEGORIES = {
 	{ key = "quest", label = "Quest" },
 	{ key = "other", label = "Other" },
 }
-local CATEGORY_ORDER = {}
+local CATEGORY_ORDER, CATEGORY_LABELS = {}, {}
 for index, category in ipairs(CATEGORIES) do
 	CATEGORY_ORDER[category.key] = index
+	CATEGORY_LABELS[category.key] = category.label
 end
 
 -- Enum.ItemClass -> category key; anything else is "other".
@@ -113,8 +114,12 @@ local function ColorName(character)
 	return string.format("|cff%02x%02x%02x%s|r", r * 255, g * 255, b * 255, character.name)
 end
 
+-- Empty when unknown (characters not logged in since gold was first recorded).
 local function Money(copper)
-	return GetMoneyString and GetMoneyString(copper or 0, true) or tostring(copper or 0)
+	if not copper then
+		return ""
+	end
+	return GetMoneyString and GetMoneyString(copper, true) or tostring(copper)
 end
 
 local function Age(timestamp)
@@ -322,19 +327,49 @@ local function DescribeOwners(item)
 	return table.concat(parts, "  ·  ")
 end
 
+-- Centred in the width; on the "All" category, with a heading above each category.
 local function RenderGrid(content, items, width)
-	local columns = math.max(1, math.floor((width + SLOT_GAP) / (SLOT + SLOT_GAP)))
-	for index, item in ipairs(items) do
-		local column, row = (index - 1) % columns, math.floor((index - 1) / columns)
+	local step = SLOT + SLOT_GAP
+	local columns = math.max(1, math.floor((width + SLOT_GAP) / step))
+	local left = PAD + math.floor((width - (columns * step - SLOT_GAP)) / 2)
+	local grouped = category == "all"
+	local y = -PAD
+	local current, index = nil, 0
+
+	local function EndGroup()
+		if index > 0 then
+			y = y - math.ceil(index / columns) * step
+		end
+		index = 0
+	end
+
+	for _, item in ipairs(items) do
+		if grouped and item.category ~= current then
+			EndGroup()
+			if current then
+				y = y - 8
+			end
+			current = item.category
+			local heading = pool:Acquire("heading", function()
+				local text = content:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+				text:SetJustifyH("LEFT")
+				return text
+			end)
+			heading:SetText(CATEGORY_LABELS[current]:upper())
+			heading:SetTextColor(unpack(UI.ACCENT))
+			heading:SetPoint("TOPLEFT", content, "TOPLEFT", left, y)
+			y = y - 18
+		end
 		local slot = AcquireSlot(content)
 		slot.itemID = item.id
 		slot.icon:SetTexture(item.icon)
 		slot.count:SetText(item.count > 1 and FormatCount(item.count) or "")
 		SetBorder(slot, item.quality)
-		slot:SetPoint("TOPLEFT", content, "TOPLEFT", PAD + column * (SLOT + SLOT_GAP), -PAD - row * (SLOT + SLOT_GAP))
+		slot:SetPoint("TOPLEFT", content, "TOPLEFT", left + (index % columns) * step, y - math.floor(index / columns) * step)
+		index = index + 1
 	end
-	local rows = math.ceil(#items / columns)
-	return PAD * 2 + rows * (SLOT + SLOT_GAP)
+	EndGroup()
+	return -y + PAD
 end
 
 local function RenderList(content, items, width)
@@ -412,9 +447,11 @@ local function RenderSidebar(characters)
 		return button
 	end
 
-	local totalMoney = 0
+	local totalMoney -- nil until some character's gold is known
 	for _, character in ipairs(characters) do
-		totalMoney = totalMoney + (character.data.money or 0)
+		if character.data.money then
+			totalMoney = (totalMoney or 0) + character.data.money
+		end
 	end
 	local all = AddButton("All characters", nil)
 	all:SetSubtext(Money(totalMoney))
