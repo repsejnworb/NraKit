@@ -114,7 +114,7 @@ local module = {
 			key = "farmGoalsWidth",
 			type = "number",
 			name = "Width (Full view)",
-			description = "Width of the tracker in the Full view. Switch views with the tracker's F / C / I button.",
+			description = "Width of the tracker in the Full view. Switch views with the tracker's view menu (the arrow in its header).",
 			default = 260, min = 180, max = 420, step = 10,
 		},
 		{
@@ -838,7 +838,7 @@ end
 -- Views, cycled with the header's view button: one-line-per-goal sizes and how many fit.
 local VIEWS = { "full", "compact", "icons" }
 local VIEW_LABELS = { full = "Full", compact = "Compact", icons = "Icons" }
-local VIEW_LETTERS = { full = "F", compact = "C", icons = "I" }
+local VIEW_DESCRIPTIONS = { full = "Full", compact = "Compact  (one line per goal)", icons = "Icons  (a tile per goal)" }
 local COMPACT_HEIGHT = 24
 local HEADER_LINGER, HEADER_FADE = 2.5, 0.4 -- Icons view: the floating header after the mouse leaves
 local HEADER_MARGIN = 12 -- Icons view: extra hover area around the tiles and the header
@@ -848,6 +848,11 @@ local MAX_ICONS = 30
 local function GetView()
 	local view = NraKitDB.farmGoalsView
 	return VIEW_LABELS[view] and view or "full"
+end
+
+local function SetView(view)
+	NraKitDB.farmGoalsView = view
+	UpdateTracker()
 end
 
 local function SetShelved(goal, shelved)
@@ -1295,19 +1300,41 @@ local function CreateTracker()
 	end)
 	tracker.collapse:SetPoint("RIGHT", add, "LEFT", -2, 0)
 
-	tracker.view = HeaderButton(header, "F", function()
+	-- View menu: Full / Compact / Icons, plus the tracker's other handy bits.
+	tracker.view = HeaderButton(header, "", function()
 		return "View: " .. VIEW_LABELS[GetView()]
-	end, "Click to switch between Full, Compact (one line per goal) and Icons.", function()
-		local current = GetView()
-		for index, view in ipairs(VIEWS) do
-			if view == current then
-				NraKitDB.farmGoalsView = VIEWS[index % #VIEWS + 1]
-			end
-		end
-		UpdateTracker()
+	end, "Choose how the tracker looks, lock it, or open its settings.", function(self)
 		GameTooltip_Hide()
+		if not (MenuUtil and MenuUtil.CreateContextMenu) then
+			return
+		end
+		MenuUtil.CreateContextMenu(self, function(_, root)
+			root:CreateTitle("Tracker view")
+			local function IsView(view)
+				return GetView() == view
+			end
+			for _, view in ipairs(VIEWS) do
+				root:CreateRadio(VIEW_DESCRIPTIONS[view], IsView, SetView, view)
+			end
+			root:CreateDivider()
+			root:CreateCheckbox("Lock position", function()
+				return ns:GetOption("farmGoalsLocked")
+			end, function()
+				ns:SetSetting("farmGoalsLocked", not ns:GetOption("farmGoalsLocked"))
+			end)
+			root:CreateButton("Open goals window", function()
+				ns:OpenGoalsWindow("active")
+			end)
+			root:CreateButton("Tracker settings...", function()
+				ns:OpenSettings("farm goals", module.key)
+			end)
+		end)
 	end)
 	tracker.view:SetPoint("RIGHT", tracker.collapse, "LEFT", -2, 0)
+	local arrow = tracker.view:CreateTexture(nil, "OVERLAY")
+	arrow:SetTexture("Interface\\Buttons\\Arrow-Down-Up")
+	arrow:SetSize(12, 12)
+	arrow:SetPoint("CENTER", 0, -2)
 
 	tracker.more = tracker:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	tracker.more:SetPoint("BOTTOM", 0, 4)
@@ -1406,7 +1433,6 @@ function UpdateTracker()
 		end
 	end
 	tracker.unseenWhileCollapsed = collapsed and unseen or nil
-	tracker.view.text:SetText(VIEW_LETTERS[view])
 
 	-- Icons: the box is just the tiles, with the header floating above them on hover.
 	local floating = view == "icons" and not collapsed
@@ -1554,6 +1580,9 @@ end
 
 ns.goals = {
 	EditGoal = EditGoal,
+	SetView = function(view)
+		SetView(view)
+	end,
 	GoAgain = GoAgain,
 	GoAgainAmount = GoAgainAmount,
 	CanGoAgain = CanGoAgain,

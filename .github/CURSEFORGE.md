@@ -74,7 +74,7 @@ Just want to farm something? Set a goal like **loot 4000 Silk Cloth**, **reach l
 - Finished? **Click** it to clear it to the history (you can restore it), or right-click to **go again** (another run of the same amount) or set a new target.
 - Item goals count **what you loot**, so banking, mailing or selling never throws them off.
 - Optionally **start from what you already have**: bags, bank, mail and other characters (with a live preview).
-- Three tracker views: **Full**, **Compact** (one line per goal) and **Icons** (a tile per goal with a bar and the amount, as small as one icon, growing sideways up to 3 per row; the buttons appear on hover). Switch with the tracker's F / C / I button.
+- Three tracker views: **Full**, **Compact** (one line per goal) and **Icons** (a tile per goal with a bar and the amount, as small as one icon, growing sideways up to 3 per row; the buttons appear on hover). Pick one from the arrow menu in the tracker's header (which can also lock it in place).
 - Right-click a goal to pause, **edit**, **shelve** (hide it from the tracker, paused, until you bring it back), reset or remove it. Edit fixes the target, item, starting count or sounds without starting over.
 - **/nra goal** opens the goals window (new goal, active and shelved goals, history). Or add goals from chat: **/nra goal 4000** plus a shift-clicked item, **/nra goal level 40**, **/nra goal gold 1g 50s**, **/nra goal rep revered timbermaw**, **/nra goal skill swords**, **/nra goal currency 2000 honor**... (**/nra goal help** lists them all).
 - Each goal can have **its own sounds** for milestones and for finishing.

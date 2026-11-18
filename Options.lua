@@ -522,9 +522,20 @@ local function CreateWindow()
 end
 
 -- /nra (and the button on the Blizzard page) toggles the window.
-function ns:OpenSettings()
+-- With a search (e.g. "farm goals"), always shows the window filtered to it, with
+-- expandKey's options open; without, toggles.
+function ns:OpenSettings(search, expandKey)
 	if not frame then
 		CreateWindow()
 	end
-	frame:SetShown(not frame:IsShown())
+	if search then
+		if expandKey then
+			expanded[expandKey] = true
+		end
+		frame:Show()
+		searchBox:SetText(search)
+		Render()
+	else
+		frame:SetShown(not frame:IsShown())
+	end
 end

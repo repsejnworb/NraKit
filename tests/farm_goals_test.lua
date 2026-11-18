@@ -240,7 +240,7 @@ return {
 
 		t.test("all three tracker views show the goals", function()
 			for _, view in ipairs({ "compact", "icons", "full" }) do
-				t.ok(wow.click(NraKitDB.farmGoalsView == nil and "F" or ({ full = "F", compact = "C", icons = "I" })[NraKitDB.farmGoalsView]), "clicked the view button")
+				ns.goals.SetView(view)
 				t.equal(NraKitDB.farmGoalsView, view, "switched view")
 				t.equal(#TrackedWidgets(wow), 2, view .. ": goals shown")
 			end
@@ -276,6 +276,15 @@ return {
 			NraKitDB.farmGoalsView = "full"
 			ns.goals.Update()
 			t.ok(NraKitGoalsTracker.header:IsShown(), "header back in the full view")
+		end)
+
+		t.test("tracker settings opens the settings window on Farm goals, expanded", function()
+			ns:OpenSettings("farm goals", "farmGoals")
+			t.ok(NraKitOptionsFrame:IsShown(), "settings shown")
+			local soundRows = wow.findAll(function(frame)
+				return frame.shown and rawget(frame, "optionKey") == "farmGoalsCompleteSoundChoice"
+			end)
+			t.equal(#soundRows, 1, "Farm goals options are open")
 		end)
 
 		t.test("the icons view shows short amounts", function()
