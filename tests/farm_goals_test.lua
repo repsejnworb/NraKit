@@ -320,6 +320,46 @@ return {
 			t.equal(#found, 1, "replayed message")
 		end)
 
+		t.test("a money goal from the form takes silver, and edits back to the same text", function()
+			ClearGoals(ns)
+			ns:OpenGoalsWindow("new")
+			wow.click("Gold")
+			wow.type(wow.amountBox(), "1g 50s")
+			t.ok(wow.click("Create goal"), "clicked Create goal")
+			local goal = Newest(ns)
+			t.equal(goal.target, 15000, "copper")
+			ns:OpenGoalsWindow("edit", goal.id)
+			t.equal(wow.amountBox().text, "1g 50s", "edit shows the amount")
+			t.ok(wow.click("Save changes"), "saves unchanged")
+			t.equal(goal.target, 15000, "still the same")
+		end)
+
+		t.test("a 1g goal counts up in silver and copper", function()
+			ClearGoals(ns)
+			wow.data.money = 0
+			wow.fire("PLAYER_MONEY")
+			local goal = ns.goals.AddGoal({ type = "gold", target = 10000 })
+			wow.data.money = 4520
+			wow.fire("PLAYER_MONEY")
+			local fraction, text = ns.goals.GetProgress(goal)
+			t.equal(text, "45s 20c / 1g", "progress text")
+			t.ok(math.abs(fraction - 0.452) < 0.0001, "bar at 45.2%")
+			NraKitDB.farmGoalsView = "icons"
+			ns.goals.Update()
+			t.equal(TrackedWidgets(wow)[1].count.text, "45s", "icon amount")
+			NraKitDB.farmGoalsView = "full"
+		end)
+
+		t.test("money parsing", function()
+			local parse = ns.goals.ParseMoney
+			t.equal(parse("100"), 1000000, "plain number is gold")
+			t.equal(parse("50s"), 5000, "silver")
+			t.equal(parse("1,234g"), 12340000, "thousands separator")
+			t.equal(parse("75c"), 75, "copper")
+			t.equal(parse("1g 50x"), nil, "junk")
+			t.equal(parse(""), nil, "empty")
+		end)
+
 		t.test("active and history pages render", function()
 			ns:OpenGoalsWindow("active")
 			ns:OpenGoalsWindow("history")

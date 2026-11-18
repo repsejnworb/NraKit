@@ -48,6 +48,13 @@ return {
 			t.equal(goals[#goals].target, 50000, "xp")
 			Chat(wow, "goal gold 100")
 			t.equal(goals[#goals].target, 1000000, "gold in copper")
+			Chat(wow, "goal gold 50s")
+			t.equal(goals[#goals].target, 5000, "50 silver")
+			Chat(wow, "goal gold 1g 50s")
+			t.equal(goals[#goals].target, 15000, "1 gold 50 silver")
+			Chat(wow, "goal gold 2g30s15c")
+			t.equal(goals[#goals].target, 23015, "gold, silver and copper")
+			t.ok(Has(Chat(wow, "goal gold lots"), "50s"), "explains the format")
 			t.ok(Has(Chat(wow, "goal level 10"), "already level"), "refuses a lower level")
 		end)
 

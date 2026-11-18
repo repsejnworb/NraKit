@@ -102,6 +102,9 @@ local methods = {
 	end,
 	SetNumeric = function(self, numeric)
 		rawset(self, "numeric", numeric)
+		if numeric then
+			rawset(self, "everNumeric", true)
+		end
 	end,
 	SetChecked = function(self, checked)
 		self.checked = checked and true or false
@@ -592,10 +595,10 @@ function wow.findAll(predicate)
 end
 
 
--- The shown edit box that only takes numbers (the goal amount box).
+-- The goal amount box: the edit box created for numbers (it takes text for money goals).
 function wow.amountBox()
 	for _, frame in ipairs(wow.frames) do
-		if frame.template == "InputBoxTemplate" and rawget(frame, "numeric") then
+		if frame.template == "InputBoxTemplate" and rawget(frame, "everNumeric") then
 			return frame
 		end
 	end

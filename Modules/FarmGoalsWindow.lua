@@ -49,7 +49,7 @@ local TYPE_HELP = {
 }
 
 local PICK_HEADINGS = { item = "Which item?", rep = "Which faction?", skill = "Which skill?", currency = "Which currency?" }
-local HOW_MUCH = { item = "How many?", level = "Which level?", xp = "How much XP?", gold = "How much gold?" }
+local HOW_MUCH = { item = "How many?", level = "Which level?", xp = "How much XP?", gold = "How much money?" }
 
 ------------------------------------------------------------------------------
 -- Active goals
@@ -456,7 +456,9 @@ end
 
 -- Current form values: target amount and starting count.
 local function ReadForm()
-	local amount = tonumber(form.amount:GetText())
+	-- Money takes "1g 50s" style amounts and is counted in copper; the rest are plain numbers.
+	local text = form.amount:GetText()
+	local amount = formType == "gold" and G().ParseMoney(text) or tonumber(text)
 	local holdings = form.holdings
 	local start, ticked = 0, false
 	if holdings and (formType == "item" or formType == "gold") then
@@ -586,7 +588,7 @@ function UpdateForm()
 	form.amountLabel:ClearAllPoints()
 	form.amountLabel:SetPoint("TOPLEFT", 2, targetY - (picking and 54 or 22))
 	local amountLabels = {
-		item = "How many to have", level = "Target level", xp = "XP to gain", gold = "Gold to have",
+		item = "How many to have", level = "Target level", xp = "XP to gain", gold = "Money to have",
 		rep = formMode == "gain" and "Reputation to gain" or "Standing to reach",
 		skill = formMode == "gain" and "Skill points to gain" or "Skill to reach",
 		currency = formMode == "gain" and "Amount to gain" or "Amount to have",
@@ -596,6 +598,7 @@ function UpdateForm()
 	local standingTarget = goalType == "rep" and formMode == "reach"
 	form.amount:SetShown(not standingTarget)
 	form.amount:SetEnabled(not (goalType == "skill" and formMode == "reach" and formToMax))
+	form.amount:SetNumeric(goalType ~= "gold") -- money takes "1g 50s"
 	if goalType == "skill" and formMode == "reach" and formToMax and entry
 		and form.amount:GetText() ~= tostring(entry.maxRank) then
 		form.amount:SetText(tostring(entry.maxRank))
@@ -666,7 +669,7 @@ function UpdateForm()
 		start = goal.start or 0
 	end
 	if seeding then
-		local target = amount and (isGold and amount * 10000 or amount)
+		local target = amount
 		form.startText:SetText(string.format("Starting count  |cffffffff%s|r%s", format(start),
 			target and ("     (" .. format(start) .. " / " .. format(target) .. ")") or ""))
 	end
@@ -704,6 +707,9 @@ function UpdateForm()
 			valid = amount and amount > 0
 			hint = not valid and "Enter an amount." or ""
 		end
+	elseif goalType == "gold" then
+		valid = amount and amount > 0
+		hint = not valid and "Enter an amount: 100 (gold), 50s or 1g 50s." or ""
 	else
 		valid = amount and amount > 0
 		hint = not valid and "Enter an amount." or ""
@@ -766,7 +772,7 @@ local function LoadGoal(goal)
 	end
 	local amount = goal.target
 	if goal.type == "gold" then
-		amount = math.floor(goal.target / 10000)
+		amount = G().FormatGold(goal.target)
 	elseif formStanding then
 		amount = nil
 	end
@@ -782,7 +788,7 @@ local function SubmitForm()
 	if formType == "item" then
 		spec.itemID, spec.target, spec.start = formItemID, amount, start
 	elseif formType == "gold" then
-		spec.target, spec.start = amount * 10000, start
+		spec.target, spec.start = amount, start
 	elseif PICKER_TYPES[formType] then
 		local entry = PickedEntry()
 		spec.key, spec.name, spec.mode = entry.id, entry.name, formMode

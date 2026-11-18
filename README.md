@@ -84,7 +84,7 @@ addons share through LibSharedMedia.
   reset or remove it. **Edit** fixes a goal's target, item, starting count or sounds without starting
   over, and each goal can have its own milestone and finish sounds.
   `/nra goal` opens the goals window (new goal, active and shelved goals, history). Goals can also be
-  added from chat: `/nra goal 4000 [item]`, `/nra goal level 40`, `/nra goal rep revered timbermaw`,
+  added from chat: `/nra goal 4000 [item]`, `/nra goal level 40`, `/nra goal gold 1g 50s`, `/nra goal rep revered timbermaw`,
   `/nra goal skill swords`, `/nra goal currency 2000 honor`, ... (`/nra goal help` lists them all).
 - **/leave leaves your group**: type `/leave` (with nothing after it) or `/leavegroup` to leave
   your party, raid or instance group. `/leave <channel>` still leaves a chat channel.

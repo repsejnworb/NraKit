@@ -157,7 +157,7 @@ local PAUSED_COLOR = { 0.5, 0.5, 0.5 }
 
 local ICONS = {
 	level = "Interface\\Icons\\Achievement_Level_10",
-	xp = "Interface\\Icons\\Spell_Holy_SurgeOfLight",
+	xp = "Interface\\Icons\\XP_Icon", -- the "XP" icon Blizzard uses for XP rewards
 	gold = "Interface\\Icons\\INV_Misc_Coin_02",
 	rep = "Interface\\Icons\\Achievement_Reputation_01",
 	skill = "Interface\\Icons\\Ability_Warrior_WeaponMastery",
@@ -227,16 +227,33 @@ local function FormatNumber(value)
 	return BreakUpLargeNumbers and BreakUpLargeNumbers(value) or tostring(value)
 end
 
--- "12g 30s", "45s", "7c": compact, no icons.
+-- Compact, no icons, the two largest units: "12g 30s", "45s 20c", "7c", "0c".
 local function FormatGold(copper)
-	copper = math.floor(copper)
-	local gold, silver = math.floor(copper / 10000), math.floor(copper / 100) % 100
+	copper = math.max(math.floor(copper), 0)
+	local gold, silver, rest = math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100
 	if gold > 0 then
 		return silver > 0 and string.format("%sg %ds", FormatNumber(gold), silver) or FormatNumber(gold) .. "g"
 	elseif silver > 0 then
-		return silver .. "s"
+		return rest > 0 and string.format("%ds %dc", silver, rest) or silver .. "s"
 	end
-	return (copper % 100) .. "c"
+	return rest .. "c"
+end
+
+-- "100" (gold), "100g", "50s", "1g 50s", "1g50s20c", "75c", "1,234g" -> copper, or nil.
+local MONEY_UNITS = { g = 10000, s = 100, c = 1 }
+local function ParseMoney(text)
+	text = (text or ""):lower():gsub("[%s,]", "")
+	if text:match("^%d+$") then
+		return tonumber(text) * 10000
+	end
+	if text == "" or text:gsub("%d+[gsc]", "") ~= "" then
+		return nil
+	end
+	local copper = 0
+	for amount, unit in text:gmatch("(%d+)([gsc])") do
+		copper = copper + tonumber(amount) * MONEY_UNITS[unit]
+	end
+	return copper > 0 and copper or nil
 end
 
 local function FormatDuration(seconds)
@@ -854,7 +871,11 @@ local function ShortAmount(goal)
 		end
 	end
 	if goal.type == "gold" then
-		return FormatNumber(math.floor(value / 10000)) .. "g"
+		-- One unit, the largest there is: "12g", "45s", "20c".
+		if value >= 10000 then
+			return FormatNumber(math.floor(value / 10000)) .. "g"
+		end
+		return value >= 100 and (math.floor(value / 100) .. "s") or (math.floor(value) .. "c")
 	elseif value >= 10000 then
 		return math.floor(value / 1000) .. "k"
 	elseif value >= 1000 then
@@ -1502,6 +1523,7 @@ ns.goals = {
 	DescribeRate = DescribeRate,
 	FormatNumber = FormatNumber,
 	FormatGold = FormatGold,
+	ParseMoney = ParseMoney,
 	FormatDuration = FormatDuration,
 	GetHoldings = GetHoldings,
 	AddGoal = AddGoal,
@@ -1585,7 +1607,7 @@ local SLASH_HELP = {
 		"/nra goal <count> <item> - loot that many of an item (shift-click the item to paste it)",
 		"/nra goal level <level> - reach a level",
 		"/nra goal xp <amount> - gain that much XP",
-		"/nra goal gold <amount> - have that much gold (counting what you gain from now)",
+		"/nra goal gold <amount> - have that much money (counting what you gain from now): 100, 50s, 1g 50s",
 		"/nra goal rep <standing> <faction> - reach a standing, e.g. /nra goal rep revered timbermaw",
 		"/nra goal rep +<amount> <faction> - gain that much reputation",
 		"/nra goal skill <skill> [rank] - raise a skill to a rank, or to its cap if no rank, e.g. /nra goal skill swords",
@@ -1613,7 +1635,14 @@ local function OnSlashCommand(input)
 	elseif first == "list" then
 		ListGoals()
 		return
-	elseif first == "level" or first == "xp" or first == "gold" then
+	elseif first == "gold" then
+		local copper = ParseMoney(rest)
+		if not copper then
+			SlashError("Give an amount like 100 (gold), 50s or 1g 50s.")
+			return
+		end
+		goal = { type = "gold", target = copper }
+	elseif first == "level" or first == "xp" then
 		local amount = tonumber(rest:match("^(%d+)"))
 		if not amount then
 			SlashError("Give a number, e.g. /nra goal " .. first .. " " .. (first == "level" and "40" or "100") .. ".")
@@ -1622,7 +1651,7 @@ local function OnSlashCommand(input)
 			SlashError("You're already level " .. UnitLevel("player") .. ".")
 			return
 		end
-		goal = { type = first, target = first == "gold" and amount * 10000 or amount }
+		goal = { type = first, target = amount }
 	elseif first == "rep" then
 		local target, name = rest:match("^(%S+)%s+(.+)$")
 		if not target then
