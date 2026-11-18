@@ -2,7 +2,7 @@
 
 **Small quality-of-life tweaks for WoW Forever. Every feature is off by default, so turn on only what you want.**
 
-Type **/nrakit** (or **/nra**), or open **Options → AddOns → NraKit**. The main page has an on/off switch for each feature, and features with options get their own page.
+Type **/nrakit** (or **/nra**) to open NraKit's own window: features grouped in a sidebar, **search**, an on/off switch per feature and its options right underneath. Everything is off until you turn it on. The same settings are also under **Options → AddOns → NraKit**.
 
 ## Features
 

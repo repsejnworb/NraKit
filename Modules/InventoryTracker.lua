@@ -14,7 +14,7 @@ local _, ns = ...
 
 local module = {
 	key = "inventoryTracker",
-	section = "Inventory",
+	section = "Bags & Items",
 	name = "Inventory Tracker",
 	description = "Item tooltips show how many of the item each of your characters has, and where (bags, bank, mail, equipped). Visit the bank and the mailbox once on each character so they're known. /nra inv lists tracked characters; /nra inv forget <name> removes one.",
 	default = false,

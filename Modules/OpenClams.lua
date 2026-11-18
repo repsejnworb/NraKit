@@ -12,7 +12,7 @@ local _, ns = ...
 
 local module = {
 	key = "openClams",
-	section = "Bags",
+	section = "Bags & Items",
 	name = "Open Clams",
 	description = "Adds a button at the bottom left of your bags, next to your money, that opens the next clam or other openable container in your bags, one per click. You can also bind it to a key under Keybindings > AddOns > NraKit.",
 	default = false,

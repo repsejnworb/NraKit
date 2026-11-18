@@ -24,7 +24,7 @@ local MarkerLabel
 
 local module = {
 	key = "unitScanner",
-	section = "Unit Scanner",
+	section = "Units & Nameplates",
 	name = "Unit Scanner",
 	description = "Alerts you when a mob or player from your list shows up nearby (nameplate range, mouseover, targets and minimap markers). Manage the list with /nra scan: target a unit and type /nra scan, or /nra scan <name or NPC ID>, /nra scan list, /nra scan remove <# or name>.",
 	default = false,

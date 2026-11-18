@@ -14,7 +14,7 @@ local _, ns = ...
 
 local module = {
 	key = "knownRecipes",
-	section = "Recipes",
+	section = "Professions",
 	name = "Known recipes",
 	description = "Marks recipes you already know with a green check at vendors and in your bags, so you don't have to mouse over each one. Also works for anything else the game calls \"Already known\".",
 	default = false,

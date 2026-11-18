@@ -19,7 +19,7 @@ local _, ns = ...
 
 local module = {
 	key = "engagedNameplates",
-	section = "Nameplates",
+	section = "Units & Nameplates",
 	name = "Engaged-only nameplates",
 	description = "Shows full nameplates only for enemies that are fighting you. Other enemy NPCs are hidden, in or out of combat. Your target, focus and enemy players always get full nameplates.",
 	default = false,

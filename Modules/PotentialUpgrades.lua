@@ -14,7 +14,7 @@ local _, ns = ...
 
 local module = {
 	key = "potentialUpgrades",
-	section = "Items",
+	section = "Bags & Items",
 	name = "Potential Upgrades",
 	description = "Marks items that are upgrades over what you have equipped: a green arrow for clear upgrades (better or equal on everything that matters for your class), yellow for likely upgrades (better by a simple per-class stat priority). Shown in bags, on quest rewards and in item tooltips.",
 	default = false,

@@ -26,9 +26,14 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
 
 - `NraKit.toc` – load order; new modules must be added here.
 - `Core.lua` – namespace, module registry, SavedVariables (`NraKitDB`), `/nrakit` and `/nra`. The module table format is documented at the top.
-- `Settings.lua` – Blizzard Settings API. Main page = one header plus an on/off switch per module (`module.section`).
-  Modules with `options` get a subpage; options support `type = "number"` sliders (`min/max/step/format`),
-  `header = "..."` subsections, and `parent = <option key>` nesting (greyed out unless the parent is on).
+- `Settings.lua` – Blizzard Settings API page (Options > AddOns > NraKit): section headers with an on/off switch per
+  module. Modules with `options` get a subpage named after the module; options support `type = "number"` sliders
+  (`min/max/step/format`), `header = "..."` subsections, and `parent = <option key>` nesting (greyed out unless the
+  parent is on). `ns.sectionOrder` lists the sidebar groups; put new modules in one of them. Change values with
+  `ns:SetSetting(key, value)` (both UIs and the module callbacks stay in step).
+- `Options.lua` – NraKit's own window (`/nra`): sidebar with search and sections, a card per module with inline
+  options. Built entirely from the module definitions, so new modules need no work here. Custom per-module buttons
+  go through `ns:AddOptionsButton(moduleKey, label, description, onClick)` and show in both UIs.
 - `Bindings.xml` – keybindings (auto-loaded by the game, not listed in the TOC); binding names are set in Lua.
 - `Modules/*.lua` – one feature per file, registered with `ns:RegisterModule(module)`.
   `module:OnSettingsRegistered(root, subcategory, sublayout)` can add custom controls (e.g. buttons) or extra
@@ -65,7 +70,7 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   event for row tooltips. Recipe data (`C_TradeSkillUI.*`) is only readable while the profession window is open.
 - Units can't be probed by name any more (`TargetUnit` is protected), so a unit scanner only sees nameplates,
   mouseover, targets and vignettes (see UnitScanner.lua). `UnitName`/`UnitGUID` can be secret.
-- `/nra <subcommand>` is dispatched through `ns:RegisterSlashCommand(name, handler)` in Core.lua; plain `/nra` opens settings.
+- `/nra <subcommand>` is dispatched through `ns:RegisterSlashCommand(name, handler)` in Core.lua; plain `/nra` toggles the NraKit window.
 - Overhead names (with nameplates off) are drawn by the engine, not Lua. A unit with a nameplate never gets its engine name back.
 
 ## Forever quirks

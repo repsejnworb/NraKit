@@ -13,7 +13,7 @@ local _, ns = ...
 
 local module = {
 	key = "wowheadLink",
-	section = "Interface",
+	section = "Utilities",
 	name = "Copy Wowhead link",
 	description = "Hover an item, spell, NPC, quest, achievement or currency and press Ctrl+C to copy a Wowhead (Forever) link to it. Change the key under Key Bindings > AddOns.",
 	default = false,

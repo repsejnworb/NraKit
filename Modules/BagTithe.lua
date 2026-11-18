@@ -11,7 +11,7 @@ local _, ns = ...
 
 local module = {
 	key = "bagTithe",
-	section = "Bags",
+	section = "Bags & Items",
 	name = "Bag Tithe",
 	description = "Adds a button next to the bag sort button that highlights your least valuable bag slots (vendor price times stack size), so you know what to sell or destroy when your bags are full. Alt+click an item while it's active to leave it out of the ranking.",
 	default = false,
@@ -475,14 +475,12 @@ function module:OnOptionChanged()
 	self:QueueRefresh()
 end
 
-function module:OnSettingsRegistered(rootCategory, _, sublayout)
+function module:OnSettingsRegistered(rootCategory)
 	local page = tithe:CreateIgnoreListPage()
 	local pageCategory = Settings.RegisterCanvasLayoutSubcategory(rootCategory, page, "Bag Tithe ignore list")
-	if sublayout then
-		sublayout:AddInitializer(CreateSettingsButtonInitializer("Ignored items", "Edit ignore list", function()
-			Settings.OpenToCategory(pageCategory:GetID())
-		end, "Show and edit the items Bag Tithe leaves out of the ranking.", true))
-	end
+	ns:AddOptionsButton(module.key, "Edit ignore list", "Show and edit the items Bag Tithe leaves out of the ranking.", function()
+		ns:OpenBlizzardSettings(pageCategory)
+	end)
 end
 
 ns:RegisterModule(module)

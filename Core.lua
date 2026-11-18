@@ -6,7 +6,7 @@ ns.moduleOrder = {}
 
 -- Modules register themselves at file load. A module is a table with:
 --   key         unique id, also the SavedVariables key for its enabled flag
---   section     header on the main settings page, and the name of the module's subpage
+--   section     group in both settings UIs; one of ns.sectionOrder (Settings.lua)
 --   name        label shown in the settings panel
 --   description tooltip shown in the settings panel
 --   default     whether the module is enabled on a fresh install (always false: every
@@ -23,7 +23,8 @@ ns.moduleOrder = {}
 --   OnEnabledChanged(self, on)           called when the module is toggled
 --   OnOptionChanged(self, key, value)    called when a sub-option changes
 --   OnSettingsRegistered(self, rootCategory, subcategory, sublayout)
---                                        optional; add custom settings controls/pages
+--                                        optional; add custom settings controls/pages.
+--                                        Buttons added with ns:AddOptionsButton show in both UIs.
 function ns:RegisterModule(module)
 	assert(module.key and not self.modules[module.key], "NraKit: invalid or duplicate module key")
 	self.modules[module.key] = module
