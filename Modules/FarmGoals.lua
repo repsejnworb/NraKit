@@ -1,6 +1,7 @@
 local _, ns = ...
 
--- Farm goals: "loot 4000 Silk Cloth", "reach level 40", "gain 50,000 XP", "earn 100g".
+-- Farm goals: "loot 4000 Silk Cloth", "reach level 40", "gain 50,000 XP", "have 100g",
+-- "reach Revered with Timbermaw Hold", "Swords to 300", "2,000 of a currency".
 --
 -- Goals count what you gain after making them: items you loot (from the loot chat
 -- line, so banking, mailing, trading or selling never changes a goal), XP gained and
@@ -13,14 +14,15 @@ local _, ns = ...
 -- The Goals window (FarmGoalsWindow.lua) adds goals and shows the history.
 --
 -- Saved per character in NraKitDB.farmGoals["Name-Realm"] = { goals = {...}, history = {...} }:
---   goal = { id, type = "item"|"level"|"xp"|"gold", target, itemID, start, gained,
---            startLevel, created, active (seconds), paused, completed (time), milestone }
+--   goal = { id, type = "item"|"level"|"xp"|"gold"|"rep"|"skill"|"currency", target, itemID,
+--            key (factionID/skillID/currencyID), mode ("reach"|"gain"), toMax, name, start,
+--            gained, last, startLevel, created, active (seconds), paused, completed, milestone }
 
 local module = {
 	key = "farmGoals",
 	section = "Trackers & Reminders",
 	name = "Farm goals",
-	description = "Set farming goals (loot 4000 Silk Cloth, reach level 40, earn 100 gold) and track them in a small movable window with rate per hour, time left and a fanfare when done. /nra goal opens the goals window.",
+	description = "Set farming goals (loot 4000 Silk Cloth, reach level 40, earn 100 gold, reach Revered, Swords to 300, a currency) and track them in a small movable window with rate per hour, time left and a fanfare when done. /nra goal opens the goals window.",
 	default = false,
 	options = {
 		{
@@ -96,6 +98,9 @@ local ICONS = {
 	level = "Interface\\Icons\\Achievement_Level_10",
 	xp = "Interface\\Icons\\Spell_Holy_SurgeOfLight",
 	gold = "Interface\\Icons\\INV_Misc_Coin_02",
+	rep = "Interface\\Icons\\Achievement_Reputation_01",
+	skill = "Interface\\Icons\\Ability_Warrior_WeaponMastery",
+	currency = "Interface\\Icons\\INV_Misc_Token_ArgentDawn",
 }
 
 local SOUND_TICK = SOUNDKIT.LOOT_WINDOW_COIN_SOUND
@@ -161,35 +166,179 @@ local function ItemName(itemID)
 	return C_Item.GetItemNameByID(itemID) or ("item " .. itemID)
 end
 
--- Name and icon of a goal, for the tracker, window and messages.
-local function Describe(goal)
-	if goal.type == "item" then
-		return ItemName(goal.itemID), select(5, C_Item.GetItemInfoInstant(goal.itemID)) or 134400
-	elseif goal.type == "level" then
-		return "Reach level " .. goal.target, ICONS.level
-	elseif goal.type == "xp" then
-		return "Gain " .. FormatNumber(goal.target) .. " XP", ICONS.xp
-	end
-	return "Earn " .. FormatGold(goal.target), ICONS.gold
+-- Total reputation at the start of each standing (1 = Hated ... 8 = Exalted).
+local REP_THRESHOLDS = { -42000, -6000, -3000, 0, 3000, 9000, 21000, 42000 }
+
+local function StandingLabel(reaction)
+	return _G["FACTION_STANDING_LABEL" .. reaction] or ("Standing " .. reaction)
 end
 
--- Where the goal stands: fraction done (0..1), "1,512 / 4,000" and the amount still to go
--- (in the units the rate is counted in: items, XP or copper).
-local function GetProgress(goal)
-	if goal.type == "level" then
+-- Progress of a "gain N" goal: just what was gained since it was made.
+local function GainProgress(goal, format)
+	local gained = goal.gained or 0
+	return gained / goal.target, "+" .. format(gained) .. " / " .. format(goal.target), goal.target - gained
+end
+
+-- Progress of a "reach N" goal from its starting value.
+local function ReachFraction(current, start, target)
+	if current >= target then
+		return 1
+	end
+	return math.max(0, (current - start) / math.max(target - start, 1))
+end
+
+-- Goal types. Each has describe(goal) -> name, icon and progress(goal) -> fraction,
+-- value text, amount still to go (in the units the rate counts). format() formats those
+-- units. Types with read(goal) are re-read when their event fires, and increases are
+-- added to goal.gained (rep, skill, currency); goals with mode "gain" count only that.
+local TYPES = {}
+
+TYPES.item = {
+	format = FormatNumber,
+	gainedSuffix = " looted",
+	describe = function(goal)
+		return ItemName(goal.itemID), select(5, C_Item.GetItemInfoInstant(goal.itemID)) or 134400
+	end,
+	progress = function(goal)
+		local current = (goal.start or 0) + (goal.gained or 0)
+		return current / goal.target, FormatNumber(current) .. " / " .. FormatNumber(goal.target), goal.target - current
+	end,
+}
+
+TYPES.gold = {
+	format = FormatGold,
+	describe = function(goal)
+		return "Have " .. FormatGold(goal.target), ICONS.gold
+	end,
+	progress = function(goal)
+		local current = (goal.start or 0) + (goal.gained or 0)
+		return current / goal.target, FormatGold(current) .. " / " .. FormatGold(goal.target), goal.target - current
+	end,
+}
+
+TYPES.xp = {
+	format = FormatNumber,
+	describe = function(goal)
+		return "Gain " .. FormatNumber(goal.target) .. " XP", ICONS.xp
+	end,
+	progress = function(goal)
+		return GainProgress(goal, FormatNumber)
+	end,
+}
+
+TYPES.level = {
+	format = FormatNumber,
+	describe = function(goal)
+		return "Reach level " .. goal.target, ICONS.level
+	end,
+	progress = function(goal)
 		local level, xp, max = UnitLevel("player"), UnitXP("player"), UnitXPMax("player")
 		local now = level + (max > 0 and xp / max or 0)
-		local span = goal.target - (goal.startLevel or level)
-		local fraction = level >= goal.target and 1 or (span > 0 and (now - goal.startLevel) / span or 0)
+		local start = goal.startLevel or level
+		local fraction = level >= goal.target and 1 or ReachFraction(now, start, goal.target)
 		local remaining = math.max(0, (max - xp) + (goal.target - level - 1) * max)
 		return fraction, string.format("Level %d (%d%%) / %d", level, max > 0 and xp / max * 100 or 0, goal.target), remaining
-	end
-	local current = (goal.start or 0) + (goal.gained or 0)
-	local fraction = goal.target > 0 and current / goal.target or 1
-	if goal.type == "gold" then
-		return fraction, FormatGold(current) .. " / " .. FormatGold(goal.target), goal.target - current
-	end
-	return fraction, FormatNumber(current) .. " / " .. FormatNumber(goal.target), goal.target - current
+	end,
+}
+
+TYPES.rep = {
+	format = FormatNumber,
+	event = "UPDATE_FACTION",
+	read = function(goal)
+		local data = C_Reputation.GetFactionDataByID(goal.key)
+		return data and data.currentStanding
+	end,
+	describe = function(goal)
+		local data = C_Reputation.GetFactionDataByID(goal.key)
+		local name = data and data.name or goal.name or "Reputation"
+		if goal.mode == "gain" then
+			name = name .. " +" .. FormatNumber(goal.target)
+		end
+		return name, ICONS.rep
+	end,
+	progress = function(goal)
+		if goal.mode == "gain" then
+			return GainProgress(goal, FormatNumber)
+		end
+		local data = C_Reputation.GetFactionDataByID(goal.key)
+		if not data then
+			return 0, "?", 0
+		end
+		local target = REP_THRESHOLDS[goal.target] or 0
+		local current = data.currentStanding
+		local span = data.nextReactionThreshold - data.currentReactionThreshold
+		local text = StandingLabel(data.reaction)
+		if current < target and span > 0 then
+			text = string.format("%s %s/%s  to %s", text, FormatNumber(current - data.currentReactionThreshold),
+				FormatNumber(span), StandingLabel(goal.target))
+		end
+		return ReachFraction(current, goal.start or current, target), text, target - current
+	end,
+}
+
+TYPES.skill = {
+	format = FormatNumber,
+	event = "SKILL_LINES_CHANGED",
+	read = function(goal)
+		local info = C_SkillInfo.GetSkillLineInfoByID(goal.key)
+		return info and info.rank
+	end,
+	describe = function(goal)
+		local info = C_SkillInfo.GetSkillLineInfoByID(goal.key)
+		local name = info and info.name or goal.name or "Skill"
+		if goal.mode == "gain" then
+			name = name .. " +" .. goal.target
+		end
+		return name, ICONS.skill
+	end,
+	progress = function(goal)
+		if goal.mode == "gain" then
+			return GainProgress(goal, FormatNumber)
+		end
+		local info = C_SkillInfo.GetSkillLineInfoByID(goal.key)
+		if not info then
+			return 0, "?", 0
+		end
+		-- "To max" follows the skill's cap as it rises.
+		local target = goal.toMax and info.maxRank or goal.target
+		return ReachFraction(info.rank, goal.start or info.rank, target), info.rank .. " / " .. target, target - info.rank
+	end,
+}
+
+TYPES.currency = {
+	format = FormatNumber,
+	event = "CURRENCY_DISPLAY_UPDATE",
+	read = function(goal)
+		local info = C_CurrencyInfo.GetCurrencyInfo(goal.key)
+		return info and info.quantity
+	end,
+	describe = function(goal)
+		local info = C_CurrencyInfo.GetCurrencyInfo(goal.key)
+		local name = info and info.name or goal.name or "Currency"
+		if goal.mode == "gain" then
+			name = name .. " +" .. FormatNumber(goal.target)
+		end
+		return name, info and info.iconFileID or ICONS.currency
+	end,
+	progress = function(goal)
+		if goal.mode == "gain" then
+			return GainProgress(goal, FormatNumber)
+		end
+		local info = C_CurrencyInfo.GetCurrencyInfo(goal.key)
+		local current = info and info.quantity or 0
+		return ReachFraction(current, goal.start or current, goal.target),
+			FormatNumber(current) .. " / " .. FormatNumber(goal.target), goal.target - current
+	end,
+}
+
+-- Name and icon of a goal, for the tracker, window and messages.
+local function Describe(goal)
+	return TYPES[goal.type].describe(goal)
+end
+
+-- Fraction done (0..1), "1,512 / 4,000" and the amount still to go.
+local function GetProgress(goal)
+	return TYPES[goal.type].progress(goal)
 end
 
 -- "+312 looted · 820/h · ~3h 22m left"
@@ -197,16 +346,18 @@ local function DescribeRate(goal)
 	if goal.completed then
 		return "Done in " .. FormatDuration(goal.active or 0)
 	end
+	local goalType = TYPES[goal.type]
+	local format = goalType.format
 	local gained = goal.gained or 0
-	local parts = {}
-	local gainedText = goal.type == "gold" and FormatGold(gained) or FormatNumber(gained)
-	table.insert(parts, "+" .. gainedText .. (goal.type == "item" and " looted" or ""))
+	local parts = { "+" .. format(gained) .. (goalType.gainedSuffix or "") }
 	local active = goal.active or 0
 	if active >= 60 and gained > 0 then
 		local perHour = gained / active * 3600
-		table.insert(parts, (goal.type == "gold" and FormatGold(perHour) or FormatNumber(perHour)) .. "/h")
+		table.insert(parts, format(perHour) .. "/h")
 		local _, _, remaining = GetProgress(goal)
-		table.insert(parts, "~" .. FormatDuration(remaining / perHour * 3600) .. " left")
+		if remaining > 0 then
+			table.insert(parts, "~" .. FormatDuration(remaining / perHour * 3600) .. " left")
+		end
 	end
 	if goal.paused then
 		table.insert(parts, "paused")
@@ -279,8 +430,9 @@ local function RemoveGoal(id)
 	if goal.completed then
 		local name = Describe(goal)
 		table.insert(data.history, 1, {
-			type = goal.type, name = name, target = goal.target, itemID = goal.itemID,
-			created = goal.created, completed = goal.completed, active = goal.active,
+			type = goal.type, name = name, target = goal.target, itemID = goal.itemID, key = goal.key,
+			mode = goal.mode, toMax = goal.toMax, created = goal.created, completed = goal.completed,
+			active = goal.active,
 		})
 	end
 	UpdateTracker()
@@ -398,6 +550,54 @@ local function OnXPUpdate()
 		end
 	end
 	UpdateTracker()
+end
+
+-- Re-reads every goal of a type (rep, skill, currency) and counts increases.
+local function Poll(goalType)
+	local read = TYPES[goalType].read
+	local any, changed = false, false
+	for _, goal in ipairs(GetData().goals) do
+		if goal.type == goalType then
+			any = true
+			local current = read(goal)
+			if current then
+				if goal.last and current > goal.last and not goal.paused and not goal.completed then
+					goal.gained = (goal.gained or 0) + (current - goal.last)
+					goal.flashAt = GetTime()
+					changed = true
+				end
+				goal.last = current
+				if not goal.paused then
+					Evaluate(goal)
+				end
+			end
+		end
+	end
+	if changed then
+		Play(SOUND_TICK, "farmGoalsTickSound")
+	end
+	if any then
+		UpdateTracker()
+	end
+end
+
+-- Event -> goal type it updates.
+local POLL_EVENTS = {}
+for key, goalType in pairs(TYPES) do
+	if goalType.event then
+		POLL_EVENTS[goalType.event] = key
+	end
+end
+
+-- Reading the current values again after a reload/login, so changes made while the
+-- addon wasn't running (or the module was off) don't count as gains.
+local function ResyncPolled()
+	for _, goal in ipairs(GetData().goals) do
+		local read = TYPES[goal.type] and TYPES[goal.type].read
+		if read then
+			goal.last = read(goal) or goal.last
+		end
+	end
 end
 
 local function OnMoney()
@@ -521,7 +721,7 @@ local function CreateRow(index)
 			GameTooltip_SetTitle(GameTooltip, (Describe(goal)))
 		end
 		if goal.start and goal.start > 0 then
-			GameTooltip:AddDoubleLine("Started from", goal.type == "gold" and FormatGold(goal.start) or FormatNumber(goal.start), 1, 0.82, 0, 1, 1, 1)
+			GameTooltip:AddDoubleLine("Started from", TYPES[goal.type].format(goal.start), 1, 0.82, 0, 1, 1, 1)
 		end
 		GameTooltip:AddDoubleLine("Running for", FormatDuration(goal.active or 0), 1, 0.82, 0, 1, 1, 1)
 		GameTooltip:AddLine("Right-click for options", 0.5, 0.5, 0.5)
@@ -745,6 +945,11 @@ local function AddGoal(goal)
 	goal.id = nextID
 	goal.created = time()
 	goal.gained, goal.active, goal.milestone = 0, 0, 0
+	local read = TYPES[goal.type].read
+	if read then
+		goal.last = read(goal)
+		goal.start = goal.start or goal.last
+	end
 	goal.start = goal.start or 0
 	if goal.type == "level" then
 		goal.startLevel = UnitLevel("player") + UnitXP("player") / math.max(UnitXPMax("player"), 1)
@@ -762,6 +967,9 @@ ns.goals = {
 	GetData = function()
 		return GetData()
 	end,
+	TYPES = TYPES,
+	REP_THRESHOLDS = REP_THRESHOLDS,
+	StandingLabel = StandingLabel,
 	Describe = Describe,
 	GetProgress = GetProgress,
 	DescribeRate = DescribeRate,
@@ -834,6 +1042,8 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 		OnXPUpdate()
 	elseif event == "PLAYER_MONEY" then
 		OnMoney()
+	elseif POLL_EVENTS[event] then
+		Poll(POLL_EVENTS[event])
 	else -- combat start/end
 		UpdateTracker()
 	end
@@ -841,6 +1051,9 @@ end)
 
 -- PLAYER_XP_UPDATE also fires on a level up (with the new level), so PLAYER_LEVEL_UP isn't needed.
 local EVENTS = { "CHAT_MSG_LOOT", "PLAYER_XP_UPDATE", "PLAYER_MONEY", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED" }
+for event in pairs(POLL_EVENTS) do
+	table.insert(EVENTS, event)
+end
 
 function module:OnInitialize()
 	characterKey = UnitName("player") .. "-" .. (GetNormalizedRealmName() or GetRealmName())
@@ -860,6 +1073,7 @@ function module:OnEnabledChanged(enabled)
 	if enabled then
 		lastXP, lastXPMax, lastLevel = UnitXP("player"), UnitXPMax("player"), UnitLevel("player")
 		lastMoney = GetMoney()
+		ResyncPolled()
 		ticker = ticker or C_Timer.NewTicker(1, Tick)
 	elseif ticker then
 		ticker:Cancel()

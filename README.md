@@ -65,8 +65,9 @@ inventory browser.
 - **Campfire timer**: a progress bar in the middle of the screen while you rest at a Welcoming
   Campfire, with the time left. It turns green (with a sound) when Camp Benefits is ready. Width
   and position are adjustable; `/nra campfire` shows a 10-second preview.
-- **Farm goals**: set goals like "loot 4000 Silk Cloth", "reach level 40", "gain 50,000 XP" or
-  "earn 100 gold" and track them in a small movable window: progress bar, amount gained, rate per
+- **Farm goals**: set goals like "loot 4000 Silk Cloth", "reach level 40", "gain 50,000 XP",
+  "earn 100 gold", "reach Revered with Timbermaw Hold", "Swords to 300 (or to its cap)" or a
+  currency amount (reach a level or gain an amount), and track them in a small movable window: progress bar, amount gained, rate per
   hour and time left. Chimes at 25/50/75% and a fanfare with a message in the middle of the screen
   when a goal is done. Item goals count what you loot (banking, mailing or selling never changes
   them) and can start from what you already have in your bags, bank, mail or on other characters.

@@ -27,6 +27,9 @@ local GOAL_TYPES = {
 	{ key = "level", label = "Level" },
 	{ key = "xp", label = "XP" },
 	{ key = "gold", label = "Gold" },
+	{ key = "rep", label = "Reputation" },
+	{ key = "skill", label = "Skill" },
+	{ key = "currency", label = "Currency" },
 }
 
 local function G()
@@ -237,6 +240,15 @@ end
 
 local formType = "item"
 local formItemID
+local formKey, formKeyName -- picked faction, skill or currency
+local formMode = "reach"
+local formStanding -- rep "reach": target reaction (5 = Friendly ... 8 = Exalted)
+local formToMax = false -- skill "reach": follow the skill's cap
+local pickerQuery = ""
+local pickerOffset = 0
+local pickerEntries = {}
+local PICKER_ROWS = 6
+local PICKER_TYPES = { rep = true, skill = true, currency = true }
 
 local function MakeLabel(parent, text, font)
 	local label = parent:CreateFontString(nil, "OVERLAY", font or "GameFontHighlight")
@@ -261,6 +273,70 @@ local function MakeHeading(parent, text)
 	return heading
 end
 
+-- Things to pick for rep, skill and currency goals: { id, name, sub, icon }.
+local function BuildPickerEntries(goalType)
+	local entries = {}
+	if goalType == "rep" then
+		local watched = C_Reputation.GetWatchedFactionData()
+		for index = 1, C_Reputation.GetNumFactions() do
+			local data = C_Reputation.GetFactionDataByIndex(index)
+			if data and data.factionID and data.factionID > 0 and (not data.isHeader or data.isHeaderWithRep) then
+				local entry = { id = data.factionID, name = data.name, sub = G().StandingLabel(data.reaction), reaction = data.reaction }
+				if watched and watched.factionID == data.factionID then
+					entry.sub = entry.sub .. "  ·  watched"
+					table.insert(entries, 1, entry)
+				else
+					table.insert(entries, entry)
+				end
+			end
+		end
+	elseif goalType == "skill" then
+		local header
+		for index = 1, C_SkillInfo.GetNumSkillLines() do
+			local info = C_SkillInfo.GetSkillLineInfo(index)
+			if info and info.isHeader then
+				header = info.name
+			elseif info and info.skillID then
+				table.insert(entries, {
+					id = info.skillID, name = info.name, rank = info.rank, maxRank = info.maxRank,
+					sub = string.format("%s  ·  %d / %d", header or "", info.rank, info.maxRank),
+				})
+			end
+		end
+	elseif goalType == "currency" then
+		for index = 1, C_CurrencyInfo.GetCurrencyListSize() do
+			local info = C_CurrencyInfo.GetCurrencyListInfo(index)
+			local link = C_CurrencyInfo.GetCurrencyListLink(index)
+			local id = link and tonumber(link:match("currency:(%d+)"))
+			if info and not info.isHeader and id then
+				table.insert(entries, { id = id, name = info.name, icon = info.iconFileID, sub = G().FormatNumber(info.quantity) })
+			end
+		end
+	end
+	return entries
+end
+
+local function FilteredEntries()
+	if pickerQuery == "" then
+		return pickerEntries
+	end
+	local list = {}
+	for _, entry in ipairs(pickerEntries) do
+		if entry.name:lower():find(pickerQuery, 1, true) then
+			table.insert(list, entry)
+		end
+	end
+	return list
+end
+
+local function PickedEntry()
+	for _, entry in ipairs(pickerEntries) do
+		if entry.id == formKey then
+			return entry
+		end
+	end
+end
+
 -- Current form values: target amount and starting count.
 local function ReadForm()
 	local amount = tonumber(form.amount:GetText())
@@ -276,7 +352,54 @@ local function ReadForm()
 	return amount, start
 end
 
-local function UpdateForm()
+local UpdateForm
+
+local function UpdatePicker()
+	local list = FilteredEntries()
+	pickerOffset = math.max(0, math.min(pickerOffset, #list - PICKER_ROWS))
+	for index, row in ipairs(form.pickerRows) do
+		local entry = list[index + pickerOffset]
+		row.entry = entry
+		if entry then
+			row.name:SetText(entry.name)
+			row.sub:SetText(entry.sub or "")
+			row.selected:SetShown(entry.id == formKey)
+			row:Show()
+		else
+			row:Hide()
+		end
+	end
+	form.pickerEmpty:SetShown(#list == 0)
+	form.pickerEmpty:SetText(#pickerEntries == 0 and "Nothing to pick yet." or "No matches.")
+end
+
+local function UpdateTargetChips(goalType, entry)
+	-- Rep "reach": a chip per standing above the current one.
+	local showStandings = goalType == "rep" and formMode == "reach"
+	local current = entry and entry.reaction or 4
+	local anchor
+	for _, chip in ipairs(form.standingChips) do
+		local visible = showStandings and chip.reaction > current
+		chip:SetShown(visible)
+		if visible then
+			chip:ClearAllPoints()
+			if anchor then
+				chip:SetPoint("LEFT", anchor, "RIGHT", 4, 0)
+			else
+				chip:SetPoint("LEFT", form.amountLabel, "LEFT", 160, 0)
+			end
+			anchor = chip
+			chip:SetSelected(chip.reaction == formStanding)
+		end
+	end
+	if showStandings and not anchor then
+		form.amountHint:SetText("Already at the top standing: use Gain instead.")
+	end
+	form.maxChip:SetShown(goalType == "skill" and formMode == "reach")
+	form.maxChip:SetSelected(formToMax)
+end
+
+function UpdateForm()
 	local recounting = page == "recount"
 	local goal = recounting and G().FindGoal(recountID)
 	if recounting and not goal then
@@ -287,6 +410,7 @@ local function UpdateForm()
 	local goalType = recounting and goal.type or formType
 	formType = goalType
 	local itemID = recounting and goal.itemID or formItemID
+	local picking = PICKER_TYPES[goalType] and not recounting
 
 	for _, chip in ipairs(form.typeChips) do
 		chip:SetSelected(chip.key == goalType)
@@ -295,25 +419,55 @@ local function UpdateForm()
 	form.title:SetText(recounting and ("Recount: " .. (G().Describe(goal))) or "New goal")
 
 	-- Item picker
-	local isItem = goalType == "item"
-	form.slot:SetShown(isItem and not recounting)
-	form.itemName:SetShown(isItem and not recounting)
-	form.itemHint:SetShown(isItem and not recounting)
+	local isItem = goalType == "item" and not recounting
+	form.slot:SetShown(isItem)
+	form.itemName:SetShown(isItem)
+	form.itemHint:SetShown(isItem)
+	form.itemLabel:SetShown(isItem)
 	if isItem then
 		local name = itemID and C_Item.GetItemNameByID(itemID)
 		local icon = itemID and select(5, C_Item.GetItemInfoInstant(itemID))
 		form.slot.icon:SetTexture(icon or "Interface\\PaperDoll\\UI-Backpack-EmptySlot")
 		form.itemLabel:SetText(name or (itemID and ("item " .. itemID)) or "No item picked")
 	end
-	form.itemLabel:SetShown(isItem and not recounting)
 
-	-- Amount
-	local amountLabels = { item = "How many to have", level = "Target level", xp = "XP to gain", gold = "Gold to have" }
+	-- Rep / skill / currency picker and mode
+	form.pickerSearch:SetShown(picking)
+	form.pickerList:SetShown(picking)
+	form.pickedLabel:SetShown(picking)
+	for _, chip in ipairs(form.modeChips) do
+		chip:SetShown(picking)
+		chip:SetSelected(chip.key == formMode)
+	end
+	local entry = picking and PickedEntry()
+	if picking then
+		UpdatePicker()
+		form.pickedLabel:SetText(entry and ("|cffffd100" .. entry.name .. "|r  " .. (entry.sub or "")) or "Pick one from the list")
+	end
+
+	-- Amount / target
+	form.amountLabel:ClearAllPoints()
+	form.amountLabel:SetPoint("TOPLEFT", 2, picking and -282 or -150)
+	local amountLabels = {
+		item = "How many to have", level = "Target level", xp = "XP to gain", gold = "Gold to have",
+		rep = formMode == "gain" and "Reputation to gain" or "Standing to reach",
+		skill = formMode == "gain" and "Skill points to gain" or "Skill to reach",
+		currency = formMode == "gain" and "Amount to gain" or "Amount to have",
+	}
 	form.amountLabel:SetText(amountLabels[goalType])
 	form.amountLabel:SetShown(not recounting)
-	form.amount:SetShown(not recounting)
+	form.amountHint:SetText("")
+	local standingTarget = goalType == "rep" and formMode == "reach"
+	form.amount:SetShown(not recounting and not standingTarget)
+	form.amount:SetEnabled(not (goalType == "skill" and formMode == "reach" and formToMax))
+	if goalType == "skill" and formMode == "reach" and formToMax and entry
+		and form.amount:GetText() ~= tostring(entry.maxRank) then
+		form.amount:SetText(tostring(entry.maxRank))
+	end
+	UpdateTargetChips(picking and goalType, entry)
+	form.amountHint:SetShown(picking)
 
-	-- Starting count
+	-- Starting count (item and gold)
 	local seeding = goalType == "item" or goalType == "gold"
 	form.seedHeading:SetShown(seeding)
 	local holdings = seeding and (goalType == "gold" or itemID) and G().GetHoldings(goalType == "item" and itemID or nil)
@@ -328,8 +482,7 @@ local function UpdateForm()
 	}
 	for index, seed in ipairs(form.seeds) do
 		local info = seedInfo[index]
-		local visible = seeding and info.show
-		seed:SetShown(visible)
+		seed:SetShown(seeding and info.show)
 		seed.count = info.count or 0
 		local available = holdings ~= nil and (not info.needsTracker or holdings.trackerOn)
 		seed:SetEnabled(available)
@@ -337,7 +490,6 @@ local function UpdateForm()
 		seed.Text:SetTextColor(unpack(available and UI.TEXT or UI.TEXT_DIM))
 		seed.countText:SetText(available and format(seed.count) or "")
 	end
-	-- Who the other characters are
 	local others = {}
 	for _, other in ipairs(holdings and holdings.others or {}) do
 		local r, g, b = ns.inventory.ClassColor(other.class)
@@ -355,12 +507,12 @@ local function UpdateForm()
 
 	local amount, start = ReadForm()
 	if recounting then
-		amount = goal.target
+		amount = isGold and goal.target / 10000 or goal.target
 	end
 	if seeding then
 		local target = amount and (isGold and amount * 10000 or amount)
 		form.startText:SetText(string.format("Starting count  |cffffffff%s|r%s", format(start),
-			target and ("   →   " .. format(start) .. " / " .. format(target)) or ""))
+			target and ("     (" .. format(start) .. " / " .. format(target) .. ")") or ""))
 	end
 	form.startText:SetShown(seeding)
 
@@ -370,9 +522,22 @@ local function UpdateForm()
 		valid = true
 		form.create:SetText("Update starting count")
 	else
-		valid = amount and amount > 0 and (not isItem or itemID ~= nil)
-		if goalType == "level" then
+		if goalType == "item" then
+			valid = amount and amount > 0 and itemID ~= nil
+		elseif goalType == "level" then
 			valid = amount and amount > UnitLevel("player")
+		elseif picking then
+			if not entry then
+				valid = false
+			elseif standingTarget then
+				valid = formStanding ~= nil and formStanding > (entry.reaction or 0)
+			elseif goalType == "skill" and formMode == "reach" then
+				valid = formToMax and entry.rank < entry.maxRank or (amount and amount > entry.rank)
+			else
+				valid = amount and amount > 0
+			end
+		else
+			valid = amount and amount > 0
 		end
 		form.create:SetText("Create goal")
 	end
@@ -385,6 +550,17 @@ local function SetItem(itemID)
 		form.itemName:ClearFocus()
 	end
 	form.itemName:SetText("")
+	UpdateForm()
+end
+
+local function SetType(goalType)
+	formType = goalType
+	formKey, formKeyName, formStanding, formToMax = nil, nil, nil, false
+	formMode = "reach"
+	pickerQuery, pickerOffset = "", 0
+	form.pickerSearch:SetText("")
+	pickerEntries = BuildPickerEntries(goalType)
+	form.amount:SetText(goalType == "level" and tostring(UnitLevel("player") + 1) or "")
 	UpdateForm()
 end
 
@@ -405,14 +581,128 @@ local function SubmitForm()
 		goal.itemID, goal.target, goal.start = formItemID, amount, start
 	elseif formType == "gold" then
 		goal.target, goal.start = amount * 10000, start
+	elseif PICKER_TYPES[formType] then
+		local entry = PickedEntry()
+		goal.key, goal.name, goal.mode = entry.id, entry.name, formMode
+		if formType == "rep" and formMode == "reach" then
+			goal.target = formStanding
+		elseif formType == "skill" and formMode == "reach" and formToMax then
+			goal.toMax, goal.target = true, entry.maxRank
+		else
+			goal.target = amount
+		end
 	else
 		goal.target = amount
 	end
 	G().AddGoal(goal)
 	form.amount:SetText("")
-	formItemID = nil
+	formItemID, formKey = nil, nil
 	page = "active"
 	Render()
+end
+
+local function CreatePicker()
+	form.pickerSearch = UI.CreateSearchBox(form, 220, function(text)
+		pickerQuery = text
+		pickerOffset = 0
+		UpdatePicker()
+	end)
+	form.pickerSearch:SetPoint("TOPLEFT", 6, -72)
+	form.pickedLabel = MakeLabel(form, "", "GameFontHighlight")
+	form.pickedLabel:SetPoint("LEFT", form.pickerSearch, "RIGHT", 16, 0)
+	form.pickedLabel:SetPoint("RIGHT", form, "RIGHT")
+	form.pickedLabel:SetWordWrap(false)
+
+	local list = CreateFrame("Frame", nil, form)
+	list:SetPoint("TOPLEFT", 0, -100)
+	list:SetPoint("RIGHT", form, "RIGHT")
+	list:SetHeight(PICKER_ROWS * 22)
+	local bg = list:CreateTexture(nil, "BACKGROUND")
+	bg:SetAllPoints()
+	bg:SetColorTexture(unpack(UI.PANEL))
+	UI.AddBorder(list)
+	list:EnableMouseWheel(true)
+	list:SetScript("OnMouseWheel", function(_, delta)
+		pickerOffset = pickerOffset - delta * 2
+		UpdatePicker()
+	end)
+	form.pickerList = list
+
+	form.pickerRows = {}
+	for index = 1, PICKER_ROWS do
+		local row = CreateFrame("Button", nil, list)
+		row:SetHeight(22)
+		row:SetPoint("TOPLEFT", 1, -1 - (index - 1) * 22)
+		row:SetPoint("RIGHT", -1, 0)
+		row.selected = row:CreateTexture(nil, "BACKGROUND")
+		row.selected:SetAllPoints()
+		row.selected:SetColorTexture(UI.ACCENT[1], UI.ACCENT[2], UI.ACCENT[3], 0.2)
+		local highlight = row:CreateTexture(nil, "HIGHLIGHT")
+		highlight:SetAllPoints()
+		highlight:SetColorTexture(1, 1, 1, 0.06)
+		row.name = MakeLabel(row, "", "GameFontHighlight")
+		row.name:SetPoint("LEFT", 8, 0)
+		row.sub = MakeLabel(row, "", "GameFontDisableSmall")
+		row.sub:SetPoint("RIGHT", -8, 0)
+		row:SetScript("OnClick", function(self)
+			if self.entry then
+				formKey, formKeyName = self.entry.id, self.entry.name
+				formStanding = nil
+				if formType == "skill" and formMode == "reach" then
+					formToMax = true
+				end
+				PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+				UpdateForm()
+			end
+		end)
+		table.insert(form.pickerRows, row)
+	end
+	form.pickerEmpty = MakeLabel(list, "", "GameFontDisable")
+	form.pickerEmpty:SetPoint("TOPLEFT", 8, -6)
+
+	-- Reach / Gain
+	form.modeChips = {}
+	local anchor
+	for _, info in ipairs({ { "reach", "Reach a level" }, { "gain", "Gain an amount" } }) do
+		local chip = UI.CreateFlatButton(form, info[2], 22)
+		chip.key = info[1]
+		chip:SetScript("OnClick", function(self)
+			formMode = self.key
+			formStanding = nil
+			form.amount:SetText("")
+			UpdateForm()
+		end)
+		if anchor then
+			chip:SetPoint("LEFT", anchor, "RIGHT", 4, 0)
+		else
+			chip:SetPoint("TOPLEFT", 0, -244)
+		end
+		anchor = chip
+		table.insert(form.modeChips, chip)
+	end
+
+	-- Standings for rep "reach"
+	form.standingChips = {}
+	for reaction = 5, 8 do
+		local chip = UI.CreateFlatButton(form, G().StandingLabel(reaction), 22)
+		chip.reaction = reaction
+		chip:SetScript("OnClick", function(self)
+			formStanding = self.reaction
+			UpdateForm()
+		end)
+		chip:Hide()
+		table.insert(form.standingChips, chip)
+	end
+
+	-- "Max" for skill "reach"
+	form.maxChip = UI.CreateFlatButton(form, "Max (follows the cap)", 22)
+	form.maxChip:SetScript("OnClick", function()
+		formToMax = not formToMax
+		if not formToMax then
+			form.amount:SetText("")
+		end
+		UpdateForm()
+	end)
 end
 
 local function CreateForm(body)
@@ -429,12 +719,10 @@ local function CreateForm(body)
 	local anchor
 	for _, info in ipairs(GOAL_TYPES) do
 		local chip = UI.CreateFlatButton(form, info.label, 24)
-		chip:SetWidth(math.max(chip:GetWidth(), 64))
+		chip:SetWidth(math.max(chip:GetWidth(), 56))
 		chip.key = info.key
 		chip:SetScript("OnClick", function(self)
-			formType = self.key
-			form.amount:SetText(self.key == "level" and tostring(UnitLevel("player") + 1) or "")
-			UpdateForm()
+			SetType(self.key)
 		end)
 		if anchor then
 			chip:SetPoint("LEFT", anchor, "RIGHT", 4, 0)
@@ -493,13 +781,23 @@ local function CreateForm(body)
 	form.amountLabel:SetPoint("TOPLEFT", 2, -150)
 	form.amount = MakeEditBox(form, 110, true)
 	form.amount:SetPoint("LEFT", form.amountLabel, "LEFT", 160, 0)
-	form.amount:SetScript("OnTextChanged", UpdateForm)
+	-- Only typing updates the form; code that sets the text updates it itself.
+	form.amount:SetScript("OnTextChanged", function(_, userInput)
+		if userInput then
+			UpdateForm()
+		end
+	end)
 	form.amount:SetScript("OnEnterPressed", function(self)
 		self:ClearFocus()
 		if form.create:IsEnabled() then
 			SubmitForm()
 		end
 	end)
+	form.amountHint = MakeLabel(form, "", "GameFontDisableSmall")
+	form.amountHint:SetPoint("TOPLEFT", form.amountLabel, "BOTTOMLEFT", 0, -10)
+
+	CreatePicker()
+	form.maxChip:SetPoint("LEFT", form.amount, "RIGHT", 10, 0)
 
 	-- Starting count
 	form.seedHeading = MakeHeading(form, "Start from what I have")
@@ -511,7 +809,9 @@ local function CreateForm(body)
 		seed:SetPoint("TOPLEFT", 0, -202 - (index - 1) * 24)
 		seed.Text:SetFontObject("GameFontHighlight")
 		seed:SetHitRectInsets(0, -150, 0, 0)
-		seed:SetScript("OnClick", UpdateForm)
+		seed:SetScript("OnClick", function()
+			UpdateForm()
+		end)
 		seed.countText = form:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 		seed.countText:SetPoint("LEFT", seed, "LEFT", 200, 1)
 		seed.countText:SetWidth(90)
@@ -574,6 +874,10 @@ function Render()
 	form:SetShown(showForm)
 	scroll:SetShown(not showForm)
 	if showForm then
+		-- Standings, skills and currencies may have changed since the list was built.
+		if PICKER_TYPES[formType] then
+			pickerEntries = BuildPickerEntries(formType)
+		end
 		UpdateForm()
 		return
 	end
