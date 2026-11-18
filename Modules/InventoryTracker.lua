@@ -10,13 +10,17 @@ local _, ns = ...
 -- (same realm) are added to their mail right away.
 --
 -- Saved account-wide in NraKitDB.inventory[realm][name] =
---   { class = "MAGE", bags = { [itemID] = count }, bank = {...}, mail = {...}, equipped = {...} }
+--   { class = "MAGE", level = 42, money = copper,
+--     bags = { [itemID] = count }, bank = {...}, mail = {...}, equipped = {...},
+--     seen = { bags = time(), bank = time(), ... } }   -- when each location was last read
+--
+-- The inventory browser (InventoryBrowser.lua) shows the same data; see ns.inventory.
 
 local module = {
 	key = "inventoryTracker",
 	section = "Bags & Items",
 	name = "Inventory Tracker",
-	description = "Item tooltips show how many of the item each of your characters has, and where (bags, bank, mail, equipped). Visit the bank and the mailbox once on each character so they're known. /nra inv lists tracked characters; /nra inv forget <name> removes one.",
+	description = "Item tooltips show how many of the item each of your characters has, and where (bags, bank, mail, equipped). Visit the bank and the mailbox once on each character so they're known. /nra inv opens a browser of every character's bags, bank and mail.",
 	default = false,
 	options = {
 		{
@@ -84,7 +88,29 @@ end
 local function GetMe()
 	local me = GetCharacter(realm, playerName)
 	me.class = select(2, UnitClass("player"))
+	me.level = math.max(me.level or 0, UnitLevel("player"))
 	return me
+end
+
+-- Lets the browser refresh while it's open.
+local function Changed()
+	if ns.inventory.onChanged then
+		ns.inventory.onChanged()
+	end
+end
+
+-- Stores what was read at one location of this character.
+local function Store(location, counts)
+	local me = GetMe()
+	me[location] = counts
+	me.seen = me.seen or {}
+	me.seen[location] = time()
+	Changed()
+end
+
+local function StoreMoney()
+	GetMe().money = GetMoney()
+	Changed()
 end
 
 ---------------------------------------------------------------------------
@@ -103,7 +129,7 @@ local function ScanBags(location)
 			end
 		end
 	end
-	GetMe()[location] = counts
+	Store(location, counts)
 end
 
 local function ScanEquipped()
@@ -114,7 +140,7 @@ local function ScanEquipped()
 			counts[itemID] = (counts[itemID] or 0) + 1
 		end
 	end
-	GetMe().equipped = counts
+	Store("equipped", counts)
 end
 
 local function ScanMail()
@@ -130,7 +156,7 @@ local function ScanMail()
 			end
 		end
 	end
-	GetMe().mail = counts
+	Store("mail", counts)
 end
 
 -- Mail sent to one of your own characters: what was attached, until it's sent.
@@ -171,6 +197,7 @@ local function OnMailSent()
 		character.mail[itemID] = (character.mail[itemID] or 0) + count
 	end
 	pendingMail = nil
+	Changed()
 end
 
 ---------------------------------------------------------------------------
@@ -273,13 +300,24 @@ local function ListCharacters()
 	end
 end
 
+-- Removes a stored character; returns false if there's no such character.
+local function ForgetCharacter(realmName, name)
+	local characters = NraKitDB.inventory and NraKitDB.inventory[realmName]
+	if not (characters and characters[name]) then
+		return false
+	end
+	characters[name] = nil
+	Changed()
+	return true
+end
+
 local function Forget(argument)
 	local name, realmName = strsplit("-", argument, 2)
 	realmName = realmName or realm
 	local characters = NraKitDB.inventory and NraKitDB.inventory[realmName]
 	for storedName in pairs(characters or {}) do
 		if storedName:lower() == name:lower() then
-			characters[storedName] = nil
+			ForgetCharacter(realmName, storedName)
 			ns:Print("Forgot " .. storedName .. "-" .. realmName .. ".")
 			if realmName == realm and storedName == playerName then
 				ns:Print("That's you: your bags are tracked again on the next change.")
@@ -287,25 +325,48 @@ local function Forget(argument)
 			return
 		end
 	end
-	ns:Print("No tracked character called " .. argument .. ". See /nra inv.")
+	ns:Print("No tracked character called " .. argument .. ". See /nra inv list.")
 end
 
 local function OnSlashCommand(input)
 	local command, rest = input:match("^(%S*)%s*(.-)$")
-	if command:lower() == "forget" and rest ~= "" then
+	command = command:lower()
+	if command == "forget" and rest ~= "" then
 		Forget(rest)
-	else
+	elseif command == "list" then
 		ListCharacters()
 		print("  /nra inv forget <name> - remove a character (e.g. a deleted one)")
+	elseif not ns:IsModuleEnabled(module.key) then
+		ns:Print("Turn on Inventory Tracker first (/nra).")
+	else
+		ns:OpenInventoryBrowser()
 	end
 end
+
+-- For the browser.
+ns.inventory = {
+	LOCATIONS = LOCATIONS,
+	LOCATION_LABELS = LOCATION_LABELS,
+	GetRealm = function()
+		return realm
+	end,
+	GetPlayer = function()
+		return playerName
+	end,
+	Forget = ForgetCharacter,
+	ClassColor = ClassColor,
+}
+
+ns:AddOptionsButton(module.key, "Browse inventories", "Open the browser of every character's bags, bank, mail and equipped items (/nra inv).", function()
+	ns:OpenInventoryBrowser()
+end)
 
 ---------------------------------------------------------------------------
 -- Lifecycle
 ---------------------------------------------------------------------------
 
 local eventFrame = CreateFrame("Frame")
-eventFrame:SetScript("OnEvent", function(_, event)
+eventFrame:SetScript("OnEvent", function(_, event, ...)
 	if event == "BAG_UPDATE_DELAYED" then
 		ScanBags("bags")
 		if bankOpen then
@@ -328,13 +389,18 @@ eventFrame:SetScript("OnEvent", function(_, event)
 		OnMailSent()
 	elseif event == "MAIL_FAILED" then
 		pendingMail = nil
+	elseif event == "PLAYER_MONEY" then
+		StoreMoney()
+	elseif event == "PLAYER_LEVEL_UP" then
+		GetMe().level = ... -- UnitLevel can still say the old level here
+		Changed()
 	end
 end)
 
 local EVENTS = {
 	"BAG_UPDATE_DELAYED", "BANKFRAME_OPENED", "BANKFRAME_CLOSED", "PLAYERBANKSLOTS_CHANGED",
 	"PLAYERREAGENTBANKSLOTS_CHANGED", "PLAYER_EQUIPMENT_CHANGED", "MAIL_INBOX_UPDATE",
-	"MAIL_SEND_SUCCESS", "MAIL_FAILED",
+	"MAIL_SEND_SUCCESS", "MAIL_FAILED", "PLAYER_MONEY", "PLAYER_LEVEL_UP",
 }
 
 local function IsEventValid(event)
@@ -346,6 +412,7 @@ function module:OnInitialize()
 	playerName = UnitName("player")
 	ns:RegisterSlashCommand("inv", OnSlashCommand)
 	ns:RegisterSlashCommand("inventory", OnSlashCommand)
+	ns:RegisterSlashCommand("bank", OnSlashCommand)
 	hooksecurefunc("SendMail", function(recipient)
 		if ns:IsModuleEnabled(module.key) then
 			OnSendMail(recipient)
@@ -368,6 +435,7 @@ function module:OnEnabledChanged(enabled)
 	if enabled then
 		ScanBags("bags")
 		ScanEquipped()
+		StoreMoney()
 	end
 	bankOpen = false
 end

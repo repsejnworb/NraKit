@@ -9,56 +9,30 @@ local addonName, ns = ...
 --
 -- The look matches the Campfire timer bar: dark flat panel, hairline borders, orange accent.
 
+local UI = ns.UI
 local WIDTH, HEIGHT = 780, 540
-local TITLE_HEIGHT = 34
 local SIDEBAR_WIDTH = 190
-local PAD = 12
+local PAD = UI.PAD
 local CARD_GAP = 8
 local INDENT = 20
 
-local BG = { 0.04, 0.04, 0.06, 0.95 }
-local EDGE = { 1, 1, 1, 0.1 }
-local PANEL = { 1, 1, 1, 0.03 }
-local ACCENT = { 1, 0.6, 0.2 }
-local NAME_ON = { 1, 0.82, 0 }
-local NAME_OFF = { 0.6, 0.6, 0.6 }
-local TEXT = { 0.78, 0.78, 0.78 }
-local TEXT_DIM = { 0.5, 0.5, 0.5 }
+local EDGE, PANEL, ACCENT = UI.EDGE, UI.PANEL, UI.ACCENT
+local NAME_ON, NAME_OFF = UI.GOLD, UI.GREY
+local TEXT, TEXT_DIM = UI.TEXT, UI.TEXT_DIM
 
-local frame, content, scrollFrame, scrollThumb, searchBox, enabledOnlyCheck
+local frame, content, scrollFrame, searchBox, enabledOnlyCheck
 local navButtons = {}
 local selectedSection -- nil = all features
 local query = ""
 local expanded = {} -- module key -> true
 local newModules = {} -- module key -> true for features added since the window was last opened
+local pool = UI.CreatePool()
 
 ------------------------------------------------------------------------------
 -- Small helpers
 ------------------------------------------------------------------------------
 
-local function AddBorder(parent)
-	local edges = {}
-	for i = 1, 4 do
-		edges[i] = parent:CreateTexture(nil, "BORDER")
-		edges[i]:SetColorTexture(unpack(EDGE))
-	end
-	edges[1]:SetPoint("TOPLEFT"); edges[1]:SetPoint("TOPRIGHT"); edges[1]:SetHeight(1)
-	edges[2]:SetPoint("BOTTOMLEFT"); edges[2]:SetPoint("BOTTOMRIGHT"); edges[2]:SetHeight(1)
-	edges[3]:SetPoint("TOPLEFT"); edges[3]:SetPoint("BOTTOMLEFT"); edges[3]:SetWidth(1)
-	edges[4]:SetPoint("TOPRIGHT"); edges[4]:SetPoint("BOTTOMRIGHT"); edges[4]:SetWidth(1)
-end
-
-local function ShowTooltip(owner, title, text)
-	if not title then
-		return
-	end
-	GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
-	GameTooltip_SetTitle(GameTooltip, title)
-	if text then
-		GameTooltip_AddNormalLine(GameTooltip, text, true)
-	end
-	GameTooltip:Show()
-end
+local ShowTooltip = UI.ShowTooltip
 
 local function IsOn(key)
 	return NraKitDB[key] == true
@@ -111,29 +85,8 @@ end
 -- Widget pools: everything in the scroll area is rebuilt on each Render()
 ------------------------------------------------------------------------------
 
-local pools = {}
-
 local function Acquire(kind, create)
-	local pool = pools[kind]
-	if not pool then
-		pool = { free = {}, used = {} }
-		pools[kind] = pool
-	end
-	local widget = table.remove(pool.free) or create()
-	table.insert(pool.used, widget)
-	widget:ClearAllPoints()
-	widget:Show()
-	return widget
-end
-
-local function ReleaseAll()
-	for _, pool in pairs(pools) do
-		for _, widget in ipairs(pool.used) do
-			widget:Hide()
-			table.insert(pool.free, widget)
-		end
-		wipe(pool.used)
-	end
+	return pool:Acquire(kind, create)
 end
 
 local Render
@@ -375,25 +328,8 @@ local function AddCard(module, x, y, width, forceOpen)
 	return y - CARD_GAP
 end
 
-local function UpdateScrollThumb()
-	local range = scrollFrame:GetVerticalScrollRange()
-	local visible = scrollFrame:GetHeight()
-	if range <= 0 then
-		scrollThumb:Hide()
-		return
-	end
-	local trackHeight = visible - 8
-	local thumbHeight = math.max(24, trackHeight * visible / (visible + range))
-	local offset = (trackHeight - thumbHeight) * scrollFrame:GetVerticalScroll() / range
-	scrollThumb:SetHeight(thumbHeight)
-	scrollThumb:SetPoint("TOPRIGHT", scrollFrame, "TOPRIGHT", 10, -4 - offset)
-	scrollThumb:Show()
-end
-
 local function SetScroll(value)
-	local range = scrollFrame:GetVerticalScrollRange()
-	scrollFrame:SetVerticalScroll(math.min(math.max(value, 0), range))
-	UpdateScrollThumb()
+	scrollFrame:SetScroll(value)
 end
 
 local function UpdateNav()
@@ -407,10 +343,7 @@ local function UpdateNav()
 			end
 		end
 		button.count:SetText(on .. "/" .. total)
-		local selected = not searching and button.section == selectedSection
-		button.selected:SetShown(selected)
-		button.bar:SetShown(selected)
-		button.text:SetTextColor(unpack(selected and NAME_ON or TEXT))
+		button:SetSelected(not searching and button.section == selectedSection)
 	end
 end
 
@@ -419,7 +352,7 @@ function Render()
 		return
 	end
 	local scroll = scrollFrame:GetVerticalScroll()
-	ReleaseAll()
+	pool:ReleaseAll()
 
 	local width = content:GetWidth() - 2 * PAD
 	local x, y = PAD, -PAD
@@ -469,25 +402,8 @@ end
 ------------------------------------------------------------------------------
 
 local function CreateNavButton(parent, label, section, modules)
-	local button = CreateFrame("Button", nil, parent)
-	button:SetSize(SIDEBAR_WIDTH - 2 * PAD, 26)
+	local button = UI.CreateNavButton(parent, SIDEBAR_WIDTH - 2 * PAD, 26, label)
 	button.section, button.modules = section, modules
-
-	button.selected = button:CreateTexture(nil, "BACKGROUND")
-	button.selected:SetAllPoints()
-	button.selected:SetColorTexture(ACCENT[1], ACCENT[2], ACCENT[3], 0.12)
-	button.bar = button:CreateTexture(nil, "ARTWORK")
-	button.bar:SetColorTexture(unpack(ACCENT))
-	button.bar:SetPoint("TOPLEFT"); button.bar:SetPoint("BOTTOMLEFT"); button.bar:SetWidth(2)
-	local highlight = button:CreateTexture(nil, "HIGHLIGHT")
-	highlight:SetAllPoints()
-	highlight:SetColorTexture(1, 1, 1, 0.05)
-
-	button.text = button:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-	button.text:SetPoint("LEFT", 10, 0)
-	button.text:SetText(label)
-	button.count = button:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	button.count:SetPoint("RIGHT", -8, 0)
 
 	button:SetScript("OnClick", function(self)
 		selectedSection = self.section
@@ -515,79 +431,21 @@ local function MarkNewModules()
 end
 
 local function CreateWindow()
-	frame = CreateFrame("Frame", "NraKitOptionsFrame", UIParent)
-	frame:SetSize(WIDTH, HEIGHT)
-	frame:SetPoint("CENTER")
-	frame:SetFrameStrata("DIALOG")
-	frame:SetToplevel(true)
-	frame:SetClampedToScreen(true)
-	frame:SetMovable(true)
-	frame:EnableMouse(true)
-	frame:Hide()
-	table.insert(UISpecialFrames, "NraKitOptionsFrame") -- Esc closes it
-
-	local bg = frame:CreateTexture(nil, "BACKGROUND")
-	bg:SetAllPoints()
-	bg:SetColorTexture(unpack(BG))
-	AddBorder(frame)
-
-	-- Title bar (drag to move)
-	local titleBar = CreateFrame("Frame", nil, frame)
-	titleBar:SetPoint("TOPLEFT")
-	titleBar:SetPoint("TOPRIGHT")
-	titleBar:SetHeight(TITLE_HEIGHT)
-	titleBar:EnableMouse(true)
-	titleBar:RegisterForDrag("LeftButton")
-	titleBar:SetScript("OnDragStart", function()
-		frame:StartMoving()
-	end)
-	titleBar:SetScript("OnDragStop", function()
-		frame:StopMovingOrSizing()
-	end)
-	local titleLine = titleBar:CreateTexture(nil, "BORDER")
-	titleLine:SetColorTexture(unpack(EDGE))
-	titleLine:SetPoint("BOTTOMLEFT"); titleLine:SetPoint("BOTTOMRIGHT"); titleLine:SetHeight(1)
-
-	local title = titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-	title:SetPoint("LEFT", PAD + 2, 0)
-	title:SetText("NraKit")
-	title:SetTextColor(unpack(ACCENT))
+	frame = UI.CreateWindow("NraKitOptionsFrame", "NraKit", WIDTH, HEIGHT, SIDEBAR_WIDTH)
 	local version = C_AddOns.GetAddOnMetadata(addonName, "Version")
 	if version and not version:find("@", 1, true) then
-		local versionText = titleBar:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-		versionText:SetPoint("LEFT", title, "RIGHT", 8, -1)
+		local versionText = frame.titleBar:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+		versionText:SetPoint("LEFT", frame.title, "RIGHT", 8, -1)
 		versionText:SetText(version)
 	end
+	local sidebar = frame.sidebar
 
-	local close = CreateFrame("Button", nil, titleBar, "UIPanelCloseButtonNoScripts")
-	close:SetPoint("RIGHT", -4, 0)
-	close:SetScript("OnClick", function()
-		frame:Hide()
+	searchBox = UI.CreateSearchBox(sidebar, SIDEBAR_WIDTH - 2 * PAD - 6, function(text)
+		query = text
+		SetScroll(0)
+		Render()
 	end)
-
-	-- Sidebar
-	local sidebar = CreateFrame("Frame", nil, frame)
-	sidebar:SetPoint("TOPLEFT", 0, -TITLE_HEIGHT)
-	sidebar:SetPoint("BOTTOMLEFT")
-	sidebar:SetWidth(SIDEBAR_WIDTH)
-	local sidebarBg = sidebar:CreateTexture(nil, "BACKGROUND")
-	sidebarBg:SetAllPoints()
-	sidebarBg:SetColorTexture(unpack(PANEL))
-	local sidebarLine = sidebar:CreateTexture(nil, "BORDER")
-	sidebarLine:SetColorTexture(unpack(EDGE))
-	sidebarLine:SetPoint("TOPRIGHT"); sidebarLine:SetPoint("BOTTOMRIGHT"); sidebarLine:SetWidth(1)
-
-	searchBox = CreateFrame("EditBox", nil, sidebar, "SearchBoxTemplate")
-	searchBox:SetSize(SIDEBAR_WIDTH - 2 * PAD - 6, 22)
 	searchBox:SetPoint("TOPLEFT", PAD + 6, -PAD)
-	searchBox:HookScript("OnTextChanged", function(self)
-		local text = strtrim(self:GetText() or ""):lower()
-		if text ~= query then
-			query = text
-			SetScroll(0)
-			Render()
-		end
-	end)
 
 	local anchor = CreateNavButton(sidebar, "All features", nil, ns.moduleOrder)
 	anchor:SetPoint("TOPLEFT", PAD, -PAD - 34)
@@ -618,21 +476,11 @@ local function CreateWindow()
 	end)
 
 	-- Feature list
-	scrollFrame = CreateFrame("ScrollFrame", nil, frame)
-	scrollFrame:SetPoint("TOPLEFT", SIDEBAR_WIDTH, -TITLE_HEIGHT - 1)
-	scrollFrame:SetPoint("BOTTOMRIGHT", -14, 1)
-	content = CreateFrame("Frame", nil, scrollFrame)
-	content:SetSize(WIDTH - SIDEBAR_WIDTH - 14, 1)
-	scrollFrame:SetScrollChild(content)
-	scrollFrame:EnableMouseWheel(true)
-	scrollFrame:SetScript("OnMouseWheel", function(self, delta)
-		SetScroll(self:GetVerticalScroll() - delta * 60)
-	end)
-	scrollFrame:SetScript("OnScrollRangeChanged", UpdateScrollThumb)
-
-	scrollThumb = frame:CreateTexture(nil, "OVERLAY")
-	scrollThumb:SetColorTexture(1, 1, 1, 0.2)
-	scrollThumb:SetWidth(3)
+	scrollFrame = UI.CreateScrollArea(frame.body)
+	scrollFrame:SetPoint("TOPLEFT")
+	scrollFrame:SetPoint("BOTTOMRIGHT", -13, 0)
+	content = scrollFrame.content
+	content:SetWidth(WIDTH - SIDEBAR_WIDTH - 15)
 
 	frame:SetScript("OnShow", function()
 		MarkNewModules()

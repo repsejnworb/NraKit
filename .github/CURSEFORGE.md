@@ -45,7 +45,8 @@ No more mousing over every recipe at a vendor. Recipes you **already know get a 
 Where did I put that? **Item tooltips show how many each of your characters has**, and where: bags, bank, mail or equipped, plus a total.
 - Visit the bank and mailbox once on each character so they're known; after that they stay up to date.
 - Items you **mail to your own characters** show up on them right away.
-- **/nra inv** lists tracked characters, **/nra inv forget &lt;name&gt;** removes one.
+- **Inventory browser** (**/nra inv** or a key binding): every character with level and gold, their **bags, bank, mail and equipped** items as a bag-style grid or a list, with **search**, category filters (gear, consumables, trade goods, recipes, quest), how fresh each location is, and the **vendor value** of what's shown.
+- **All characters** view lists who has what. Right-click a character to forget it.
 
 ### Open Clams
 A small button at the bottom of your bags, next to your money, **opens the next clam** (or any other "Right Click to Open" container, except locked boxes) **one click at a time**, and shows how many are left.

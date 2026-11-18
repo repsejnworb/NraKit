@@ -9,6 +9,7 @@
 ## X-Curse-Project-ID: 1786796
 
 Core.lua
+UI.lua
 Settings.lua
 Options.lua
 
@@ -21,6 +22,7 @@ Modules\BagTitheIgnoreList.lua
 Modules\PotentialUpgrades.lua
 Modules\KnownRecipes.lua
 Modules\InventoryTracker.lua
+Modules\InventoryBrowser.lua
 Modules\OpenClams.lua
 Modules\SousChef.lua
 Modules\UnspentTalents.lua

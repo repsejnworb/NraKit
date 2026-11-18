@@ -31,6 +31,8 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   (`min/max/step/format`), `header = "..."` subsections, and `parent = <option key>` nesting (greyed out unless the
   parent is on). `ns.sectionOrder` lists the sidebar groups; put new modules in one of them. Change values with
   `ns:SetSetting(key, value)` (both UIs and the module callbacks stay in step).
+- `UI.lua` – shared look for NraKit's windows (`ns.UI`: window with title bar and sidebar, nav buttons, flat
+  tabs/chips, search box, scroll area, widget pools, colours). New windows should use it.
 - `Options.lua` – NraKit's own window (`/nra`): sidebar with search and sections, a card per module with inline
   options. Built entirely from the module definitions, so new modules need no work here. Custom per-module buttons
   go through `ns:AddOptionsButton(moduleKey, label, description, onClick)` and show in both UIs.

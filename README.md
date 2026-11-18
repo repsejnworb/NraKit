@@ -45,8 +45,11 @@ The same settings are also in the game's Settings panel under **AddOns → NraKi
 - **Inventory Tracker**: item tooltips list how many of the item each of your characters has and
   where, e.g. "Bob 12 (Bags 5, Bank 7)", with a total. Bags and equipment are tracked as they change;
   the bank and mailbox are read while open, so visit them once per character. Items you mail to your
-  own characters show up in their mail right away. `/nra inv` lists tracked characters and
-  `/nra inv forget <name>` removes one.
+  own characters show up in their mail right away.
+  `/nra inv` (or a key binding) opens the **inventory browser**: every character in a sidebar with
+  level and gold, their bags, bank, mail and equipped items as a bag-style grid or a list, search,
+  category filters, how fresh each location is, and the vendor value of what's shown. "All
+  characters" lists who has what. Right-click a character to forget it.
 - **Open Clams**: a button at the bottom left of your bags (next to your money) opens the next clam (or any other
   "Right Click to Open" container, except locked boxes) one per click, showing its icon and how
   many are left. Bindable under Keybindings → AddOns → NraKit. Openable items get a green border.
