@@ -12,7 +12,7 @@ local addonName, ns = ...
 -- OnOptionChanged, whichever UI did it.
 
 -- Section order, in both UIs. Sections not listed here go last.
-ns.sectionOrder = { "Units & Nameplates", "Quests", "Bags & Items", "Professions", "Reminders", "Utilities" }
+ns.sectionOrder = { "Units & Nameplates", "Quests", "Bags & Items", "Professions", "Trackers & Reminders", "Utilities" }
 
 ns.settings = {}
 ns.optionsButtons = {} -- module key -> list of { label, description, onClick }

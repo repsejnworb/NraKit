@@ -8,7 +8,7 @@ local _, ns = ...
 
 local module = {
 	key = "campfireTimer",
-	section = "Reminders",
+	section = "Trackers & Reminders",
 	name = "Campfire timer",
 	description = "Show a progress bar in the middle of the screen while you rest at a Welcoming Campfire.",
 	default = false,

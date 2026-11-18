@@ -6,7 +6,7 @@ local _, ns = ...
 
 local module = {
 	key = "unspentTalents",
-	section = "Reminders",
+	section = "Trackers & Reminders",
 	name = "Unspent talent points",
 	description = "Show a reminder in the middle of the screen while you have talent points to spend.",
 	default = false,

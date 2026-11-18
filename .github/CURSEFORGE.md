@@ -66,6 +66,14 @@ A **progress bar in the middle of the screen** while you rest at a Welcoming Cam
 - Width and position are adjustable.
 - **/nra campfire** shows a 10-second preview.
 
+### Farm goals
+Just want to farm something? Set a goal like **loot 4000 Silk Cloth**, **reach level 40**, **gain 50,000 XP** or **earn 100 gold**, and a small **movable tracker** shows the progress, how much you've gained, your **rate per hour** and **time left**.
+- **Chimes at 25/50/75%**, and a **fanfare** with a message in the middle of the screen when a goal is done.
+- Item goals count **what you loot**, so banking, mailing or selling never throws them off.
+- Optionally **start from what you already have**: bags, bank, mail and other characters (with a live preview).
+- **/nra goal** opens the goals window (new goal, active goals, history of finished ones). **/nra goal 4000** plus a shift-clicked item adds one directly.
+- Right-click a goal to pause, reset, recount or remove it.
+
 ### /leave leaves your group
 Type **/leave** (with nothing after it) or **/leavegroup** to leave your party, raid or instance group. **/leave &lt;channel&gt;** still leaves a chat channel.
 

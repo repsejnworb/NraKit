@@ -30,6 +30,8 @@ Modules\OpenClams.lua
 Modules\SousChef.lua
 Modules\UnspentTalents.lua
 Modules\CampfireTimer.lua
+Modules\FarmGoals.lua
+Modules\FarmGoalsWindow.lua
 Modules\UnitScanner.lua
 Modules\LeaveGroup.lua
 Modules\OpenSelectedMail.lua
