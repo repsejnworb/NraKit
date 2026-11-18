@@ -10,7 +10,7 @@ local _, ns = ...
 -- "Recount" reuses the same section to change an existing goal's starting count.
 
 local UI = ns.UI
-local WIDTH, HEIGHT = 720, 500
+local WIDTH, HEIGHT = 720, 560
 local SIDEBAR_WIDTH = 170
 local PAD = UI.PAD
 
@@ -35,6 +35,20 @@ local GOAL_TYPES = {
 local function G()
 	return ns.goals
 end
+
+-- One line per type, under the type chips: what the goal counts.
+local TYPE_HELP = {
+	item = "Counts the items you loot from now on. Banking, mailing, trading or selling them never changes the count.",
+	level = "Fills as you earn XP, until you reach the level.",
+	xp = "Counts the XP you earn from now on.",
+	gold = "Counts the money you gain from now on (loot, sales, quests). Spending doesn't count against it.",
+	rep = "Follows your reputation with a faction: reach a standing, or gain an amount from now on.",
+	skill = "Follows a skill (weapon skills, professions, riding...): reach a rank, or gain points from now on.",
+	currency = "Follows a currency: reach an amount, or gain an amount from now on.",
+}
+
+local PICK_HEADINGS = { item = "Which item?", rep = "Which faction?", skill = "Which skill?", currency = "Which currency?" }
+local HOW_MUCH = { item = "How many?", level = "Which level?", xp = "How much XP?", gold = "How much gold?" }
 
 ------------------------------------------------------------------------------
 -- Active goals
@@ -165,12 +179,46 @@ local function RenderActive(content, width)
 	cardSignature = table.concat(ids, ",")
 
 	if #goals == 0 then
-		local empty = pool:Acquire("text", function()
-			return content:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+		local heading = pool:Acquire("emptyHeading", function()
+			local text = content:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+			text:SetJustifyH("LEFT")
+			text:SetTextColor(1, 1, 1)
+			return text
 		end)
-		empty:SetText("No goals yet. Pick \"New goal\" on the left, or type /nra goal 4000 and shift-click an item.")
-		empty:SetPoint("TOPLEFT", content, "TOPLEFT", PAD + 2, y - 4)
-		y = y - 30
+		heading:SetText("No goals yet")
+		heading:SetPoint("TOPLEFT", content, "TOPLEFT", PAD + 2, y - 8)
+		local text = pool:Acquire("emptyText", function()
+			local t = content:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+			t:SetJustifyH("LEFT")
+			t:SetJustifyV("TOP")
+			t:SetSpacing(3)
+			return t
+		end)
+		text:SetWidth(width - 4)
+		text:SetTextColor(unpack(UI.TEXT))
+		text:SetText("A goal tracks something you're farming: an item you loot, a level, XP, gold, "
+			.. "reputation, a skill or a currency. It counts what you gain from the moment you make it.\n\n"
+			.. "Your goals show in a small tracker you can drag anywhere, with your rate per hour and "
+			.. "the time left. You get a chime at 25, 50 and 75%, and a fanfare when a goal is done.")
+		text:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -10)
+		local button = pool:Acquire("emptyButton", function()
+			local b = UI.CreateFlatButton(content, "+  Create a goal", 28)
+			b:SetWidth(160)
+			b:SetSelected(true)
+			b:SetScript("OnClick", function()
+				ns:OpenGoalsWindow("new")
+			end)
+			return b
+		end)
+		button:SetPoint("TOPLEFT", text, "BOTTOMLEFT", 0, -16)
+		local tip = pool:Acquire("emptyTip", function()
+			local t = content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+			t:SetJustifyH("LEFT")
+			return t
+		end)
+		tip:SetText("Shortcut: type /nra goal 4000 and shift-click an item to paste it.")
+		tip:SetPoint("TOPLEFT", button, "BOTTOMLEFT", 0, -12)
+		y = y - 220
 	end
 	return -y + PAD
 end
@@ -417,6 +465,15 @@ function UpdateForm()
 		chip:SetShown(not recounting)
 	end
 	form.title:SetText(recounting and ("Recount: " .. (G().Describe(goal))) or "New goal")
+	form.typeHeading:SetShown(not recounting)
+	form.typeHelp:SetShown(not recounting)
+	form.typeHelp:SetText(TYPE_HELP[goalType] or "")
+
+	-- Numbered steps: 1. type, 2. which one (item/rep/skill/currency), then the target.
+	local hasPick = PICK_HEADINGS[goalType] ~= nil and not recounting
+	local step = hasPick and 3 or 2
+	form.pickHeading:SetShown(hasPick)
+	form.pickHeading:SetText(hasPick and ("2. " .. PICK_HEADINGS[goalType]):upper() or "")
 
 	-- Item picker
 	local isItem = goalType == "item" and not recounting
@@ -445,9 +502,14 @@ function UpdateForm()
 		form.pickedLabel:SetText(entry and ("|cffffd100" .. entry.name .. "|r  " .. (entry.sub or "")) or "Pick one from the list")
 	end
 
-	-- Amount / target
+	-- Amount / target: below the picker, the item, or right under the type.
+	local targetY = picking and -292 or (goalType == "item" and -196 or -108)
+	form.amountHeading:ClearAllPoints()
+	form.amountHeading:SetPoint("TOPLEFT", 2, targetY)
+	form.amountHeading:SetText((step .. ". " .. (picking and "Target" or HOW_MUCH[goalType] or "")):upper())
+	form.amountHeading:SetShown(not recounting)
 	form.amountLabel:ClearAllPoints()
-	form.amountLabel:SetPoint("TOPLEFT", 2, picking and -282 or -150)
+	form.amountLabel:SetPoint("TOPLEFT", 2, targetY - (picking and 54 or 22))
 	local amountLabels = {
 		item = "How many to have", level = "Target level", xp = "XP to gain", gold = "Gold to have",
 		rep = formMode == "gain" and "Reputation to gain" or "Standing to reach",
@@ -470,7 +532,7 @@ function UpdateForm()
 	-- Starting count (item and gold)
 	local seeding = goalType == "item" or goalType == "gold"
 	form.seedHeading:SetShown(seeding)
-	local holdings = seeding and (goalType == "gold" or itemID) and G().GetHoldings(goalType == "item" and itemID or nil)
+	local holdings = seeding and (goalType == "gold" or itemID) and G().GetHoldings(goalType == "item" and itemID or nil) or nil
 	form.holdings = holdings
 	local isGold = goalType == "gold"
 	local format = isGold and G().FormatGold or G().FormatNumber
@@ -480,9 +542,17 @@ function UpdateForm()
 		{ label = "Mail", count = holdings and holdings.mail, show = not isGold, needsTracker = true },
 		{ label = "Other characters", count = holdings and holdings.othersTotal, show = true, needsTracker = true },
 	}
+	form.seedHeading:SetText(((recounting and "" or (step + 1) .. ". ") .. "Start from what I have (optional)"):upper())
+	form.seedHelp:SetShown(seeding)
+	local lastSeed = form.seedHelp
 	for index, seed in ipairs(form.seeds) do
 		local info = seedInfo[index]
 		seed:SetShown(seeding and info.show)
+		if seeding and info.show then
+			seed:ClearAllPoints()
+			seed:SetPoint("TOPLEFT", lastSeed, "BOTTOMLEFT", lastSeed == form.seedHelp and -2 or 0, -4)
+			lastSeed = seed
+		end
 		seed.count = info.count or 0
 		local available = holdings ~= nil and (not info.needsTracker or holdings.trackerOn)
 		seed:SetEnabled(available)
@@ -499,6 +569,11 @@ function UpdateForm()
 		end
 	end
 	form.othersText:SetShown(seeding)
+	form.othersText:ClearAllPoints()
+	form.othersText:SetPoint("TOPLEFT", lastSeed, "BOTTOMLEFT", 26, -4)
+	form.othersText:SetPoint("RIGHT", form, "RIGHT")
+	form.startText:ClearAllPoints()
+	form.startText:SetPoint("TOPLEFT", lastSeed, "BOTTOMLEFT", 2, -24)
 	if holdings and not holdings.trackerOn then
 		form.othersText:SetText("Turn on Inventory Tracker to include mail and other characters.")
 	else
@@ -516,7 +591,13 @@ function UpdateForm()
 	end
 	form.startText:SetShown(seeding)
 
-	-- Create / update button
+	if recounting then
+		form.amountLabel:ClearAllPoints()
+		form.amountLabel:SetPoint("TOPLEFT", 2, -20)
+	end
+
+	-- Create / update button, with why it's disabled
+	local hint = ""
 	local valid
 	if recounting then
 		valid = true
@@ -524,24 +605,32 @@ function UpdateForm()
 	else
 		if goalType == "item" then
 			valid = amount and amount > 0 and itemID ~= nil
+			hint = not itemID and "Pick an item first." or (not valid and "Enter how many." or "")
 		elseif goalType == "level" then
 			valid = amount and amount > UnitLevel("player")
+			hint = not valid and ("Enter a level above " .. UnitLevel("player") .. ".") or ""
 		elseif picking then
 			if not entry then
 				valid = false
+				hint = "Pick one from the list."
 			elseif standingTarget then
 				valid = formStanding ~= nil and formStanding > (entry.reaction or 0)
+				hint = not valid and "Pick the standing to reach." or ""
 			elseif goalType == "skill" and formMode == "reach" then
 				valid = formToMax and entry.rank < entry.maxRank or (amount and amount > entry.rank)
+				hint = not valid and ("Enter a rank above " .. entry.rank .. ", or pick Max.") or ""
 			else
 				valid = amount and amount > 0
+				hint = not valid and "Enter an amount." or ""
 			end
 		else
 			valid = amount and amount > 0
+			hint = not valid and "Enter an amount." or ""
 		end
 		form.create:SetText("Create goal")
 	end
 	form.create:SetEnabled(valid and true or false)
+	form.createHint:SetText(hint)
 end
 
 local function SetItem(itemID)
@@ -607,14 +696,14 @@ local function CreatePicker()
 		pickerOffset = 0
 		UpdatePicker()
 	end)
-	form.pickerSearch:SetPoint("TOPLEFT", 6, -72)
+	form.pickerSearch:SetPoint("TOPLEFT", 6, -126)
 	form.pickedLabel = MakeLabel(form, "", "GameFontHighlight")
 	form.pickedLabel:SetPoint("LEFT", form.pickerSearch, "RIGHT", 16, 0)
 	form.pickedLabel:SetPoint("RIGHT", form, "RIGHT")
 	form.pickedLabel:SetWordWrap(false)
 
 	local list = CreateFrame("Frame", nil, form)
-	list:SetPoint("TOPLEFT", 0, -100)
+	list:SetPoint("TOPLEFT", 0, -154)
 	list:SetPoint("RIGHT", form, "RIGHT")
 	list:SetHeight(PICKER_ROWS * 22)
 	local bg = list:CreateTexture(nil, "BACKGROUND")
@@ -675,7 +764,7 @@ local function CreatePicker()
 		if anchor then
 			chip:SetPoint("LEFT", anchor, "RIGHT", 4, 0)
 		else
-			chip:SetPoint("TOPLEFT", 0, -244)
+			chip:SetPoint("TOPLEFT", 0, -312)
 		end
 		anchor = chip
 		table.insert(form.modeChips, chip)
@@ -715,6 +804,15 @@ local function CreateForm(body)
 	form.title:SetPoint("TOPLEFT", 2, 0)
 	form.title:SetTextColor(1, 1, 1)
 
+	form.typeHeading = MakeHeading(form, "1. What do you want to track?")
+	form.typeHeading:SetPoint("TOPLEFT", 2, -30)
+	form.typeHelp = MakeLabel(form, "", "GameFontDisableSmall")
+	form.typeHelp:SetPoint("TOPLEFT", 2, -78)
+	form.typeHelp:SetPoint("RIGHT", form, "RIGHT")
+	form.pickHeading = MakeHeading(form, "")
+	form.pickHeading:SetPoint("TOPLEFT", 2, -108)
+	form.amountHeading = MakeHeading(form, "")
+
 	form.typeChips = {}
 	local anchor
 	for _, info in ipairs(GOAL_TYPES) do
@@ -727,7 +825,7 @@ local function CreateForm(body)
 		if anchor then
 			chip:SetPoint("LEFT", anchor, "RIGHT", 4, 0)
 		else
-			chip:SetPoint("TOPLEFT", 0, -32)
+			chip:SetPoint("TOPLEFT", 0, -46)
 		end
 		anchor = chip
 		table.insert(form.typeChips, chip)
@@ -736,7 +834,7 @@ local function CreateForm(body)
 	-- Item slot: drop an item on it (or click while holding one).
 	local slot = CreateFrame("Button", nil, form)
 	slot:SetSize(40, 40)
-	slot:SetPoint("TOPLEFT", 0, -72)
+	slot:SetPoint("TOPLEFT", 0, -126)
 	slot.icon = slot:CreateTexture(nil, "ARTWORK")
 	slot.icon:SetAllPoints()
 	UI.AddBorder(slot)
@@ -800,13 +898,14 @@ local function CreateForm(body)
 	form.maxChip:SetPoint("LEFT", form.amount, "RIGHT", 10, 0)
 
 	-- Starting count
-	form.seedHeading = MakeHeading(form, "Start from what I have")
-	form.seedHeading:SetPoint("TOPLEFT", 2, -186)
+	form.seedHeading = MakeHeading(form, "")
+	form.seedHeading:SetPoint("TOPLEFT", form.amountLabel, "BOTTOMLEFT", 0, -22)
+	form.seedHelp = MakeLabel(form, "Ticked counts are added as already done; only new loot is counted after that.", "GameFontDisableSmall")
+	form.seedHelp:SetPoint("TOPLEFT", form.seedHeading, "BOTTOMLEFT", 0, -4)
 	form.seeds = {}
 	for index = 1, 4 do
 		local seed = CreateFrame("CheckButton", nil, form, "UICheckButtonTemplate")
 		seed:SetSize(22, 22)
-		seed:SetPoint("TOPLEFT", 0, -202 - (index - 1) * 24)
 		seed.Text:SetFontObject("GameFontHighlight")
 		seed:SetHitRectInsets(0, -150, 0, 0)
 		seed:SetScript("OnClick", function()
@@ -825,15 +924,15 @@ local function CreateForm(body)
 		table.insert(form.seeds, seed)
 	end
 	form.othersText = MakeLabel(form, "", "GameFontDisableSmall")
-	form.othersText:SetPoint("TOPLEFT", 26, -300)
 	form.othersText:SetPoint("RIGHT", form, "RIGHT")
 	form.startText = MakeLabel(form, "", "GameFontNormal")
-	form.startText:SetPoint("TOPLEFT", 2, -324)
 
 	form.create = CreateFrame("Button", nil, form, "UIPanelButtonTemplate")
 	form.create:SetSize(190, 26)
 	form.create:SetPoint("BOTTOMLEFT", 0, 0)
 	form.create:SetScript("OnClick", SubmitForm)
+	form.createHint = MakeLabel(form, "", "GameFontDisableSmall")
+	form.createHint:SetPoint("LEFT", form.create, "RIGHT", 12, 0)
 
 	-- Shift-clicking an item while the name box has focus picks it.
 	if ChatFrameUtil and ChatFrameUtil.InsertLink then
@@ -855,7 +954,7 @@ end
 local function UpdateNav()
 	local data = G().GetData()
 	for _, button in ipairs(navButtons) do
-		button:SetSelected(button.page == page or (button.page == "new" and page == "recount"))
+		button:SetSelected(button.page == page)
 		if button.page == "active" then
 			button.count:SetText(#data.goals)
 		elseif button.page == "history" then
@@ -919,8 +1018,16 @@ end
 local function CreateGoalsWindow()
 	frame = UI.CreateWindow("NraKitGoalsFrame", "Goals", WIDTH, HEIGHT, SIDEBAR_WIDTH)
 
-	local anchor
-	for _, info in ipairs({ { "active", "Active goals" }, { "new", "New goal" }, { "history", "History" } }) do
+	local newButton = UI.CreateFlatButton(frame.sidebar, "+  New goal", 28)
+	newButton:SetWidth(SIDEBAR_WIDTH - 2 * PAD)
+	newButton:SetPoint("TOPLEFT", PAD, -PAD)
+	newButton:SetSelected(true)
+	newButton:SetScript("OnClick", function()
+		ns:OpenGoalsWindow("new")
+	end)
+
+	local anchor = newButton
+	for _, info in ipairs({ { "active", "Active goals" }, { "history", "History" } }) do
 		local button = UI.CreateNavButton(frame.sidebar, SIDEBAR_WIDTH - 2 * PAD, 26, info[2])
 		button.page = info[1]
 		button:SetScript("OnClick", function(self)
@@ -929,14 +1036,19 @@ local function CreateGoalsWindow()
 			scroll:SetScroll(0)
 			Render()
 		end)
-		if anchor then
-			button:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -2)
-		else
-			button:SetPoint("TOPLEFT", PAD, -PAD)
-		end
+		button:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, anchor == newButton and -12 or -2)
 		anchor = button
 		table.insert(navButtons, button)
 	end
+
+	local help = frame.sidebar:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+	help:SetPoint("BOTTOMLEFT", PAD, PAD)
+	help:SetWidth(SIDEBAR_WIDTH - 2 * PAD)
+	help:SetJustifyH("LEFT")
+	help:SetSpacing(2)
+	help:SetText("Goals count what you gain after you make them.\n\n"
+		.. "They show in a small tracker you can drag anywhere. Right-click a goal there to pause, "
+		.. "reset or remove it.\n\nThe tracker's look and sounds are in the NraKit settings.")
 
 	scroll = UI.CreateScrollArea(frame.body)
 	scroll:SetPoint("TOPLEFT")
@@ -971,6 +1083,8 @@ function ns:OpenGoalsWindow(toPage, goalID)
 	if toPage then
 		page = toPage
 		recountID = goalID
+	elseif #G().GetData().goals == 0 then
+		page = "new"
 	end
 	if page == "new" and formType == "level" and form.amount:GetText() == "" then
 		form.amount:SetText(tostring(UnitLevel("player") + 1))

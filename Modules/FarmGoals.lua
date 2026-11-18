@@ -13,7 +13,8 @@ local _, ns = ...
 -- and finishing one plays a fanfare and shows a message in the middle of the screen.
 -- The Goals window (FarmGoalsWindow.lua) adds goals and shows the history.
 --
--- Saved per character in NraKitDB.farmGoals["Name-Realm"] = { goals = {...}, history = {...} }:
+-- Saved per character in NraKitDB.farmGoalsData["Name-Realm"] (not "farmGoals": that's the
+-- module's on/off setting) = { goals = {...}, history = {...} }:
 --   goal = { id, type = "item"|"level"|"xp"|"gold"|"rep"|"skill"|"currency", target, itemID,
 --            key (factionID/skillID/currencyID), mode ("reach"|"gain"), toMax, name, start,
 --            gained, last, startLevel, created, active (seconds), paused, completed, milestone }
@@ -118,11 +119,11 @@ local nextID = 0
 ------------------------------------------------------------------------------
 
 local function GetData()
-	NraKitDB.farmGoals = NraKitDB.farmGoals or {}
-	local data = NraKitDB.farmGoals[characterKey]
+	NraKitDB.farmGoalsData = NraKitDB.farmGoalsData or {}
+	local data = NraKitDB.farmGoalsData[characterKey]
 	if not data then
 		data = { goals = {}, history = {} }
-		NraKitDB.farmGoals[characterKey] = data
+		NraKitDB.farmGoalsData[characterKey] = data
 	end
 	return data
 end

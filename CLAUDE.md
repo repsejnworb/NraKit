@@ -81,6 +81,8 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   plates to combat. EngagedNameplates toggles `nameplateShowEnemies` on `PLAYER_REGEN_DISABLED`/`ENABLED` instead.
 - `nameplateMinScaleDistance` and `nameplateMaxScaleDistance` are both 10, so plates are either full size or min scale (no gradient).
 - Modules that change CVars save the user's originals in `NraKitDB` and restore them when turned off.
+- Module and option keys are `NraKitDB` keys too (their on/off values). Data a module stores in `NraKitDB` must use a
+  different key (e.g. `farmGoalsData`, not `farmGoals`), or it overwrites the setting and breaks.
 
 ## Releasing
 
