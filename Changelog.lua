@@ -16,7 +16,7 @@ local _, ns = ...
 --           "new" entry with its module (tests/changelog_test.lua checks).
 
 ns.changelog = {
-	{ version = "Unreleased", entries = {
+	{ version = "0.12.0", date = "2026-11-19", entries = {
 		{ "new", "Player notes: give players a label (Kill on sight, Avoid, Neutral, Good, Friend, or your own) and keep dated notes on them. Shown in their tooltip; right-click a player for Player note or to set their label. Warns you when a player you've marked Avoid or Kill on sight joins your group, invites, whispers or trades you.", module = "playerNotes" },
 		{ "new", "Unit Scanner alerts you when a player you've labelled Kill on sight (Player notes) shows up nearby.", module = "unitScanner" },
 		{ "new", "What's new: this page. NraKit tells you in chat when it has been updated; new features can be turned on right here." },
