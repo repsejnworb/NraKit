@@ -9,7 +9,9 @@ local addonName, ns = ...
 -- one chat line per session; What's new shows it too.
 --
 -- /nra who asks the guild and group ("WHO"); everyone answers by whisper ("VER:...")
--- and the list prints a few seconds later.
+-- and the list prints a few seconds later, with how many NraKit users you've come
+-- across: this session, and ever (NraKitDB.nraKitUsersSeen: name -> last seen; only
+-- kept on your computer).
 --
 -- A development copy (a git clone: the TOC version is still "@project-version@")
 -- answers /nra who as "dev" but never compares. Pre-releases only count for people on
@@ -29,7 +31,7 @@ local GROUP_DELAY = 3
 local REPLY_DELAY_MIN, REPLY_DELAY_SPREAD = 1, 3
 local WHO_WAIT = 3
 
-local known = {} -- sender -> { version, time } heard this session
+local known = {} -- "Bob Stone" -> { version, time } heard this session
 local pendingReply = {} -- channel -> true while waiting to answer an older hello
 local groupChannel -- the group channel we last said hello on
 local notified = false
@@ -137,7 +139,10 @@ function versionCheck.Newer()
 end
 
 local function Heard(sender, version)
-	known[sender] = { version = version, time = GetTime() }
+	local name = DisplayName(sender)
+	known[name] = { version = version, time = GetTime() }
+	NraKitDB.nraKitUsersSeen = NraKitDB.nraKitUsersSeen or {}
+	NraKitDB.nraKitUsersSeen[name:lower()] = time()
 	local theirs, mine = versionCheck.Parse(version), versionCheck.Parse(versionCheck.MyVersion())
 	if not theirs or not mine or (theirs.pre and not mine.pre) then
 		return
@@ -227,6 +232,20 @@ local function PrintWho(since)
 	for _, entry in ipairs(list) do
 		print(string.format("  %s  %s", entry.name, Describe(entry.version)))
 	end
+	local session, ever = versionCheck.SeenCounts()
+	print(string.format("  |cff808080NraKit users you've come across: %d this session, %d in all.|r", session, ever))
+end
+
+-- How many other NraKit users you've heard from (guild, group, whispers): this session, and ever.
+function versionCheck.SeenCounts()
+	local session, ever = 0, 0
+	for _ in pairs(known) do
+		session = session + 1
+	end
+	for _ in pairs(NraKitDB.nraKitUsersSeen or {}) do
+		ever = ever + 1
+	end
+	return session, ever
 end
 
 local WHO_HELP = {

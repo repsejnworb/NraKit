@@ -21,7 +21,7 @@ ns.changelog = {
 		{ "new", "Unit Scanner alerts you when a player you've labelled Kill on sight (Player notes) shows up nearby.", module = "unitScanner" },
 		{ "new", "What's new: this page. NraKit tells you in chat when it has been updated; new features can be turned on right here." },
 		{ "improved", "NraKit's windows (Settings, Inventory, Goals, Notes) are tabs of one window: same size and place, with tabs at the top for the features you have on. Right-click NraKit in the addon button by the minimap for a menu of them." },
-		{ "new", "NraKit tells you when a newer version is out, when someone in your guild or group already has it. /nra who lists who in your guild and group runs NraKit, and which version. Switch it off on this page." },
+		{ "new", "NraKit tells you when a newer version is out, when someone in your guild or group already has it. /nra who lists who in your guild and group runs NraKit, which version, and how many NraKit users you've come across. Switch it off on this page." },
 	} },
 	{ version = "0.11.0", date = "2026-11-18", entries = {
 		{ "new", "Farm goals: set goals like \"loot 4000 Silk Cloth\", \"reach level 40\", \"earn 100 gold\", \"reach Revered with Timbermaw Hold\", a skill or a currency, and track them in a small movable tracker with rate per hour and time left. /nra goal opens the goals window.", module = "farmGoals" },

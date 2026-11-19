@@ -4,7 +4,7 @@
 
 Type **/nrakit** (or **/nra**) to open NraKit's own window: features grouped in a sidebar, **search**, an on/off switch per feature and its options right underneath. Everything is off until you turn it on. The same settings are also under **Options → AddOns → NraKit**. NraKit's windows (Settings, Inventory, Goals, Notes) work as **tabs of one window**, with a tab for each feature you have on. NraKit is also in the **addon button by the minimap** (no extra minimap button): left-click for settings, right-click for a menu of its windows. **/nra help** lists the chat commands.
 
-**What's new** (**/nra new**, at the top of the NraKit window) shows what changed in every version, and new features can be turned on right there. After an update, NraKit tells you in one chat line (you can turn that off). It also tells you when a **newer version is out**, if someone in your guild or group already has it, and **/nra who** lists who in your guild and group runs NraKit (both can be switched off).
+**What's new** (**/nra new**, at the top of the NraKit window) shows what changed in every version, and new features can be turned on right there. After an update, NraKit tells you in one chat line (you can turn that off). It also tells you when a **newer version is out**, if someone in your guild or group already has it, and **/nra who** lists who in your guild and group runs NraKit (and how many NraKit users you've come across) (both can be switched off).
 
 Alert **sounds are yours to choose** (Campfire timer, Unit Scanner, Farm goals, Player notes): a short list of good ones (hover to hear them), or **More sounds...** to search every game sound and any sounds other addons share through LibSharedMedia.
 

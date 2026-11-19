@@ -133,6 +133,13 @@ return {
 			t.ok(Printed("2 other players"), "count")
 			t.ok(Printed("Eli Moss") and Printed("Fay Dorn  dev"), "listed, dash names readable")
 			t.ok(not Printed("Ann Lee"), "only who answered now")
+			t.ok(Printed("come across: 8 this session, 8 in all"), "users seen")
+		end)
+
+		t.test("users seen: one per player however their name is spelled, kept across sessions", function()
+			Message("VER:0.12.0", "GUILD", "Eli Moss")
+			t.equal(select(1, check.SeenCounts()), 8, "Eli-Moss and Eli Moss are one")
+			t.ok(NraKitDB.nraKitUsersSeen["eli moss"], "saved")
 		end)
 
 		t.test("blocked addon messages: nothing is sent", function()
