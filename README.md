@@ -128,6 +128,7 @@ addons share through LibSharedMedia.
     replaces it. Optionally the last player you mailed is filled in when you open Send Mail.
   - **Alt+click to attach all**: with Send Mail open, Alt+click an item in your bags to attach every
     stack of it you have (all your Silk Cloth, all 4 Small Red Pouches), as many as fit in the mail.
+  <img width="486" height="545" alt="mailInboxFeatures" src=".github/screenshots/mailInboxFeatures.png" />
 - **Hide micro menu notifications**: hides the blue "new" dot on the Shop button, and shows the
   Legacy button's dot only while you have unspent Legacy Tree points (not for every new challenge).
 - **Item lookup**: search every item in the game by name. `/nra item nightbl` opens an Items tab

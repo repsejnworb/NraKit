@@ -111,6 +111,8 @@ Helpers for the mailbox, each one an option (all on once you turn **Mail** on):
 - **Remember mail recipient**: the **To** box **keeps the name after you send** a mail, so sending several mails to the same player (like your **bank alt**) needs no retyping. It can also fill in the **last player you mailed** when you open Send Mail.
 - **Alt+click to attach all**: with Send Mail open, **Alt+click an item in your bags** to attach **every stack** of it you have (all your Silk Cloth, all 4 Small Red Pouches), as many as fit in the mail.
 
+![mailInboxFeatures](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/mailInboxFeatures.png)
+
 ### Hide micro menu notifications
 Hides the blue notification dot on the **Shop** button that never goes away, and makes the **Legacy** button's dot show only when you have **unspent Legacy points**, not for every new challenge.
 
