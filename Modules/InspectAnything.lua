@@ -198,6 +198,8 @@ function inspect.ShowModel(unit)
 end
 
 -- The key: players you can inspect get the inspect window, everyone else the model viewer.
+-- Addons can't open the inspect window in combat (it's a UI panel; the game blocks it with
+-- "Interface action failed because of an AddOn"), so in combat players get the viewer too.
 function inspect.Inspect()
 	if not ns:IsModuleEnabled(module.key) then
 		return
@@ -208,10 +210,13 @@ function inspect.Inspect()
 		return
 	end
 	if CanInspect(unit) then
-		InspectUnit(unit)
-	else
-		inspect.ShowModel(unit)
+		if not InCombatLockdown() then
+			InspectUnit(unit)
+			return
+		end
+		ns:Print("The inspect window can't open in combat, so here's their model.")
 	end
+	inspect.ShowModel(unit)
 end
 
 local eventFrame = CreateFrame("Frame")

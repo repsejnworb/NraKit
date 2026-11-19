@@ -104,6 +104,18 @@ return {
 			units.mouseover = nil
 		end)
 
+		-- Regression: opening the inspect window in combat was blocked ("Interface action failed").
+		t.test("in combat a player gets the model viewer, not the blocked inspect window", function()
+			units.mouseover = { name = "Grunt", surname = "Axe", isPlayer = true }
+			wow.data.inCombat = true
+			NraKit_InspectAnything()
+			t.equal(#inspected, 1, "inspect window not opened")
+			t.equal(Title(), "Grunt Axe", "model shown")
+			t.ok(Printed("can't open in combat"), "says why")
+			wow.data.inCombat = false
+			units.mouseover = nil
+		end)
+
 		t.test("turn, zoom and reset", function()
 			model.scripts.OnMouseDown(model, "LeftButton")
 			cursorX = cursorX + 50
