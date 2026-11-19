@@ -1,6 +1,6 @@
-# NraKit 0.17.1
+# NraKit 0.17.2
 
-### Fixed
-- Inspect anything: NPCs show their health and attack speed again, with the level, type and stats in small lines above the model as before. Players' level line no longer shows their race, as in the game's own inspect window.
+### Improved
+- Item lookup: the search box no longer grabs your keyboard when the window opens (or with /nra item <name>), so you can keep moving and fighting; click it to type, and Enter or Esc gives the keys back.
 
 Type /nra new in game to see what's new in every version.
