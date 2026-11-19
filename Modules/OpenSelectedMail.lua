@@ -10,16 +10,10 @@ local _, ns = ...
 -- Mail indexes shift as emptied mails disappear, so a selection is remembered by
 -- sender, subject and expiry time instead of by index.
 
-local module = {
-	key = "openSelectedMail",
-	section = "Mail",
-	name = "Open selected mail",
-	description = "Adds a checkbox to each mail in your inbox. Tick some and the Open All button only opens those.",
-	default = false,
-}
 
 -- Two reads of the same mail's days left can differ slightly; this is about a minute.
 local DAYS_TOLERANCE = 0.001
+local feature = { key = "openSelectedMail" } -- an option of the Mail feature (Mail.lua)
 
 local selected = {} -- list of { sender, subject, daysLeft }
 local checkboxes = {}
@@ -44,7 +38,7 @@ local function FindSelection(index)
 end
 
 local function IsActive()
-	return ns:IsModuleEnabled(module.key) and #selected > 0
+	return ns.mail.IsOn(feature.key) and #selected > 0
 end
 
 local function UpdateOpenAllText()
@@ -76,7 +70,7 @@ local function Prune()
 end
 
 local function UpdateCheckboxes()
-	local enabled = ns:IsModuleEnabled(module.key)
+	local enabled = ns.mail.IsOn(feature.key)
 	for i = 1, INBOXITEMS_TO_DISPLAY do
 		local checkbox = checkboxes[i]
 		local button = _G["MailItem" .. i .. "Button"]
@@ -154,7 +148,7 @@ eventFrame:SetScript("OnEvent", function()
 	wipe(selected)
 end)
 
-function module:OnInitialize()
+function feature.OnInitialize()
 	if not OpenAllMail or not OpenAllMail.ShouldSkipCurrentMail then
 		return
 	end
@@ -169,10 +163,10 @@ function module:OnInitialize()
 	eventFrame:RegisterEvent("MAIL_CLOSED")
 end
 
-function module:OnEnabledChanged()
+function feature.OnEnabledChanged()
 	if checkboxes[1] then
 		UpdateCheckboxes()
 	end
 end
 
-ns:RegisterModule(module)
+ns.mail.Register(feature)

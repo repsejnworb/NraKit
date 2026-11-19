@@ -22,6 +22,8 @@ ns.moduleOrder = {}
 --               An option with `parent = <option key>` is nested under that checkbox,
 --               `header = "..."` starts a new sub-section before the option, and
 --               `requires = <module key>` greys it out while that other module is off.
+--   Migrate(self, db)                    optional; called on load before defaults are filled
+--                                        in, to carry over settings that moved (see Mail.lua)
 --   OnInitialize(self)                   called once on PLAYER_LOGIN
 --   OnEnabledChanged(self, on)           called when the module is toggled
 --   OnOptionChanged(self, key, value)    called when a sub-option changes
@@ -86,6 +88,12 @@ end
 
 local function InitializeDB()
 	NraKitDB = NraKitDB or {}
+	-- Settings moved or renamed are carried over first, so the defaults don't fill them in.
+	for _, module in ipairs(ns.moduleOrder) do
+		if module.Migrate then
+			module:Migrate(NraKitDB)
+		end
+	end
 	for _, module in ipairs(ns.moduleOrder) do
 		SetDefault(module.key, module.default)
 		for _, option in ipairs(module.options or {}) do

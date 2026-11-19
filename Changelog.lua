@@ -45,8 +45,8 @@ ns.changelog = {
 		{ "new", "Farm goals: pick your own icon for a goal, like a macro icon. Click the icon in the goal form, or drop an item or spell on it to use its icon." },
 	} },
 	{ version = "0.13.0", date = "2026-11-19", entries = {
-		{ "new", "Fill in mail subject: the subject of a mail you send is written from what you attach, e.g. \"Linen Cloth (40)\", \"25g\" or \"Linen Cloth (20) + 5g\". A subject you typed is left alone.", module = "mailSubject" },
-		{ "new", "Remember mail recipient: the To box keeps the name after you send a mail, so mailing your bank alt again needs no typing. It also fills in the last player you mailed when you open Send Mail.", module = "mailRecipient" },
+		{ "new", "Fill in mail subject: the subject of a mail you send is written from what you attach, e.g. \"Linen Cloth (40)\", \"25g\" or \"Linen Cloth (20) + 5g\". A subject you typed is left alone.", module = "mail" },
+		{ "new", "Remember mail recipient: the To box keeps the name after you send a mail, so mailing your bank alt again needs no typing. It also fills in the last player you mailed when you open Send Mail.", module = "mail" },
 		{ "improved", "The mail features (Open selected mail, Fill in mail subject, Remember mail recipient) have their own Mail section in the NraKit window and settings." },
 	} },
 	{ version = "0.12.0", date = "2026-11-19", entries = {
@@ -80,7 +80,7 @@ ns.changelog = {
 	{ version = "0.7.0", date = "2026-11-17", entries = {
 		{ "new", "Inventory Tracker: item tooltips show how many each of your characters has, and where.", module = "inventoryTracker" },
 		{ "new", "Known recipes: recipes you already know get a green check at vendors and in your bags.", module = "knownRecipes" },
-		{ "new", "Open selected mail: tick mails in your inbox and Open All only opens those.", module = "openSelectedMail" },
+		{ "new", "Open selected mail: tick mails in your inbox and Open All only opens those.", module = "mail" },
 		{ "new", "Hide micro menu notifications: no more \"new\" dot on the Shop button, and the Legacy button's dot only for unspent points.", module = "microMenuNotifications" },
 		{ "fixed", "One feature failing to start no longer stops the others." },
 	} },

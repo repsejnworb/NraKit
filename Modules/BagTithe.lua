@@ -211,6 +211,9 @@ local function OnItemButtonClick(itemButton, mouseButton)
 		or not ns:GetOption("bagTitheAltClick") then
 		return
 	end
+	if ns.mailAttachAll and ns.mailAttachAll.IsActive() then
+		return -- with Send Mail open, Alt+click attaches all of it instead
+	end
 	-- Alt+left-click has no default action on bag items, so this doesn't clash.
 	local itemID = C_Container.GetContainerItemID(itemButton:GetBagID(), itemButton:GetID())
 	if itemID then

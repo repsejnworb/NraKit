@@ -9,21 +9,8 @@ local _, ns = ...
 -- we put the name back right after. Replying still fills in the sender (Reply sets the name
 -- after switching tabs, so after us).
 
-local module = {
-	key = "mailRecipient",
-	section = "Mail",
-	name = "Remember mail recipient",
-	description = "Keeps the name in the To box after you send a mail, so you can send several to the same player (like your bank alt) without typing it again.",
-	default = false,
-	options = {
-		{
-			key = "mailRecipientOnOpen",
-			name = "Fill it in when opening Send Mail",
-			description = "Also fill in the last player you mailed (from this character) when you open the Send Mail tab.",
-			default = true,
-		},
-	},
-}
+
+local feature = { key = "mailRecipient" } -- an option of the Mail feature (Mail.lua)
 
 local mailRecipient = {}
 ns.mailRecipient = mailRecipient
@@ -56,7 +43,7 @@ end
 function mailRecipient.OnSent()
 	local name = sending
 	sending = nil
-	if not name or name == "" or not ns:IsModuleEnabled(module.key) then
+	if not name or name == "" or not ns.mail.IsOn(feature.key) then
 		return
 	end
 	NraKitDB.mailRecipientData = NraKitDB.mailRecipientData or {}
@@ -67,7 +54,7 @@ end
 -- A mail tab was clicked (tab 2 is Send Mail).
 function mailRecipient.OnTab(tab, tabID)
 	tabID = tabID or (tab and tab:GetID())
-	if tabID == 2 and ns:IsModuleEnabled(module.key) and ns:GetOption("mailRecipientOnOpen")
+	if tabID == 2 and ns.mail.IsOn(feature.key) and ns:GetOption("mailRecipientOnOpen")
 		and SendMailNameEditBox:GetText() == "" then
 		Fill(mailRecipient.Last())
 	end
@@ -78,7 +65,7 @@ eventFrame:SetScript("OnEvent", function()
 	sending = nil -- MAIL_FAILED
 end)
 
-function module:OnInitialize()
+function feature.OnInitialize()
 	if not SendMailNameEditBox or not SendMailFrame_Reset then
 		return
 	end
@@ -88,4 +75,4 @@ function module:OnInitialize()
 	eventFrame:RegisterEvent("MAIL_FAILED")
 end
 
-ns:RegisterModule(module)
+ns.mail.Register(feature)

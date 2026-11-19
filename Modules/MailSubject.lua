@@ -8,15 +8,9 @@ local _, ns = ...
 -- after Send Money / C.O.D. is switched. A subject is only replaced when it's empty or
 -- still the one we (or Blizzard) wrote, so a subject you typed is never touched.
 
-local module = {
-	key = "mailSubject",
-	section = "Mail",
-	name = "Fill in mail subject",
-	description = "Writes the subject of a mail you're sending from what you attach: \"Linen Cloth (40)\", \"25g\" or \"Linen Cloth (20) + 5g\". A subject you typed yourself is left alone.",
-	default = false,
-}
 
 local MAX_LETTERS = 64 -- the subject box's limit
+local feature = { key = "mailSubject" } -- an option of the Mail feature (Mail.lua)
 
 local mailSubject = {}
 ns.mailSubject = mailSubject
@@ -98,7 +92,7 @@ local function AttachedItems()
 end
 
 function mailSubject.Update()
-	if not ns:IsModuleEnabled(module.key) or not SendMailSubjectEditBox then
+	if not ns.mail.IsOn(feature.key) or not SendMailSubjectEditBox then
 		return
 	end
 	local items = AttachedItems()
@@ -129,7 +123,7 @@ eventFrame:SetScript("OnEvent", function()
 	end
 end)
 
-function module:OnInitialize()
+function feature.OnInitialize()
 	if not SendMailFrame_Update or not SendMailSubjectEditBox then
 		return
 	end
@@ -147,8 +141,8 @@ function module:OnInitialize()
 	eventFrame:RegisterEvent("GET_ITEM_INFO_RECEIVED")
 end
 
-function module:OnEnabledChanged()
+function feature.OnEnabledChanged()
 	mailSubject.Update()
 end
 
-ns:RegisterModule(module)
+ns.mail.Register(feature)

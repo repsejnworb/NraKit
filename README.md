@@ -113,14 +113,17 @@ addons share through LibSharedMedia.
   
 - **/leave leaves your group**: type `/leave` (with nothing after it) or `/leavegroup` to leave
   your party, raid or instance group. `/leave <channel>` still leaves a chat channel.
-- **Open selected mail**: a checkbox on each mail in your inbox. Tick some and the Open All button
-  turns into "Open Selected (N)" and only opens those. The selection is cleared when you close the mailbox.
-- **Fill in mail subject**: the subject of a mail you're sending is written from what you attach,
-  like "Linen Cloth (40)", "Linen Cloth (40), Wool Cloth (20)", "25g", "Linen Cloth (20) + 5g" or
-  "Linen Cloth (20) (C.O.D. 5g)". A subject you typed yourself is never replaced.
-- **Remember mail recipient**: the To box keeps the name after you send a mail, so you can send
-  several to the same player (like your bank alt) without typing it again. The name is selected, so typing
-  replaces it. Optionally (on by default) the last player you mailed is filled in when you open Send Mail.
+- **Mail**: helpers for the mailbox, each one an option (all on once you turn Mail on):
+  - **Open selected mail**: a checkbox on each mail in your inbox. Tick some and the Open All button
+    turns into "Open Selected (N)" and only opens those. The selection is cleared when you close the mailbox.
+  - **Fill in mail subject**: the subject of a mail you're sending is written from what you attach,
+    like "Linen Cloth (40)", "Linen Cloth (40), Wool Cloth (20)", "25g", "Linen Cloth (20) + 5g" or
+    "Linen Cloth (20) (C.O.D. 5g)". A subject you typed yourself is never replaced.
+  - **Remember mail recipient**: the To box keeps the name after you send a mail, so you can send
+    several to the same player (like your bank alt) without typing it again. The name is selected, so typing
+    replaces it. Optionally the last player you mailed is filled in when you open Send Mail.
+  - **Alt+click to attach all**: with Send Mail open, Alt+click an item in your bags to attach every
+    stack of it you have (all your Silk Cloth, all 4 Small Red Pouches), as many as fit in the mail.
 - **Hide micro menu notifications**: hides the blue "new" dot on the Shop button, and shows the
   Legacy button's dot only while you have unspent Legacy Tree points (not for every new challenge).
 - **Item lookup**: search every item in the game by name. `/nra item nightbl` opens an Items tab
