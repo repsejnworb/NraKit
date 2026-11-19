@@ -1,9 +1,7 @@
-# NraKit 0.14.0
+# NraKit 0.14.1
 
-### New
-- Farm goals: pick your own icon for a goal, like a macro icon. Click the icon in the goal form, or drop an item or spell on it to use its icon.
-
-### Improved
-- Farm goals: icons that fit the goal, like an axe for Axes, a pick for Mining, coins for gold and the level's badge for level goals.
+### Fixed
+- Inventory Tracker: characters are kept by first name and surname, so two of yours with the same first name no longer share one inventory. Tooltips and the inventory browser show the full name, and mail to "Firstname Surname" counts on that character. Your saved inventories move over when you log in to each character.
+- Farm goals: goals are kept by first name and surname, so two characters with the same first name no longer share their goals.
 
 Type /nra new in game to see what's new in every version.
