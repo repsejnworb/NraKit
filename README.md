@@ -116,7 +116,8 @@ addons share through LibSharedMedia.
   renamed, recolored, added and deleted; each has a tone that decides what it does: Hostile (warnings
   and Unit Scanner alerts), Caution (warnings), Neutral or Friendly (tooltip only). `/nra note` opens
   the notebook (**+ Add player** adds anyone by first name and surname; search by name, label or note text) or your target's notes; from chat,
-  `/nra note Bob Stone kos stole my node` or `/nra note avoid ninja'd the loot` for your target.
+  `/nra note Bob Stone kos stole my node` and with a player targeted just
+  `/nra note ninja'd the loot` (or `/nra note avoid ninja'd the loot` to label them too).
 
 ## Development
 Requires [just](https://github.com/casey/just), [cocogitto](https://github.com/cocogitto/cocogitto) and Lua (`luac` for the syntax check; LuaJIT for the tests, since it runs Lua 5.1 like the game).

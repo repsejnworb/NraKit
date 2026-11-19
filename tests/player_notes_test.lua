@@ -65,6 +65,32 @@ return {
 			wow.data.units.target = nil
 		end)
 
+		t.test("with a player targeted, plain text is a note for them", function()
+			wow.data.units.target = { name = "Hal", surname = "Pike", guid = "Player-1-0009" }
+			Slash("note testing")
+			t.ok(players()["testing"] == nil, "no player called testing")
+			local record = players()["hal pike"]
+			t.ok(record and record.notes[1].text == "testing", "note on the target")
+			Slash("note Hal Pike avoid camped the mailbox")
+			t.equal(record.label, "avoid", "naming your target works too")
+			t.equal(record.notes[2].text, "camped the mailbox", "and its note")
+			Slash("note Ann Lee was here again")
+			t.equal(players()["ann lee"].notes[2].text, "was here again", "a noted player named in full wins over the target")
+			wow.data.units.target = nil
+		end)
+
+		t.test("without a target, a lone word or label asks who it's for", function()
+			wow.printed = {}
+			Slash("note testing")
+			t.ok(players()["testing"] == nil, "nobody added")
+			t.ok(wow.printed[#wow.printed]:find("Who is that for", 1, true), "explains")
+			Slash("note kos stole my node")
+			t.ok(players()["kos stole"] == nil, "a label first doesn't become a name")
+			Slash("note Bob Smith was rude")
+			t.ok(players()["bob smith"], "a new Bob, not Bob Stone")
+			t.equal(#players()["bob stone"].notes, 1, "Bob Stone untouched")
+		end)
+
 		t.test("a renamed player is still found by GUID", function()
 			wow.data.units.target = { name = "Cid", surname = "Newname", guid = "Player-1-0001" }
 			local record = notes.FindUnit("target")
@@ -78,7 +104,7 @@ return {
 			wow.data.units.mouseover = { name = "Ann", surname = "Lee" }
 			local lines = wow.unitTooltip("mouseover")
 			t.ok(lines[1] and lines[1]:find("Kill on sight", 1, true), "label line")
-			t.ok(lines[2] and lines[2]:find("ganked me", 1, true), "note line")
+			t.ok(lines[2] and lines[2]:find("was here again", 1, true), "latest note line")
 			NraKitDB.playerNotesTooltip = false
 			t.equal(#wow.unitTooltip("mouseover"), 0, "option off")
 			NraKitDB.playerNotesTooltip = true

@@ -727,10 +727,10 @@ local HELP = {
 	summary = "Player notes: label players and keep notes on them",
 	usage = {
 		"/nra note - your target's notes, or the notebook",
-		"/nra note <First Last> - open a player's notes",
-		"/nra note <First Last> <label> [note] - set their label (kos, avoid, neutral, good, friend, or yours) and add a note",
-		"/nra note <First Last> <note> - add a note",
-		"/nra note <label> [note] - the same for your target",
+		"/nra note <note> - add a note to your target (a player)",
+		"/nra note <label> [note] - set your target's label (kos, avoid, neutral, good, friend, or yours), and add a note",
+		"/nra note <First Last> [label] [note] - the same for anyone by name (no note: opens their notes)",
+		"/nra note <first name> [label [note]] - someone you already have notes on (e.g. /nra note bob kos)",
 		"/nra note list - list the players you have notes on",
 	},
 }
@@ -817,32 +817,38 @@ local function OnSlashCommand(input)
 	for word in input:gmatch("%S+") do
 		table.insert(words, word)
 	end
-
-	-- "<label> [note]" for your target.
 	local targetName, targetInfo = notes.TargetPlayer()
-	local firstLabel = notes.LabelByWord(words[1])
-	if targetName and firstLabel then
-		Apply(targetName, targetInfo, firstLabel, table.concat(words, " ", 2))
+	local function RestFrom(index)
+		local label = notes.LabelByWord(words[index])
+		return label, table.concat(words, " ", label and index + 1 or index)
+	end
+
+	-- A player named in full: someone you have notes on, or your target by name.
+	local twoWords = words[2] and (words[1] .. " " .. words[2])
+	local named = twoWords and (notes.Find(twoWords)
+		or (targetName and notes.Key(targetName) == notes.Key(twoWords)))
+	if named then
+		local isTarget = targetName and notes.Key(targetName) == notes.Key(twoWords)
+		Apply(isTarget and targetName or twoWords, isTarget and targetInfo or nil, RestFrom(3))
 		return
 	end
 
-	-- Name: two words (Forever's "First Last"), unless only the first word is a name:
-	-- "/nra note bob kos" (a noted player whose name starts with it, e.g. Bob Stone).
-	local name, rest
-	local twoWords = words[2] and (words[1] .. " " .. words[2])
-	if twoWords and notes.Find(twoWords) then
-		name, rest = twoWords, 3
-	elseif #words == 1 or (notes.LabelByWord(words[2]) and not notes.LabelByWord(words[3])) then
-		local known = FindByPrefix(words[1])
-		name, rest = known and known.name or words[1], 2
+	-- Otherwise, with a player targeted, it's all about them: "[label] [note]".
+	if targetName then
+		Apply(targetName, targetInfo, RestFrom(1))
+		return
+	end
+
+	-- No target: a noted player by first name, followed by a label or nothing ("bob kos"
+	-- -> Bob Stone; "bob smith kos" is a new Bob), or a new player's "First Last".
+	local known = (#words == 1 or notes.LabelByWord(words[2])) and FindByPrefix(words[1])
+	if known then
+		Apply(known.name, nil, RestFrom(2))
+	elseif notes.LabelByWord(words[1]) or #words == 1 then
+		ns:Print(string.format("Who is that for? Target a player, or name them: |cffffd100/nra note <First Last> %s|r. (/nra note help)", input))
 	else
-		name, rest = twoWords, 3
+		Apply(twoWords, nil, RestFrom(3))
 	end
-	local label = notes.LabelByWord(words[rest])
-	if label then
-		rest = rest + 1
-	end
-	Apply(name, nil, label, table.concat(words, " ", rest))
 end
 
 ------------------------------------------------------------------------------
