@@ -16,7 +16,7 @@ local _, ns = ...
 --           "new" entry with its module (tests/changelog_test.lua checks).
 
 ns.changelog = {
-	{ version = "Unreleased", entries = {
+	{ version = "0.16.0", date = "2026-11-19", entries = {
 		{ "new", "Item lookup: search every item in the game by name. /nra item nightbl lists the matching items in an Items tab, with their tooltips; Shift-click to link one in chat. The list of names fills in by itself in the background, with a progress bar in the tab to pause it or check again for newly discovered items.", module = "itemLookup" },
 	} },
 	{ version = "0.15.0", date = "2026-11-19", entries = {
