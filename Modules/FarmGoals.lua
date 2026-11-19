@@ -215,7 +215,7 @@ local SOUNDS = {
 
 local characterKey
 local lastXP, lastXPMax, lastLevel, lastMoney
-local tracker, toast
+local tracker
 local nextID = 0
 
 ------------------------------------------------------------------------------
@@ -536,131 +536,38 @@ end
 -- Completion message
 ------------------------------------------------------------------------------
 
--- Pops in big, bounces to its size, holds (longer while the mouse is on it) and fades.
--- A goal finished in combat is shown again when the fight ends.
-local TOAST_FADE = 1
+-- NraKit's big toast (Toast.lua). A goal finished in combat is shown again when the fight ends.
 local combatFinished = {} -- goals finished during the current fight
-
--- Scale over the first 0.35s: 1.35 -> 0.95 -> 1.
-local function PopScale(age)
-	if age < 0.18 then
-		return 1.35 - 0.4 * (age / 0.18)
-	elseif age < 0.35 then
-		return 0.95 + 0.05 * ((age - 0.18) / 0.17)
-	end
-	return 1
-end
-
-local function CreateToast()
-	-- The holder stays put; the inner frame is scaled around its centre for the pop.
-	toast = CreateFrame("Frame", nil, UIParent)
-	toast:SetSize(640, 110)
-	toast:SetPoint("CENTER", 0, 260)
-	toast:SetFrameStrata("HIGH")
-	local inner = CreateFrame("Frame", nil, toast)
-	inner:SetSize(640, 110)
-	inner:SetPoint("CENTER")
-	toast.inner = inner
-
-	toast.icon = inner:CreateTexture(nil, "ARTWORK")
-	toast.icon:SetSize(44, 44)
-	toast.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-	toast.heading = inner:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-	toast.heading:SetTextColor(unpack(DONE_COLOR))
-	toast.text = inner:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
-	toast.text:SetTextColor(1, 1, 1)
-	toast.detail = inner:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-	toast.detail:SetTextColor(unpack(UI.TEXT))
-	-- Icon left of the name, both centred together.
-	toast.heading:SetPoint("TOP", 0, 0)
-	toast.text:SetPoint("TOP", toast.heading, "BOTTOM", 26, -8)
-	toast.icon:SetPoint("RIGHT", toast.text, "LEFT", -10, 0)
-	toast.detail:SetPoint("TOP", toast.text, "BOTTOM", -26, -8)
-
-	toast:SetScript("OnUpdate", function(self)
-		local now = GetTime()
-		-- Hovering it keeps it up.
-		if self:IsMouseOver() and now - self.shownAt > 0.35 then
-			self.holdUntil = math.max(self.holdUntil, now + 1)
-		end
-		local age = now - self.shownAt
-		self.inner:SetScale(PopScale(age) * self.size)
-		if now > self.holdUntil + TOAST_FADE then
-			self:Hide()
-		elseif now > self.holdUntil then
-			self:SetAlpha(1 - (now - self.holdUntil) / TOAST_FADE)
-		else
-			self:SetAlpha(1)
-		end
-	end)
-end
 
 -- Shows the message for a goal (or a summary for several finished in one fight).
 local function ShowToast(goal, detail, count)
-	if not toast then
-		CreateToast()
-	end
 	local name, icon = Describe(goal)
 	if goal.type == "item" then
 		name = FormatNumber(goal.target) .. " " .. name
 	end
-	toast.heading:SetText(count and count > 1 and (count .. " GOALS COMPLETE") or "GOAL COMPLETE")
-	toast.text:SetText(name)
-	toast.icon:SetTexture(icon)
-	toast.detail:SetText(detail or ("in " .. FormatDuration(goal.active or 0)))
-	toast.size = (ns:GetValue("farmGoalsToastSize") or 100) / 100
-	toast.shownAt = GetTime()
-	toast.holdUntil = toast.shownAt + (ns:GetValue("farmGoalsToastDuration") or 6)
-	toast:SetAlpha(1)
-	toast:Show()
+	ns.toast.Show({
+		style = "big",
+		heading = count and count > 1 and (count .. " GOALS COMPLETE") or "GOAL COMPLETE",
+		headingColor = DONE_COLOR,
+		text = name,
+		icon = icon,
+		detail = detail or ("in " .. FormatDuration(goal.active or 0)),
+		size = (ns:GetValue("farmGoalsToastSize") or 100) / 100,
+		duration = ns:GetValue("farmGoalsToastDuration") or 6,
+	})
 end
 
--- The milestone message: a quieter cousin of the finish message. Smaller, lower, a
--- gentle pop, gone in a few seconds, and never over a finish message.
-local milestoneToast
-local MILESTONE_HOLD, MILESTONE_FADE = 2.5, 0.6
-
+-- The milestone message: a quieter cousin of the finish message, never over another message.
 local function ShowMilestone(goal, percent)
-	if toast and toast:IsShown() then
-		return
-	end
-	if not milestoneToast then
-		milestoneToast = CreateFrame("Frame", nil, UIParent)
-		milestoneToast:SetSize(500, 50)
-		milestoneToast:SetPoint("CENTER", 0, 200)
-		milestoneToast:SetFrameStrata("HIGH")
-		local inner = CreateFrame("Frame", nil, milestoneToast)
-		inner:SetSize(500, 50)
-		inner:SetPoint("CENTER")
-		milestoneToast.inner = inner
-		milestoneToast.heading = inner:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-		milestoneToast.heading:SetPoint("TOP")
-		milestoneToast.heading:SetTextColor(unpack(UI.ACCENT))
-		milestoneToast.heading:SetText("MILESTONE")
-		milestoneToast.text = inner:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-		milestoneToast.text:SetPoint("TOP", milestoneToast.heading, "BOTTOM", 12, -4)
-		milestoneToast.text:SetTextColor(1, 1, 1)
-		milestoneToast.icon = inner:CreateTexture(nil, "ARTWORK")
-		milestoneToast.icon:SetSize(20, 20)
-		milestoneToast.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-		milestoneToast.icon:SetPoint("RIGHT", milestoneToast.text, "LEFT", -6, 0)
-		milestoneToast:SetScript("OnUpdate", function(self)
-			local age = GetTime() - self.shownAt
-			self.inner:SetScale(age < 0.2 and (1.12 - 0.12 * age / 0.2) or 1)
-			if age > MILESTONE_HOLD + MILESTONE_FADE then
-				self:Hide()
-			elseif age > MILESTONE_HOLD then
-				self:SetAlpha(1 - (age - MILESTONE_HOLD) / MILESTONE_FADE)
-			else
-				self:SetAlpha(1)
-			end
-		end)
-	end
 	local name, icon = Describe(goal)
-	milestoneToast.text:SetText(name .. "  ·  " .. percent .. "%")
-	milestoneToast.icon:SetTexture(icon)
-	milestoneToast.shownAt = GetTime()
-	milestoneToast:Show()
+	ns.toast.Show({
+		style = "small",
+		heading = "MILESTONE",
+		text = name .. "  ·  " .. percent .. "%",
+		icon = icon,
+		duration = 2.5,
+		skipIfBusy = true,
+	})
 end
 
 -- Called when combat ends: show again what finished during the fight.

@@ -13,6 +13,7 @@
 
 Core.lua
 UI.lua
+Toast.lua
 Sounds.lua
 Settings.lua
 Changelog.lua

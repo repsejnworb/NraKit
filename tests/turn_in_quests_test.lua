@@ -79,6 +79,33 @@ return {
 				end
 			end
 		end
+		-- World positions: maps' centres and the player, on continent 1 (Stranglethorn on 2).
+		local CENTRES = { [1437] = { 1, 100, 0 }, [1432] = { 1, 300, 0 }, [1434] = { 2, 0, 0 }, [9999] = { 1, 300, 0 } }
+		local playerMap = 9999 -- where the player stands: (300, 0) on continent 1
+		CreateVector2D = function(x, y)
+			return { x = x, y = y, GetXY = function(self)
+				return self.x, self.y
+			end }
+		end
+		C_Map.GetBestMapForUnit = function()
+			return playerMap
+		end
+		C_Map.GetPlayerMapPosition = function()
+			return CreateVector2D(0.5, 0.5)
+		end
+		C_Map.GetWorldPosFromMapPos = function(mapID)
+			local centre = CENTRES[mapID]
+			if centre then
+				return centre[1], CreateVector2D(centre[2], centre[3])
+			end
+		end
+		local function Shown(text)
+			for _, frame in ipairs(wow.frames) do
+				if frame.text == text and wow.visible(frame) then
+					return frame
+				end
+			end
+		end
 		local function Row(title)
 			for _, frame in ipairs(wow.frames) do
 				if rawget(frame, "questID") and wow.visible(frame) and rawget(frame, "title") == title then
@@ -99,7 +126,7 @@ return {
 				table.insert(list, zone.zone .. ": " .. table.concat(titles, ", "))
 			end
 			t.equal(table.concat(list, " | "),
-				"Loch Modan: Find Bingles, No Map | Stranglethorn Vale: Hemet Nesingwary | Wetlands: The Doomed Fleet",
+				"Loch Modan: Find Bingles, No Map | Wetlands: The Doomed Fleet | Stranglethorn Vale: Hemet Nesingwary",
 				"grouped by where they're turned in (the log's heading without a map)")
 		end)
 
@@ -137,10 +164,40 @@ return {
 			t.ok(not NraKitTurnInFrame:IsShown(), "toggled closed")
 		end)
 
-		t.test("entering a zone with turn-ins says so (once), and can open the window", function()
+		t.test("zones by distance: here, then nearest on this continent, then other continents", function()
+			wow.data.zone = "Elwynn Forest" -- nothing to turn in here
+			CENTRES[1432] = { 1, 300, 0 } -- standing at Loch Modan's centre
+			local order = {}
+			for _, zone in ipairs(ns.turnInQuests.Zones()) do
+				table.insert(order, zone.zone)
+			end
+			t.equal(table.concat(order, ", "), "Loch Modan, Wetlands, Stranglethorn Vale", "nearest first")
+			CENTRES[1432] = { 1, 900, 0 } -- Loch Modan now further away than Wetlands
+			order = {}
+			for _, zone in ipairs(ns.turnInQuests.Zones()) do
+				table.insert(order, zone.zone)
+			end
+			t.equal(table.concat(order, ", "), "Wetlands, Loch Modan, Stranglethorn Vale", "re-sorted")
+			CENTRES[1432] = { 1, 300, 0 }
+		end)
+
+		t.test("entering a zone with turn-ins shows a toast (once); clicking it opens the list", function()
 			wow.data.zone = "Wetlands"
 			wow.fire("ZONE_CHANGED_NEW_AREA")
-			t.ok(Printed("1 quest to turn in here in Wetlands: The Doomed Fleet"), "reminded")
+			local toast = Shown("Wetlands  ·  1 quest")
+			t.ok(toast, "toast")
+			t.ok(Shown("The Doomed Fleet"), "with the quest")
+			t.ok(not Printed("to turn in here in Wetlands"), "no chat line by default")
+			local holder = wow.findAll(function(frame)
+				return wow.visible(frame) and rawget(frame, "onClick") ~= nil
+			end)[1]
+			holder.scripts.OnMouseUp(holder)
+			t.ok(NraKitTurnInFrame:IsShown(), "clicked: the list opens")
+			NraKitTurnInFrame:Hide()
+			ns:SetSetting("turnInQuestsChat", true)
+			wow.data.zone = "Loch Modan"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+			t.ok(Printed("2 quests to turn in here in Loch Modan: Find Bingles, No Map"), "chat line when asked for")
 			local lines = #wow.printed
 			wow.fire("ZONE_CHANGED_NEW_AREA")
 			t.equal(#wow.printed, lines, "not again in the same zone")

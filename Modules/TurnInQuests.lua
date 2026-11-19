@@ -5,8 +5,11 @@ local _, ns = ...
 -- first, each with its level and in its difficulty colour as in the quest log ("[32] Malin's
 -- Request" in yellow). Click a quest to open the map on it (its turn-in shows there); right-click
 -- it, or click its round quest icon (the objective tracker's, drawn with the same textures), to
--- make it your waypoint; Shift-click to link it. Entering a zone with turn-ins says so in chat, and can
--- open the window.
+-- make it your waypoint; Shift-click to link it. Entering a zone with turn-ins says so (a small
+-- toast you can click to open the list, and/or a chat line), and can open the window.
+--
+-- Zones are sorted by how far they are: the one you're in, then the others on your continent
+-- nearest first (their map's centre, in world coordinates), then other continents.
 --
 -- For a finished quest, GetQuestUiMapID gives the turn-in's map on Forever (Hemet Nesingwary
 -- shows Stranglethorn Vale, not where it's picked up); the quest log's heading is the fallback.
@@ -22,8 +25,22 @@ local module = {
 		{
 			key = "turnInQuestsReminder",
 			name = "Remind me when I enter the zone",
-			description = "A chat line when you enter a zone where you have finished quests to turn in.",
+			description = "Say so when you enter a zone where you have finished quests to turn in.",
 			default = true,
+		},
+		{
+			key = "turnInQuestsToast",
+			parent = "turnInQuestsReminder",
+			name = "On screen",
+			description = "A small message in the middle of the screen; click it to open the list.",
+			default = true,
+		},
+		{
+			key = "turnInQuestsChat",
+			parent = "turnInQuestsReminder",
+			name = "In chat",
+			description = "A line in chat with the quests' names.",
+			default = false,
 		},
 		{
 			key = "turnInQuestsAutoOpen",
@@ -58,8 +75,29 @@ local function CurrentZone()
 	return GetRealZoneText and GetRealZoneText() or ""
 end
 
--- Finished quests by turn-in zone: { { zone, quests = { { id, title } } } }, the current zone
--- first, then by name.
+-- Where a map is in the world: its continent and the world position of its centre (or the
+-- player's own, for the player). nil when the game won't say.
+local function WorldPosition(mapID, x, y)
+	if not (mapID and C_Map.GetWorldPosFromMapPos and CreateVector2D) then
+		return nil
+	end
+	local continent, position = C_Map.GetWorldPosFromMapPos(mapID, CreateVector2D(x or 0.5, y or 0.5))
+	if continent and position then
+		local wx, wy = position:GetXY()
+		return { continent = continent, x = wx, y = wy }
+	end
+end
+
+local function PlayerPosition()
+	local mapID = C_Map.GetBestMapForUnit("player")
+	local position = mapID and C_Map.GetPlayerMapPosition(mapID, "player")
+	if position then
+		return WorldPosition(mapID, position:GetXY())
+	end
+end
+
+-- Finished quests by turn-in zone: { { zone, mapID, quests = { { id, title, level } } } }, the
+-- current zone first, then the nearest (same continent before others), then by name.
 function turnIn.Zones()
 	local byZone, zones, header = {}, {}, nil
 	for index = 1, C_QuestLog.GetNumQuestLogEntries() do
@@ -71,7 +109,7 @@ function turnIn.Zones()
 			local map = mapID and mapID > 0 and C_Map.GetMapInfo(mapID)
 			local zone = map and map.name or header or "Other"
 			if not byZone[zone] then
-				byZone[zone] = { zone = zone, quests = {} }
+				byZone[zone] = { zone = zone, mapID = map and mapID or nil, quests = {} }
 				table.insert(zones, byZone[zone])
 			end
 			local level = C_QuestLog.GetQuestDifficultyLevel(info.questID) or info.level
@@ -79,9 +117,22 @@ function turnIn.Zones()
 		end
 	end
 	local here = CurrentZone()
+	local player = PlayerPosition()
+	for _, zone in ipairs(zones) do
+		local position = player and WorldPosition(zone.mapID)
+		if position and position.continent == player.continent then
+			zone.distance = math.sqrt((position.x - player.x) ^ 2 + (position.y - player.y) ^ 2)
+		end
+	end
 	table.sort(zones, function(a, b)
 		if (a.zone == here) ~= (b.zone == here) then
 			return a.zone == here
+		end
+		if (a.distance ~= nil) ~= (b.distance ~= nil) then
+			return a.distance ~= nil -- this continent before the others
+		end
+		if a.distance and a.distance ~= b.distance then
+			return a.distance < b.distance
 		end
 		return a.zone < b.zone
 	end)
@@ -353,8 +404,23 @@ local function OnZoneChanged()
 				for _, quest in ipairs(zone.quests) do
 					table.insert(titles, quest.title)
 				end
-				ns:Print(string.format("%d %s to turn in here in %s: %s (/nra done)", #zone.quests,
-					#zone.quests == 1 and "quest" or "quests", here, table.concat(titles, ", ")))
+				local count = string.format("%d %s", #zone.quests, #zone.quests == 1 and "quest" or "quests")
+				if ns:GetOption("turnInQuestsToast") then
+					ns.toast.Show({
+						style = "small",
+						heading = "QUESTS TO TURN IN",
+						text = here .. "  ·  " .. count,
+						atlas = "UI-QuestIcon-TurnIn-Normal",
+						detail = table.concat(titles, ", "),
+						duration = 6,
+						onClick = function()
+							turnIn.Toggle(true)
+						end,
+					})
+				end
+				if ns:GetOption("turnInQuestsChat") then
+					ns:Print(string.format("%s to turn in here in %s: %s (/nra done)", count, here, table.concat(titles, ", ")))
+				end
 			end
 			if ns:GetOption("turnInQuestsAutoOpen") then
 				turnIn.Toggle(true)
