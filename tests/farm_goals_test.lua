@@ -440,5 +440,81 @@ return {
 			ns:OpenGoalsWindow("active")
 			ns:OpenGoalsWindow("history")
 		end)
+
+		t.test("automatic icons follow what the goal tracks", function()
+			local function Icon(goal)
+				return tostring(select(2, ns.goals.Describe(goal)))
+			end
+			t.ok(Icon({ type = "skill", key = 43 }):find("INV_Sword_04"), "Swords: a sword")
+			t.ok(Icon({ type = "skill", key = 186 }):find("Trade_Mining"), "Mining: a pick")
+			t.ok(Icon({ type = "skill", key = 99999 }):find("WeaponMastery"), "unknown skill: the general icon")
+			t.ok(Icon({ type = "level", target = 40 }):find("Level_40$"), "level 40")
+			t.ok(Icon({ type = "level", target = 65 }):find("Level_60$"), "above 60")
+			t.ok(Icon({ type = "level", target = 7 }):find("Level_10$"), "below 10")
+			t.ok(Icon({ type = "gold", target = 5000 }):find("Coin_03$"), "silver under 1g")
+			t.ok(Icon({ type = "gold", target = 5000000 }):find("Coin_02$"), "a pile from 100g")
+			t.ok(Icon({ type = "rep", key = 576 }):find("Timbermaw"), "Timbermaw Hold")
+			t.equal(ns.goals.AutoIcon({ type = "item" }), 134400, "no item yet: question mark")
+		end)
+
+		-- Finds the goals form's icon button and the picker's cell showing an icon.
+		local function IconButton()
+			return wow.findAll(function(frame)
+				return rawget(frame, "autoIcon") ~= nil and wow.visible(frame)
+			end)[1]
+		end
+		local function IconCell(icon)
+			return wow.findAll(function(frame)
+				return rawget(frame, "iconValue") == icon and wow.visible(frame)
+			end)[1]
+		end
+
+		t.test("pick a custom icon for a goal, and go back to automatic", function()
+			GetMacroIcons = function(list)
+				table.insert(list, 111)
+				table.insert(list, 222)
+			end
+			GetMacroItemIcons = function(list)
+				table.insert(list, 222) -- repeats are shown once
+				table.insert(list, "INV_Misc_Bag_08")
+			end
+			local goal = ns.goals.AddGoal({ type = "level", target = 40 })
+			ns:OpenGoalsWindow("edit", goal.id)
+			local button = IconButton()
+			t.ok(button, "icon button on the form")
+			button.scripts.OnClick(button)
+			t.ok(IconCell(222), "macro icons in the picker")
+			t.ok(IconCell("Interface\\Icons\\INV_Misc_Bag_08"), "icon names get their path")
+			IconCell(222).scripts.OnClick(IconCell(222))
+			t.ok(wow.click("Save changes"), "saved")
+			t.equal(goal.icon, 222, "chosen icon saved")
+			t.equal(select(2, ns.goals.Describe(goal)), 222, "shown everywhere the goal is")
+
+			ns:OpenGoalsWindow("edit", goal.id)
+			IconButton().scripts.OnClick(IconButton())
+			t.ok(wow.click("Automatic  (follows what the goal tracks)"), "Automatic")
+			t.ok(wow.click("Save changes"), "saved")
+			t.equal(goal.icon, nil, "automatic again")
+			t.ok(tostring(select(2, ns.goals.Describe(goal))):find("Level_40$"), "automatic icon")
+			ns.goals.RemoveGoal(goal.id)
+		end)
+
+		t.test("drop an item on the icon to use its icon; finished goals keep it in the history", function()
+			ns:OpenGoalsWindow("new")
+			wow.click("Level")
+			wow.type(wow.amountBox(), "45")
+			GetCursorInfo = function()
+				return "item", SILK
+			end
+			IconButton().scripts.OnReceiveDrag(IconButton())
+			GetCursorInfo = nil
+			t.ok(wow.click("Create goal"), "created")
+			local goal = Newest(ns)
+			t.equal(goal.icon, 132903, "the item's icon")
+			goal.completed = time()
+			ns.goals.RemoveGoal(goal.id)
+			t.equal(ns.goals.GetData().history[1].icon, 132903, "history keeps the icon")
+			t.noErrors()
+		end)
 	end,
 }

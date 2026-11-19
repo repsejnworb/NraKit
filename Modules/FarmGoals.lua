@@ -161,14 +161,50 @@ local MAX_ROWS = 5
 local DONE_COLOR = { 0.3, 0.85, 0.3 }
 local PAUSED_COLOR = { 0.5, 0.5, 0.5 }
 
+local ICON_PATH = "Interface\\Icons\\"
 local ICONS = {
-	level = "Interface\\Icons\\Achievement_Level_10",
-	xp = "Interface\\Icons\\XP_Icon", -- the "XP" icon Blizzard uses for XP rewards
-	gold = "Interface\\Icons\\INV_Misc_Coin_02",
-	rep = "Interface\\Icons\\Achievement_Reputation_01",
-	skill = "Interface\\Icons\\Ability_Warrior_WeaponMastery",
-	currency = "Interface\\Icons\\INV_Misc_Token_ArgentDawn",
+	xp = ICON_PATH .. "XP_Icon", -- the "XP" icon Blizzard uses for XP rewards
+	rep = ICON_PATH .. "Achievement_Reputation_01",
+	skill = ICON_PATH .. "Ability_Warrior_WeaponMastery",
+	currency = ICON_PATH .. "INV_Misc_Token_ArgentDawn",
 }
+
+-- Skill line ID -> icon: weapon skills show the weapon, professions their tool. Others
+-- get ICONS.skill.
+local SKILL_ICONS = {
+	[44] = "INV_Axe_01", [172] = "INV_Axe_04", -- Axes, Two-Handed Axes
+	[43] = "INV_Sword_04", [55] = "INV_Sword_06", -- Swords, Two-Handed Swords
+	[54] = "INV_Mace_01", [160] = "INV_Hammer_04", -- Maces, Two-Handed Maces
+	[173] = "INV_Weapon_ShortBlade_01", [136] = "INV_Staff_08", [229] = "INV_Spear_06", -- Daggers, Staves, Polearms
+	[45] = "INV_Weapon_Bow_05", [46] = "INV_Weapon_Rifle_01", [226] = "INV_Weapon_Crossbow_01", -- Bows, Guns, Crossbows
+	[176] = "INV_ThrowingKnife_02", [228] = "INV_Wand_01", [473] = "INV_Gauntlets_04", -- Thrown, Wands, Fist Weapons
+	[95] = "Ability_Defend", -- Defense
+	[186] = "Trade_Mining", [182] = "Trade_Herbalism", [393] = "INV_Misc_Pelt_Wolf_01",
+	[164] = "Trade_BlackSmithing", [165] = "Trade_LeatherWorking", [171] = "Trade_Alchemy",
+	[197] = "Trade_Tailoring", [202] = "Trade_Engineering", [333] = "Trade_Engraving", -- Enchanting
+	[185] = "INV_Misc_Food_15", [129] = "Spell_Holy_SealOfSacrifice", [356] = "Trade_Fishing", -- Cooking, First Aid, Fishing
+	[633] = "INV_Misc_Key_03", [762] = "Ability_Mount_RidingHorse", -- Lockpicking, Riding
+}
+
+-- Faction ID -> icon, for the few with an obvious one. Others get ICONS.rep.
+local FACTION_ICONS = {
+	[576] = "Achievement_Reputation_Timbermaw", -- Timbermaw Hold
+	[529] = "INV_Misc_Token_ArgentDawn", -- Argent Dawn
+}
+
+-- Level 10 to 60 achievement icons, by the target's tens.
+local function LevelIcon(target)
+	return ICON_PATH .. "Achievement_Level_" .. math.max(1, math.min(6, math.floor((target or 10) / 10))) * 10
+end
+
+-- Silver coins under 1g, gold coins, and a pile of gold from 100g.
+local function GoldIcon(copper)
+	copper = copper or 0
+	if copper < 10000 then
+		return ICON_PATH .. "INV_Misc_Coin_03"
+	end
+	return ICON_PATH .. (copper < 1000000 and "INV_Misc_Coin_01" or "INV_Misc_Coin_02")
+end
 
 -- Goal sounds: which -> { on/off option, sound option, default sound }.
 local SOUNDS = {
@@ -320,7 +356,7 @@ TYPES.item = {
 TYPES.gold = {
 	format = FormatGold,
 	describe = function(goal)
-		return "Have " .. FormatGold(goal.target), ICONS.gold
+		return "Have " .. FormatGold(goal.target), GoldIcon(goal.target)
 	end,
 	progress = function(goal)
 		local current = (goal.start or 0) + (goal.gained or 0)
@@ -341,7 +377,7 @@ TYPES.xp = {
 TYPES.level = {
 	format = FormatNumber,
 	describe = function(goal)
-		return "Reach level " .. goal.target, ICONS.level
+		return "Reach level " .. goal.target, LevelIcon(goal.target)
 	end,
 	progress = function(goal)
 		local level, xp, max = UnitLevel("player"), UnitXP("player"), UnitXPMax("player")
@@ -366,7 +402,8 @@ TYPES.rep = {
 		if goal.mode == "gain" then
 			name = name .. " +" .. FormatNumber(goal.target)
 		end
-		return name, ICONS.rep
+		local icon = FACTION_ICONS[goal.key]
+		return name, icon and (ICON_PATH .. icon) or ICONS.rep
 	end,
 	progress = function(goal)
 		if goal.mode == "gain" then
@@ -401,7 +438,8 @@ TYPES.skill = {
 		if goal.mode == "gain" then
 			name = name .. " +" .. goal.target
 		end
-		return name, ICONS.skill
+		local icon = SKILL_ICONS[goal.key]
+		return name, icon and (ICON_PATH .. icon) or ICONS.skill
 	end,
 	progress = function(goal)
 		if goal.mode == "gain" then
@@ -443,9 +481,26 @@ TYPES.currency = {
 	end,
 }
 
--- Name and icon of a goal, for the tracker, window and messages.
+-- The icon a goal gets unless you pick one (goal.icon). Works on a half-filled goal too
+-- (the goals window's form shows it before an item or faction is picked).
+local function AutoIcon(goal)
+	if goal.type == "item" and not goal.itemID then
+		return 134400 -- question mark
+	elseif goal.type == "level" then
+		return LevelIcon(goal.target)
+	elseif goal.type == "gold" then
+		return GoldIcon(goal.target)
+	elseif ICONS[goal.type] and not goal.key then
+		return ICONS[goal.type] -- xp, or nothing picked yet
+	end
+	return select(2, TYPES[goal.type].describe(goal))
+end
+
+-- Name and icon of a goal, for the tracker, window and messages. A chosen icon
+-- (goal.icon, from the goals window) wins over the automatic one.
 local function Describe(goal)
-	return TYPES[goal.type].describe(goal)
+	local name, icon = TYPES[goal.type].describe(goal)
+	return name, goal.icon or icon
 end
 
 -- Fraction done (0..1), "1,512 / 4,000" and the amount still to go.
@@ -646,7 +701,7 @@ local function Archive(goal, restorable)
 	end
 	table.insert(GetData().history, 1, {
 		type = goal.type, name = (Describe(goal)), target = goal.target, itemID = goal.itemID, key = goal.key,
-		mode = goal.mode, toMax = goal.toMax, created = goal.created, completed = goal.completed,
+		mode = goal.mode, toMax = goal.toMax, icon = goal.icon, created = goal.created, completed = goal.completed,
 		active = goal.active, goal = copy,
 	})
 end
@@ -1614,7 +1669,7 @@ end
 
 -- Applies the goals window's Edit form. If the tracked thing (item, faction, skill,
 -- currency or gain/reach mode) changed, progress starts over; otherwise it's kept and
--- only the target, sounds and (if recount) the starting count change.
+-- only the target, sounds, icon and (if recount) the starting count change.
 local function EditGoal(id, changes, recount)
 	local goal = FindGoal(id)
 	if not goal then
@@ -1623,7 +1678,7 @@ local function EditGoal(id, changes, recount)
 	local changedThing = goal.itemID ~= changes.itemID or goal.key ~= changes.key
 		or (goal.mode or "reach") ~= (changes.mode or "reach")
 	goal.itemID, goal.key, goal.name, goal.mode = changes.itemID, changes.key, changes.name or goal.name, changes.mode
-	goal.target, goal.toMax, goal.sounds = changes.target, changes.toMax, changes.sounds
+	goal.target, goal.toMax, goal.sounds, goal.icon = changes.target, changes.toMax, changes.sounds, changes.icon
 	local read = TYPES[goal.type].read
 	if changedThing then
 		goal.gained, goal.active, goal.flashAt = 0, 0, nil
@@ -1666,6 +1721,7 @@ ns.goals = {
 	REP_THRESHOLDS = REP_THRESHOLDS,
 	StandingLabel = StandingLabel,
 	Describe = Describe,
+	AutoIcon = AutoIcon,
 	GetProgress = GetProgress,
 	DescribeRate = DescribeRate,
 	FormatNumber = FormatNumber,

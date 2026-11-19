@@ -91,6 +91,9 @@ addons share through LibSharedMedia.
   edit, **shelve** (hide it from the tracker, paused, until you bring it back from the goals window),
   reset or remove it. **Edit** fixes a goal's target, item, starting count or sounds without starting
   over, and each goal can have its own milestone and finish sounds.
+  Icons follow what a goal tracks (an axe for Axes, a pick for Mining, coins for gold, the level's
+  badge), or pick your own like a macro icon: click the icon in the goal form, then choose one, or drop
+  an item or spell on it to use its icon.
   `/nra goal` opens the goals window (new goal, active and shelved goals, history). Goals can also be
   added from chat: `/nra goal 4000 [item]`, `/nra goal level 40`, `/nra goal gold 1g 50s`, `/nra goal rep revered timbermaw`,
   `/nra goal skill swords`, `/nra goal currency 2000 honor`, ... (`/nra goal help` lists them all).

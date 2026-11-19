@@ -9,6 +9,11 @@ local _, ns = ...
 -- last two need Inventory Tracker's data) and the starting count updates live.
 -- "Edit" fills the same form with an existing goal (type fixed) to fix its target,
 -- item, starting count or sounds without recreating it.
+--
+-- The icon at the top right of the form opens an icon picker beside the window, like
+-- the macro window's: Automatic, an item or spell dropped on it, or any macro icon. The
+-- icon list is our own (GetMacroIcons into our table), not Blizzard's shared
+-- IconDataProvider, whose cache we'd otherwise be the ones to fill.
 
 local UI = ns.UI
 local WIDTH, HEIGHT = UI.WINDOW_WIDTH, UI.WINDOW_HEIGHT
@@ -362,6 +367,8 @@ local formMode = "reach"
 local formStanding -- rep "reach": target reaction (5 = Friendly ... 8 = Exalted)
 local formToMax = false -- skill "reach": follow the skill's cap
 local formSounds = { milestone = "default", complete = "default" }
+local formIcon -- a chosen icon (file ID or path), or nil for automatic
+local iconPicker
 local pickerQuery = ""
 local pickerOffset = 0
 local pickerEntries = {}
@@ -538,6 +545,17 @@ function UpdateForm()
 		chip:SetShown(not editing)
 	end
 	form.title:SetText(editing and ("Edit goal: " .. (G().Describe(goal))) or "New goal")
+	local entryForIcon = PICKER_TYPES[goalType] and PickedEntry()
+	local autoIcon = G().AutoIcon({
+		type = goalType, itemID = itemID, key = entryForIcon and entryForIcon.id,
+		target = goalType == "gold" and G().ParseMoney(form.amount:GetText()) or tonumber(form.amount:GetText()),
+	})
+	form.iconButton.icon:SetTexture(formIcon or autoIcon)
+	form.iconLabel:SetText(formIcon and "Custom icon" or "Automatic icon")
+	form.iconButton.autoIcon = autoIcon
+	if iconPicker and iconPicker:IsShown() then
+		iconPicker:Refresh()
+	end
 	local typeLabel
 	for _, info in ipairs(GOAL_TYPES) do
 		if info.key == goalType then
@@ -750,6 +768,7 @@ end
 local function ResetForm()
 	formItemID = nil
 	formSounds.milestone, formSounds.complete = "default", "default"
+	formIcon = nil
 	for _, seed in ipairs(form.seeds) do
 		seed:SetChecked(false)
 	end
@@ -765,6 +784,7 @@ local function LoadGoal(goal)
 	formToMax = goal.toMax or false
 	formSounds.milestone = goal.sounds and goal.sounds.milestone or "default"
 	formSounds.complete = goal.sounds and goal.sounds.complete or "default"
+	formIcon = goal.icon
 	pickerQuery, pickerOffset = "", 0
 	form.pickerSearch:SetText("")
 	pickerEntries = BuildPickerEntries(goal.type)
@@ -785,7 +805,7 @@ local function SubmitForm()
 		return
 	end
 	local amount, start, ticked = ReadForm()
-	local spec = { type = formType, sounds = { milestone = formSounds.milestone, complete = formSounds.complete } }
+	local spec = { type = formType, icon = formIcon, sounds = { milestone = formSounds.milestone, complete = formSounds.complete } }
 	if formType == "item" then
 		spec.itemID, spec.target, spec.start = formItemID, amount, start
 	elseif formType == "gold" then
@@ -919,6 +939,178 @@ end
 
 local FOOTER_HEIGHT = 46
 
+------------------------------------------------------------------------------
+-- Icon picker
+------------------------------------------------------------------------------
+
+local ICON_COLUMNS, ICON_ROWS, ICON_SIZE, ICON_GAP = 8, 8, 34, 4
+local iconList
+
+-- Every macro icon (spell icons, then item icons), without repeats.
+local function IconList()
+	if not iconList then
+		local raw = {}
+		for _, fill in ipairs({ GetLooseMacroIcons, GetLooseMacroItemIcons, GetMacroIcons, GetMacroItemIcons }) do
+			if fill then
+				fill(raw)
+			end
+		end
+		iconList = {}
+		local seen = {}
+		for _, icon in ipairs(raw) do
+			-- Older clients give names ("INV_Misc_Bag_08"), newer ones file IDs.
+			if type(icon) == "string" and not icon:find("[\\/]") then
+				icon = "Interface\\Icons\\" .. icon
+			end
+			if not seen[icon] then
+				seen[icon] = true
+				table.insert(iconList, icon)
+			end
+		end
+	end
+	return iconList
+end
+
+-- The icon of the item or spell on the cursor, if any.
+local function CursorIcon()
+	local kind, id, _, spellID = GetCursorInfo()
+	if kind == "item" and id then
+		return select(5, C_Item.GetItemInfoInstant(id))
+	elseif kind == "spell" and (spellID or id) then
+		return C_Spell.GetSpellTexture(spellID or id)
+	end
+	return nil
+end
+
+local function PickIcon(icon)
+	formIcon = icon
+	PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+	UpdateForm()
+end
+
+local function CreateIconPicker()
+	local width = PAD * 2 + ICON_COLUMNS * ICON_SIZE + (ICON_COLUMNS - 1) * ICON_GAP
+	local gridTop = 138
+	local picker = CreateFrame("Frame", "NraKitGoalIconPicker", frame)
+	picker:SetSize(width, gridTop + ICON_ROWS * (ICON_SIZE + ICON_GAP) + PAD + 16)
+	picker:SetPoint("TOPLEFT", frame, "TOPRIGHT", 4, 0)
+	picker:SetFrameLevel(frame:GetFrameLevel() + 20)
+	picker:EnableMouse(true)
+	local bg = picker:CreateTexture(nil, "BACKGROUND")
+	bg:SetAllPoints()
+	bg:SetColorTexture(unpack(UI.BG))
+	UI.AddBorder(picker)
+	picker:Hide()
+	picker.offset = 0
+
+	local title = MakeLabel(picker, "Choose an icon", "GameFontNormalLarge")
+	title:SetPoint("TOPLEFT", PAD, -PAD)
+	title:SetTextColor(1, 1, 1)
+	local close = UI.CreateFlatButton(picker, "Done", 22)
+	close:SetWidth(60)
+	close:SetPoint("TOPRIGHT", -PAD, -PAD + 2)
+	close:SetScript("OnClick", function()
+		picker:Hide()
+	end)
+
+	-- Automatic
+	local auto = UI.CreateFlatButton(picker, "Automatic  (follows what the goal tracks)", 40)
+	auto:SetWidth(width - 2 * PAD)
+	auto:SetPoint("TOPLEFT", PAD, -44)
+	auto.icon = auto:CreateTexture(nil, "ARTWORK")
+	auto.icon:SetSize(30, 30)
+	auto.icon:SetPoint("LEFT", 6, 0)
+	auto.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	auto.text:ClearAllPoints()
+	auto.text:SetPoint("LEFT", auto.icon, "RIGHT", 10, 0)
+	auto:SetScript("OnClick", function()
+		PickIcon(nil)
+	end)
+	picker.auto = auto
+
+	-- Drop an item or spell
+	local drop = CreateFrame("Button", nil, picker)
+	drop:SetSize(36, 36)
+	drop:SetPoint("TOPLEFT", PAD, -92)
+	drop.icon = drop:CreateTexture(nil, "ARTWORK")
+	drop.icon:SetAllPoints()
+	drop.icon:SetTexture("Interface\\PaperDoll\\UI-Backpack-EmptySlot")
+	UI.AddBorder(drop)
+	local function TakeCursor()
+		local icon = CursorIcon()
+		if icon then
+			ClearCursor()
+			PickIcon(icon)
+		end
+	end
+	drop:SetScript("OnReceiveDrag", TakeCursor)
+	drop:SetScript("OnClick", TakeCursor)
+	picker.drop = drop
+	local dropText = MakeLabel(picker, "Drop an item or spell here to use its icon, or pick one below.", "GameFontDisableSmall")
+	dropText:SetPoint("LEFT", drop, "RIGHT", 10, 0)
+	dropText:SetPoint("RIGHT", picker, "RIGHT", -PAD, 0)
+
+	-- The grid shows ICON_ROWS rows of the list; the mouse wheel scrolls it.
+	picker.cells = {}
+	for row = 1, ICON_ROWS do
+		for column = 1, ICON_COLUMNS do
+			local cell = CreateFrame("Button", nil, picker)
+			cell:SetSize(ICON_SIZE, ICON_SIZE)
+			cell:SetPoint("TOPLEFT", PAD + (column - 1) * (ICON_SIZE + ICON_GAP), -gridTop - (row - 1) * (ICON_SIZE + ICON_GAP))
+			cell.texture = cell:CreateTexture(nil, "ARTWORK")
+			cell.texture:SetAllPoints()
+			cell.selected = cell:CreateTexture(nil, "OVERLAY")
+			cell.selected:SetPoint("TOPLEFT", -2, 2)
+			cell.selected:SetPoint("BOTTOMRIGHT", 2, -2)
+			cell.selected:SetColorTexture(UI.ACCENT[1], UI.ACCENT[2], UI.ACCENT[3], 0.45)
+			local highlight = cell:CreateTexture(nil, "HIGHLIGHT")
+			highlight:SetAllPoints()
+			highlight:SetColorTexture(1, 1, 1, 0.2)
+			cell:SetScript("OnClick", function(self)
+				if self.iconValue then
+					PickIcon(self.iconValue)
+				end
+			end)
+			table.insert(picker.cells, cell)
+		end
+	end
+	picker.position = MakeLabel(picker, "", "GameFontDisableSmall")
+	picker.position:SetPoint("BOTTOMLEFT", PAD, PAD - 2)
+	picker:EnableMouseWheel(true)
+	picker:SetScript("OnMouseWheel", function(self, delta)
+		self.offset = self.offset - delta * 2
+		self:Refresh()
+	end)
+
+	function picker:Refresh()
+		local list = IconList()
+		local rows = math.ceil(#list / ICON_COLUMNS)
+		self.offset = math.max(0, math.min(self.offset, rows - ICON_ROWS))
+		for index, cell in ipairs(self.cells) do
+			local icon = list[self.offset * ICON_COLUMNS + index]
+			cell.iconValue = icon
+			cell.texture:SetTexture(icon)
+			cell.selected:SetShown(icon ~= nil and icon == formIcon)
+			cell:SetShown(icon ~= nil)
+		end
+		self.auto.icon:SetTexture(form.iconButton.autoIcon)
+		self.auto:SetSelected(formIcon == nil)
+		self.drop.icon:SetTexture(formIcon or "Interface\\PaperDoll\\UI-Backpack-EmptySlot")
+		self.position:SetText(#list == 0 and "No icons." or
+			string.format("%d icons  ·  scroll for more", #list))
+	end
+
+	picker:HookScript("OnShow", function(self)
+		self:Refresh()
+	end)
+	return picker
+end
+
+local function ToggleIconPicker()
+	iconPicker = iconPicker or CreateIconPicker()
+	iconPicker:SetShown(not iconPicker:IsShown())
+end
+
 local function CreateForm(body)
 	-- The form scrolls; the Create/Save button sits in a footer that always shows.
 	local area = UI.CreateScrollArea(body)
@@ -930,6 +1122,11 @@ local function CreateForm(body)
 	form:SetPoint("TOPLEFT", PAD, -PAD)
 	form:SetSize(WIDTH - SIDEBAR_WIDTH - 15 - 2 * PAD, 730)
 	form.area = area
+	area:HookScript("OnHide", function()
+		if iconPicker then
+			iconPicker:Hide()
+		end
+	end)
 
 	local footer = CreateFrame("Frame", nil, body)
 	footer:SetPoint("BOTTOMLEFT")
@@ -942,6 +1139,33 @@ local function CreateForm(body)
 	form.title = MakeLabel(form, "New goal", "GameFontNormalLarge")
 	form.title:SetPoint("TOPLEFT", 2, 0)
 	form.title:SetTextColor(1, 1, 1)
+
+	-- Icon (top right): opens the icon picker.
+	local iconButton = CreateFrame("Button", nil, form)
+	iconButton:SetSize(40, 40)
+	iconButton:SetPoint("TOPRIGHT", -2, 0)
+	iconButton.icon = iconButton:CreateTexture(nil, "ARTWORK")
+	iconButton.icon:SetAllPoints()
+	iconButton.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	local iconHighlight = iconButton:CreateTexture(nil, "HIGHLIGHT")
+	iconHighlight:SetAllPoints()
+	iconHighlight:SetColorTexture(1, 1, 1, 0.15)
+	UI.AddBorder(iconButton)
+	iconButton:SetScript("OnClick", ToggleIconPicker)
+	iconButton:SetScript("OnReceiveDrag", function()
+		local icon = CursorIcon()
+		if icon then
+			ClearCursor()
+			PickIcon(icon)
+		end
+	end)
+	iconButton:SetScript("OnEnter", function(self)
+		UI.ShowTooltip(self, "Goal icon", "Click to choose an icon, or drop an item or spell on it to use its icon.")
+	end)
+	iconButton:SetScript("OnLeave", GameTooltip_Hide)
+	form.iconButton = iconButton
+	form.iconLabel = MakeLabel(form, "", "GameFontDisableSmall")
+	form.iconLabel:SetPoint("RIGHT", iconButton, "LEFT", -8, 0)
 
 	form.typeHeading = MakeHeading(form, "1. What do you want to track?")
 	form.typeHeading:SetPoint("TOPLEFT", 2, -30)

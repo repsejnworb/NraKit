@@ -80,6 +80,7 @@ Just want to farm something? Set a goal like **loot 4000 Silk Cloth**, **reach l
 - Right-click a goal to pause, **edit**, **shelve** (hide it from the tracker, paused, until you bring it back), reset or remove it. Edit fixes the target, item, starting count or sounds without starting over.
 - **/nra goal** opens the goals window (new goal, active and shelved goals, history). Or add goals from chat: **/nra goal 4000** plus a shift-clicked item, **/nra goal level 40**, **/nra goal gold 1g 50s**, **/nra goal rep revered timbermaw**, **/nra goal skill swords**, **/nra goal currency 2000 honor**... (**/nra goal help** lists them all).
 - Each goal can have **its own sounds** for milestones and for finishing.
+- **Icons** follow what a goal tracks (an axe for Axes, a pick for Mining, coins for gold), or **pick your own** like a macro icon: click the icon in the goal form and choose one, or drop an item or spell on it.
 
 ### /leave leaves your group
 Type **/leave** (with nothing after it) or **/leavegroup** to leave your party, raid or instance group. **/leave &lt;channel&gt;** still leaves a chat channel.
