@@ -7,7 +7,12 @@ local _, ns = ...
 -- Bags and equipment are read whenever they change. The bank and the mailbox can
 -- only be read while they're open, so each character has to visit them once; after
 -- that they're kept up to date while open. Items you mail to your own characters
--- (same realm) are added to their mail right away.
+-- are added to their mail right away.
+--
+-- Characters are saved by full name, "Firstname Surname" (ns:PlayerName), since two of
+-- them can share a first name. Older versions saved the first name alone; a character's
+-- entry is moved to its full name when it logs in (if the class matches), and until
+-- then mail to "Bob Stone" still finds the old "Bob".
 --
 -- Saved account-wide in NraKitDB.inventory[realm][name] =
 --   { class = "MAGE", level = 42, money = copper,
@@ -83,6 +88,44 @@ local function GetCharacter(realmName, name)
 	local characters = GetRealmData(realmName)
 	characters[name] = characters[name] or {}
 	return characters[name]
+end
+
+-- "Bob Stone", "bob-stone" -> "bob stone".
+local function NameKey(name)
+	return (strtrim(name):gsub("%-", " "):gsub("%s+", " "):lower())
+end
+
+-- The stored name of a character: "Bob Stone" (any case, "Bob-Stone" too) finds "Bob Stone",
+-- and a first name finds a character that's the only one with it (on either side: "Bob"
+-- finds "Bob Stone", and "Bob Stone" finds an old entry saved as "Bob").
+local function FindCharacter(characters, name)
+	local key = NameKey(name)
+	local first = key:match("^%S*")
+	local byFirstName, count = nil, 0
+	for storedName in pairs(characters or {}) do
+		local storedKey = NameKey(storedName)
+		if storedKey == key then
+			return storedName
+		end
+		if storedKey:match("^%S*") == first and (storedKey == first or key == first) then
+			byFirstName, count = storedName, count + 1
+		end
+	end
+	return count == 1 and byFirstName or nil
+end
+
+-- Moves this character's entry from its first name (older versions) to its full name.
+local function MoveToFullName(firstName, class)
+	local characters = NraKitDB.inventory and NraKitDB.inventory[realm]
+	local old = characters and characters[firstName]
+	if firstName == playerName or not old or characters[playerName] then
+		return
+	end
+	-- Another character with this first name may have saved it; theirs stays for them.
+	if old.class == nil or old.class == class then
+		characters[playerName] = old
+		characters[firstName] = nil
+	end
 end
 
 local function GetMe()
@@ -167,24 +210,19 @@ local function OnSendMail(recipient)
 	if not recipient or recipient == "" then
 		return
 	end
-	local name, recipientRealm = strsplit("-", recipient, 2)
-	recipientRealm = recipientRealm and recipientRealm:gsub("[%s%-']", "") or realm
-	local characters = NraKitDB.inventory and NraKitDB.inventory[recipientRealm]
-	-- Names are stored as the game gives them (capitalised); match case-insensitively.
-	local lowerName = name:lower()
-	for storedName in pairs(characters or {}) do
-		if storedName:lower() == lowerName then
-			local items = {}
-			for attachment = 1, ATTACHMENTS_MAX_SEND do
-				local _, itemID, _, count = GetSendMailItem(attachment)
-				if itemID then
-					items[itemID] = (items[itemID] or 0) + math.max(count or 1, 1)
-				end
-			end
-			pendingMail = { realm = recipientRealm, name = storedName, items = items }
-			return
+	-- No realms on Forever: a "-" in a name is the surname ("Bob-Stone").
+	local storedName = FindCharacter(NraKitDB.inventory and NraKitDB.inventory[realm], recipient)
+	if not storedName then
+		return
+	end
+	local items = {}
+	for attachment = 1, ATTACHMENTS_MAX_SEND do
+		local _, itemID, _, count = GetSendMailItem(attachment)
+		if itemID then
+			items[itemID] = (items[itemID] or 0) + math.max(count or 1, 1)
 		end
 	end
+	pendingMail = { realm = realm, name = storedName, items = items }
 end
 
 local function OnMailSent()
@@ -234,7 +272,7 @@ local function AddRealmLines(lines, realmName, characters, itemID)
 		if not isMe or ns:GetOption("inventoryTrackerCurrent") then
 			local total, where = Describe(character, itemID)
 			if total then
-				local label = realmName == realm and name or (name .. "-" .. realmName)
+				local label = realmName == realm and name or (name .. " (" .. realmName .. ")")
 				table.insert(lines, { label = label, class = character.class, total = total, where = where, isMe = isMe })
 			end
 		end
@@ -295,7 +333,7 @@ local function ListCharacters()
 	ns:Print("Tracked characters:")
 	for realmName, characters in pairs(NraKitDB.inventory or {}) do
 		for name in pairs(characters) do
-			print("  " .. name .. "-" .. realmName)
+			print("  " .. name .. (realmName == realm and "" or (" (" .. realmName .. ")")))
 		end
 	end
 end
@@ -312,13 +350,18 @@ local function ForgetCharacter(realmName, name)
 end
 
 local function Forget(argument)
-	local name, realmName = strsplit("-", argument, 2)
-	realmName = realmName or realm
-	local characters = NraKitDB.inventory and NraKitDB.inventory[realmName]
-	for storedName in pairs(characters or {}) do
-		if storedName:lower() == name:lower() then
+	-- This realm first, then the others.
+	local realms = { realm }
+	for realmName in pairs(NraKitDB.inventory or {}) do
+		if realmName ~= realm then
+			table.insert(realms, realmName)
+		end
+	end
+	for _, realmName in ipairs(realms) do
+		local storedName = FindCharacter(NraKitDB.inventory and NraKitDB.inventory[realmName], argument)
+		if storedName then
 			ForgetCharacter(realmName, storedName)
-			ns:Print("Forgot " .. storedName .. "-" .. realmName .. ".")
+			ns:Print("Forgot " .. storedName .. ".")
 			if realmName == realm and storedName == playerName then
 				ns:Print("That's you: your bags are tracked again on the next change.")
 			end
@@ -335,7 +378,7 @@ local function OnSlashCommand(input)
 		Forget(rest)
 	elseif command == "list" then
 		ListCharacters()
-		print("  /nra inv forget <name> - remove a character (e.g. a deleted one)")
+		print("  /nra inv forget <first name> <surname> - remove a character (e.g. a deleted one)")
 	elseif not ns:IsModuleEnabled(module.key) then
 		ns:Print("Turn on Inventory Tracker first (/nra).")
 	else
@@ -409,13 +452,14 @@ end
 
 function module:OnInitialize()
 	realm = GetNormalizedRealmName() or GetRealmName():gsub("[%s%-']", "")
-	playerName = UnitName("player")
+	playerName = ns:PlayerName()
+	MoveToFullName(UnitName("player"), select(2, UnitClass("player")))
 	local help = {
 		summary = "Inventory browser: every character's bags, bank, mail and equipped items",
 		usage = {
 			"/nra inv - open the inventory browser (also /nra bank, /nra inventory)",
 			"/nra inv list - list the tracked characters in chat",
-			"/nra inv forget <name> - remove a character (e.g. a deleted one); also right-click it in the browser",
+			"/nra inv forget <first name> <surname> - remove a character (e.g. a deleted one); also right-click it in the browser",
 		},
 	}
 	ns:RegisterSlashCommand("inv", OnSlashCommand, help)

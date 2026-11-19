@@ -86,8 +86,14 @@ end
 
 local function CharacterRecipes()
 	NraKitDB[RECIPES_KEY] = NraKitDB[RECIPES_KEY] or {}
-	local key = UnitName("player") .. "-" .. GetRealmName()
-	NraKitDB[RECIPES_KEY][key] = NraKitDB[RECIPES_KEY][key] or {}
+	local saved = NraKitDB[RECIPES_KEY]
+	local key = ns:PlayerName() .. "-" .. GetRealmName()
+	-- Saved under the first name alone before, which two characters can share.
+	local oldKey = UnitName("player") .. "-" .. GetRealmName()
+	if not saved[key] and saved[oldKey] and oldKey ~= key then
+		saved[key], saved[oldKey] = saved[oldKey], nil
+	end
+	saved[key] = saved[key] or {}
 	return NraKitDB[RECIPES_KEY][key]
 end
 

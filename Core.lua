@@ -118,6 +118,17 @@ function ns:Print(message)
 	print("|cff33ccffNraKit|r: " .. message)
 end
 
+-- Your character's name, "Firstname Surname" (Forever has no realms; UnitName gives
+-- the two parts). Two of your characters can share a first name, so per-character
+-- data is saved under this, never the first name alone.
+function ns:PlayerName()
+	local name, surname = UnitName("player")
+	if surname and surname ~= "" then
+		return name .. " " .. surname
+	end
+	return name
+end
+
 -- Subcommands of /nrakit and /nra, e.g. "/nra scan list". Registered by modules:
 -- handler(rest) gets everything after the subcommand, trimmed.
 --

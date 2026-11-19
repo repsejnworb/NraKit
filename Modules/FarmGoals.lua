@@ -1979,7 +1979,14 @@ for event in pairs(POLL_EVENTS) do
 end
 
 function module:OnInitialize()
-	characterKey = UnitName("player") .. "-" .. (GetNormalizedRealmName() or GetRealmName())
+	local realm = GetNormalizedRealmName() or GetRealmName()
+	characterKey = ns:PlayerName() .. "-" .. realm
+	-- Goals used to be saved under the first name alone, which two characters can share.
+	local oldKey = UnitName("player") .. "-" .. realm
+	local saved = NraKitDB.farmGoalsData
+	if saved and oldKey ~= characterKey and saved[oldKey] and not saved[characterKey] then
+		saved[characterKey], saved[oldKey] = saved[oldKey], nil
+	end
 	-- The finish sound's default changed from Epic loot to World quest complete; move
 	-- anyone still on the old default (once).
 	-- Milestone chimes are now off by default; turn off the old default once.

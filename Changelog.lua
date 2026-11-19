@@ -16,6 +16,10 @@ local _, ns = ...
 --           "new" entry with its module (tests/changelog_test.lua checks).
 
 ns.changelog = {
+	{ version = "Unreleased", entries = {
+		{ "fixed", "Inventory Tracker: characters are kept by first name and surname, so two of yours with the same first name no longer share one inventory. Tooltips and the inventory browser show the full name, and mail to \"Firstname Surname\" counts on that character. Your saved inventories move over when you log in to each character." },
+		{ "fixed", "Farm goals: goals are kept by first name and surname, so two characters with the same first name no longer share their goals." },
+	} },
 	{ version = "0.14.0", date = "2026-11-19", entries = {
 		{ "improved", "Farm goals: icons that fit the goal, like an axe for Axes, a pick for Mining, coins for gold and the level's badge for level goals." },
 		{ "new", "Farm goals: pick your own icon for a goal, like a macro icon. Click the icon in the goal form, or drop an item or spell on it to use its icon." },

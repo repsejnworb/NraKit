@@ -370,6 +370,9 @@ function wow.install()
 		G[name] = Namespace()
 	end
 	G.TooltipDataProcessor.AllTypes = "ALL"
+	G.C_EventUtils.IsEventValid = function()
+		return true
+	end
 	G.TooltipDataProcessor.AddTooltipPostCall = function(dataType, callback)
 		table.insert(wow.tooltipCalls, { type = dataType, callback = callback })
 	end
