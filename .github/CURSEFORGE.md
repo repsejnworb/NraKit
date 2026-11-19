@@ -2,7 +2,7 @@
 
 **Small quality-of-life tweaks for WoW Forever. Every feature is off by default, so turn on only what you want.**
 
-Type **/nrakit** (or **/nra**) to open NraKit's own window: features grouped in a sidebar, **search**, an on/off switch per feature and its options right underneath. Everything is off until you turn it on. The same settings are also under **Options → AddOns → NraKit**. NraKit's windows (Settings, Inventory, Goals, Notes) work as **tabs of one window**, with a tab for each feature you have on. NraKit is also in the **addon button by the minimap** (no extra minimap button): left-click for settings, right-click for a menu of its windows. **/nra help** lists the chat commands.
+Type **/nrakit** (or **/nra**) to open NraKit's own window: features grouped in a sidebar, **search**, an on/off switch per feature and its options right underneath. Everything is off until you turn it on. The same settings are also under **Options → AddOns → NraKit**. NraKit's windows (Settings, Inventory, Goals, Notes, Items) work as **tabs of one window**, with a tab for each feature you have on. NraKit is also in the **addon button by the minimap** (no extra minimap button): left-click for settings, right-click for a menu of its windows. **/nra help** lists the chat commands.
 
 **What's new** (**/nra new**, at the top of the NraKit window) shows what changed in every version, and new features can be turned on right there. After an update, NraKit tells you in one chat line (you can turn that off). It also tells you when a **newer version is out**, if someone in your guild or group already has it, and **/nra who** lists who in your guild and group runs NraKit (and how many NraKit users you've come across) (both can be switched off).
 
@@ -99,6 +99,11 @@ The **To** box **keeps the name after you send** a mail, so sending several mail
 
 ### Hide micro menu notifications
 Hides the blue notification dot on the **Shop** button that never goes away, and makes the **Legacy** button's dot show only when you have **unspent Legacy points**, not for every new challenge.
+
+### Item lookup
+**Search every item in the game by name.** **/nra item nightbl** opens an **Items** tab listing every item whose name contains it, best matches first, with icon, type, required level and how many your characters have (with Inventory Tracker). Hover for the tooltip, **Shift+click** to link it in chat, **Ctrl+click** to preview it.
+- The game can't search items by name, so NraKit learns the names in the background, a few dozen a second (paused in combat). It takes a few minutes, once per game version; searching works right away and finds more as it fills.
+- Items nobody has discovered yet can't be looked up until they have been; NraKit checks for them again every day.
 
 ### Copy Wowhead link
 Hover an **item, spell, NPC, quest, achievement or currency** and press **Ctrl+C**. A box opens in the middle of the screen with its **wowhead.com/forever** link selected; copy it with **Ctrl+C** (**Cmd+C** on a Mac) and the box closes (addons can't reach the clipboard directly).

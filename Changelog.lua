@@ -16,6 +16,9 @@ local _, ns = ...
 --           "new" entry with its module (tests/changelog_test.lua checks).
 
 ns.changelog = {
+	{ version = "Unreleased", entries = {
+		{ "new", "Item lookup: search every item in the game by name. /nra item nightbl lists the matching items in an Items tab, with their tooltips; Shift-click to link one in chat. The list of names fills in by itself in the background (a few minutes, once per game version).", module = "itemLookup" },
+	} },
 	{ version = "0.15.0", date = "2026-11-19", entries = {
 		{ "new", "Double-click fishing: with a fishing pole in your main hand, double right-click the world to cast Fishing.", module = "doubleClickFishing" },
 	} },

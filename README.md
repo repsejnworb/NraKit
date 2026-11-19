@@ -15,7 +15,7 @@ Clone or symlink this repo into `World of Warcraft/_<flavor>_/Interface/AddOns/N
 Type `/nrakit` (`/nra`) to open NraKit's window: features grouped in a sidebar, a search box, an
 on/off switch per feature and its options right underneath. Everything is off until you turn it on.
 The same settings are also in the game's Settings panel under **AddOns → NraKit**.
-NraKit's windows (Settings, Inventory, Goals, Notes) work as tabs of one window, with a tab for each
+NraKit's windows (Settings, Inventory, Goals, Notes, Items) work as tabs of one window, with a tab for each
 feature you have on. NraKit is also in the addon button by the minimap: left-click for settings,
 right-click for a menu of its windows. **What's new** (`/nra new`, top of the NraKit window) lists what changed in each
 version, and new features can be turned on right there. After an update, NraKit says so in one chat line.
@@ -112,6 +112,11 @@ addons share through LibSharedMedia.
   replaces it. Optionally (on by default) the last player you mailed is filled in when you open Send Mail.
 - **Hide micro menu notifications**: hides the blue "new" dot on the Shop button, and shows the
   Legacy button's dot only while you have unspent Legacy Tree points (not for every new challenge).
+- **Item lookup**: search every item in the game by name. `/nra item nightbl` opens an Items tab
+  listing the matches (icon, type, required level, how many your characters have); hover for the
+  tooltip, Shift+click to link, Ctrl+click to preview. The game can't search items by name, so the
+  names are learned in the background (a few dozen a second, paused in combat, a few minutes once
+  per game version). Undiscovered items are checked for again daily.
 - **Copy Wowhead link**: hover an item, spell, NPC, quest, achievement or currency and press Ctrl+C.
   A box opens in the middle of the screen with its wowhead.com/forever link selected; copy it with
   Ctrl+C (Cmd+C on a Mac) and the box closes (addons can't reach the clipboard directly). Works in bags, chat links, quest log, achievements and the

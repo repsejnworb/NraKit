@@ -46,3 +46,5 @@ Modules\MailSubject.lua
 Modules\MailRecipient.lua
 Modules\MicroMenuNotifications.lua
 Modules\WowheadLink.lua
+Modules\ItemLookup.lua
+Modules\ItemLookupWindow.lua
