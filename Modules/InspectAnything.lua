@@ -51,6 +51,8 @@ local module = {
 -- Blizzard's inspect window is a standard panel: 338 x 424.
 local WIDTH, HEIGHT = PANEL_DEFAULT_WIDTH or 338, PANEL_DEFAULT_HEIGHT or 424
 local SLOT_SIZE, SLOT_GAP = 37, 4
+-- The inspect window's model: 231 x 320, its top left 52 x 66 into the window.
+local MODEL_LEFT, MODEL_TOP, MODEL_WIDTH, MODEL_HEIGHT = 52, 66, 231, 320
 local RETRY_EVERY, RETRIES = 2, 8 -- seconds between asking again for gear, and how often
 local READ_EVERY, READ_FOR = 0.5, 10 -- once it answers: re-read this often, for at most this long
 
@@ -89,7 +91,7 @@ local UI = ns.UI
 local inspect = {}
 ns.inspectAnything = inspect
 
-local frame, model, subtitle, statusText, stats, slotButtons, modelBorder, raceTiles, raceShade
+local frame, model, subtitle, itemLevelText, statusText, stats, slotButtons, modelBorder, raceTiles, raceShade
 local LayoutBackground
 local wowheadButton, blizzardButton, dressUpButton
 local shown -- what the window shows: { guid, isPlayer, npcID, name }
@@ -207,26 +209,42 @@ local function UpdateStats(unit)
 	end
 end
 
--- "Fury  ·  Item level 32.4" once their gear is in, else how it's going (players).
+-- The level line, with "Fury · Item level 32.4" after it in a smaller font once their gear
+-- is in, centred together under the title but kept clear of the portrait.
+local function LayoutHeader()
+	local extra = itemLevelText:IsShown() and (itemLevelText:GetStringWidth() or 0) + 8 or 0
+	local total = (subtitle:GetStringWidth() or 0) + extra
+	local left = math.max(WIDTH / 2 - total / 2, 66) -- the portrait ends about there
+	left = math.min(left, WIDTH - 10 - total)
+	subtitle:ClearAllPoints()
+	subtitle:SetPoint("TOPLEFT", frame, "TOPLEFT", math.max(left, 66), -40)
+end
+
+-- Players: spec and item level up by the level line once their gear is in, else how loading
+-- it is going at the top of the model.
 local function UpdateStatus()
 	if not (shown and shown.isPlayer) then
 		statusText:Hide()
+		itemLevelText:Hide()
+		LayoutHeader()
 		return
 	end
-	statusText:Show()
-	statusText:SetFontObject(gear[shown.guid] and "GameFontNormal" or "GameFontHighlightSmall")
 	local data = gear[shown.guid]
+	local parts = {}
 	if data then
-		local parts = {}
 		if data.spec and data.spec ~= shown.class then -- Forever has no specs: the game names the class
 			table.insert(parts, data.spec)
 		end
 		if data.itemLevel and data.itemLevel > 0 then
 			table.insert(parts, string.format("Item level %.1f", data.itemLevel))
 		end
-		statusText:SetText(table.concat(parts, "  ·  "))
-		statusText:SetTextColor(1, 0.82, 0)
-		statusText:SetShown(#parts > 0)
+	end
+	itemLevelText:SetText("·  " .. table.concat(parts, "  ·  "))
+	itemLevelText:SetShown(#parts > 0)
+	LayoutHeader()
+	statusText:SetShown(data == nil)
+	if data then
+		return
 	elseif waitingGUID == shown.guid then
 		statusText:SetText(InCombatLockdown() and "Their gear loads after combat..." or "Loading their gear...")
 		statusText:SetTextColor(0.6, 0.6, 0.6)
@@ -381,16 +399,20 @@ end
 
 local function LayoutModel(isPlayer)
 	local inset = frame.Inset
-	local left, right, top, bottom = 4, 4, 4, 4
-	if isPlayer then
-		left, right, bottom = 46, 47, SLOT_SIZE + 12
-	end
-	modelBorder:ClearAllPoints()
-	modelBorder:SetPoint("TOPLEFT", inset, "TOPLEFT", left, -top)
-	modelBorder:SetPoint("BOTTOMRIGHT", inset, "BOTTOMRIGHT", -right, bottom)
 	model:ClearAllPoints()
-	model:SetPoint("TOPLEFT", modelBorder, "TOPLEFT", 4, -4)
-	model:SetPoint("BOTTOMRIGHT", modelBorder, "BOTTOMRIGHT", -4, 4)
+	modelBorder:ClearAllPoints()
+	if isPlayer then
+		-- Exactly where and how big the inspect window's model is (it runs on behind the weapons).
+		model:SetPoint("TOPLEFT", frame, "TOPLEFT", MODEL_LEFT, -MODEL_TOP)
+		model:SetSize(MODEL_WIDTH, MODEL_HEIGHT)
+		modelBorder:SetPoint("TOPLEFT", model, "TOPLEFT", -4, 4)
+		modelBorder:SetPoint("BOTTOMRIGHT", model, "BOTTOMRIGHT", 4, -4)
+	else
+		modelBorder:SetPoint("TOPLEFT", inset, "TOPLEFT", 4, -4)
+		modelBorder:SetPoint("BOTTOMRIGHT", inset, "BOTTOMRIGHT", -4, 4)
+		model:SetPoint("TOPLEFT", modelBorder, "TOPLEFT", 4, -4)
+		model:SetPoint("BOTTOMRIGHT", modelBorder, "BOTTOMRIGHT", -4, 4)
+	end
 end
 
 ------------------------------------------------------------------------------
@@ -491,8 +513,11 @@ local function CreateWindow()
 	end
 	subtitle = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalMed2Outline")
 	subtitle:SetPoint("TOP", 0, -40)
-	subtitle:SetWidth(WIDTH - 110)
 	subtitle:SetWordWrap(false)
+	itemLevelText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+	itemLevelText:SetPoint("LEFT", subtitle, "RIGHT", 8, 0)
+	itemLevelText:SetWordWrap(false)
+	itemLevelText:Hide()
 	stats = {}
 	for _, info in ipairs({ { "health", "Health" }, { "speed", "Attack speed" } }) do
 		local label = frame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
