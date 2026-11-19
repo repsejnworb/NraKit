@@ -289,9 +289,11 @@ local function CreateWindow()
 	hint:SetPoint("RIGHT", -PAD, 0)
 	hint:SetText("Shift-click to link in chat, Ctrl-click to preview")
 
+	-- The search box never takes the keyboard by itself (you may be moving or fighting):
+	-- click it to type. Enter (like Esc) gives the keys back to the game.
+	searchBox:HookScript("OnEnterPressed", searchBox.ClearFocus)
 	frame:HookScript("OnShow", function()
 		Render()
-		searchBox:SetFocus()
 	end)
 
 	-- A new name that matches, or a shown item finishing loading (its level), redraws.
@@ -313,6 +315,7 @@ function ns:OpenItemLookup(text)
 	text = text and strtrim(text) or ""
 	if text ~= "" then
 		searchBox:SetText(text)
+		searchBox:ClearFocus()
 		frame:Show()
 		Render()
 	else

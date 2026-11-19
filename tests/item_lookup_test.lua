@@ -104,6 +104,9 @@ return {
 		t.test("/nra item opens the window with the search", function()
 			SlashCmdList.NRAKIT("item nightbl")
 			t.ok(NraKitItemLookupFrame:IsShown(), "window open")
+			for _, frame in ipairs(wow.frames) do
+				t.ok(not (frame.template == "SearchBoxTemplate" and frame:HasFocus()), "the search box doesn't take the keyboard")
+			end
 			local rows = wow.findAll(function(frame)
 				return wow.visible(frame) and rawget(frame, "itemID") ~= nil
 			end)

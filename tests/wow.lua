@@ -175,8 +175,15 @@ local methods = {
 	GetPoint = function()
 		return "CENTER", nil, "CENTER", 0, 0
 	end,
-	HasFocus = function()
-		return false
+	-- Focus (edit boxes): remembered, so tests can check what has the keyboard.
+	SetFocus = function(self)
+		rawset(self, "focused", true)
+	end,
+	ClearFocus = function(self)
+		rawset(self, "focused", false)
+	end,
+	HasFocus = function(self)
+		return rawget(self, "focused") == true
 	end,
 	IsForbidden = function()
 		return false
