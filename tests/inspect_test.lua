@@ -225,6 +225,14 @@ return {
 			Inspect("mouseover", GRUNT)
 		end)
 
+		t.test("the class is in its class colour", function()
+			RAID_CLASS_COLORS = { WARRIOR = { WrapTextInColorCode = function(_, text)
+				return "|cffc69b6d" .. text .. "|r"
+			end } }
+			Inspect("mouseover", GRUNT)
+			t.ok(Shown("Level 40 Orc |cffc69b6dWarrior|r"), "coloured class")
+		end)
+
 		t.test("no spec on Forever: the class name the game gives instead isn't repeated", function()
 			specName = "Warrior" -- the stand-in's class
 			local orgrim = { name = "Orgrim", surname = "Hammer", isPlayer = true, level = 40, guid = "Player-1-00000009" }

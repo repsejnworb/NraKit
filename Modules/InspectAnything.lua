@@ -133,12 +133,15 @@ local function Describe(unit)
 		table.insert(parts, labels[classification])
 	end
 	if IsPlayerUnit(unit) then
-		local race, class = UnitRace(unit), UnitClass(unit)
+		local race = UnitRace(unit)
+		local class, classFile = UnitClass(unit)
 		if Readable(race) then
 			table.insert(parts, race)
 		end
 		if Readable(class) then
-			table.insert(parts, class)
+			-- In their class colour, as the inspect window shows it.
+			local color = Readable(classFile) and RAID_CLASS_COLORS and RAID_CLASS_COLORS[classFile]
+			table.insert(parts, color and color:WrapTextInColorCode(class) or class)
 		end
 	else
 		local creatureType = UnitCreatureType(unit)
