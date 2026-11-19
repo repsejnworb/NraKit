@@ -75,6 +75,19 @@ local methods = {
 	GetScript = function(self, name)
 		return self.scripts[name]
 	end,
+	-- Textures remember their file and alpha, for tests that look at them.
+	SetTexture = function(self, file)
+		rawset(self, "file", file)
+	end,
+	GetTexture = function(self)
+		return rawget(self, "file")
+	end,
+	SetAlpha = function(self, alpha)
+		rawset(self, "alpha", alpha)
+	end,
+	GetAlpha = function(self)
+		return rawget(self, "alpha") or 1
+	end,
 	SetAttribute = function(self, name, value)
 		rawset(self, "attributes", rawget(self, "attributes") or {})
 		self.attributes[name] = value

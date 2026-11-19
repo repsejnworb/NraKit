@@ -22,6 +22,9 @@ local _, ns = ...
 -- FontString takes it) but not formatted, so health shows as a plain number, and what
 -- can't be read at all is left out.
 --
+-- Behind a player's model, their race's background (the dressing room art, in four tiles),
+-- greyed and darkened per race as in the inspect window; NPCs get plain black.
+--
 -- Right-clicking an NPC or enemy player (target, focus) also offers "View 3D model".
 --
 -- The window is a UI panel (RegisterUIPanel, a "left" panel like the inspect window), so out
@@ -50,6 +53,18 @@ local WIDTH, HEIGHT = PANEL_DEFAULT_WIDTH or 338, PANEL_DEFAULT_HEIGHT or 424
 local SLOT_SIZE, SLOT_GAP = 37, 4
 local RETRY_EVERY, RETRIES = 2, 8 -- seconds between asking again for gear, and how often
 local READ_EVERY, READ_FOR = 0.5, 10 -- once it answers: re-read this often, for at most this long
+
+-- The race background, as the inspect window lays it out: four tiles of a 231 x 373 area
+-- (the model shows its top), { point, width, height, texture coordinates }.
+local BACKGROUND_TILES = {
+	{ "TOPLEFT", 212, 245, { 0.171875, 1, 0.0392156862745098, 1 } },
+	{ "TOPRIGHT", 19, 245, { 0, 0.296875, 0.0392156862745098, 1 } },
+	{ "BOTTOMLEFT", 212, 128, { 0.171875, 1, 0, 1 } },
+	{ "BOTTOMRIGHT", 19, 128, { 0, 0.296875, 0, 1 } },
+}
+local BACKGROUND_WIDTH, BACKGROUND_HEIGHT = 231, 373
+-- How dark the black over it is, per race (Blizzard's PaperDollFrame); others 0.85.
+local BACKGROUND_DARKNESS = { HUMAN = 1, DWARF = 0.93, NIGHTELF = 0.5, TROLL = 0.85, ORC = 0.75, SCOURGE = 0.2 }
 -- Right-click menus that get "View 3D model": NPCs (target and focus) and enemy players.
 local MENU_TAGS = { "TARGET", "FOCUS", "ENEMY_PLAYER" }
 local TURN_SPEED = 0.02 -- radians per pixel dragged
@@ -73,7 +88,7 @@ local UI = ns.UI
 local inspect = {}
 ns.inspectAnything = inspect
 
-local frame, model, subtitle, statusText, stats, slotButtons, modelBorder
+local frame, model, subtitle, statusText, stats, slotButtons, modelBorder, raceTiles, raceShade
 local wowheadButton, blizzardButton, dressUpButton
 local shown -- what the window shows: { guid, isPlayer, npcID, name }
 -- [guid] = { items = { [slotID] = link }, ids = { [slotID] = itemID } (items without a link
@@ -320,6 +335,24 @@ end
 
 -- Players: between the slot columns, above the weapons (where the inspect window has its
 -- model). NPCs: the whole inset. The black backdrop and the frame around it follow.
+-- Their race's background (players), or none (NPCs, or a race that can't be read).
+local function UpdateBackground(unit, isPlayer)
+	local _, raceFile = UnitRace(unit)
+	local show = isPlayer and Readable(raceFile) and raceFile ~= nil
+	for _, texture in ipairs(raceTiles) do
+		texture:SetShown(show)
+	end
+	raceShade:SetShown(show)
+	if not show then
+		return
+	end
+	local path = DressUpTexturePath and DressUpTexturePath(raceFile) or ("Interface\\DressUpFrame\\DressUpBackground-" .. raceFile)
+	for index, texture in ipairs(raceTiles) do
+		texture:SetTexture(path .. index)
+	end
+	raceShade:SetAlpha(BACKGROUND_DARKNESS[raceFile:upper()] or 0.85)
+end
+
 local function LayoutModel(isPlayer)
 	local inset = frame.Inset
 	local left, right, top, bottom = 4, 4, 4, 4
@@ -470,9 +503,30 @@ local function CreateWindow()
 
 	model = CreateFrame("PlayerModel", nil, modelBorder)
 	-- Black right behind the model (a model frame's own background layer, as Blizzard's has).
-	local modelBackground = model:CreateTexture(nil, "BACKGROUND")
+	local modelBackground = model:CreateTexture(nil, "BACKGROUND", nil, -8)
 	modelBackground:SetAllPoints()
 	modelBackground:SetColorTexture(0, 0, 0, 1)
+	-- A player's race background over it, scaled from the inspect window's layout.
+	raceTiles = {}
+	for index, tile in ipairs(BACKGROUND_TILES) do
+		local texture = model:CreateTexture(nil, "BACKGROUND", nil, 0)
+		texture:SetTexCoord(unpack(tile[4]))
+		texture:SetDesaturated(true)
+		raceTiles[index] = texture
+	end
+	raceTiles[1]:SetPoint("TOPLEFT")
+	raceTiles[2]:SetPoint("TOPLEFT", raceTiles[1], "TOPRIGHT")
+	raceTiles[3]:SetPoint("TOPLEFT", raceTiles[1], "BOTTOMLEFT")
+	raceTiles[4]:SetPoint("TOPLEFT", raceTiles[1], "BOTTOMRIGHT")
+	model:HookScript("OnSizeChanged", function(self, width)
+		local scale = (width or self:GetWidth() or BACKGROUND_WIDTH) / BACKGROUND_WIDTH
+		for index, tile in ipairs(BACKGROUND_TILES) do
+			raceTiles[index]:SetSize(tile[2] * scale, tile[3] * scale)
+		end
+	end)
+	raceShade = model:CreateTexture(nil, "BORDER")
+	raceShade:SetAllPoints()
+	raceShade:SetColorTexture(0, 0, 0, 1)
 	model:EnableMouse(true)
 	model:EnableMouseWheel(true)
 	model:SetScript("OnMouseDown", function(_, button)
@@ -593,6 +647,7 @@ local function Show(unit)
 	UpdateStatus()
 	UpdateSlots()
 	LayoutModel(isPlayer)
+	UpdateBackground(unit, isPlayer)
 	wowheadButton:SetShown(shown.npcID ~= nil)
 	blizzardButton:SetShown(isPlayer)
 	dressUpButton:SetShown(isPlayer)

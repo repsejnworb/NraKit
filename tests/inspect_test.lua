@@ -87,7 +87,8 @@ return {
 			return units[unit] and units[unit].isPlayer == true
 		end
 		UnitRace = function(unit)
-			return units[unit] and units[unit].race
+			local race = units[unit] and units[unit].race
+			return race, race and race:gsub(" ", "")
 		end
 		UnitHealthMax = function(unit)
 			return units[unit] and units[unit].health
@@ -190,6 +191,27 @@ return {
 			local helm = Slot(LINKS[1])
 			helm.scripts.OnClick(helm)
 			t.equal(clicked[1], LINKS[1], "Shift-click links it")
+		end)
+
+		t.test("players get their race's background, greyed and darkened per race; NPCs plain black", function()
+			local function Tiles()
+				local files, shade = {}, nil
+				for _, frame in ipairs(wow.frames) do
+					local file = rawget(frame, "file")
+					if wow.visible(frame) and type(file) == "string" and file:find("DressUpBackground", 1, true) then
+						table.insert(files, file)
+					end
+				end
+				table.sort(files)
+				return table.concat(files, " ")
+			end
+			Inspect("target", { name = "Baine", surname = "Hoof", isPlayer = true, race = "Tauren", level = 30,
+				guid = "Player-1-00000010" })
+			local path = "Interface\\DressUpFrame\\DressUpBackground-Tauren"
+			t.equal(Tiles(), path .. "1 " .. path .. "2 " .. path .. "3 " .. path .. "4", "four Tauren tiles")
+			Inspect("target", HOGGER)
+			t.equal(Tiles(), "", "none for an NPC")
+			Inspect("mouseover", GRUNT)
 		end)
 
 		t.test("no spec on Forever: the class name the game gives instead isn't repeated", function()
