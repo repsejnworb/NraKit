@@ -50,8 +50,9 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
 - `UI.lua` – shared look for NraKit's windows (`ns.UI`: window with title bar and sidebar, nav buttons, flat
   tabs/chips, search box, scroll area, widget pools, colours). New windows should use it. NraKit's main windows are
   tabs of one app: `UI.CreateWindow(..., tabKey)` at `UI.WINDOW_WIDTH`x`UI.WINDOW_HEIGHT` plus `UI.RegisterTab{ key, label,
-  menuLabel, order, frameName, open, available }` gives the tab strip, one-open-at-a-time, a shared position and an
-  entry in the addon button's right-click menu. Add window OnShow/OnHide handlers with `HookScript`, not `SetScript`.
+  menuLabel, order, frameName, open, module }` gives the tab strip, one-open-at-a-time, a shared position and an
+  entry in the addon button's right-click menu. Tabs always show; while `module` is off the tab is dimmed and opens a
+  shared "feature is off" page (name, description, turn-on button) instead of the window. Add window OnShow/OnHide handlers with `HookScript`, not `SetScript`.
 - `Changelog.lua` – what's new per version, for players (see the changelog rule above). `WhatsNew.lua` tracks what
   each player has seen, prints one chat line after an update and registers `/nra new`; the page is in `Options.lua`.
   `tools/changelog.lua` is the release tooling (`count`, `release <version> <date>`, `markdown <version>`).

@@ -328,7 +328,5 @@ UI.RegisterTab({
 	open = function()
 		ns:OpenItemLookup()
 	end,
-	available = function()
-		return ns:IsModuleEnabled("itemLookup")
-	end,
+	module = "itemLookup",
 })

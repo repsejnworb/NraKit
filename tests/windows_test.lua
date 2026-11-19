@@ -18,21 +18,41 @@ return {
 			return table.concat(labels, ", ")
 		end
 
-		t.test("tabs only for features that are on", function()
+		local function Tab(key)
+			return wow.findAll(function(frame)
+				return wow.visible(frame) and rawget(frame, "tabKey") == key and frame.scripts.OnClick ~= nil
+			end)[1]
+		end
+
+		t.test("every tab is there, also for features that are off", function()
 			ns:OpenSettings()
 			t.ok(NraKitOptionsFrame:IsShown(), "settings open")
+			t.ok(Tab("inventory"), "Inventory tab")
+			t.ok(Tab("notes"), "Notes tab")
+			t.ok(Tab("goals"), "Goals tab while Farm goals is off")
+			t.ok(Tab("items"), "Items tab while Item lookup is off")
+		end)
+
+		t.test("a tab whose feature is off says what it does and turns it on", function()
+			t.ok(wow.click("Goals"), "Goals tab")
+			t.ok(NraKitFeatureOffFrame:IsShown(), "the feature-is-off page")
+			t.ok(not NraKitOptionsFrame:IsShown(), "in place of settings")
 			t.ok(wow.findAll(function(frame)
-				return wow.visible(frame) and rawget(frame, "tabKey") == "inventory"
-			end)[1], "Inventory tab")
-			t.ok(wow.findAll(function(frame)
-				return wow.visible(frame) and rawget(frame, "tabKey") == "notes"
-			end)[1], "Notes tab")
-			t.ok(not wow.findAll(function(frame)
-				return wow.visible(frame) and rawget(frame, "tabKey") == "goals"
-			end)[1], "no Goals tab while Farm goals is off")
+				return wow.visible(frame) and frame.text == ns.modules.farmGoals.description
+			end)[1], "its description")
+			t.ok(wow.click("Items"), "another off tab")
+			t.ok(NraKitFeatureOffFrame:IsShown(), "still the page")
+			t.ok(wow.click("Turn on Item lookup"), "turn-on button")
+			t.equal(NraKitDB.itemLookup, true, "turned on")
+			t.ok(NraKitItemLookupFrame:IsShown(), "its window opens")
+			t.ok(not NraKitFeatureOffFrame:IsShown(), "in place of the page")
+			ns:SetSetting("itemLookup", false)
+			t.ok(NraKitFeatureOffFrame:IsShown(), "turned off again: back to the page")
+			NraKitFeatureOffFrame:Hide()
 		end)
 
 		t.test("a tab replaces the open window", function()
+			ns:OpenSettings()
 			t.ok(wow.click("Notes"), "Notes tab")
 			t.ok(NraKitPlayerNotesFrame:IsShown(), "notes open")
 			t.ok(not NraKitOptionsFrame:IsShown(), "settings closed")
@@ -66,15 +86,14 @@ return {
 			NraKit_OnCompartmentEnter("NraKit", UIParent)
 		end)
 
-		t.test("turning a feature on adds its tab and menu entry", function()
+		t.test("turning a feature on adds its menu entry", function()
 			ns:SetSetting("farmGoals", true)
 			NraKit_OnCompartmentClick("NraKit", "RightButton")
 			t.equal(Labels(lastMenu.entries), "Inventory, Farm goals, Player notes, What's new, Settings", "menu")
 			wow.menuEntry(lastMenu.entries, "Farm goals").onClick()
 			t.ok(NraKitGoalsFrame:IsShown() and not NraKitPlayerNotesFrame:IsShown(), "goals window")
-			t.ok(wow.findAll(function(frame)
-				return wow.visible(frame) and rawget(frame, "tabKey") == "goals"
-			end)[1], "Goals tab")
+			t.ok(Tab("goals"), "Goals tab")
+			t.noErrors()
 		end)
 	end,
 }

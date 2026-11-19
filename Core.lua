@@ -210,7 +210,7 @@ local function OpenCompartmentMenu()
 	MenuUtil.CreateContextMenu(UIParent, function(_, root)
 		root:CreateTitle(addonName)
 		local windows = 0
-		for _, tab in ipairs(ns.UI.GetTabs()) do
+		for _, tab in ipairs(ns.UI.GetTabs(true)) do
 			if tab.key ~= "settings" then
 				windows = windows + 1
 				root:CreateButton(tab.menuLabel or tab.label, function()
@@ -244,7 +244,7 @@ function NraKit_OnCompartmentEnter(_, button)
 	GameTooltip_SetTitle(GameTooltip, addonName)
 	GameTooltip_AddInstructionLine(GameTooltip, "Left-click: settings")
 	local names = {}
-	for _, tab in ipairs(ns.UI.GetTabs()) do
+	for _, tab in ipairs(ns.UI.GetTabs(true)) do
 		if tab.key ~= "settings" then
 			table.insert(names, tab.menuLabel or tab.label)
 		end

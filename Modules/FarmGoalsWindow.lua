@@ -1515,9 +1515,7 @@ UI.RegisterTab({
 	open = function()
 		ns:OpenGoalsWindow()
 	end,
-	available = function()
-		return ns:IsModuleEnabled("farmGoals")
-	end,
+	module = "farmGoals",
 })
 
 ns:AddOptionsButton("farmGoals", "Open goals window", "Your goals, history and a new goal (/nra goal).", function()

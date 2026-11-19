@@ -175,6 +175,7 @@ function ns:RegisterSettings()
 				if module.OnEnabledChanged then
 					module:OnEnabledChanged(value)
 				end
+				ns.UI.RefreshTabs() -- its tab brightens or dims, its page turns into its window
 			end)
 
 			local subcategory, sublayout

@@ -91,15 +91,20 @@ end
 -- Tabs: NraKit's main windows act as one app. Each registers a tab (UI.RegisterTab);
 -- a window made with a tab key gets "NraKit" and the tab strip in its title bar. Only
 -- one is open at a time, always at the same place (NraKitDB.windowPosition, saved when
--- one is dragged), so switching tabs looks like one window changing pages. Tabs of
--- features that are off are hidden.
+-- one is dragged), so switching tabs looks like one window changing pages.
+--
+-- Every tab is always there, so they keep their places and players find what they haven't
+-- turned on. A tab whose feature is off is dimmed and opens a page saying what the feature
+-- does, with a button to turn it on (which then opens the real window). The strips follow
+-- features being switched on and off (UI.RefreshTabs, called by Settings.lua).
 ------------------------------------------------------------------------------
 
-local tabs = {} -- { key, label, menuLabel, order, frameName, open, available }
+local tabs = {} -- { key, label, menuLabel, order, frameName, open, module }
 local tabWindows = {} -- tab key -> frame
+local RefreshTabStrip, ShowOffPage
 
 -- tab = { key, label, menuLabel? (addon button menu), order, frameName,
---         open = function() shows the window end, available = function() -> bool (optional) }
+--         open = function() shows the window end, module = key of the feature it belongs to (optional) }
 function UI.RegisterTab(tab)
 	table.insert(tabs, tab)
 	table.sort(tabs, function(a, b)
@@ -107,11 +112,15 @@ function UI.RegisterTab(tab)
 	end)
 end
 
--- The tabs that can be opened now, in order.
-function UI.GetTabs()
+function UI.IsTabOn(tab)
+	return not tab.module or ns:IsModuleEnabled(tab.module)
+end
+
+-- Every tab, in order; with onlyOn, just those whose feature is on (the addon button's menu).
+function UI.GetTabs(onlyOn)
 	local list = {}
 	for _, tab in ipairs(tabs) do
-		if not tab.available or tab.available() then
+		if not onlyOn or UI.IsTabOn(tab) then
 			table.insert(list, tab)
 		end
 	end
@@ -119,8 +128,12 @@ function UI.GetTabs()
 end
 
 function UI.ShowTab(key)
-	for _, tab in ipairs(UI.GetTabs()) do
+	for _, tab in ipairs(tabs) do
 		if tab.key == key then
+			if not UI.IsTabOn(tab) then
+				ShowOffPage(tab)
+				return true
+			end
 			local frame = _G[tab.frameName]
 			if not (frame and frame:IsShown()) then
 				tab.open()
@@ -129,6 +142,29 @@ function UI.ShowTab(key)
 		end
 	end
 	return false
+end
+
+-- A feature was switched on or off: redraw the open window's tabs. The "feature is off" page
+-- turns into the real window when its feature comes on, and a window whose feature goes off
+-- turns into that page.
+function UI.RefreshTabs()
+	for key, frame in pairs(tabWindows) do
+		if frame:IsShown() then
+			local tab
+			for _, each in ipairs(tabs) do
+				if each.key == frame.tabKey then
+					tab = each
+				end
+			end
+			if tab and key == "_off" and UI.IsTabOn(tab) then
+				tab.open()
+			elseif tab and key ~= "_off" and not UI.IsTabOn(tab) then
+				ShowOffPage(tab)
+			else
+				RefreshTabStrip(frame)
+			end
+		end
+	end
 end
 
 local function SavePosition(frame)
@@ -146,7 +182,7 @@ local function ApplyPosition(frame)
 	end
 end
 
-local function RefreshTabStrip(frame)
+function RefreshTabStrip(frame)
 	local strip = frame.tabStrip
 	for _, button in ipairs(strip.buttons) do
 		button:Hide()
@@ -167,6 +203,9 @@ local function RefreshTabStrip(frame)
 		button.text:SetText(tab.label)
 		button:SetWidth(button.text:GetStringWidth() + 22)
 		button:SetSelected(tab.key == frame.tabKey)
+		if not UI.IsTabOn(tab) and tab.key ~= frame.tabKey then
+			button.text:SetTextColor(unpack(UI.TEXT_DIM)) -- its feature is off
+		end
 		button:ClearAllPoints()
 		if anchor then
 			button:SetPoint("LEFT", anchor, "RIGHT", 2, 0)
@@ -267,6 +306,61 @@ function UI.CreateWindow(globalName, titleText, width, height, sidebarWidth, tab
 	end
 
 	return frame
+end
+
+------------------------------------------------------------------------------
+-- The page a tab shows while its feature is off.
+------------------------------------------------------------------------------
+
+local offPage
+
+local function CreateOffPage()
+	offPage = UI.CreateWindow("NraKitFeatureOffFrame", "", UI.WINDOW_WIDTH, UI.WINDOW_HEIGHT, 0, "_off")
+	local body = offPage.body
+	offPage.name = body:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
+	offPage.name:SetPoint("TOP", 0, -110)
+	offPage.name:SetTextColor(unpack(UI.GOLD))
+	offPage.status = body:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+	offPage.status:SetPoint("TOP", offPage.name, "BOTTOM", 0, -8)
+	offPage.status:SetText("This feature is off.")
+	offPage.description = body:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	offPage.description:SetPoint("TOP", offPage.status, "BOTTOM", 0, -24)
+	offPage.description:SetWidth(520)
+	offPage.description:SetJustifyH("CENTER")
+	offPage.description:SetSpacing(3)
+	offPage.turnOn = UI.CreateFlatButton(body, "", 32)
+	offPage.turnOn:SetSelected(true)
+	offPage.turnOn:SetPoint("TOP", offPage.description, "BOTTOM", 0, -30)
+	offPage.turnOn:SetScript("OnClick", function()
+		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+		ns:SetSetting(offPage.module.key, true) -- UI.RefreshTabs then opens the real window
+	end)
+	offPage.settings = UI.CreateFlatButton(body, "Its settings", 22)
+	offPage.settings:SetPoint("TOP", offPage.turnOn, "BOTTOM", 0, -12)
+	offPage.settings:SetScript("OnClick", function()
+		ns:OpenSettings(offPage.module.name, offPage.module.key)
+	end)
+end
+
+function ShowOffPage(tab)
+	local module = ns.modules[tab.module]
+	if not module then
+		return
+	end
+	if not offPage then
+		CreateOffPage()
+	end
+	offPage.module = module
+	offPage.tabKey = tab.key
+	offPage.name:SetText(module.name)
+	offPage.description:SetText(module.description)
+	offPage.turnOn.text:SetText("Turn on " .. module.name)
+	offPage.turnOn:SetWidth(offPage.turnOn.text:GetStringWidth() + 40)
+	if offPage:IsShown() then
+		RefreshTabStrip(offPage) -- from one off tab to another
+	else
+		offPage:Show()
+	end
 end
 
 -- A sidebar entry: label on the left, a small count on the right, an optional second

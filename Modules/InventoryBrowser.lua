@@ -743,7 +743,5 @@ UI.RegisterTab({
 	open = function()
 		ns:OpenInventoryBrowser()
 	end,
-	available = function()
-		return ns:IsModuleEnabled("inventoryTracker")
-	end,
+	module = "inventoryTracker",
 })

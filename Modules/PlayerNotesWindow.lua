@@ -826,9 +826,7 @@ UI.RegisterTab({
 	open = function()
 		ns:OpenPlayerNotes()
 	end,
-	available = function()
-		return ns:IsModuleEnabled("playerNotes")
-	end,
+	module = "playerNotes",
 })
 
 ns:AddOptionsButton("playerNotes", "Open player notes", "Everyone you have notes on, and your labels (/nra note).", function()
