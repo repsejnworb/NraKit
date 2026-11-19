@@ -22,6 +22,11 @@ wow.data = {
 		{ currencyID = 1901, name = "Honor", quantity = 120, iconFileID = 1 },
 	},
 	items = { [4306] = { name = "Silk Cloth", bags = 0, bank = 0 } },
+	-- Units by token: { name, surname?, guid?, class?, isPlayer? }. Unlisted units don't exist,
+	-- except "player" (Nra, a warrior).
+	units = {},
+	party = {}, -- unit tokens of the other group members ("party1", ...)
+	zone = "Elwynn Forest",
 }
 
 ------------------------------------------------------------------------------
@@ -263,7 +268,8 @@ function wow.install()
 	G.ITEM_QUALITY_COLORS = {}
 	G.SOUNDKIT = { RAID_WARNING = 8959, READY_CHECK = 8960, UI_EPICLOOT_TOAST = 31578, UI_WORLDQUEST_COMPLETE = 73277, LOOT_WINDOW_COIN_SOUND = 120,
 		UI_QUEST_ROLLING_FORWARD_01 = 3, IG_QUEST_LIST_COMPLETE = 878, IG_MAINMENU_OPTION_CHECKBOX_ON = 856,
-		IG_MAINMENU_OPTION_CHECKBOX_OFF = 857, MAP_PING = 3175 }
+		IG_MAINMENU_OPTION_CHECKBOX_OFF = 857, MAP_PING = 3175,
+		UI_RAID_BOSS_WHISPER_WARNING = 37666 }
 	G.Enum = setmetatable({}, { __index = function(enums, name)
 		local enum = setmetatable({}, { __index = function()
 			return 1
@@ -359,10 +365,16 @@ function wow.install()
 		G[name] = Namespace()
 	end
 	G.TooltipDataProcessor.AllTypes = "ALL"
+	G.TooltipDataProcessor.AddTooltipPostCall = function(dataType, callback)
+		table.insert(wow.tooltipCalls, { type = dataType, callback = callback })
+	end
 	G.C_Container.GetContainerNumSlots = function()
 		return 0
 	end
 	G.C_NamePlate.GetNamePlates = function()
+		return {}
+	end
+	G.C_VignetteInfo.GetVignettes = function()
 		return {}
 	end
 
@@ -431,12 +443,61 @@ function wow.install()
 	end
 	G.ChatFrameUtil = { InsertLink = function() end }
 
-	G.UnitName = function()
+	local function Unit(unit)
+		return wow.data.units[unit]
+	end
+	G.UnitName = function(unit)
+		local data = Unit(unit)
+		if data then
+			return data.name, data.surname
+		end
 		return "Nra"
 	end
-	G.UnitClass = function()
+	G.UnitClass = function(unit)
+		local data = Unit(unit)
+		if data and data.class then
+			return data.class, data.class:upper()
+		end
 		return "Warrior", "WARRIOR"
 	end
+	G.UnitExists = function(unit)
+		return unit == "player" or Unit(unit) ~= nil
+	end
+	G.UnitIsPlayer = function(unit)
+		local data = Unit(unit)
+		return unit == "player" or (data ~= nil and data.isPlayer ~= false)
+	end
+	G.UnitGUID = function(unit)
+		local data = Unit(unit)
+		return data and data.guid
+	end
+	G.IsInGroup = function()
+		return #wow.data.party > 0
+	end
+	G.IsInRaid = function()
+		return false
+	end
+	G.GetNumSubgroupMembers = function()
+		return #wow.data.party
+	end
+	G.GetNumGroupMembers = function()
+		return #wow.data.party > 0 and #wow.data.party + 1 or 0
+	end
+	G.GetRealZoneText = function()
+		return wow.data.zone
+	end
+	wow.raidNotices = {}
+	G.RaidNotice_AddMessage = function(_, text)
+		table.insert(wow.raidNotices, text)
+	end
+	-- Unit popup menus: Menu.ModifyMenu callbacks by tag; wow.openMenu runs them.
+	wow.menus = {}
+	G.Menu = { ModifyMenu = function(tag, callback)
+		wow.menus[tag] = wow.menus[tag] or {}
+		table.insert(wow.menus[tag], callback)
+	end }
+	-- Tooltip post-calls by data type (TooltipDataProcessor.AddTooltipPostCall).
+	wow.tooltipCalls = {}
 	G.UnitLevel = function()
 		return wow.data.level
 	end
@@ -620,6 +681,62 @@ function wow.advance(seconds)
 			onUpdate(frame, seconds)
 		end
 	end
+end
+
+-- Opens a unit popup menu (e.g. "MENU_UNIT_PLAYER") with contextData, running every
+-- addon's Menu.ModifyMenu callback. Returns the entries: { text, onClick, entries,
+-- isSelected, kind }. Find one with wow.menuEntry(entries, text).
+function wow.openMenu(tag, contextData)
+	local function Description()
+		local description = { entries = {} }
+		local function Add(kind, text, a, b)
+			local entry = Description()
+			entry.kind, entry.text = kind, text
+			if kind == "radio" then
+				entry.isSelected, entry.onClick = a, b
+			else
+				entry.onClick = a
+			end
+			table.insert(description.entries, entry)
+			return entry
+		end
+		function description:CreateDivider() return Add("divider") end
+		function description:CreateTitle(text) return Add("title", text) end
+		function description:CreateButton(text, onClick) return Add("button", text, onClick) end
+		function description:CreateRadio(text, isSelected, onClick) return Add("radio", text, isSelected, onClick) end
+		function description:CreateCheckbox(text, isSelected, onClick) return Add("checkbox", text, isSelected, onClick) end
+		return description
+	end
+	local root = Description()
+	for _, callback in ipairs(wow.menus[tag] or {}) do
+		callback(nil, root, contextData)
+	end
+	return root.entries
+end
+
+function wow.menuEntry(entries, text)
+	for _, entry in ipairs(entries) do
+		if entry.text == text or (type(entry.text) == "string" and entry.text:find(text, 1, true)) then
+			return entry
+		end
+	end
+end
+
+-- Builds the tooltip for a unit and returns its added lines.
+function wow.unitTooltip(unit)
+	local tooltip = NewObject("GameTooltip")
+	local lines = {}
+	rawset(tooltip, "lines", lines)
+	rawset(tooltip, "GetUnit", function()
+		return nil, unit
+	end)
+	rawset(tooltip, "AddLine", function(_, text)
+		table.insert(lines, text)
+	end)
+	for _, call in ipairs(wow.tooltipCalls) do
+		call.callback(tooltip, {})
+	end
+	return lines
 end
 
 -- The goal amount box: the edit box created for numbers (it takes text for money goals).

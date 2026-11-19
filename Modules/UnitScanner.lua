@@ -19,6 +19,10 @@ local _, ns = ...
 --
 -- The list lives in NraKitDB.unitScanTargets (account-wide) as { name = , npcID = }
 -- entries; either may be missing until the unit has been seen.
+--
+-- Player notes adds players with a Hostile label (Kill on sight, ...) when its "Alert
+-- when Hostile players are nearby" option is on: they're looked up by full name
+-- ("Firstname Surname") through ns.playerNotes.ScanEntry, not added to the list.
 
 local MarkerLabel
 
@@ -180,6 +184,11 @@ local function GetNpcID(guid)
 		return tonumber(npcID)
 	end
 	return nil
+end
+
+-- Whether there's anything to look for: the list, or Hostile players from Player notes.
+local function HasWork()
+	return #GetTargets() > 0 or (ns.playerNotes ~= nil and ns.playerNotes.HasScanTargets())
 end
 
 local function DisplayName(entry)
@@ -414,10 +423,14 @@ local function Alert(entry, source)
 		ns.sounds.PlayOption("unitScanSoundChoice", "kit:RAID_WARNING")
 	end
 	if ns:GetOption("unitScanScreenText") then
-		ShowScreenText(name .. " found!")
+		ShowScreenText(entry.noted and string.format("%s: %s nearby!", entry.label, name) or (name .. " found!"))
 	end
 	if ns:GetOption("unitScanChat") then
-		ns:Print(string.format("|cffff4020%s|r found (%s).", name, SOURCE_LABELS[source] or source))
+		if entry.noted then
+			ns:Print(string.format("|cffff4020%s|r (%s) found (%s).", name, entry.label, SOURCE_LABELS[source] or source))
+		else
+			ns:Print(string.format("|cffff4020%s|r found (%s).", name, SOURCE_LABELS[source] or source))
+		end
 	end
 	if ns:GetOption("unitScanFlash") then
 		FlashClientIcon()
@@ -427,8 +440,9 @@ local function Alert(entry, source)
 	end
 end
 
--- Checks one name / GUID pair against the list.
-local function Check(name, guid, source, unit)
+-- Checks one name / GUID pair against the list (and Player notes' Hostile players;
+-- surname is the second part of a player's name).
+local function Check(name, guid, source, unit, surname)
 	if name and IsSecret(name) then
 		name = nil
 	end
@@ -437,12 +451,19 @@ local function Check(name, guid, source, unit)
 		return
 	end
 	local entry = FindEntry(name, npcID)
+	if not entry and name and not npcID and ns.playerNotes then
+		local fullName = name
+		if surname and not IsSecret(surname) and surname ~= "" then
+			fullName = name .. " " .. surname
+		end
+		entry = ns.playerNotes.ScanEntry(fullName, guid and not IsSecret(guid) and guid or nil)
+	end
 	if not entry then
 		return
 	end
 	-- Fill in what an entry added by ID (or by name) was missing, and take the
 	-- unit's own spelling of the name (names match case-insensitively).
-	if name then
+	if name and not entry.noted then
 		entry.name = name
 	end
 	if npcID and not entry.npcID then
@@ -462,7 +483,8 @@ local function CheckUnit(unit, source)
 	if not IsSecret(dead) and dead then
 		return
 	end
-	Check(UnitName(unit), UnitGUID(unit), source, unit)
+	local name, surname = UnitName(unit)
+	Check(name, UnitGUID(unit), source, unit, surname)
 end
 
 local function CheckVignette(vignetteGUID)
@@ -477,7 +499,7 @@ local function CheckVignette(vignetteGUID)
 end
 
 local function ScanAll()
-	if not ns:IsModuleEnabled(module.key) or #GetTargets() == 0 then
+	if not ns:IsModuleEnabled(module.key) or not HasWork() then
 		return
 	end
 	for _, plate in pairs(C_NamePlate.GetNamePlates()) do
@@ -490,6 +512,11 @@ local function ScanAll()
 			CheckVignette(vignetteGUID)
 		end
 	end
+end
+
+-- Player notes changed which players are Hostile (or turned scanning for them on/off).
+function ns:UnitScannerTargetsChanged()
+	ScanAll()
 end
 
 ---------------------------------------------------------------------------
@@ -696,7 +723,7 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1, arg2, ...)
 		ScanAll()
 		return
 	end
-	if #GetTargets() == 0 then
+	if not HasWork() then
 		return
 	end
 	if event == "NAME_PLATE_UNIT_ADDED" then

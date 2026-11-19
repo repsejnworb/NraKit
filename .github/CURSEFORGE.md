@@ -4,7 +4,7 @@
 
 Type **/nrakit** (or **/nra**) to open NraKit's own window: features grouped in a sidebar, **search**, an on/off switch per feature and its options right underneath. Everything is off until you turn it on. The same settings are also under **Options → AddOns → NraKit**. NraKit is also in the **addon button by the minimap** (no extra minimap button): left-click for settings, right-click for the inventory browser. **/nra help** lists the chat commands.
 
-Alert **sounds are yours to choose** (Campfire timer, Unit Scanner, Farm goals): a short list of good ones (hover to hear them), or **More sounds...** to search every game sound and any sounds other addons share through LibSharedMedia.
+Alert **sounds are yours to choose** (Campfire timer, Unit Scanner, Farm goals, Player notes): a short list of good ones (hover to hear them), or **More sounds...** to search every game sound and any sounds other addons share through LibSharedMedia.
 
 ## Features
 
@@ -100,6 +100,16 @@ Get alerted when a **mob or player from your own list** shows up.
 - Target a unit and type **/nra scan** to add it (again to remove it), or use **/nra scan &lt;name or NPC ID&gt;**, **/nra scan list**, **/nra scan remove &lt;# or name&gt;** and **/nra scan clear**.
 - Units are found through nameplates, mouseover, your and your group's targets, **minimap markers** (rares) and **NPC yells and emotes**. The nameplate range can optionally be raised while scanning.
 - Addons can only see units the game already shows you, so keep enemy nameplates on (with Engaged-only nameplates, the scanner keeps them on for you).
+- With **Player notes**, it also alerts you when a player you've labelled **Kill on sight** shows up (optional, on by default).
+
+### Player notes
+Remember who stole your mining node, who ninja'd the loot and who was a great healer.
+- Give a player a **label** (Kill on sight, Avoid, Neutral, Good, Friend, or your own) and keep a **dated log of notes** on them (each note saves the date, zone and your character).
+- Their label and latest note show in their **tooltip**.
+- **Right-click a player** (portrait, party frame, their name in chat, guild and friends lists) for **Player note...** or to set their label right there.
+- **Warnings** when a player labelled Avoid or Kill on sight joins your group, invites you, whispers you or opens a trade (chat, on screen and a sound, each optional).
+- Labels can be renamed, recolored, added and deleted. Each has a **tone** that decides what it does: Hostile (warnings and Unit Scanner alerts), Caution (warnings), Neutral or Friendly (tooltip only).
+- **/nra note** opens your notebook (search by name, label or note text), or your target's notes. From chat: **/nra note Bob Stone kos stole my node**, or **/nra note avoid ninja'd the loot** for your target.
 
 ## Feedback and bugs
 NraKit is a growing collection of small fixes. Found a bug or have an idea? **[Open an issue on GitHub](https://github.com/repsejnworb/NraKit/issues).**

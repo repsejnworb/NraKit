@@ -19,7 +19,7 @@ NraKit is also in the addon button by the minimap: left-click for settings, righ
 inventory browser. `/nra help` lists the chat commands; add `help` after one for details
 (e.g. `/nra goal help`).
 
-Sounds (Campfire timer, Unit Scanner, Farm goals) can be changed: pick from a short list of good
+Sounds (Campfire timer, Unit Scanner, Farm goals, Player notes) can be changed: pick from a short list of good
 ones (hover to hear them) or **More sounds...** to search every game sound, plus any sounds other
 addons share through LibSharedMedia.
 
@@ -107,6 +107,16 @@ addons share through LibSharedMedia.
   `/nra scan <name or NPC ID>`, `/nra scan list`, `/nra scan remove <# or name>` and
   `/nra scan clear`. Addons can only see units the game already shows you, so enemy nameplates
   should be on (with Engaged-only nameplates, the scanner keeps them on while the list isn't empty).
+  With Player notes, it also alerts for players labelled Kill on sight (optional, on by default).
+- **Player notes**: give players a label (Kill on sight, Avoid, Neutral, Good, Friend, or your own)
+  and a dated log of notes (each saves the date, zone and your character). Their label and latest note
+  show in their tooltip. Right-click a player (portrait, party frame, chat name, guild and friends
+  lists) for **Player note...** or to set their label. Warns you (chat, on screen, sound) when a player
+  labelled Avoid or Kill on sight joins your group, invites, whispers or trades you. Labels can be
+  renamed, recolored, added and deleted; each has a tone that decides what it does: Hostile (warnings
+  and Unit Scanner alerts), Caution (warnings), Neutral or Friendly (tooltip only). `/nra note` opens
+  the notebook (search by name, label or note text) or your target's notes; from chat,
+  `/nra note Bob Stone kos stole my node` or `/nra note avoid ninja'd the loot` for your target.
 
 ## Development
 Requires [just](https://github.com/casey/just), [cocogitto](https://github.com/cocogitto/cocogitto) and Lua (`luac` for the syntax check; LuaJIT for the tests, since it runs Lua 5.1 like the game).

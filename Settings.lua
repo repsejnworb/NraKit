@@ -141,16 +141,20 @@ local function RegisterModuleOptions(category, module, moduleSetting, moduleInit
 		end)
 		controls[option.key] = { setting = setting, initializer = initializer }
 
+		-- An option that needs another module (option.requires) greys out while it's off.
+		local function RequiredOn()
+			return not option.requires or NraKitDB[option.requires] == true
+		end
 		local parent = option.parent and controls[option.parent]
 		if parent then
 			-- Parent is on this page, so Blizzard indents the option under it.
 			initializer:SetParentInitializer(parent.initializer, function()
-				return moduleSetting:GetValue() and parent.setting:GetValue()
+				return moduleSetting:GetValue() and parent.setting:GetValue() and RequiredOn()
 			end)
 		else
 			-- Parent is the module switch on the main page: greys out without indenting.
 			initializer:SetParentInitializer(moduleInitializer, function()
-				return moduleSetting:GetValue()
+				return moduleSetting:GetValue() and RequiredOn()
 			end)
 		end
 	end

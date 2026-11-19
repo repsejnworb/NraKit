@@ -20,7 +20,8 @@ ns.moduleOrder = {}
 --                                                                   string.format pattern, or
 --                                                                   a function(value) -> label)
 --               An option with `parent = <option key>` is nested under that checkbox,
---               and `header = "..."` starts a new sub-section before the option.
+--               `header = "..."` starts a new sub-section before the option, and
+--               `requires = <module key>` greys it out while that other module is off.
 --   OnInitialize(self)                   called once on PLAYER_LOGIN
 --   OnEnabledChanged(self, on)           called when the module is toggled
 --   OnOptionChanged(self, key, value)    called when a sub-option changes

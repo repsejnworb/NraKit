@@ -7,4 +7,6 @@
 	<Binding name="NRAKIT_WOWHEAD_LINK" category="ADDONS">NraKit_CopyWowheadLink()</Binding>
 	<!-- Opens the inventory browser (Modules/InventoryBrowser.lua). -->
 	<Binding name="NRAKIT_INVENTORY_BROWSER" category="ADDONS">NraKit_ToggleInventoryBrowser()</Binding>
+	<!-- Opens player notes (Modules/PlayerNotes.lua). -->
+	<Binding name="NRAKIT_PLAYER_NOTES" category="ADDONS">NraKit_TogglePlayerNotes()</Binding>
 </Bindings>

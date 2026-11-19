@@ -38,9 +38,10 @@ local function IsOn(key)
 	return NraKitDB[key] == true
 end
 
--- Whether an option can be changed: its module is on and every parent option is on.
+-- Whether an option can be changed: its module is on, every parent option is on, and
+-- the module it needs (option.requires) is on.
 local function IsOptionActive(module, option, byKey)
-	if not IsOn(module.key) then
+	if not IsOn(module.key) or (option.requires and not IsOn(option.requires)) then
 		return false
 	end
 	local parent = option.parent and byKey[option.parent]

@@ -33,8 +33,8 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
 - `Core.lua` – namespace, module registry, SavedVariables (`NraKitDB`), `/nrakit` and `/nra`. The module table format is documented at the top.
 - `Settings.lua` – Blizzard Settings API page (Options > AddOns > NraKit): section headers with an on/off switch per
   module. Modules with `options` get a subpage named after the module; options support `type = "number"` sliders
-  (`min/max/step/format`), `header = "..."` subsections, and `parent = <option key>` nesting (greyed out unless the
-  parent is on). `ns.sectionOrder` lists the sidebar groups; put new modules in one of them. Change values with
+  (`min/max/step/format`), `header = "..."` subsections, `parent = <option key>` nesting (greyed out unless the
+  parent is on) and `requires = <module key>` (greyed out while that other module is off). `ns.sectionOrder` lists the sidebar groups; put new modules in one of them. Change values with
   `ns:SetSetting(key, value)` (both UIs and the module callbacks stay in step).
 - `Sounds.lua` – sound choices (`ns.sounds`): values are `"kit:NAME"`, `"lsm:Name"`, `"none"` (or `"default"` per goal).
   Options with `type = "sound"` get a dropdown + Play in both UIs; play them with `ns.sounds.PlayOption(key, default)`.
@@ -87,6 +87,10 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
 
 ## Forever quirks
 
+- **No realms.** Player names are "Firstname Surname": `UnitName(unit)` returns the two parts (the realm slot holds
+  the surname; Blizzard joins them with `CHARACTERNAME_SURNAME_SEPARATOR`, a space). Unit popup menus give
+  `contextData.name`/`surname`. Match names case-insensitively and treat "First-Surname" as the same player
+  (`ns.playerNotes.Key`).
 - "Always Show Nameplates" off (`nameplateShowAll = 0`) is **broken in Forever** (known since beta): it doesn't limit
   plates to combat. EngagedNameplates toggles `nameplateShowEnemies` on `PLAYER_REGEN_DISABLED`/`ENABLED` instead.
 - `nameplateMinScaleDistance` and `nameplateMaxScaleDistance` are both 10, so plates are either full size or min scale (no gradient).
