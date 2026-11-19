@@ -109,7 +109,7 @@ Remember who stole your mining node, who ninja'd the loot and who was a great he
 - **Right-click a player** (portrait, party frame, their name in chat, guild and friends lists) for **Player note...** or to set their label right there.
 - **Warnings** when a player labelled Avoid or Kill on sight joins your group, invites you, whispers you or opens a trade (chat, on screen and a sound, each optional).
 - Labels can be renamed, recolored, added and deleted. Each has a **tone** that decides what it does: Hostile (warnings and Unit Scanner alerts), Caution (warnings), Neutral or Friendly (tooltip only).
-- **/nra note** opens your notebook (**+ Add player** adds anyone by first name and surname, or your target; search by name, label or note text), or your target's notes. From chat: **/nra note Bob Stone kos stole my node**, and with a player targeted just **/nra note ninja'd the loot** (or **/nra note avoid ninja'd the loot** to label them too).
+- **/nra note** opens your notebook (**+ Add player** adds anyone by first name and surname, or your target; search by name, label or note text), or your target's notes. From chat: **/nra note Bob Stone kos stole my node**, and with a player targeted just **/nra note ninja'd the loot** (or **/nra note avoid ninja'd the loot** to label them too). **/nra note !remove** takes your target out of your notes (**!undo** brings them back).
 
 ## Feedback and bugs
 NraKit is a growing collection of small fixes. Found a bug or have an idea? **[Open an issue on GitHub](https://github.com/repsejnworb/NraKit/issues).**

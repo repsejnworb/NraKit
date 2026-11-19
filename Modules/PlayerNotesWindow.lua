@@ -406,7 +406,10 @@ local function CreatePlayerPage(body)
 			return
 		end
 		Select(nil)
-		notes.DeletePlayer(key)
+		local record = notes.DeletePlayer(key)
+		if record then
+			ns:Print(string.format("Removed %s (%s). |cffffd100/nra note !undo|r brings them back.", record.name, notes.CountText(record)))
+		end
 	end)
 	p.deleteButton:SetScript("OnLeave", function()
 		if confirmDelete then

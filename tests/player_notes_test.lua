@@ -91,6 +91,31 @@ return {
 			t.equal(#players()["bob stone"].notes, 1, "Bob Stone untouched")
 		end)
 
+		t.test("!remove takes your target out of your notes, !undo brings them back", function()
+			wow.data.units.target = { name = "Hal", surname = "Pike", guid = "Player-1-0009" }
+			Slash("note remove")
+			t.equal(players()["hal pike"].notes[3].text, "remove", "plain words are still a note")
+			wow.printed = {}
+			Slash("note !remove")
+			t.ok(players()["hal pike"] == nil, "removed")
+			t.ok(wow.printed[1]:find("3 notes", 1, true) and wow.printed[1]:find("!undo", 1, true), "says how to undo")
+			Slash("note !undo")
+			t.equal(#players()["hal pike"].notes, 3, "back with its notes")
+			Slash("note !rm Hal Pike")
+			t.ok(players()["hal pike"] == nil, "removed by name")
+			Slash("note fresh start")
+			Slash("note !undo")
+			t.equal(#players()["hal pike"].notes, 4, "undo after re-adding merges the notes")
+			t.equal(players()["hal pike"].notes[4].text, "fresh start", "newest last")
+			wow.printed = {}
+			Slash("note !undo")
+			t.ok(wow.printed[1]:find("Nothing to undo", 1, true), "only once")
+			Slash("note !bogus")
+			t.ok(wow.printed[2]:find("Unknown", 1, true), "unknown command")
+			t.ok(players()["bogus"] == nil, "never a player or a note")
+			wow.data.units.target = nil
+		end)
+
 		t.test("a renamed player is still found by GUID", function()
 			wow.data.units.target = { name = "Cid", surname = "Newname", guid = "Player-1-0001" }
 			local record = notes.FindUnit("target")

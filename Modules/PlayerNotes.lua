@@ -382,9 +382,48 @@ function notes.DeleteNote(key, index)
 	end
 end
 
+-- The last deleted player, for undo (this session only): { key, record }.
+local lastDeleted
+
 function notes.DeletePlayer(key)
+	local record = notes.GetData().players[key]
+	if not record then
+		return nil
+	end
 	notes.GetData().players[key] = nil
+	lastDeleted = { key = key, record = record }
 	Changed()
+	return record
+end
+
+-- Brings back the last deleted player. If they were added again since, their old
+-- notes are merged in (oldest first) and the new label stays. Returns the record.
+function notes.RestorePlayer()
+	if not lastDeleted then
+		return nil
+	end
+	local players = notes.GetData().players
+	local old, current = lastDeleted.record, players[lastDeleted.key]
+	lastDeleted = nil
+	if current then
+		for index, note in ipairs(old.notes) do
+			table.insert(current.notes, index, note)
+		end
+		table.sort(current.notes, function(a, b)
+			return (a.time or 0) < (b.time or 0)
+		end)
+		current.created = math.min(current.created or old.created, old.created or current.created)
+	else
+		players[notes.Key(old.name)] = old
+		current = old
+	end
+	Changed()
+	return current
+end
+
+function notes.CountText(record)
+	local count = #record.notes
+	return count == 1 and "1 note" or (count .. " notes")
 end
 
 -- All players: { key, record } sorted by last change, newest first.
@@ -731,7 +770,9 @@ local HELP = {
 		"/nra note <label> [note] - set your target's label (kos, avoid, neutral, good, friend, or yours), and add a note",
 		"/nra note <First Last> [label] [note] - the same for anyone by name (no note: opens their notes)",
 		"/nra note <first name> [label [note]] - someone you already have notes on (e.g. /nra note bob kos)",
-		"/nra note list - list the players you have notes on",
+		"/nra note !remove [First Last] - remove your target (or that player) from your notes; also !rm, !forget",
+		"/nra note !undo - bring back the player you last removed",
+		"/nra note !list - list the players you have notes on",
 	},
 }
 
@@ -798,6 +839,50 @@ local function List()
 	end
 end
 
+-- "!" commands, so they never clash with note text: !remove, !undo, !list.
+local REMOVE_WORDS = { remove = true, rm = true, del = true, delete = true, forget = true, clear = true }
+
+local function RemoveCommand(argument)
+	local record, key
+	if argument == "" then
+		local name, info = notes.TargetPlayer()
+		if not name then
+			ns:Print("Target a player, or name them: |cffffd100/nra note !remove <First Last>|r.")
+			return
+		end
+		record, key = notes.Find(name, info.guid)
+		if not record then
+			ns:Print(name .. " isn't in your notes.")
+			return
+		end
+	else
+		record, key = notes.Find(argument)
+		if not record and not argument:find("%s") then
+			record = FindByPrefix(argument)
+			key = record and notes.Key(record.name)
+		end
+		if not record then
+			ns:Print("No notes on " .. argument .. ". See /nra note list.")
+			return
+		end
+	end
+	notes.DeletePlayer(key)
+	ns:Print(string.format("Removed %s (%s). |cffffd100/nra note !undo|r brings them back.", record.name, notes.CountText(record)))
+end
+
+local function RunCommand(command, argument)
+	if REMOVE_WORDS[command] then
+		RemoveCommand(argument)
+	elseif command == "undo" then
+		local record = notes.RestorePlayer()
+		ns:Print(record and ("Restored " .. record.name .. " (" .. notes.CountText(record) .. ").") or "Nothing to undo.")
+	elseif command == "list" then
+		List()
+	else
+		ns:Print("Unknown: !" .. command .. ". Try !remove, !undo or !list (/nra note help).")
+	end
+end
+
 local function OnSlashCommand(input)
 	if not ns:IsModuleEnabled(module.key) then
 		ns:Print("Player notes is turned off. Turn it on in /nra.")
@@ -809,7 +894,12 @@ local function OnSlashCommand(input)
 		ns:OpenPlayerNotes(name, info)
 		return
 	end
-	if input:lower() == "list" then
+	local command, argument = input:match("^!(%S*)%s*(.-)$")
+	if command then
+		RunCommand(command:lower(), argument)
+		return
+	end
+	if input:lower() == "list" and not notes.TargetPlayer() then
 		List()
 		return
 	end
