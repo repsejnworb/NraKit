@@ -120,7 +120,7 @@ local function IsPlayerUnit(unit)
 	return Readable(isPlayer) and isPlayer == true
 end
 
--- "Level 32 Elite Beast (Wolf)", "Level 40 Human Warrior": what can be read of it.
+-- "Level 32 Elite Beast (Wolf)", "Level 40 Warrior": what can be read of it.
 local function Describe(unit)
 	local parts = {}
 	local level = UnitLevel(unit)
@@ -133,11 +133,7 @@ local function Describe(unit)
 		table.insert(parts, labels[classification])
 	end
 	if IsPlayerUnit(unit) then
-		local race = UnitRace(unit)
 		local class, classFile = UnitClass(unit)
-		if Readable(race) then
-			table.insert(parts, race)
-		end
 		if Readable(class) then
 			-- In their class colour, as the inspect window shows it.
 			local color = Readable(classFile) and RAID_CLASS_COLORS and RAID_CLASS_COLORS[classFile]
@@ -517,14 +513,6 @@ local function CreateWindow()
 	itemLevelText:SetPoint("TOP", subtitle, "BOTTOM", 0, -2)
 	itemLevelText:SetWordWrap(false)
 	itemLevelText:Hide()
-	stats = {}
-	for _, info in ipairs({ { "health", "Health" }, { "speed", "Attack speed" } }) do
-		local label = frame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-		label:SetText(info[2])
-		local value = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-		value:SetPoint("LEFT", label, "RIGHT", 4, 0)
-		stats[info[1]] = { label = label, value = value }
-	end
 
 	-- The model area: black, in the character frame's inner border (Blizzard's textures).
 	local inset = frame.Inset
@@ -601,7 +589,17 @@ local function CreateWindow()
 		view.zoom = math.min(math.max(view.zoom - delta * ZOOM_STEP, MIN_ZOOM), MAX_ZOOM)
 		ApplyView()
 	end)
-	-- Spec and item level (players), or how loading their gear is going, at the top of the model.
+	-- NPC stats at the top of the model, on the model (its black background would cover them otherwise).
+	stats = {}
+	for _, info in ipairs({ { "health", "Health" }, { "speed", "Attack speed" } }) do
+		local label = model:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+		label:SetText(info[2])
+		local value = model:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		value:SetPoint("LEFT", label, "RIGHT", 4, 0)
+		stats[info[1]] = { label = label, value = value }
+	end
+
+	-- How loading their gear is going (players), at the top of the model.
 	statusText = model:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	statusText:SetPoint("TOP", 0, -8)
 	statusText:SetWidth(WIDTH - 110)

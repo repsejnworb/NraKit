@@ -230,7 +230,7 @@ return {
 				return "|cffc69b6d" .. text .. "|r"
 			end } }
 			Inspect("mouseover", GRUNT)
-			t.ok(Shown("Level 40 Orc |cffc69b6dWarrior|r"), "coloured class")
+			t.ok(Shown("Level 40 |cffc69b6dWarrior|r"), "coloured class, no race (as the inspect window)")
 		end)
 
 		t.test("no spec on Forever: the class name the game gives instead isn't repeated", function()
