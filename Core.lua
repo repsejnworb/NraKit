@@ -189,10 +189,40 @@ SlashCmdList.NRAKIT = function(input)
 end
 
 -- Addon compartment (the addon button by the minimap); wired up in the TOC.
--- Left-click: settings window. Right-click: inventory browser.
+-- Left-click: the NraKit window. Right-click: a menu of NraKit's windows (the ones whose
+-- feature is on), What's new and Settings.
+local function UnseenCount()
+	return ns.whatsNew and ns.whatsNew.UnseenCount() or 0
+end
+
+local function OpenCompartmentMenu()
+	MenuUtil.CreateContextMenu(UIParent, function(_, root)
+		root:CreateTitle(addonName)
+		local windows = 0
+		for _, tab in ipairs(ns.UI.GetTabs()) do
+			if tab.key ~= "settings" then
+				windows = windows + 1
+				root:CreateButton(tab.menuLabel or tab.label, function()
+					ns.UI.ShowTab(tab.key)
+				end)
+			end
+		end
+		if windows > 0 then
+			root:CreateDivider()
+		end
+		local unseen = UnseenCount()
+		root:CreateButton(unseen > 0 and string.format("What's new |cffff9933(%d)|r", unseen) or "What's new", function()
+			ns:OpenWhatsNew()
+		end)
+		root:CreateButton("Settings", function()
+			ns.UI.ShowTab("settings")
+		end)
+	end)
+end
+
 function NraKit_OnCompartmentClick(_, mouseButton)
 	if mouseButton == "RightButton" then
-		ns:OpenInventoryBrowser()
+		OpenCompartmentMenu()
 	else
 		ns:OpenSettings()
 	end
@@ -202,10 +232,15 @@ function NraKit_OnCompartmentEnter(_, button)
 	GameTooltip:SetOwner(button, "ANCHOR_LEFT")
 	GameTooltip_SetTitle(GameTooltip, addonName)
 	GameTooltip_AddInstructionLine(GameTooltip, "Left-click: settings")
-	if ns:IsModuleEnabled("inventoryTracker") then
-		GameTooltip_AddInstructionLine(GameTooltip, "Right-click: inventory browser")
+	local names = {}
+	for _, tab in ipairs(ns.UI.GetTabs()) do
+		if tab.key ~= "settings" then
+			table.insert(names, tab.menuLabel or tab.label)
+		end
 	end
-	local unseen = ns.whatsNew and ns.whatsNew.UnseenCount() or 0
+	table.insert(names, "What's new")
+	GameTooltip_AddInstructionLine(GameTooltip, "Right-click: " .. table.concat(names, ", "))
+	local unseen = UnseenCount()
 	if unseen > 0 then
 		GameTooltip_AddNormalLine(GameTooltip, string.format("What's new: %d %s since you last looked (/nra new)",
 			unseen, unseen == 1 and "change" or "changes"))

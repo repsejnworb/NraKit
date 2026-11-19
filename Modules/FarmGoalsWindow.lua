@@ -11,7 +11,7 @@ local _, ns = ...
 -- item, starting count or sounds without recreating it.
 
 local UI = ns.UI
-local WIDTH, HEIGHT = 720, 560
+local WIDTH, HEIGHT = UI.WINDOW_WIDTH, UI.WINDOW_HEIGHT
 local SIDEBAR_WIDTH = 170
 local PAD = UI.PAD
 
@@ -1189,7 +1189,7 @@ local function OnGoalsChanged()
 end
 
 local function CreateGoalsWindow()
-	frame = UI.CreateWindow("NraKitGoalsFrame", "Goals", WIDTH, HEIGHT, SIDEBAR_WIDTH)
+	frame = UI.CreateWindow("NraKitGoalsFrame", "Goals", WIDTH, HEIGHT, SIDEBAR_WIDTH, "goals")
 
 	local newButton = UI.CreateFlatButton(frame.sidebar, "+  New goal", 28)
 	newButton:SetWidth(SIDEBAR_WIDTH - 2 * PAD)
@@ -1230,7 +1230,7 @@ local function CreateGoalsWindow()
 
 	CreateForm(frame.body)
 
-	frame:SetScript("OnShow", Render)
+	frame:HookScript("OnShow", Render)
 	frame:RegisterEvent("BAG_UPDATE_DELAYED")
 	frame:SetScript("OnEvent", function()
 		if form:IsVisible() then
@@ -1285,3 +1285,17 @@ function ns:OpenGoalsWindow(toPage, goalID)
 		form.amount:HighlightText()
 	end
 end
+
+UI.RegisterTab({
+	key = "goals", label = "Goals", menuLabel = "Farm goals", order = 3, frameName = "NraKitGoalsFrame",
+	open = function()
+		ns:OpenGoalsWindow()
+	end,
+	available = function()
+		return ns:IsModuleEnabled("farmGoals")
+	end,
+})
+
+ns:AddOptionsButton("farmGoals", "Open goals window", "Your goals, history and a new goal (/nra goal).", function()
+	ns:OpenGoalsWindow()
+end)

@@ -15,7 +15,7 @@ local _, ns = ...
 
 local UI = ns.UI
 local notes = ns.playerNotes
-local WIDTH, HEIGHT = 720, 520
+local WIDTH, HEIGHT = UI.WINDOW_WIDTH, UI.WINDOW_HEIGHT
 local SIDEBAR_WIDTH = 230
 local PAD = UI.PAD
 local FOOTER_HEIGHT = 34
@@ -734,7 +734,7 @@ Render = function()
 end
 
 local function CreateNotesWindow()
-	frame = UI.CreateWindow("NraKitPlayerNotesFrame", "Player notes", WIDTH, HEIGHT, SIDEBAR_WIDTH)
+	frame = UI.CreateWindow("NraKitPlayerNotesFrame", "Player notes", WIDTH, HEIGHT, SIDEBAR_WIDTH, "notes")
 
 	addButton = UI.CreateFlatButton(frame.sidebar, "+  Add player", 28)
 	addButton:SetWidth(SIDEBAR_WIDTH - 2 * PAD)
@@ -785,7 +785,7 @@ local function CreateNotesWindow()
 	CreateLabelsPage(frame.body)
 	CreateAddPage(frame.body)
 
-	frame:SetScript("OnShow", Render)
+	frame:HookScript("OnShow", Render)
 	notes.onChanged = Render
 end
 
@@ -820,3 +820,17 @@ function ns:OpenPlayerNotes(name, info)
 	end
 	playerPage.noteBox:SetFocus()
 end
+
+UI.RegisterTab({
+	key = "notes", label = "Notes", menuLabel = "Player notes", order = 4, frameName = "NraKitPlayerNotesFrame",
+	open = function()
+		ns:OpenPlayerNotes()
+	end,
+	available = function()
+		return ns:IsModuleEnabled("playerNotes")
+	end,
+})
+
+ns:AddOptionsButton("playerNotes", "Open player notes", "Everyone you have notes on, and your labels (/nra note).", function()
+	ns:OpenPlayerNotes()
+end)

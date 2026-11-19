@@ -15,8 +15,9 @@ Clone or symlink this repo into `World of Warcraft/_<flavor>_/Interface/AddOns/N
 Type `/nrakit` (`/nra`) to open NraKit's window: features grouped in a sidebar, a search box, an
 on/off switch per feature and its options right underneath. Everything is off until you turn it on.
 The same settings are also in the game's Settings panel under **AddOns → NraKit**.
-NraKit is also in the addon button by the minimap: left-click for settings, right-click for the
-inventory browser. **What's new** (`/nra new`, top of the NraKit window) lists what changed in each
+NraKit's windows (Settings, Inventory, Goals, Notes) work as tabs of one window, with a tab for each
+feature you have on. NraKit is also in the addon button by the minimap: left-click for settings,
+right-click for a menu of its windows. **What's new** (`/nra new`, top of the NraKit window) lists what changed in each
 version, and new features can be turned on right there. After an update, NraKit says so in one chat line.
 It also tells you when a newer version is out, if someone in your guild or group already has it (NraKit
 shares its version with other NraKit users there; switch it off on the What's new page). `/nra who` lists

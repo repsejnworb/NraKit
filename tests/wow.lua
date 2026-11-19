@@ -698,7 +698,8 @@ end
 -- Opens a unit popup menu (e.g. "MENU_UNIT_PLAYER") with contextData, running every
 -- addon's Menu.ModifyMenu callback. Returns the entries: { text, onClick, entries,
 -- isSelected, kind }. Find one with wow.menuEntry(entries, text).
-function wow.openMenu(tag, contextData)
+-- A menu description that records what's added (like Blizzard's root description).
+function wow.newMenu()
 	local function Description()
 		local description = { entries = {} }
 		local function Add(kind, text, a, b)
@@ -719,7 +720,11 @@ function wow.openMenu(tag, contextData)
 		function description:CreateCheckbox(text, isSelected, onClick) return Add("checkbox", text, isSelected, onClick) end
 		return description
 	end
-	local root = Description()
+	return Description()
+end
+
+function wow.openMenu(tag, contextData)
+	local root = wow.newMenu()
 	for _, callback in ipairs(wow.menus[tag] or {}) do
 		callback(nil, root, contextData)
 	end

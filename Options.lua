@@ -12,7 +12,7 @@ local addonName, ns = ...
 -- The look matches the Campfire timer bar: dark flat panel, hairline borders, orange accent.
 
 local UI = ns.UI
-local WIDTH, HEIGHT = 780, 540
+local WIDTH, HEIGHT = UI.WINDOW_WIDTH, UI.WINDOW_HEIGHT
 local SIDEBAR_WIDTH = 190
 local PAD = UI.PAD
 local CARD_GAP = 8
@@ -743,11 +743,11 @@ local function MarkNewModules()
 end
 
 local function CreateWindow()
-	frame = UI.CreateWindow("NraKitOptionsFrame", "NraKit", WIDTH, HEIGHT, SIDEBAR_WIDTH)
+	frame = UI.CreateWindow("NraKitOptionsFrame", "NraKit", WIDTH, HEIGHT, SIDEBAR_WIDTH, "settings")
 	local version = C_AddOns.GetAddOnMetadata(addonName, "Version")
 	if version and not version:find("@", 1, true) then
 		local versionText = frame.titleBar:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-		versionText:SetPoint("LEFT", frame.title, "RIGHT", 8, -1)
+		versionText:SetPoint("RIGHT", frame.titleBar, "RIGHT", -36, 0)
 		versionText:SetText(version)
 	end
 	local sidebar = frame.sidebar
@@ -805,11 +805,11 @@ local function CreateWindow()
 	content = scrollFrame.content
 	content:SetWidth(WIDTH - SIDEBAR_WIDTH - 15)
 
-	frame:SetScript("OnShow", function()
+	frame:HookScript("OnShow", function()
 		MarkNewModules()
 		Render()
 	end)
-	frame:SetScript("OnHide", function()
+	frame:HookScript("OnHide", function()
 		wipe(newModules)
 		wipe(unseenEntries)
 	end)
@@ -851,3 +851,10 @@ function ns:OpenWhatsNew()
 		frame:Show()
 	end
 end
+
+UI.RegisterTab({
+	key = "settings", label = "Settings", menuLabel = "Settings", order = 1, frameName = "NraKitOptionsFrame",
+	open = function()
+		ns:OpenSettings()
+	end,
+})

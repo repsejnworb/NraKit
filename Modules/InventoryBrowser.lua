@@ -14,7 +14,7 @@ local _, ns = ...
 -- client to load the item first; the window re-renders as they arrive.
 
 local UI = ns.UI
-local WIDTH, HEIGHT = 840, 560
+local WIDTH, HEIGHT = UI.WINDOW_WIDTH, UI.WINDOW_HEIGHT
 local SIDEBAR_WIDTH = 210
 local PAD = UI.PAD
 local SLOT, SLOT_GAP = 36, 4
@@ -612,7 +612,7 @@ end
 ------------------------------------------------------------------------------
 
 local function CreateBrowser()
-	frame = UI.CreateWindow("NraKitInventoryFrame", "Inventory", WIDTH, HEIGHT, SIDEBAR_WIDTH)
+	frame = UI.CreateWindow("NraKitInventoryFrame", "Inventory", WIDTH, HEIGHT, SIDEBAR_WIDTH, "inventory")
 	local body = frame.body
 
 	sidebarScroll = UI.CreateScrollArea(frame.sidebar)
@@ -707,11 +707,11 @@ local function CreateBrowser()
 	footerRight = footer:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	footerRight:SetPoint("RIGHT", -PAD, 0)
 
-	frame:SetScript("OnShow", function(self)
+	frame:HookScript("OnShow", function(self)
 		self:RegisterEvent("GET_ITEM_INFO_RECEIVED")
 		Render()
 	end)
-	frame:SetScript("OnHide", function(self)
+	frame:HookScript("OnHide", function(self)
 		self:UnregisterEvent("GET_ITEM_INFO_RECEIVED")
 	end)
 	frame:SetScript("OnEvent", RequestRender)
@@ -737,3 +737,13 @@ _G["BINDING_NAME_NRAKIT_INVENTORY_BROWSER"] = "Open the inventory browser"
 function NraKit_ToggleInventoryBrowser()
 	ns:OpenInventoryBrowser()
 end
+
+UI.RegisterTab({
+	key = "inventory", label = "Inventory", menuLabel = "Inventory", order = 2, frameName = "NraKitInventoryFrame",
+	open = function()
+		ns:OpenInventoryBrowser()
+	end,
+	available = function()
+		return ns:IsModuleEnabled("inventoryTracker")
+	end,
+})

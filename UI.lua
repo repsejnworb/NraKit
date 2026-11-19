@@ -8,6 +8,9 @@ ns.UI = UI
 
 UI.TITLE_HEIGHT = 34
 UI.PAD = 12
+-- NraKit's main windows (settings, inventory, goals, notes) share one size, so switching
+-- tabs looks like one window changing pages.
+UI.WINDOW_WIDTH, UI.WINDOW_HEIGHT = 800, 560
 
 UI.BG = { 0.04, 0.04, 0.06, 0.95 }
 UI.EDGE = { 1, 1, 1, 0.1 }
@@ -84,10 +87,114 @@ function UI.CreatePool()
 	return pool
 end
 
+------------------------------------------------------------------------------
+-- Tabs: NraKit's main windows act as one app. Each registers a tab (UI.RegisterTab);
+-- a window made with a tab key gets "NraKit" and the tab strip in its title bar. Only
+-- one is open at a time, always at the same place (NraKitDB.windowPosition, saved when
+-- one is dragged), so switching tabs looks like one window changing pages. Tabs of
+-- features that are off are hidden.
+------------------------------------------------------------------------------
+
+local tabs = {} -- { key, label, menuLabel, order, frameName, open, available }
+local tabWindows = {} -- tab key -> frame
+
+-- tab = { key, label, menuLabel? (addon button menu), order, frameName,
+--         open = function() shows the window end, available = function() -> bool (optional) }
+function UI.RegisterTab(tab)
+	table.insert(tabs, tab)
+	table.sort(tabs, function(a, b)
+		return a.order < b.order
+	end)
+end
+
+-- The tabs that can be opened now, in order.
+function UI.GetTabs()
+	local list = {}
+	for _, tab in ipairs(tabs) do
+		if not tab.available or tab.available() then
+			table.insert(list, tab)
+		end
+	end
+	return list
+end
+
+function UI.ShowTab(key)
+	for _, tab in ipairs(UI.GetTabs()) do
+		if tab.key == key then
+			local frame = _G[tab.frameName]
+			if not (frame and frame:IsShown()) then
+				tab.open()
+			end
+			return true
+		end
+	end
+	return false
+end
+
+local function SavePosition(frame)
+	local point, _, relativePoint, x, y = frame:GetPoint()
+	if point then
+		NraKitDB.windowPosition = { point, relativePoint, x, y }
+	end
+end
+
+local function ApplyPosition(frame)
+	local position = NraKitDB.windowPosition
+	if position then
+		frame:ClearAllPoints()
+		frame:SetPoint(position[1], UIParent, position[2], position[3], position[4])
+	end
+end
+
+local function RefreshTabStrip(frame)
+	local strip = frame.tabStrip
+	for _, button in ipairs(strip.buttons) do
+		button:Hide()
+	end
+	local anchor
+	for index, tab in ipairs(UI.GetTabs()) do
+		local button = strip.buttons[index]
+		if not button then
+			button = UI.CreateFlatButton(frame.titleBar, "", 22)
+			button:SetScript("OnClick", function(self)
+				if UI.ShowTab(self.tabKey) then
+					PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+				end
+			end)
+			strip.buttons[index] = button
+		end
+		button.tabKey = tab.key
+		button.text:SetText(tab.label)
+		button:SetWidth(button.text:GetStringWidth() + 22)
+		button:SetSelected(tab.key == frame.tabKey)
+		button:ClearAllPoints()
+		if anchor then
+			button:SetPoint("LEFT", anchor, "RIGHT", 2, 0)
+		else
+			button:SetPoint("LEFT", frame.title, "RIGHT", 18, -1)
+		end
+		button:Show()
+		anchor = button
+	end
+end
+
+-- Showing one tab window closes the others and puts it where they were.
+local function OnTabWindowShow(frame)
+	for _, other in pairs(tabWindows) do
+		if other ~= frame and other:IsShown() then
+			other:Hide()
+		end
+	end
+	ApplyPosition(frame)
+	RefreshTabStrip(frame)
+end
+
 -- A movable window with a title bar and a left sidebar (none if sidebarWidth is 0). Esc closes it.
 -- Returns the frame; frame.titleBar, frame.title, frame.sidebar and frame.body
--- (the area right of the sidebar) are for the caller to fill.
-function UI.CreateWindow(globalName, titleText, width, height, sidebarWidth)
+-- (the area right of the sidebar) are for the caller to fill. With tabKey it's one of
+-- NraKit's main windows: titled "NraKit" with the tab strip (see UI.RegisterTab).
+-- Callers add OnShow/OnHide handlers with HookScript, not SetScript.
+function UI.CreateWindow(globalName, titleText, width, height, sidebarWidth, tabKey)
 	local frame = CreateFrame("Frame", globalName, UIParent)
 	frame:SetSize(width, height)
 	frame:SetPoint("CENTER")
@@ -115,6 +222,9 @@ function UI.CreateWindow(globalName, titleText, width, height, sidebarWidth)
 	end)
 	titleBar:SetScript("OnDragStop", function()
 		frame:StopMovingOrSizing()
+		if tabKey then
+			SavePosition(frame)
+		end
 	end)
 	UI.AddLine(titleBar, "BOTTOM")
 	frame.titleBar = titleBar
@@ -147,6 +257,14 @@ function UI.CreateWindow(globalName, titleText, width, height, sidebarWidth)
 	body:SetPoint("TOPLEFT", sidebarWidth, -UI.TITLE_HEIGHT - 1)
 	body:SetPoint("BOTTOMRIGHT", -1, 1)
 	frame.body = body
+
+	if tabKey then
+		title:SetText("NraKit")
+		frame.tabKey = tabKey
+		frame.tabStrip = { buttons = {} }
+		tabWindows[tabKey] = frame
+		frame:HookScript("OnShow", OnTabWindowShow)
+	end
 
 	return frame
 end
