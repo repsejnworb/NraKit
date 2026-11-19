@@ -17,6 +17,7 @@ local _, ns = ...
 
 ns.changelog = {
 	{ version = "Unreleased", entries = {
+		{ "new", "Mail: an arrow next to Open All with more ways to open: collect only auction gold (sales and outbid refunds), auction purchases or expired auctions, or take the money from every mail and leave the items. Each says how many mails and how much gold first.", module = "mail" },
 		{ "new", "Mail: Alt+click an item in your bags with Send Mail open to attach every stack of it you have (all your Silk Cloth, all your Small Red Pouches), as many as fit.", module = "mail" },
 		{ "improved", "Mail: Open selected mail, Fill in mail subject and Remember mail recipient are now parts of one Mail feature, each with its own switch. If you had any of them on, Mail is on with the same parts." },
 	} },

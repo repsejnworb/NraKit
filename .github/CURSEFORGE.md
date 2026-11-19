@@ -106,6 +106,7 @@ Type **/leave** (with nothing after it) or **/leavegroup** to leave your party, 
 ### Mail
 Helpers for the mailbox, each one an option (all on once you turn **Mail** on):
 - **Open selected mail**: a **checkbox on each mail** in your inbox. Tick the ones you want and the **Open All** button becomes **Open Selected**, opening only those.
+- **Open All menu**: an **arrow next to Open All** with more ways to open, each showing how many mails and how much gold first: **Collect auction gold** (sales and outbid refunds), **Collect auction purchases**, **Collect expired auctions** (unsold and cancelled), and **Take money only** (the gold from every mail, items left in). Gold works even with full bags; C.O.D. and GM mail are never touched.
 - **Fill in mail subject**: the **subject** of a mail you're sending is written from **what you attach**: "Linen Cloth (40)", "Linen Cloth (40), Wool Cloth (20)", "25g" or "Linen Cloth (20) + 5g". A subject you typed yourself is never replaced.
 - **Remember mail recipient**: the **To** box **keeps the name after you send** a mail, so sending several mails to the same player (like your **bank alt**) needs no retyping. It can also fill in the **last player you mailed** when you open Send Mail.
 - **Alt+click to attach all**: with Send Mail open, **Alt+click an item in your bags** to attach **every stack** of it you have (all your Silk Cloth, all 4 Small Red Pouches), as many as fit in the mail.

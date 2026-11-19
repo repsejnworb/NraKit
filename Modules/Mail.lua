@@ -2,6 +2,7 @@ local _, ns = ...
 
 -- Mail: one feature for the mailbox helpers, each an option of it (on by default):
 --   openSelectedMail   checkboxes on inbox mails; Open All opens the ticked ones (OpenSelectedMail.lua)
+--   mailOpenMenu       an arrow by Open All: auction gold, purchases, expired, money only (MailOpenMenu.lua)
 --   mailSubject        the subject written from what you attach (MailSubject.lua)
 --   mailRecipient      the To name kept after sending, mailRecipientOnOpen fills it in (MailRecipient.lua)
 --   mailAttachAll      Alt+click a bag item to attach every stack of it (MailAttachAll.lua)
@@ -18,13 +19,19 @@ local module = {
 	key = "mail",
 	section = "Mail",
 	name = "Mail",
-	description = "Helpers for the mailbox: open only the mails you tick, a subject written from what you attach, the last recipient remembered, and Alt+click to attach every stack of an item.",
+	description = "Helpers for the mailbox: open only the mails you tick, collect just auction gold, purchases or expired auctions, a subject written from what you attach, the last recipient remembered, and Alt+click to attach every stack of an item.",
 	default = false,
 	options = {
 		{
 			key = "openSelectedMail",
 			name = "Open selected mail",
 			description = "Adds a checkbox to each mail in your inbox. Tick some and the Open All button only opens those.",
+			default = true,
+		},
+		{
+			key = "mailOpenMenu",
+			name = "Open All menu",
+			description = "An arrow next to the inbox's Open All button with more ways to open: collect auction gold, auction purchases or expired auctions, or take only the money and leave the items.",
 			default = true,
 		},
 		{

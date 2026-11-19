@@ -43,6 +43,7 @@ Modules\PlayerNotesWindow.lua
 Modules\LeaveGroup.lua
 Modules\Mail.lua
 Modules\OpenSelectedMail.lua
+Modules\MailOpenMenu.lua
 Modules\MailSubject.lua
 Modules\MailRecipient.lua
 Modules\MailAttachAll.lua

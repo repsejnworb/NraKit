@@ -116,6 +116,10 @@ addons share through LibSharedMedia.
 - **Mail**: helpers for the mailbox, each one an option (all on once you turn Mail on):
   - **Open selected mail**: a checkbox on each mail in your inbox. Tick some and the Open All button
     turns into "Open Selected (N)" and only opens those. The selection is cleared when you close the mailbox.
+  - **Open All menu**: an arrow next to Open All with more ways to open, each showing how many mails
+    and how much gold first: **Collect auction gold** (sales and outbid refunds), **Collect auction
+    purchases**, **Collect expired auctions** (unsold and cancelled), and **Take money only** (the gold
+    from every mail, items left in). Gold works with full bags; C.O.D. and GM mail are never touched.
   - **Fill in mail subject**: the subject of a mail you're sending is written from what you attach,
     like "Linen Cloth (40)", "Linen Cloth (40), Wool Cloth (20)", "25g", "Linen Cloth (20) + 5g" or
     "Linen Cloth (20) (C.O.D. 5g)". A subject you typed yourself is never replaced.

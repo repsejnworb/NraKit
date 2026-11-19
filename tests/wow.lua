@@ -760,6 +760,8 @@ function wow.newMenu()
 			table.insert(description.entries, entry)
 			return entry
 		end
+		function description:SetEnabled(on) self.enabled = on end
+		function description:SetTooltip(fn) self.tooltip = fn end
 		function description:CreateDivider() return Add("divider") end
 		function description:CreateTitle(text) return Add("title", text) end
 		function description:CreateButton(text, onClick) return Add("button", text, onClick) end
