@@ -107,6 +107,8 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   the surname; Blizzard joins them with `CHARACTERNAME_SURNAME_SEPARATOR`, a space). Unit popup menus give
   `contextData.name`/`surname`. Match names case-insensitively and treat "First-Surname" as the same player
   (`ns.playerNotes.Key`).
+  Per-character saved data is keyed by `ns:PlayerName()` ("Firstname Surname"), never the first name alone: two
+  of a player's characters can share a first name.
 - "Always Show Nameplates" off (`nameplateShowAll = 0`) is **broken in Forever** (known since beta): it doesn't limit
   plates to combat. EngagedNameplates toggles `nameplateShowEnemies` on `PLAYER_REGEN_DISABLED`/`ENABLED` instead.
 - `nameplateMinScaleDistance` and `nameplateMaxScaleDistance` are both 10, so plates are either full size or min scale (no gradient).
