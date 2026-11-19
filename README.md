@@ -98,6 +98,9 @@ addons share through LibSharedMedia.
   your party, raid or instance group. `/leave <channel>` still leaves a chat channel.
 - **Open selected mail**: a checkbox on each mail in your inbox. Tick some and the Open All button
   turns into "Open Selected (N)" and only opens those. The selection is cleared when you close the mailbox.
+- **Fill in mail subject**: the subject of a mail you're sending is written from what you attach,
+  like "Linen Cloth (40)", "Linen Cloth (40), Wool Cloth (20)", "25g", "Linen Cloth (20) + 5g" or
+  "Linen Cloth (20) (C.O.D. 5g)". A subject you typed yourself is never replaced.
 - **Hide micro menu notifications**: hides the blue "new" dot on the Shop button, and shows the
   Legacy button's dot only while you have unspent Legacy Tree points (not for every new challenge).
 - **Copy Wowhead link**: hover an item, spell, NPC, quest, achievement or currency and press Ctrl+C.

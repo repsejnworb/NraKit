@@ -87,6 +87,9 @@ Type **/leave** (with nothing after it) or **/leavegroup** to leave your party, 
 ### Open selected mail
 A **checkbox on each mail** in your inbox. Tick the ones you want and the **Open All** button becomes **Open Selected**, opening only those.
 
+### Fill in mail subject
+The **subject** of a mail you're sending is written from **what you attach**: "Linen Cloth (40)", "Linen Cloth (40), Wool Cloth (20)", "25g" or "Linen Cloth (20) + 5g". A subject you typed yourself is never replaced.
+
 ### Hide micro menu notifications
 Hides the blue notification dot on the **Shop** button that never goes away, and makes the **Legacy** button's dot show only when you have **unspent Legacy points**, not for every new challenge.
 
