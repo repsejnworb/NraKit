@@ -17,6 +17,7 @@ Sounds.lua
 Settings.lua
 Changelog.lua
 WhatsNew.lua
+VersionCheck.lua
 Options.lua
 
 Modules\ClassColorHealthBars.lua

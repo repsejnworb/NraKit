@@ -52,6 +52,8 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
 - `Changelog.lua` – what's new per version, for players (see the changelog rule above). `WhatsNew.lua` tracks what
   each player has seen, prints one chat line after an update and registers `/nra new`; the page is in `Options.lua`.
   `tools/changelog.lua` is the release tooling (`count`, `release <version> <date>`, `markdown <version>`).
+- `VersionCheck.lua` – "a newer NraKit is out" and `/nra who`, over addon messages (prefix `NraKit`) to the guild and
+  group. Uses the TOC `## Version`; a git clone (`@project-version@`) counts as `dev` and never compares.
 - `Options.lua` – NraKit's own window (`/nra`): sidebar with search, What's new and sections, a card per module with inline
   options. Built entirely from the module definitions, so new modules need no work here. Custom per-module buttons
   go through `ns:AddOptionsButton(moduleKey, label, description, onClick)` and show in both UIs.

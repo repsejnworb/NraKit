@@ -471,8 +471,9 @@ function wow.install()
 		local data = Unit(unit)
 		return data and data.guid
 	end
-	G.IsInGroup = function()
-		return #wow.data.party > 0
+	G.LE_PARTY_CATEGORY_HOME, G.LE_PARTY_CATEGORY_INSTANCE = 1, 2
+	G.IsInGroup = function(category)
+		return category ~= G.LE_PARTY_CATEGORY_INSTANCE and #wow.data.party > 0
 	end
 	G.IsInRaid = function()
 		return false

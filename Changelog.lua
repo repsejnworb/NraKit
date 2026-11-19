@@ -20,6 +20,7 @@ ns.changelog = {
 		{ "new", "Player notes: give players a label (Kill on sight, Avoid, Neutral, Good, Friend, or your own) and keep dated notes on them. Shown in their tooltip; right-click a player for Player note or to set their label. Warns you when a player you've marked Avoid or Kill on sight joins your group, invites, whispers or trades you.", module = "playerNotes" },
 		{ "new", "Unit Scanner alerts you when a player you've labelled Kill on sight (Player notes) shows up nearby.", module = "unitScanner" },
 		{ "new", "What's new: this page. NraKit tells you in chat when it has been updated; new features can be turned on right here." },
+		{ "new", "NraKit tells you when a newer version is out, when someone in your guild or group already has it. /nra who lists who in your guild and group runs NraKit, and which version. Switch it off on this page." },
 	} },
 	{ version = "0.11.0", date = "2026-11-18", entries = {
 		{ "new", "Farm goals: set goals like \"loot 4000 Silk Cloth\", \"reach level 40\", \"earn 100 gold\", \"reach Revered with Timbermaw Hold\", a skill or a currency, and track them in a small movable tracker with rate per hour and time left. /nra goal opens the goals window.", module = "farmGoals" },

@@ -508,7 +508,32 @@ local function RenderWhatsNew(x, y, width)
 	chatLabel:SetWordWrap(false)
 	chatLabel:SetTextColor(unpack(TEXT))
 	chatLabel:SetPoint("LEFT", chat, "RIGHT", 2, 1)
-	y = y - 34
+
+	local share = AcquireCheck()
+	share:SetSize(22, 22)
+	share:SetPoint("TOPLEFT", content, "TOPLEFT", x + width - 210, y - 21)
+	share:SetChecked(ns.versionCheck.Enabled())
+	share:SetEnabled(true)
+	share.settingKey = "versionCheck"
+	share.tooltipTitle, share.tooltipText = "Tell me when a newer NraKit is out",
+		"NraKit shares its version with other NraKit users in your guild and group (hidden addon messages), and says so in chat when one of them has a newer release. Also needed for /nra who. Off: nothing is sent."
+	local shareLabel = AcquireText("GameFontHighlightSmall")
+	shareLabel:SetText("Tell me when a newer NraKit is out")
+	shareLabel:SetWordWrap(false)
+	shareLabel:SetTextColor(unpack(TEXT))
+	shareLabel:SetPoint("LEFT", share, "RIGHT", 2, 1)
+	y = y - 56
+
+	local newer = ns.versionCheck.Newer()
+	if newer then
+		local notice = AcquireText("GameFontNormal")
+		notice:SetWidth(width - 4)
+		notice:SetText(string.format("NraKit %s is out (you have %s). Update through CurseForge or your addon manager.",
+			newer, ns.versionCheck.MyVersion()))
+		notice:SetTextColor(unpack(ACCENT))
+		notice:SetPoint("TOPLEFT", content, "TOPLEFT", x + 2, y)
+		y = y - notice:GetStringHeight() - 12
+	end
 
 	for index, release in ipairs(Releases()) do
 		local hasUnseen = false
