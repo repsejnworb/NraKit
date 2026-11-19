@@ -101,6 +101,9 @@ addons share through LibSharedMedia.
 - **Fill in mail subject**: the subject of a mail you're sending is written from what you attach,
   like "Linen Cloth (40)", "Linen Cloth (40), Wool Cloth (20)", "25g", "Linen Cloth (20) + 5g" or
   "Linen Cloth (20) (C.O.D. 5g)". A subject you typed yourself is never replaced.
+- **Remember mail recipient**: the To box keeps the name after you send a mail, so you can send
+  several to the same player (like your bank alt) without typing it again. The name is selected, so typing
+  replaces it. Optionally (on by default) the last player you mailed is filled in when you open Send Mail.
 - **Hide micro menu notifications**: hides the blue "new" dot on the Shop button, and shows the
   Legacy button's dot only while you have unspent Legacy Tree points (not for every new challenge).
 - **Copy Wowhead link**: hover an item, spell, NPC, quest, achievement or currency and press Ctrl+C.

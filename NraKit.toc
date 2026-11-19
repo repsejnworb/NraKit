@@ -42,5 +42,6 @@ Modules\PlayerNotesWindow.lua
 Modules\LeaveGroup.lua
 Modules\OpenSelectedMail.lua
 Modules\MailSubject.lua
+Modules\MailRecipient.lua
 Modules\MicroMenuNotifications.lua
 Modules\WowheadLink.lua

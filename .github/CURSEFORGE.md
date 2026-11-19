@@ -90,6 +90,9 @@ A **checkbox on each mail** in your inbox. Tick the ones you want and the **Open
 ### Fill in mail subject
 The **subject** of a mail you're sending is written from **what you attach**: "Linen Cloth (40)", "Linen Cloth (40), Wool Cloth (20)", "25g" or "Linen Cloth (20) + 5g". A subject you typed yourself is never replaced.
 
+### Remember mail recipient
+The **To** box **keeps the name after you send** a mail, so sending several mails to the same player (like your **bank alt**) needs no retyping. It can also fill in the **last player you mailed** when you open Send Mail.
+
 ### Hide micro menu notifications
 Hides the blue notification dot on the **Shop** button that never goes away, and makes the **Legacy** button's dot show only when you have **unspent Legacy points**, not for every new challenge.
 
