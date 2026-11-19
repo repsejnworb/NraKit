@@ -391,6 +391,34 @@ end
 -- Entering a zone
 ------------------------------------------------------------------------------
 
+-- The small message for a zone: "QUESTS TO TURN IN / Wetlands · 3 quests", the names under it.
+local function ShowReminderToast(zoneName, titles)
+	ns.toast.Show({
+		style = "small",
+		heading = "QUESTS TO TURN IN",
+		text = string.format("%s  ·  %d %s", zoneName, #titles, #titles == 1 and "quest" or "quests"),
+		atlas = "UI-QuestIcon-TurnIn-Normal",
+		detail = table.concat(titles, ", "),
+		duration = 6,
+		onClick = function()
+			turnIn.Toggle(true)
+		end,
+	})
+end
+
+-- /nra preview turnin: your first zone with turn-ins, or a made-up one.
+ns:RegisterPreview("turnin", "Quests to turn in: the message when you enter a zone", function()
+	local zone = turnIn.Zones()[1]
+	local titles = {}
+	for _, quest in ipairs(zone and zone.quests or {}) do
+		table.insert(titles, quest.title)
+	end
+	if #titles == 0 then
+		titles = { "The Doomed Fleet", "Seeking Caitlin", "Unrequited Love" }
+	end
+	ShowReminderToast(zone and zone.zone or "Wetlands", titles)
+end)
+
 local function OnZoneChanged()
 	local here = CurrentZone()
 	if here == lastZone then
@@ -406,17 +434,7 @@ local function OnZoneChanged()
 				end
 				local count = string.format("%d %s", #zone.quests, #zone.quests == 1 and "quest" or "quests")
 				if ns:GetOption("turnInQuestsToast") then
-					ns.toast.Show({
-						style = "small",
-						heading = "QUESTS TO TURN IN",
-						text = here .. "  ·  " .. count,
-						atlas = "UI-QuestIcon-TurnIn-Normal",
-						detail = table.concat(titles, ", "),
-						duration = 6,
-						onClick = function()
-							turnIn.Toggle(true)
-						end,
-					})
+					ShowReminderToast(here, titles)
 				end
 				if ns:GetOption("turnInQuestsChat") then
 					ns:Print(string.format("%s to turn in here in %s: %s (/nra done)", count, here, table.concat(titles, ", ")))

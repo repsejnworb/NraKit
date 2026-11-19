@@ -249,6 +249,8 @@ local function Preview()
 	end)
 end
 
+ns:RegisterPreview("campfire", "Campfire timer: a 10-second rest (same as /nra campfire)", Preview)
+
 local eventFrame = CreateFrame("Frame")
 eventFrame:SetScript("OnEvent", Update)
 

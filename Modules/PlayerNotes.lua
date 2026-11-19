@@ -680,6 +680,15 @@ function notes.Warn(name, guid, reason)
 	return true
 end
 
+-- /nra preview warning: the warning for a made-up Kill on sight player.
+ns:RegisterPreview("warning", "Player notes: the warning when a player you've marked joins your group", function()
+	ns:Print("|cffff8040Heads up:|r Bob Stone (Kill on sight) is in your group: \"stole my mining node\"")
+	if RaidNotice_AddMessage and RaidWarningFrame then
+		RaidNotice_AddMessage(RaidWarningFrame, "Bob Stone - Kill on sight", { r = 1, g = 0.2, b = 0.2 })
+	end
+	ns.sounds.PlayOption("playerNotesWarnSoundChoice", "kit:UI_RAID_BOSS_WHISPER_WARNING")
+end)
+
 -- Group members we've already seen (key -> true), so only newcomers warn.
 local roster = {}
 

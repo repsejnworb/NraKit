@@ -288,6 +288,7 @@ function wow.install()
 	end
 	G.UIParent = NewObject("UIParent")
 	G.GameTooltip = NewObject("GameTooltip")
+	G.GameFontNormalLarge = NewObject("Font") -- a font object some features copy their font from
 	G.ItemRefTooltip = NewObject("ItemRefTooltip")
 	G.UISpecialFrames = {}
 	G.SlashCmdList = {}
@@ -414,6 +415,9 @@ function wow.install()
 	end
 	G.TooltipDataProcessor.AddTooltipPostCall = function(dataType, callback)
 		table.insert(wow.tooltipCalls, { type = dataType, callback = callback })
+	end
+	G.C_QuestLog.GetNumQuestLogEntries = function()
+		return 0 -- an empty quest log unless a test fills one in
 	end
 	G.C_Container.GetContainerNumSlots = function()
 		return 0

@@ -108,6 +108,15 @@ local function Refresh()
 	end
 end
 
+-- /nra preview talents: the reminder for a few seconds, with made-up points.
+ns:RegisterPreview("talents", "Unspent talent points: the reminder", function()
+	EnsureFrame()
+	ApplyStyle()
+	text:SetText(ns:GetOption("unspentTalentsShowCount") and string.format("%s (%d)", TEXT, 3) or TEXT)
+	frame:Show()
+	C_Timer.After(6, Refresh) -- back to how it really is
+end)
+
 local refreshQueued = false
 local function QueueRefresh()
 	if not refreshQueued then

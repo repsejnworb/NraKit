@@ -570,6 +570,20 @@ local function ShowMilestone(goal, percent)
 	})
 end
 
+-- /nra preview goal, goals, milestone: the messages with a made-up goal (4,000 Silk Cloth).
+local function SampleGoal()
+	return { type = "item", itemID = ns.previewSample.itemID, target = 4000, active = 4520 }
+end
+ns:RegisterPreview("goal", "Farm goals: the \"Goal complete\" message", function()
+	ShowToast(SampleGoal())
+end)
+ns:RegisterPreview("goals", "Farm goals: several goals finished in one fight", function()
+	ShowToast(SampleGoal(), "and 2 more, while you were fighting", 3)
+end)
+ns:RegisterPreview("milestone", "Farm goals: the small 25/50/75% message", function()
+	ShowMilestone(SampleGoal(), 50)
+end)
+
 -- Called when combat ends: show again what finished during the fight.
 local function ReplayCombatToasts()
 	local last = combatFinished[#combatFinished]

@@ -440,6 +440,14 @@ local function Alert(entry, source)
 	end
 end
 
+-- /nra preview scan: the alert's text and sound, for a made-up find.
+ns:RegisterPreview("scan", "Unit Scanner: the alert when a unit is found (text and sound)", function()
+	if ns:GetOption("unitScanSound") then
+		ns.sounds.PlayOption("unitScanSoundChoice", "kit:RAID_WARNING")
+	end
+	ShowScreenText("Hogger found!")
+end)
+
 -- Checks one name / GUID pair against the list (and Player notes' Hostile players;
 -- surname is the second part of a player's name).
 local function Check(name, guid, source, unit, surname)

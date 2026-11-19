@@ -23,7 +23,8 @@ It also tells you when a newer version is out, if someone in your guild or group
 shares its version with other NraKit users there; switch it off on the What's new page). `/nra who` lists
 who in your guild and group runs NraKit, which version, and how many NraKit users you've come across
 (this session and in all). `/nra help` lists the chat commands; add `help` after one for details
-(e.g. `/nra goal help`).
+(e.g. `/nra goal help`). `/nra preview` shows any of NraKit's on-screen messages (goal complete,
+quest reminders, alerts...) with made-up content, to see how they look (`/nra preview goal`).
 
 Sounds (Campfire timer, Unit Scanner, Farm goals, Player notes) can be changed: pick from a short list of good
 ones (hover to hear them) or **More sounds...** to search every game sound, plus any sounds other

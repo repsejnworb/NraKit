@@ -56,6 +56,8 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
 - `Toast.lua` – NraKit's messages in the middle of the screen (`ns.toast.Show{ style = "big"|"small", heading, text,
   icon/atlas, detail, duration, onClick, skipIfBusy }`); small ones wait their turn, big ones go in front. Use it for
   any feature's on-screen message.
+- `Preview.lua` – `/nra preview <name>` (also `/nra test`): shows a feature's on-screen message or bar with made-up
+  content. Anything a feature pops up on screen gets one: `ns:RegisterPreview(name, description, show)`.
 - `Changelog.lua` – what's new per version, for players (see the changelog rule above). `WhatsNew.lua` tracks what
   each player has seen, prints one chat line after an update and registers `/nra new`; the page is in `Options.lua`.
   `tools/changelog.lua` is the release tooling (`count`, `release <version> <date>`, `markdown <version>`).
