@@ -16,6 +16,9 @@ local _, ns = ...
 --           "new" entry with its module (tests/changelog_test.lua checks).
 
 ns.changelog = {
+	{ version = "Unreleased", entries = {
+		{ "fixed", "Inspect anything: NPCs show their health and attack speed again, with the level, type and stats in small lines above the model as before. Players' level line no longer shows their race, as in the game's own inspect window." },
+	} },
 	{ version = "0.17.0", date = "2026-11-19", entries = {
 		{ "new", "Inspect anything: one key inspects your target (or what's under the mouse when you have none), in a window like the inspect window that stays open until you close it, even when they run off. Players show their gear (loaded after combat if you inspect them in combat), NPCs a 3D model you can turn, move and zoom, with their health, attack speed and a link to their abilities on Wowhead. Set the key under Key Bindings > NraKit, or right-click an NPC or enemy player and choose View 3D model.", module = "inspectAnything" },
 		{ "improved", "Key bindings: NraKit's keys have their own NraKit section in Key Bindings instead of being mixed in with other addons'." },
