@@ -91,7 +91,7 @@ local UI = ns.UI
 local inspect = {}
 ns.inspectAnything = inspect
 
-local frame, model, subtitle, itemLevelText, statusText, stats, slotButtons, modelBorder, raceTiles, raceShade
+local frame, model, modelBackground, hint, subtitle, itemLevelText, statusText, stats, slotButtons, modelBorder, raceTiles, raceShade
 local LayoutBackground
 local wowheadButton, blizzardButton, dressUpButton
 local shown -- what the window shows: { guid, isPlayer, npcID, name }
@@ -201,18 +201,25 @@ local function UpdateStats(unit)
 			if anchor then
 				pair.label:SetPoint("LEFT", anchor, "RIGHT", 14, 0)
 			else
-				pair.label:SetPoint("TOPLEFT", model, "TOPLEFT", 10, -8)
+				pair.label:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", 0, -4)
 			end
 			anchor = pair.value
 		end
 	end
 end
 
--- The level line where the inspect window has it, or a little higher when "Fury · Item
--- level 32.4" goes on a line of its own under it.
+-- Players: the level line where the inspect window has it (centred, outlined), or a little
+-- higher when "Fury · Item level 32.4" goes on a line of its own under it. NPCs: small and
+-- left-aligned by the portrait, with their stats on a line under it.
 local function LayoutHeader()
 	subtitle:ClearAllPoints()
-	subtitle:SetPoint("TOP", frame, "TOP", 0, itemLevelText:IsShown() and -34 or -40)
+	if shown and shown.isPlayer then
+		subtitle:SetFontObject("GameFontNormalMed2Outline")
+		subtitle:SetPoint("TOP", frame, "TOP", 0, itemLevelText:IsShown() and -34 or -40)
+	else
+		subtitle:SetFontObject("GameFontNormalSmall")
+		subtitle:SetPoint("TOPLEFT", frame, "TOPLEFT", 64, -30)
+	end
 end
 
 -- Players: spec and item level under the level line once their gear is in, else how loading
@@ -374,6 +381,14 @@ end
 
 -- Their race's background (players), or none (NPCs, or a race that can't be read).
 local function UpdateBackground(unit, isPlayer)
+	-- Players: black, as the inspect window (their race's art goes on it). NPCs: a soft spotlight.
+	if isPlayer then
+		modelBackground:SetColorTexture(0, 0, 0, 1)
+	else
+		modelBackground:SetColorTexture(1, 1, 1, 1)
+		modelBackground:SetGradient("VERTICAL", CreateColor(0.02, 0.02, 0.03, 1), CreateColor(0.14, 0.14, 0.17, 1))
+	end
+	hint:SetShown(not isPlayer)
 	local _, raceFile = UnitRace(unit)
 	local show = isPlayer and Readable(raceFile) and raceFile ~= nil
 	for _, texture in ipairs(raceTiles) do
@@ -541,9 +556,8 @@ local function CreateWindow()
 
 	model = CreateFrame("PlayerModel", nil, modelBorder)
 	-- Black right behind the model (a model frame's own background layer, as Blizzard's has).
-	local modelBackground = model:CreateTexture(nil, "BACKGROUND", nil, -8)
+	modelBackground = model:CreateTexture(nil, "BACKGROUND", nil, -8)
 	modelBackground:SetAllPoints()
-	modelBackground:SetColorTexture(0, 0, 0, 1)
 	-- A player's race background over it, scaled from the inspect window's layout.
 	raceTiles = {}
 	for index in ipairs(BACKGROUND_TILES) do
@@ -589,15 +603,20 @@ local function CreateWindow()
 		view.zoom = math.min(math.max(view.zoom - delta * ZOOM_STEP, MIN_ZOOM), MAX_ZOOM)
 		ApplyView()
 	end)
-	-- NPC stats at the top of the model, on the model (its black background would cover them otherwise).
+	-- NPC stats, on a line under the level line (above the model).
 	stats = {}
 	for _, info in ipairs({ { "health", "Health" }, { "speed", "Attack speed" } }) do
-		local label = model:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+		local label = frame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 		label:SetText(info[2])
-		local value = model:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		local value = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 		value:SetPoint("LEFT", label, "RIGHT", 4, 0)
 		stats[info[1]] = { label = label, value = value }
 	end
+
+	-- How to handle the model (NPCs; players have the weapons there, and it's in Reset view's tooltip).
+	hint = model:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+	hint:SetPoint("BOTTOM", 0, 8)
+	hint:SetText("Drag to turn, right-drag to move, wheel to zoom")
 
 	-- How loading their gear is going (players), at the top of the model.
 	statusText = model:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
