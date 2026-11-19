@@ -32,7 +32,8 @@ next:
     echo
     just changelog-check || true
 
-# Fails if there are feat/fix commits since the last release but nothing under Unreleased in Changelog.lua
+# Fails if there are feat/fix commits since the last release but nothing under Unreleased in Changelog.lua,
+# or if entries were added to an already released version (they belong under Unreleased)
 changelog-check:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -40,6 +41,18 @@ changelog-check:
     last="$(git describe --tags --abbrev=0 2>/dev/null || true)"
     changes=$(git log --format=%s ${last:+"$last"..HEAD} | grep -cE '^(feat|fix)(\(.+\))?!?:' || true)
     entries=$("$runner" tools/changelog.lua count)
+    if [ -n "$last" ]; then
+        released_copy="$(mktemp)"
+        git show "$last:Changelog.lua" > "$released_copy"
+        before=$("$runner" tools/changelog.lua released "$released_copy")
+        rm -f "$released_copy"
+        now=$("$runner" tools/changelog.lua released)
+        if [ "$now" -ne "$before" ]; then
+            echo "Released versions in Changelog.lua have $now entries, but $last had $before."
+            echo "New entries go under Unreleased at the top, not into a released version."
+            exit 1
+        fi
+    fi
     if [ "$changes" -gt 0 ] && [ "$entries" -eq 0 ]; then
         echo "$changes feat/fix commits since ${last:-the start}, but nothing under Unreleased in Changelog.lua."
         echo "Add what players will notice (see the top of Changelog.lua)."

@@ -1,14 +1,16 @@
 -- Changelog tooling for releases (run from the repo root, with luajit or lua):
 --   lua tools/changelog.lua count                    entries in the Unreleased block
+--   lua tools/changelog.lua released [file]          entries in released versions (of file, e.g.
+--                                                    the last release's copy, to catch additions)
 --   lua tools/changelog.lua release <version> <date> turn the Unreleased block into that version
 --   lua tools/changelog.lua markdown <version>       release notes for a version (or Unreleased),
 --                                                    written to CHANGELOG.md by `just release`
 
 local FILE = "Changelog.lua"
 
-local function Load()
+local function Load(file)
 	local ns = {}
-	assert(loadfile(FILE))("NraKit", ns)
+	assert(loadfile(file or FILE))("NraKit", ns)
 	return ns.changelog
 end
 
@@ -25,6 +27,15 @@ local command = arg[1]
 if command == "count" then
 	local release = Find(Load(), "Unreleased")
 	print(release and #release.entries or 0)
+
+elseif command == "released" then
+	local total = 0
+	for _, release in ipairs(Load(arg[2])) do
+		if release.version ~= "Unreleased" then
+			total = total + #release.entries
+		end
+	end
+	print(total)
 
 elseif command == "release" then
 	local version, date = assert(arg[2], "version?"), assert(arg[3], "date?")
@@ -68,6 +79,6 @@ elseif command == "markdown" then
 	print("Type /nra new in game to see what's new in every version.")
 
 else
-	io.stderr:write("usage: lua tools/changelog.lua count | release <version> <date> | markdown <version>\n")
+	io.stderr:write("usage: lua tools/changelog.lua count | released [file] | release <version> <date> | markdown <version>\n")
 	os.exit(2)
 end
