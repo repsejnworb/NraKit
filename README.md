@@ -121,6 +121,8 @@ addons share through LibSharedMedia.
 - **Inspect anything**: one key (Key Bindings > NraKit) inspects what's under the mouse
   or your target. Players get the normal inspect window; NPCs (and players you can't inspect) get a
   model viewer where the inspect window opens: drag to turn, right-drag to move, wheel to zoom.
+  It shows level, type, health and attack speed (out of combat; the game hides NPC stats from
+  addons), and "Abilities on Wowhead" gives the NPC's Wowhead link.
   Optionally follows your target, and adds "View 3D model" to the right-click menu of NPCs and
   enemy players.
 - **Copy Wowhead link**: hover an item, spell, NPC, quest, achievement or currency and press Ctrl+C.

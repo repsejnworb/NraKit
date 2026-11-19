@@ -107,7 +107,7 @@ Hides the blue notification dot on the **Shop** button that never goes away, and
 - Items nobody has discovered yet can't be looked up until they have been; NraKit checks for them again every day (or right away with Check again).
 
 ### Inspect anything
-**One key** (Key Bindings → NraKit) inspects whatever is **under your mouse, or your target**. Players open the normal inspect window; **NPCs open a model viewer** with their **3D model** to look at: **drag to turn**, **right-drag to move**, **mouse wheel to zoom**, plus their level and type. It opens where the inspect window does, and follows your target while it's open (optional).
+**One key** (Key Bindings → NraKit) inspects whatever is **under your mouse, or your target**. Players open the normal inspect window; **NPCs open a model viewer** with their **3D model** to look at: **drag to turn**, **right-drag to move**, **mouse wheel to zoom**, plus their level, type, health and attack speed, and an **Abilities on Wowhead** button (the game doesn't tell addons what NPCs can do, so it gives you their Wowhead link). It opens where the inspect window does, and follows your target while it's open (optional).
 - Also in the **right-click menu** of NPCs and enemy players: **View 3D model** (optional).
 
 ### Copy Wowhead link

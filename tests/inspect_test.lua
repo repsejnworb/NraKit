@@ -38,6 +38,18 @@ return {
 		issecretvalue = function(value)
 			return value == SECRET
 		end
+		UnitHealthMax = function(unit)
+			return units[unit] and units[unit].health
+		end
+		UnitAttackSpeed = function(unit)
+			return units[unit] and units[unit].attackSpeed
+		end
+		UnitCreatureFamily = function(unit)
+			return units[unit] and units[unit].family
+		end
+		UnitGUID = function(unit)
+			return units[unit] and units[unit].guid
+		end
 		-- Blizzard's panel layout (a "Panel" name would otherwise be a stand-in frame).
 		GetUIPanelLayoutAttribute = function(name)
 			return ({ LEFT_OFFSET = 16, TOP_OFFSET = -116 })[name]
@@ -180,6 +192,50 @@ return {
 			ns:SetSetting("inspectAnythingMenu", false)
 			t.equal(wow.menuEntry(wow.openMenu("MENU_UNIT_TARGET", { unit = "target" }), "View 3D model"), nil, "option off")
 			ns:SetSetting("inspectAnythingMenu", true)
+		end)
+
+		local function Shown(text)
+			for _, frame in ipairs(wow.frames) do
+				if frame.text == text and wow.visible(frame) then
+					return true
+				end
+			end
+			return false
+		end
+
+		t.test("stats: secret health shows as it is, attack speed when readable, a beast's family", function()
+			units.target = { name = "Mangy Wolf", level = 6, creatureType = "Beast", family = "Wolf",
+				health = SECRET, attackSpeed = 2, guid = "Creature-0-1-2-3-525-0000ABCD" }
+			ns.inspectAnything.ShowModel("target")
+			t.ok(Shown("Level 6 Beast (Wolf)"), "family after the type")
+			t.ok(Shown(SECRET), "secret health handed to the text as it is")
+			t.ok(Shown("2.0 s"), "attack speed")
+			units.target.attackSpeed = SECRET -- in combat
+			units.target.health = 1500 -- a player's is readable
+			ns.inspectAnything.ShowModel("target")
+			t.ok(Shown("1,500") or Shown("1500"), "readable health formatted")
+			t.ok(not Shown("Attack speed"), "secret attack speed left out")
+			t.noErrors()
+		end)
+
+		t.test("Abilities on Wowhead opens the NPC's Wowhead link", function()
+			units.target = { name = "Mangy Wolf", level = 6, guid = "Creature-0-1-2-3-525-0000ABCD" }
+			ns.inspectAnything.ShowModel("target")
+			t.ok(wow.click("Abilities on Wowhead"), "button")
+			local found
+			for _, frame in ipairs(wow.frames) do
+				if type(frame.text) == "string" and frame.text:find("wowhead.com/forever/npc=525", 1, true) then
+					found = true
+				end
+			end
+			t.ok(found, "npc link in the copy box")
+			units.target = { name = "Bob", surname = "Stone", isPlayer = true, guid = "Player-1-0000ABCD" }
+			ns.inspectAnything.ShowModel("target")
+			t.ok(not wow.click("Abilities on Wowhead"), "not for players")
+			units.target = { name = "Mangy Wolf", level = 6, guid = SECRET }
+			ns.inspectAnything.ShowModel("target")
+			t.ok(not wow.click("Abilities on Wowhead"), "not when the GUID is secret")
+			t.noErrors()
 		end)
 
 		t.test("does nothing while off", function()

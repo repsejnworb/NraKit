@@ -7,8 +7,12 @@ local _, ns = ...
 -- inspect window does. Right-clicking an NPC or enemy player (target, focus) also offers
 -- "View 3D model".
 --
--- Names, levels and types can be secret values (instances, combat); the model still shows,
--- the line under the title just leaves out what it can't read.
+-- Under the title: level, classification and type, then max health and attack speed. The
+-- game keeps an NPC's max health secret (always) and its attack speed in combat: a secret
+-- value can still be shown as it is (a FontString takes it), but not formatted, so health
+-- shows as a plain number. What can't be read at all is left out. Abilities aren't
+-- available to addons (NPC casts are secret), so "Abilities on Wowhead" opens the copy-link
+-- box with the NPC's Wowhead page instead.
 
 local module = {
 	key = "inspectAnything",
@@ -33,7 +37,7 @@ local module = {
 }
 
 local WIDTH, HEIGHT = 380, 520
-local SUBTITLE_HEIGHT = 26
+local SUBTITLE_HEIGHT = 44
 -- Right-click menus that get "View 3D model": NPCs (target and focus) and enemy players.
 local MENU_TAGS = { "TARGET", "FOCUS", "ENEMY_PLAYER" }
 local FOOTER_HEIGHT = 30
@@ -45,7 +49,8 @@ local UI = ns.UI
 local inspect = {}
 ns.inspectAnything = inspect
 
-local frame, model, subtitle
+local frame, model, subtitle, stats, wowheadButton
+local npcID, npcName -- of the shown NPC, for its Wowhead page
 local view = { facing = 0, x = 0, y = 0, zoom = 1 }
 local dragging, lastX, lastY
 
@@ -83,8 +88,52 @@ local function Describe(unit)
 		if Readable(creatureType) then
 			table.insert(parts, creatureType)
 		end
+		local family = UnitCreatureFamily(unit) -- Wolf, Spider... (beasts)
+		if Readable(family) and family ~= creatureType then
+			table.insert(parts, "(" .. family .. ")")
+		end
 	end
 	return table.concat(parts, " ")
+end
+
+-- "Health 1,234   Attack speed 2.0 s": label and value pairs, laid out left to right,
+-- leaving out the ones that can't be shown.
+local function UpdateStats(unit)
+	local health = UnitHealthMax(unit)
+	local speed = UnitAttackSpeed(unit)
+	-- values[key] is only looked at when shown[key]: a secret can't even be compared to nil.
+	local values, shown = {}, {}
+	if issecretvalue and issecretvalue(health) then
+		values.health, shown.health = health, true -- an NPC's: shown as it is
+	elseif health and health > 0 then
+		values.health, shown.health = BreakUpLargeNumbers and BreakUpLargeNumbers(health) or tostring(health), true
+	end
+	if Readable(speed) and speed > 0 then
+		values.speed, shown.speed = string.format("%.1f s", speed), true
+	end
+	local anchor
+	for _, key in ipairs({ "health", "speed" }) do
+		local pair = stats[key]
+		pair.label:SetShown(shown[key] == true)
+		pair.value:SetShown(shown[key] == true)
+		if shown[key] then
+			pair.value:SetText(values[key])
+			pair.label:ClearAllPoints()
+			if anchor then
+				pair.label:SetPoint("LEFT", anchor, "RIGHT", 14, 0)
+			else
+				pair.label:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", 0, -5)
+			end
+			anchor = pair.value
+		end
+	end
+end
+
+local function UpdateWowheadButton(unit)
+	npcID = ns.wowheadLink and ns.wowheadLink.NpcIDFromGUID(UnitGUID(unit))
+	local name = UnitName(unit)
+	npcName = Readable(name) and name or nil
+	wowheadButton:SetShown(npcID ~= nil)
 end
 
 local function ApplyView()
@@ -112,9 +161,18 @@ local function CreateViewer()
 
 	subtitle = body:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	subtitle:SetPoint("TOPLEFT", UI.PAD + 2, -8)
-	subtitle:SetPoint("RIGHT", -UI.PAD, 0)
+	subtitle:SetPoint("RIGHT", -150, 0)
 	subtitle:SetJustifyH("LEFT")
 	subtitle:SetWordWrap(false)
+
+	stats = {}
+	for _, info in ipairs({ { "health", "Health" }, { "speed", "Attack speed" } }) do
+		local label = body:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+		label:SetText(info[2])
+		local value = body:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		value:SetPoint("LEFT", label, "RIGHT", 4, 0)
+		stats[info[1]] = { label = label, value = value }
+	end
 
 	-- A soft spotlight behind the model.
 	local backdrop = body:CreateTexture(nil, "BACKGROUND")
@@ -173,6 +231,23 @@ local function CreateViewer()
 		inspect.ResetView()
 		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
 	end)
+	hint:SetPoint("RIGHT", reset, "LEFT", -8, 0)
+	hint:SetJustifyH("LEFT")
+	hint:SetWordWrap(false)
+
+	-- Top right of the model area, for NPCs.
+	wowheadButton = UI.CreateFlatButton(body, "Abilities on Wowhead", 20)
+	wowheadButton:SetPoint("TOPRIGHT", -UI.PAD + 4, -8)
+	wowheadButton:SetScript("OnClick", function()
+		if npcID then
+			ns.wowheadLink.Show("npc", npcID, npcName)
+		end
+	end)
+	wowheadButton:SetScript("OnEnter", function(self)
+		UI.ShowTooltip(self, "Abilities on Wowhead",
+			"The game doesn't tell addons what NPCs can do. This gives you a link to its Wowhead page (abilities, loot, where it is) to copy into your browser.")
+	end)
+	wowheadButton:SetScript("OnLeave", GameTooltip_Hide)
 end
 
 -- Shows a unit in the model viewer.
@@ -187,6 +262,8 @@ function inspect.ShowModel(unit)
 		frame.title:SetText(name) -- may be secret; FontStrings take it as it is
 	end
 	subtitle:SetText(Describe(unit))
+	UpdateStats(unit)
+	UpdateWowheadButton(unit)
 	if not frame:IsShown() then
 		PlaceLikeInspect() -- it can be dragged, but opens there each time
 	end

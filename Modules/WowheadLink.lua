@@ -203,6 +203,17 @@ local function ShowBox(page, id, tooltipName)
 	box.edit:HighlightText()
 end
 
+-- For other features (Inspect anything's "Abilities on Wowhead"): the box works whether
+-- or not this feature is on.
+ns.wowheadLink = {
+	Show = function(page, id, name)
+		ShowBox(page, id, name)
+	end,
+	NpcIDFromGUID = function(guid)
+		return NpcIDFromGUID(Plain(guid))
+	end,
+}
+
 -- Called by the key binding (Bindings.xml).
 function NraKit_CopyWowheadLink()
 	if not ns:IsModuleEnabled(module.key) then
