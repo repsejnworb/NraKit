@@ -4,7 +4,7 @@ local _, ns = ...
 -- "Linen Cloth (40)", "Linen Cloth (40), Wool Cloth (20)", "25g" or "Linen Cloth (20) + 5g".
 --
 -- Blizzard's own version (SendMailFrame_Update) only names the first item and doesn't
--- always fire on Forever, so we redo it after every update, after the money changes and
+-- always fire on Forever, so we redo it after every update, after any money box changes and
 -- after Send Money / C.O.D. is switched. A subject is only replaced when it's empty or
 -- still the one we (or Blizzard) wrote, so a subject you typed is never touched.
 
@@ -134,13 +134,15 @@ function module:OnInitialize()
 		return
 	end
 	hooksecurefunc("SendMailFrame_Update", mailSubject.Update)
-	-- The money box calls the copy of SendMailFrame_CanSend it saved when loading, so a
-	-- hook there wouldn't run: hook the box's text change instead.
-	hooksecurefunc("MoneyInputFrame_OnTextChanged", function(editBox)
-		if editBox:GetParent() == SendMailMoney then
-			mailSubject.Update()
+	-- The money boxes call the MoneyInputFrame_OnTextChanged (and SendMailFrame_CanSend) they
+	-- saved when loading (XML function="..."), so hooking those globals never runs: watch
+	-- the gold, silver and copper boxes themselves.
+	for _, key in ipairs({ "gold", "silver", "copper" }) do
+		local editBox = SendMailMoney and SendMailMoney[key]
+		if editBox then
+			editBox:HookScript("OnTextChanged", mailSubject.Update)
 		end
-	end)
+	end
 	hooksecurefunc("SendMailRadioButton_OnClick", mailSubject.Update)
 	eventFrame:RegisterEvent("GET_ITEM_INFO_RECEIVED")
 end
