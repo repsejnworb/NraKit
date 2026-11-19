@@ -118,8 +118,8 @@ addons share through LibSharedMedia.
   names are learned in the background (a few dozen a second, paused in combat, a few minutes once
   per game version). A progress bar in the tab has Pause / Resume, and Check again once it's done;
   undiscovered items are also checked for again daily.
-- **Inspect anything**: one key (Key Bindings > NraKit) inspects what's under the mouse or your
-  target, in a window like the inspect window (same frame and place) that stays open until you close
+- **Inspect anything**: one key (Key Bindings > NraKit) inspects your target (or what's under the mouse when you have none),
+  in a window like the inspect window (same frame and place) that stays open until you close
   it, even when they run off or you change target. Players: their gear around the model (tooltips,
   Shift-click to link), spec and item level; inspected in combat, the gear fills in after combat.
   "Blizzard's inspect" opens the game's window (talents, PvP, guild) while they're near, and

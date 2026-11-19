@@ -1,7 +1,7 @@
 local _, ns = ...
 
--- Inspect anything: one key (Key Bindings > NraKit) for the unit under the mouse, or your
--- target, opens NraKit's inspect window: the frame, size and place of Blizzard's, with the
+-- Inspect anything: one key (Key Bindings > NraKit) for your target, or the unit under
+-- the mouse when you have none, opens NraKit's inspect window: the frame, size and place of Blizzard's, with the
 -- 3D model to turn (drag), move (right-drag) and zoom (mouse wheel).
 --
 -- Players: their gear in slots around the model (tooltips, Shift-click to link), average
@@ -36,7 +36,7 @@ local module = {
 	key = "inspectAnything",
 	section = "Utilities",
 	name = "Inspect anything",
-	description = "One key (Key Bindings > NraKit) inspects what's under the mouse or your target, in a window like the inspect window that stays open until you close it: players with their gear (it loads after combat if needed), and NPCs as a 3D model you can turn, move and zoom.",
+	description = "One key (Key Bindings > NraKit) inspects your target (or what's under the mouse when you have none), in a window like the inspect window that stays open until you close it: players with their gear (it loads after combat if needed), and NPCs as a 3D model you can turn, move and zoom.",
 	default = false,
 	options = {
 		{
@@ -782,7 +782,7 @@ function inspect.Inspect()
 	if not ns:IsModuleEnabled(module.key) then
 		return
 	end
-	local unit = (UnitExists("mouseover") and "mouseover") or (UnitExists("target") and "target")
+	local unit = (UnitExists("target") and "target") or (UnitExists("mouseover") and "mouseover")
 	if not unit then
 		ns:Print("Point at or target someone to inspect them.")
 		return

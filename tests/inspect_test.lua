@@ -159,6 +159,17 @@ return {
 			NraKit_InspectAnything()
 		end
 
+		t.test("your target comes before what's under the mouse", function()
+			units.target, units.mouseover = HOGGER, { name = "Mangy Wolf", level = 6 }
+			NraKit_InspectAnything()
+			t.equal(Title(), "Hogger", "the target")
+			units.target = nil
+			NraKit_InspectAnything()
+			t.equal(Title(), "Mangy Wolf", "the mouse when there's no target")
+			units.mouseover = nil
+			NraKitModelViewer:Hide()
+		end)
+
 		t.test("nothing to inspect says so", function()
 			NraKit_InspectAnything()
 			t.ok(Printed("Point at or target someone"), "message")
