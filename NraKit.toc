@@ -15,6 +15,8 @@ Core.lua
 UI.lua
 Sounds.lua
 Settings.lua
+Changelog.lua
+WhatsNew.lua
 Options.lua
 
 Modules\ClassColorHealthBars.lua

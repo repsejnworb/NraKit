@@ -7,6 +7,14 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
 - Conventional commits (`feat:`, `fix:`, ...). **Never** add a `Co-Authored-By` or any other attribution trailer.
 - Work directly in this `main/` worktree, commit, and push to `origin/main`.
 - **Every feature is off by default** (module `default = false`). Sub-options inside a feature may default on.
+- **Changelog:** every `feat:`/`fix:` commit that changes something players can see adds a line to the `Unreleased`
+  block at the top of `Changelog.lua`, in the same commit (add the block if it's missing). Write it for players
+  ("Player notes: ..."), not as the commit message; kinds are `new`, `improved`, `fixed`. A new feature's entry is
+  `{ "new", "...", module = "<module key>" }` (the window shows its on/off switch there; a test fails if a module
+  has none). Only ever add entries, never remove or reorder them (the game counts them to know what's new to someone).
+  Tests, refactors and docs need no entry. `just release` turns `Unreleased` into the version and writes `CHANGELOG.md`
+  (the CurseForge/GitHub release notes); `just changelog-check` (run by release) fails on feat/fix commits with an
+  empty `Unreleased`.
 - Each feature should be toggleable on the NraKit overview page; anything tunable goes in settings, not code constants.
 - Run `just test` before committing (it also syntax-checks). It uses LuaJIT (Lua 5.1, like the game). `tests/run.lua` loads the whole addon in TOC order into a
   stand-in client (`tests/wow.lua`), logs in and runs a `tests/*_test.lua` file; each file is a fresh process. Tests
@@ -41,7 +49,10 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   `UI.CreateSoundSelect` is the widget; "More sounds..." searches all of SOUNDKIT and LibSharedMedia.
 - `UI.lua` – shared look for NraKit's windows (`ns.UI`: window with title bar and sidebar, nav buttons, flat
   tabs/chips, search box, scroll area, widget pools, colours). New windows should use it.
-- `Options.lua` – NraKit's own window (`/nra`): sidebar with search and sections, a card per module with inline
+- `Changelog.lua` – what's new per version, for players (see the changelog rule above). `WhatsNew.lua` tracks what
+  each player has seen, prints one chat line after an update and registers `/nra new`; the page is in `Options.lua`.
+  `tools/changelog.lua` is the release tooling (`count`, `release <version> <date>`, `markdown <version>`).
+- `Options.lua` – NraKit's own window (`/nra`): sidebar with search, What's new and sections, a card per module with inline
   options. Built entirely from the module definitions, so new modules need no work here. Custom per-module buttons
   go through `ns:AddOptionsButton(moduleKey, label, description, onClick)` and show in both UIs.
 - `Bindings.xml` – keybindings (auto-loaded by the game, not listed in the TOC); binding names are set in Lua.

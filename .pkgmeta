@@ -1,7 +1,15 @@
 package-as: NraKit
 
+# Release notes come from Changelog.lua (`just release` writes CHANGELOG.md).
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
 ignore:
   - .github
   - CLAUDE.md
   - README.md
   - tests
+  - tools
+  - Justfile
+  - cog.toml

@@ -16,7 +16,8 @@ Type `/nrakit` (`/nra`) to open NraKit's window: features grouped in a sidebar, 
 on/off switch per feature and its options right underneath. Everything is off until you turn it on.
 The same settings are also in the game's Settings panel under **AddOns → NraKit**.
 NraKit is also in the addon button by the minimap: left-click for settings, right-click for the
-inventory browser. `/nra help` lists the chat commands; add `help` after one for details
+inventory browser. **What's new** (`/nra new`, top of the NraKit window) lists what changed in each
+version, and new features can be turned on right there. After an update, NraKit says so in one chat line. `/nra help` lists the chat commands; add `help` after one for details
 (e.g. `/nra goal help`).
 
 Sounds (Campfire timer, Unit Scanner, Farm goals, Player notes) can be changed: pick from a short list of good
@@ -127,8 +128,11 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
 - `just check` syntax-checks the Lua files
 - `just test` runs the tests: the addon is loaded into a stand-in WoW client (`tests/wow.lua`) and its
   windows are clicked through (`tests/*_test.lua`). They also run on every push (GitHub Actions)
-- `just next` shows the next version and the commits going into it
-- `just release` tags the next version and pushes it; CI packages it and uploads to CurseForge and GitHub
+- `Changelog.lua` is the player-facing changelog (in game under What's new, and the release notes): add a line
+  under `Unreleased` with every change players will notice
+- `just next` shows the next version, the commits going into it and whether the changelog has them
+- `just release` turns `Unreleased` into the next version, writes `CHANGELOG.md`, tags and pushes; CI packages it
+  and uploads to CurseForge and GitHub
 - `just release-pre alpha.1` does the same as an alpha/beta pre-release
 
 ## License

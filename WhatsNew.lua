@@ -1,0 +1,99 @@
+local _, ns = ...
+
+-- What's new: which changelog entries (Changelog.lua) you haven't seen, and the chat line
+-- after an update. The page itself is in the NraKit window (Options.lua), opened with
+-- /nra new.
+--
+-- Entries are only ever added, so counting them is enough: NraKitDB.changelogSeen is how
+-- many there were when you last opened the page, NraKitDB.changelogAnnounced how many
+-- when the chat line last went out (once per update). A fresh install starts with
+-- everything seen: a changelog is for people updating.
+
+local whatsNew = {}
+ns.whatsNew = whatsNew
+
+local ANNOUNCE_DELAY = 8 -- seconds after login, so it isn't lost in the login chat
+
+local entries
+
+-- Every entry, newest first, with its version: { kind, text, module, version, date }.
+function whatsNew.Entries()
+	if not entries then
+		entries = {}
+		for _, release in ipairs(ns.changelog) do
+			for _, entry in ipairs(release.entries) do
+				table.insert(entries, {
+					kind = entry[1], text = entry[2], module = entry.module,
+					version = release.version, date = release.date,
+				})
+			end
+		end
+	end
+	return entries
+end
+
+function whatsNew.UnseenCount()
+	local total = #whatsNew.Entries()
+	return math.max(0, total - (NraKitDB.changelogSeen or total))
+end
+
+function whatsNew.MarkSeen()
+	NraKitDB.changelogSeen = #whatsNew.Entries()
+end
+
+function whatsNew.ChatEnabled()
+	return NraKitDB.whatsNewChat ~= false
+end
+
+local KIND_WORDS = {
+	new = { "new feature", "new features" },
+	improved = { "improvement", "improvements" },
+	fixed = { "fix", "fixes" },
+}
+
+-- "NraKit has been updated to 0.12.0: 2 new features, 1 fix. ..." once per update.
+function whatsNew.Announce()
+	local total = #whatsNew.Entries()
+	local unseen = whatsNew.UnseenCount()
+	if not whatsNew.ChatEnabled() or unseen == 0 or (NraKitDB.changelogAnnounced or 0) >= total then
+		return
+	end
+	NraKitDB.changelogAnnounced = total
+
+	local counts = {}
+	for index = 1, unseen do
+		local kind = whatsNew.Entries()[index].kind
+		counts[kind] = (counts[kind] or 0) + 1
+	end
+	local parts = {}
+	for _, kind in ipairs({ "new", "improved", "fixed" }) do
+		if counts[kind] then
+			table.insert(parts, counts[kind] .. " " .. KIND_WORDS[kind][counts[kind] == 1 and 1 or 2])
+		end
+	end
+	local version = whatsNew.Entries()[1].version
+	ns:Print(string.format("has been updated%s: %s. Type |cffffd100/nra new|r to see what's new.",
+		version ~= "Unreleased" and (" to " .. version) or "", table.concat(parts, ", ")))
+end
+
+local HELP = {
+	summary = "What's new in NraKit (the changelog)",
+	usage = { "/nra new - what's new in each version; turn new features on right there (also /nra changelog)" },
+}
+
+local eventFrame = CreateFrame("Frame")
+eventFrame:RegisterEvent("PLAYER_LOGIN")
+eventFrame:SetScript("OnEvent", function()
+	if NraKitDB.changelogSeen == nil then
+		whatsNew.MarkSeen()
+		NraKitDB.changelogAnnounced = #whatsNew.Entries()
+	end
+	C_Timer.After(ANNOUNCE_DELAY, whatsNew.Announce)
+end)
+
+local function Open()
+	ns:OpenWhatsNew()
+end
+ns:RegisterSlashCommand("new", Open, HELP)
+ns:RegisterSlashCommand("whatsnew", Open, HELP)
+ns:RegisterSlashCommand("changelog", Open, HELP)

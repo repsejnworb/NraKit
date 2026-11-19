@@ -2,9 +2,11 @@ local addonName, ns = ...
 
 -- NraKit's own settings window (/nra), next to Blizzard's Options > AddOns page.
 --
--- Left: a search box, "All features" and one entry per section (with enabled/total
--- counts). Right: a card per feature with its on/off switch and description; a card's
--- options open inline under it. Everything is built from the module definitions and
+-- Left: a search box, "What's new" (with a dot while there's something you haven't
+-- seen), "All features" and one entry per section (with enabled/total counts). Right: a
+-- card per feature with its on/off switch and description; a card's options open inline
+-- under it. What's new lists Changelog.lua by version, with an on/off switch and a
+-- Settings link next to each new feature. Everything is built from the module definitions and
 -- changed through ns:SetSetting, so it stays in step with the Blizzard page.
 --
 -- The look matches the Campfire timer bar: dark flat panel, hairline borders, orange accent.
@@ -20,9 +22,12 @@ local EDGE, PANEL, ACCENT = UI.EDGE, UI.PANEL, UI.ACCENT
 local NAME_ON, NAME_OFF = UI.GOLD, UI.GREY
 local TEXT, TEXT_DIM = UI.TEXT, UI.TEXT_DIM
 
-local frame, content, scrollFrame, searchBox, enabledOnlyCheck
+local frame, content, scrollFrame, searchBox, enabledOnlyCheck, whatsNewButton
 local navButtons = {}
 local selectedSection -- nil = all features
+local showWhatsNew = false
+local unseenEntries = {} -- changelog entries new to you, marked until the window closes
+local openVersions = {} -- version -> true/false once you've opened or closed it
 local query = ""
 local expanded = {} -- module key -> true
 local newModules = {} -- module key -> true for features added since the window was last opened
@@ -118,7 +123,12 @@ local function AcquireCheck()
 		check:SetFrameLevel(content:GetFrameLevel() + 3)
 		check:SetScript("OnClick", function(self)
 			PlaySound(self:GetChecked() and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON or SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_OFF)
-			ns:SetSetting(self.settingKey, self:GetChecked() and true or false)
+			if ns.settings[self.settingKey] then
+				ns:SetSetting(self.settingKey, self:GetChecked() and true or false)
+			else
+				-- Not a module option (e.g. What's new's chat line): just saved.
+				NraKitDB[self.settingKey] = self:GetChecked() and true or false
+			end
 			Render()
 		end)
 		check:SetScript("OnEnter", function(self)
@@ -359,6 +369,238 @@ local function AddCard(module, x, y, width, forceOpen)
 	return y - CARD_GAP
 end
 
+------------------------------------------------------------------------------
+-- What's new
+------------------------------------------------------------------------------
+
+local KINDS = { { "new", "New" }, { "improved", "Improved" }, { "fixed", "Fixed" } }
+local CONTROLS_WIDTH = 150
+local SUMMARY_NAMES = 3
+
+-- Remembers what's new to you (to mark it while the window is open), then counts it as seen.
+local function EnterWhatsNew()
+	if not next(unseenEntries) then
+		local entries = ns.whatsNew.Entries()
+		for index = 1, ns.whatsNew.UnseenCount() do
+			unseenEntries[entries[index]] = true
+		end
+	end
+	ns.whatsNew.MarkSeen()
+end
+
+-- "2026-11-18" -> "18 Nov 2026"
+local function FormatDate(text)
+	local year, month, day = (text or ""):match("^(%d+)-(%d+)-(%d+)$")
+	if not year then
+		return text or ""
+	end
+	return date("%d %b %Y", time({ year = tonumber(year), month = tonumber(month), day = tonumber(day), hour = 12 }))
+end
+
+-- Entries grouped by version, newest first: { version, date, entries }.
+local function Releases()
+	local releases = {}
+	for _, entry in ipairs(ns.whatsNew.Entries()) do
+		local last = releases[#releases]
+		if not last or last.version ~= entry.version then
+			last = { version = entry.version, date = entry.date, entries = {} }
+			table.insert(releases, last)
+		end
+		table.insert(last.entries, entry)
+	end
+	return releases
+end
+
+-- One line for a closed version: its new features, and how many changes in all.
+local function ReleaseSummary(release)
+	local names = {}
+	for _, entry in ipairs(release.entries) do
+		local module = entry.kind == "new" and entry.module and ns.modules[entry.module]
+		if module then
+			table.insert(names, module.name)
+		end
+	end
+	local count = #release.entries
+	local changes = count == 1 and "1 change" or (count .. " changes")
+	if #names == 0 then
+		return changes
+	end
+	local shown = {}
+	for index = 1, math.min(#names, SUMMARY_NAMES) do
+		shown[index] = names[index]
+	end
+	local text = table.concat(shown, ", ")
+	if #names > SUMMARY_NAMES then
+		text = text .. string.format(" + %d more", #names - SUMMARY_NAMES)
+	end
+	return text .. "  ·  " .. changes
+end
+
+local function AcquireVersionHeader()
+	return Acquire("versionHeader", function()
+		local header = CreateFrame("Button", nil, content)
+		header:SetFrameLevel(content:GetFrameLevel() + 1)
+		header.highlight = header:CreateTexture(nil, "HIGHLIGHT")
+		header.highlight:SetAllPoints()
+		header.highlight:SetColorTexture(1, 1, 1, 0.03)
+		header.toggle = header:CreateTexture(nil, "ARTWORK")
+		header.toggle:SetSize(14, 14)
+		header.toggle:SetPoint("TOPRIGHT", -10, -11)
+		header:SetScript("OnClick", function(self)
+			openVersions[self.version] = not self.isOpen
+			PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+			Render()
+		end)
+		return header
+	end)
+end
+
+local function AcquireSettingsLink()
+	return Acquire("settingsLink", function()
+		local link = UI.CreateFlatButton(content, "Settings", 20)
+		link:SetFrameLevel(content:GetFrameLevel() + 3)
+		link:SetScript("OnClick", function(self)
+			ns:OpenSettings(self.search, self.moduleKey)
+		end)
+		link:SetScript("OnEnter", function(self)
+			ShowTooltip(self, self.search, "Show this feature's settings.")
+		end)
+		link:SetScript("OnLeave", GameTooltip_Hide)
+		return link
+	end)
+end
+
+-- A new feature's on/off switch and Settings link, at the right of its line.
+local function AddFeatureControls(module, x, y)
+	local check = AcquireCheck()
+	check:SetSize(22, 22)
+	check:SetPoint("TOPLEFT", content, "TOPLEFT", x, y + 3)
+	check:SetChecked(IsOn(module.key))
+	check:SetEnabled(true)
+	check.settingKey = module.key
+	check.tooltipTitle, check.tooltipText = module.name, "Turn this feature on or off."
+	local label = AcquireText("GameFontHighlightSmall")
+	label:SetText(IsOn(module.key) and "On" or "Off")
+	label:SetWordWrap(false)
+	label:SetTextColor(unpack(IsOn(module.key) and NAME_ON or TEXT_DIM))
+	label:SetPoint("LEFT", check, "RIGHT", 2, 1)
+	local link = AcquireSettingsLink()
+	link.search, link.moduleKey = module.name, module.key
+	link:SetPoint("TOPLEFT", content, "TOPLEFT", x + 62, y + 1)
+end
+
+local function RenderWhatsNew(x, y, width)
+	local title = AcquireText("GameFontNormalLarge")
+	title:SetText("What's new")
+	title:SetTextColor(1, 1, 1)
+	title:SetPoint("TOPLEFT", content, "TOPLEFT", x + 2, y)
+
+	local chat = AcquireCheck()
+	chat:SetSize(22, 22)
+	chat:SetPoint("TOPLEFT", content, "TOPLEFT", x + width - 210, y + 3)
+	chat:SetChecked(ns.whatsNew.ChatEnabled())
+	chat:SetEnabled(true)
+	chat.settingKey = "whatsNewChat"
+	chat.tooltipTitle, chat.tooltipText = "Tell me in chat after an update",
+		"One line in chat after NraKit has been updated, saying what's new."
+	local chatLabel = AcquireText("GameFontHighlightSmall")
+	chatLabel:SetText("Tell me in chat after an update")
+	chatLabel:SetWordWrap(false)
+	chatLabel:SetTextColor(unpack(TEXT))
+	chatLabel:SetPoint("LEFT", chat, "RIGHT", 2, 1)
+	y = y - 34
+
+	for index, release in ipairs(Releases()) do
+		local hasUnseen = false
+		for _, entry in ipairs(release.entries) do
+			hasUnseen = hasUnseen or unseenEntries[entry] == true
+		end
+		local open = openVersions[release.version]
+		if open == nil then
+			open = index <= 2 or hasUnseen
+		end
+		local top = y
+
+		local header = AcquireVersionHeader()
+		header.version, header.isOpen = release.version, open
+		header:SetPoint("TOPLEFT", content, "TOPLEFT", x, top)
+		header:SetPoint("BOTTOMRIGHT", content, "TOPLEFT", x + width, top - 34)
+		header.toggle:SetTexture(open and "Interface\\Buttons\\UI-MinusButton-Up" or "Interface\\Buttons\\UI-PlusButton-Up")
+
+		local unreleased = release.version == "Unreleased"
+		local name = AcquireText("GameFontNormalLarge")
+		name:SetText(unreleased and "Next version" or release.version)
+		name:SetWordWrap(false)
+		name:SetTextColor(unpack(NAME_ON))
+		name:SetPoint("TOPLEFT", content, "TOPLEFT", x + 12, y - 10)
+		local when = AcquireText("GameFontDisableSmall")
+		when:SetText(unreleased and "not released yet: you're running a development version" or FormatDate(release.date))
+		when:SetWordWrap(false)
+		when:SetPoint("LEFT", name, "RIGHT", 8, -1)
+		if hasUnseen then
+			local badge = AcquireText("GameFontNormalSmall")
+			badge:SetText("NEW TO YOU")
+			badge:SetWordWrap(false)
+			badge:SetTextColor(unpack(ACCENT))
+			badge:SetPoint("LEFT", when, "RIGHT", 8, 0)
+		end
+		y = y - 34
+
+		if not open then
+			local summary = AcquireText("GameFontHighlightSmall")
+			summary:SetWidth(width - 24)
+			summary:SetText(ReleaseSummary(release))
+			summary:SetTextColor(unpack(TEXT_DIM))
+			summary:SetPoint("TOPLEFT", content, "TOPLEFT", x + 12, y + 4)
+			y = y - summary:GetStringHeight() - 6
+		else
+			for _, kind in ipairs(KINDS) do
+				local shownHeading = false
+				for _, entry in ipairs(release.entries) do
+					if entry.kind == kind[1] then
+						if not shownHeading then
+							shownHeading = true
+							local heading = AcquireText("GameFontNormalSmall")
+							heading:SetText(kind[2]:upper())
+							heading:SetTextColor(unpack(ACCENT))
+							heading:SetPoint("TOPLEFT", content, "TOPLEFT", x + 12, y - 2)
+							y = y - 20
+						end
+						local module = entry.kind == "new" and entry.module and ns.modules[entry.module]
+						if unseenEntries[entry] then
+							local dot = AcquireTexture()
+							dot:SetDrawLayer("ARTWORK")
+							dot:SetColorTexture(unpack(ACCENT))
+							dot:SetSize(6, 6)
+							dot:SetPoint("TOPLEFT", content, "TOPLEFT", x + 14, y - 5)
+						end
+						local text = AcquireText("GameFontHighlight")
+						text:SetWidth(width - 40 - (module and CONTROLS_WIDTH or 0))
+						text:SetText(entry.text)
+						text:SetTextColor(unpack(unseenEntries[entry] and { 1, 1, 1 } or TEXT))
+						text:SetPoint("TOPLEFT", content, "TOPLEFT", x + 26, y)
+						local height = text:GetStringHeight()
+						if module then
+							AddFeatureControls(module, x + width - CONTROLS_WIDTH + 4, y)
+							height = math.max(height, 20)
+						end
+						y = y - height - 8
+					end
+				end
+			end
+		end
+		y = y - 6
+
+		local background = AcquireTexture()
+		background:SetDrawLayer("BACKGROUND")
+		background:SetColorTexture(unpack(PANEL))
+		background:SetPoint("TOPLEFT", content, "TOPLEFT", x, top)
+		background:SetPoint("BOTTOMRIGHT", content, "TOPLEFT", x + width, y)
+		y = y - CARD_GAP
+	end
+	return y
+end
+
 local function SetScroll(value)
 	scrollFrame:SetScroll(value)
 end
@@ -374,8 +616,12 @@ local function UpdateNav()
 			end
 		end
 		button.count:SetText(on .. "/" .. total)
-		button:SetSelected(not searching and button.section == selectedSection)
+		button:SetSelected(not searching and not showWhatsNew and button.section == selectedSection)
 	end
+	local unseen = ns.whatsNew.UnseenCount()
+	whatsNewButton:SetSelected(not searching and showWhatsNew)
+	whatsNewButton.dot:SetShown(unseen > 0)
+	whatsNewButton.count:SetText(unseen > 0 and tostring(unseen) or "")
 end
 
 function Render()
@@ -389,6 +635,15 @@ function Render()
 	local x, y = PAD, -PAD
 	local shown = 0
 	local enabledOnly = enabledOnlyCheck:GetChecked()
+
+	if showWhatsNew and query == "" then
+		EnterWhatsNew()
+		y = RenderWhatsNew(x, y, width)
+		content:SetHeight(-y + PAD)
+		UpdateNav()
+		SetScroll(scroll)
+		return
+	end
 
 	for _, section in ipairs(ns:GetSections()) do
 		if query ~= "" or not selectedSection or selectedSection == section.name then
@@ -438,6 +693,7 @@ local function CreateNavButton(parent, label, section, modules)
 
 	button:SetScript("OnClick", function(self)
 		selectedSection = self.section
+		showWhatsNew = false
 		if query ~= "" then
 			searchBox:SetText("") -- also re-renders
 		end
@@ -478,8 +734,19 @@ local function CreateWindow()
 	end)
 	searchBox:SetPoint("TOPLEFT", PAD + 6, -PAD)
 
+	whatsNewButton = UI.CreateNavButton(sidebar, SIDEBAR_WIDTH - 2 * PAD, 26, "What's new")
+	whatsNewButton:SetPoint("TOPLEFT", PAD, -PAD - 34)
+	whatsNewButton.dot = whatsNewButton:CreateTexture(nil, "OVERLAY")
+	whatsNewButton.dot:SetColorTexture(unpack(ACCENT))
+	whatsNewButton.dot:SetSize(6, 6)
+	whatsNewButton.dot:SetPoint("RIGHT", whatsNewButton.count, "LEFT", -5, 0)
+	whatsNewButton:SetScript("OnClick", function()
+		ns:OpenWhatsNew()
+		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+	end)
+
 	local anchor = CreateNavButton(sidebar, "All features", nil, ns.moduleOrder)
-	anchor:SetPoint("TOPLEFT", PAD, -PAD - 34)
+	anchor:SetPoint("TOPLEFT", whatsNewButton, "BOTTOMLEFT", 0, -10)
 	for _, section in ipairs(ns:GetSections()) do
 		local button = CreateNavButton(sidebar, section.name, section.name, section.modules)
 		button:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -2)
@@ -519,6 +786,7 @@ local function CreateWindow()
 	end)
 	frame:SetScript("OnHide", function()
 		wipe(newModules)
+		wipe(unseenEntries)
 	end)
 end
 
@@ -533,10 +801,28 @@ function ns:OpenSettings(search, expandKey)
 		if expandKey then
 			expanded[expandKey] = true
 		end
+		showWhatsNew = false
 		frame:Show()
 		searchBox:SetText(search)
 		Render()
 	else
 		frame:SetShown(not frame:IsShown())
+	end
+end
+
+-- /nra new: the window on What's new (always shown, never toggled closed).
+function ns:OpenWhatsNew()
+	if not frame then
+		CreateWindow()
+	end
+	showWhatsNew = true
+	if query ~= "" then
+		searchBox:SetText("") -- also re-renders
+	end
+	SetScroll(0)
+	if frame:IsShown() then
+		Render()
+	else
+		frame:Show()
 	end
 end

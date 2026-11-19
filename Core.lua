@@ -205,6 +205,11 @@ function NraKit_OnCompartmentEnter(_, button)
 	if ns:IsModuleEnabled("inventoryTracker") then
 		GameTooltip_AddInstructionLine(GameTooltip, "Right-click: inventory browser")
 	end
+	local unseen = ns.whatsNew and ns.whatsNew.UnseenCount() or 0
+	if unseen > 0 then
+		GameTooltip_AddNormalLine(GameTooltip, string.format("What's new: %d %s since you last looked (/nra new)",
+			unseen, unseen == 1 and "change" or "changes"))
+	end
 	GameTooltip:Show()
 end
 
