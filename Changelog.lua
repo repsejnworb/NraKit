@@ -16,7 +16,7 @@ local _, ns = ...
 --           "new" entry with its module (tests/changelog_test.lua checks).
 
 ns.changelog = {
-	{ version = "Unreleased", entries = {
+	{ version = "0.18.0", date = "2026-11-19", entries = {
 		{ "improved", "NraKit window: every tab is always there. Tabs of features that are off are dimmed and show what the feature does, with a button to turn it on." },
 		{ "fixed", "NraKit window: tabs update right away when you turn a feature on or off, instead of after switching tabs." },
 	} },
