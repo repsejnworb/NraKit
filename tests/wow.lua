@@ -377,6 +377,18 @@ function wow.install()
 		G[name] = Namespace()
 	end
 	G.TooltipDataProcessor.AllTypes = "ALL"
+	-- UI panels (Blizzard's window manager): shown and hidden as asked, and remembered.
+	wow.panels = {}
+	G.RegisterUIPanel = function(frame, attributes)
+		wow.panels[frame] = attributes
+	end
+	G.ShowUIPanel = function(frame)
+		wow.panelShown = frame
+		frame:Show()
+	end
+	G.HideUIPanel = function(frame)
+		frame:Hide()
+	end
 	G.C_EventUtils.IsEventValid = function()
 		return true
 	end

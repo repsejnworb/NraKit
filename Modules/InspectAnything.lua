@@ -8,9 +8,9 @@ local _, ns = ...
 -- item level and spec. The gear is asked for (NotifyInspect) and copied when it arrives
 -- (INSPECT_READY), so the window keeps showing it when they run off, change target or leave
 -- your group: it only changes when you press the key again, and only closes when you close
--- it. In combat the server answers late (often after combat; players inspected before
--- answer at once), so the gear fills in when it comes, and is asked for again when combat
--- ends. "Blizzard's inspect" opens the real window (talents, PvP, guild) while they're near
+-- it. The server doesn't always answer (and answers late in combat; players inspected
+-- before answer at once), so it's asked again every couple of seconds while they're near,
+-- for a while, and again when combat ends. "Blizzard's inspect" opens the real window (talents, PvP, guild) while they're near
 -- and you're out of combat; "Dressing room" tries their outfit on.
 --
 -- NPCs: the model, level and type, max health and attack speed, and "Abilities on Wowhead"
@@ -20,6 +20,11 @@ local _, ns = ...
 -- can't be read at all is left out.
 --
 -- Right-clicking an NPC or enemy player (target, focus) also offers "View 3D model".
+--
+-- The window is a UI panel (RegisterUIPanel, a "left" panel like the inspect window), so out
+-- of combat it's opened with ShowUIPanel and other panels (the dressing room, your bags'
+-- windows) push it aside instead of opening behind it. Addons can't show or hide panels in
+-- combat (Blizzard blocks it), so in combat it's shown and hidden directly, in the same place.
 
 local module = {
 	key = "inspectAnything",
@@ -40,6 +45,7 @@ local module = {
 -- Blizzard's inspect window is a standard panel: 338 x 424.
 local WIDTH, HEIGHT = PANEL_DEFAULT_WIDTH or 338, PANEL_DEFAULT_HEIGHT or 424
 local SLOT_SIZE, SLOT_GAP = 37, 4
+local RETRY_EVERY, RETRIES = 2, 8 -- seconds between asking again for gear, and how often
 -- Right-click menus that get "View 3D model": NPCs (target and focus) and enemy players.
 local MENU_TAGS = { "TARGET", "FOCUS", "ENEMY_PLAYER" }
 local TURN_SPEED = 0.02 -- radians per pixel dragged
@@ -56,18 +62,23 @@ local RIGHT_SLOTS = {
 	{ "HandsSlot", 10 }, { "WaistSlot", 6 }, { "LegsSlot", 7 }, { "FeetSlot", 8 },
 	{ "Finger0Slot", 11 }, { "Finger1Slot", 12 }, { "Trinket0Slot", 13 }, { "Trinket1Slot", 14 },
 }
-local WEAPON_SLOTS = { { "MainHandSlot", 16 }, { "SecondaryHandSlot", 17 } }
+-- Forever has the ranged slot (like Blizzard's "Camelot" inspect window it uses).
+local WEAPON_SLOTS = { { "MainHandSlot", 16 }, { "SecondaryHandSlot", 17 }, { "RangedSlot", 18 } }
 
 local UI = ns.UI
 local inspect = {}
 ns.inspectAnything = inspect
 
-local frame, model, subtitle, statusText, stats, slotButtons, hint
+local frame, model, subtitle, statusText, stats, slotButtons, modelBorder
 local wowheadButton, blizzardButton, dressUpButton
 local shown -- what the window shows: { guid, isPlayer, npcID, name }
 local gear = {} -- [guid] = { items = { [slotID] = link }, itemLevel, spec, outfit }, this session
 local waitingGUID -- the player whose gear was asked for and hasn't arrived
+local retries, sinceRetry = 0, 0
+local retryFrame = CreateFrame("Frame")
+retryFrame:Hide()
 local view = { facing = 0, x = 0, y = 0, zoom = 1 }
+local startFacing = 0 -- the model's own angle when shown, which Reset view goes back to
 local dragging, lastX, lastY
 
 -- Secret values can't even be compared, so this is checked first.
@@ -165,7 +176,7 @@ local function UpdateStats(unit)
 			if anchor then
 				pair.label:SetPoint("LEFT", anchor, "RIGHT", 14, 0)
 			else
-				pair.label:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", 0, -4)
+				pair.label:SetPoint("TOPLEFT", model, "TOPLEFT", 10, -8)
 			end
 			anchor = pair.value
 		end
@@ -179,10 +190,11 @@ local function UpdateStatus()
 		return
 	end
 	statusText:Show()
+	statusText:SetFontObject(gear[shown.guid] and "GameFontNormal" or "GameFontHighlightSmall")
 	local data = gear[shown.guid]
 	if data then
 		local parts = {}
-		if data.spec then
+		if data.spec and data.spec ~= shown.class then -- Forever has no specs: the game names the class
 			table.insert(parts, data.spec)
 		end
 		if data.itemLevel and data.itemLevel > 0 then
@@ -190,6 +202,7 @@ local function UpdateStatus()
 		end
 		statusText:SetText(table.concat(parts, "  ·  "))
 		statusText:SetTextColor(1, 0.82, 0)
+		statusText:SetShown(#parts > 0)
 	elseif waitingGUID == shown.guid then
 		statusText:SetText(InCombatLockdown() and "Their gear loads after combat..." or "Loading their gear...")
 		statusText:SetTextColor(0.6, 0.6, 0.6)
@@ -254,6 +267,17 @@ local function CreateSlot(info)
 	button.slotName, button.slotID = info[1], info[2]
 	local _, emptyTexture = GetInventorySlotInfo(info[1])
 	button.emptyTexture = emptyTexture
+	-- The inspect window's slot: a dark socket behind, the quick-slot frame around.
+	local socket = button:CreateTexture(nil, "BACKGROUND")
+	socket:SetAtlas("UI-Character-Info-GearSlot", true)
+	socket:SetPoint("CENTER")
+	button:SetNormalTexture("Interface\\Buttons\\UI-Quickslot2")
+	local normal = button:GetNormalTexture()
+	if normal then
+		normal:ClearAllPoints()
+		normal:SetSize(64, 64)
+		normal:SetPoint("CENTER", 0, -1)
+	end
 	button.icon = button:CreateTexture(nil, "ARTWORK")
 	button.icon:SetAllPoints()
 	button.border = button:CreateTexture(nil, "OVERLAY")
@@ -280,21 +304,24 @@ local function ApplyView()
 end
 
 function inspect.ResetView()
-	view.facing, view.x, view.y, view.zoom = 0, 0, 0, 1
+	view.facing, view.x, view.y, view.zoom = startFacing, 0, 0, 1
 	ApplyView()
 end
 
--- Players: between the slot columns, above the weapons. NPCs: the whole inset.
+-- Players: between the slot columns, above the weapons (where the inspect window has its
+-- model). NPCs: the whole inset. The black backdrop and the frame around it follow.
 local function LayoutModel(isPlayer)
 	local inset = frame.Inset
-	model:ClearAllPoints()
+	local left, right, top, bottom = 4, 4, 4, 4
 	if isPlayer then
-		model:SetPoint("TOPLEFT", inset, "TOPLEFT", SLOT_SIZE + 10, -3)
-		model:SetPoint("BOTTOMRIGHT", inset, "BOTTOMRIGHT", -(SLOT_SIZE + 10), SLOT_SIZE + 12)
-	else
-		model:SetPoint("TOPLEFT", inset, "TOPLEFT", 3, -3)
-		model:SetPoint("BOTTOMRIGHT", inset, "BOTTOMRIGHT", -3, 3)
+		left, right, bottom = 46, 47, SLOT_SIZE + 12
 	end
+	modelBorder:ClearAllPoints()
+	modelBorder:SetPoint("TOPLEFT", inset, "TOPLEFT", left, -top)
+	modelBorder:SetPoint("BOTTOMRIGHT", inset, "BOTTOMRIGHT", -right, bottom)
+	model:ClearAllPoints()
+	model:SetPoint("TOPLEFT", modelBorder, "TOPLEFT", 4, -4)
+	model:SetPoint("BOTTOMRIGHT", modelBorder, "BOTTOMRIGHT", -4, 4)
 end
 
 ------------------------------------------------------------------------------
@@ -307,6 +334,30 @@ local function PlaceLikeInspect()
 	local top = GetUIPanelLayoutAttribute and GetUIPanelLayoutAttribute("TOP_OFFSET") or -116
 	frame:ClearAllPoints()
 	frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", left, top)
+end
+
+-- Opens it as a panel out of combat, directly in combat.
+local function Open()
+	if frame:IsShown() then
+		return
+	end
+	if InCombatLockdown() then
+		PlaceLikeInspect()
+		frame:Show()
+	else
+		ShowUIPanel(frame)
+	end
+end
+
+local function Close()
+	if not frame:IsShown() then
+		return
+	end
+	if InCombatLockdown() then
+		frame:Hide()
+	else
+		HideUIPanel(frame)
+	end
 end
 
 local function OpenBlizzardInspect()
@@ -322,7 +373,7 @@ local function OpenBlizzardInspect()
 		ns:Print("They need to be near you (and targeted or in sight) for Blizzard's inspect window.")
 		return
 	end
-	frame:Hide() -- it opens in the same place
+	Close() -- it opens in the same place
 	InspectUnit(unit)
 end
 
@@ -342,7 +393,6 @@ local function CreateWindow()
 	-- The inspect window's frame (portrait, title, inset, close button).
 	frame = CreateFrame("Frame", "NraKitModelViewer", UIParent, "ButtonFrameTemplate")
 	frame:SetSize(WIDTH, HEIGHT)
-	frame:SetFrameStrata("HIGH")
 	frame:SetToplevel(true)
 	frame:SetClampedToScreen(true)
 	frame:SetMovable(true)
@@ -351,7 +401,11 @@ local function CreateWindow()
 	frame:SetScript("OnDragStart", frame.StartMoving)
 	frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
 	frame:Hide()
-	table.insert(UISpecialFrames, "NraKitModelViewer")
+	RegisterUIPanel(frame, { area = "left", pushable = 1, whileDead = 1 })
+	table.insert(UISpecialFrames, "NraKitModelViewer") -- Esc, also when shown in combat
+	if type(frame.CloseButton) == "table" then
+		frame.CloseButton:SetScript("OnClick", Close) -- the template's would use HideUIPanel even in combat
+	end
 	frame:SetScript("OnEvent", function()
 		UpdateSlots() -- GET_ITEM_INFO_RECEIVED: an item's quality came in
 	end)
@@ -362,17 +416,14 @@ local function CreateWindow()
 		self:UnregisterEvent("GET_ITEM_INFO_RECEIVED")
 	end)
 
-	-- Level line, then spec and item level (players) or stats (NPCs), under the title.
-	subtitle = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-	subtitle:SetPoint("TOPLEFT", 64, -30)
-	subtitle:SetPoint("RIGHT", -12, 0)
-	subtitle:SetJustifyH("LEFT")
+	-- The title in white and the level line centred under it, as in the inspect window.
+	if frame.GetTitleText and frame:GetTitleText() then
+		frame:GetTitleText():SetFontObject("GameFontHighlight")
+	end
+	subtitle = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalMed2Outline")
+	subtitle:SetPoint("TOP", 0, -40)
+	subtitle:SetWidth(WIDTH - 110)
 	subtitle:SetWordWrap(false)
-	statusText = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	statusText:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", 0, -4)
-	statusText:SetPoint("RIGHT", -12, 0)
-	statusText:SetJustifyH("LEFT")
-	statusText:SetWordWrap(false)
 	stats = {}
 	for _, info in ipairs({ { "health", "Health" }, { "speed", "Attack speed" } }) do
 		local label = frame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
@@ -382,15 +433,32 @@ local function CreateWindow()
 		stats[info[1]] = { label = label, value = value }
 	end
 
-	-- A dark spotlight in the inset, the model on it.
+	-- The model area: black, in the character frame's inner border (Blizzard's textures).
 	local inset = frame.Inset
-	local backdrop = inset:CreateTexture(nil, "BACKGROUND", nil, 1)
+	modelBorder = CreateFrame("Frame", nil, inset)
+	local backdrop = modelBorder:CreateTexture(nil, "BACKGROUND", nil, 1)
 	backdrop:SetPoint("TOPLEFT", 3, -3)
 	backdrop:SetPoint("BOTTOMRIGHT", -3, 3)
-	backdrop:SetColorTexture(1, 1, 1, 1)
-	backdrop:SetGradient("VERTICAL", CreateColor(0.02, 0.02, 0.03, 1), CreateColor(0.14, 0.14, 0.17, 1))
+	backdrop:SetColorTexture(0, 0, 0, 1)
+	local corners = {}
+	for _, corner in ipairs({ { "UpperLeft", "TOPLEFT" }, { "UpperRight", "TOPRIGHT" },
+		{ "LowerLeft", "BOTTOMLEFT" }, { "LowerRight", "BOTTOMRIGHT" } }) do
+		local texture = modelBorder:CreateTexture(nil, "OVERLAY", "Char-Corner-" .. corner[1])
+		texture:SetPoint(corner[2])
+		corners[corner[2]] = texture
+	end
+	for _, side in ipairs({ { "Left", "TOPLEFT", "BOTTOMLEFT", "BOTTOMLEFT", "TOPLEFT" },
+		{ "Right", "TOPRIGHT", "BOTTOMRIGHT", "BOTTOMRIGHT", "TOPRIGHT" },
+		{ "Top", "TOPLEFT", "TOPRIGHT", "TOPRIGHT", "TOPLEFT" },
+		{ "Bottom", "BOTTOMLEFT", "BOTTOMRIGHT", "BOTTOMRIGHT", "BOTTOMLEFT" } }) do
+		-- Between its two corners.
+		local texture = modelBorder:CreateTexture(nil, "OVERLAY", "Char-Inner-" .. side[1])
+		local horizontal = side[1] == "Top" or side[1] == "Bottom"
+		texture:SetPoint(side[2], corners[side[2]], horizontal and side[3] or side[4])
+		texture:SetPoint(side[4], corners[side[4]], horizontal and side[5] or side[2])
+	end
 
-	model = CreateFrame("PlayerModel", nil, inset)
+	model = CreateFrame("PlayerModel", nil, modelBorder)
 	model:EnableMouse(true)
 	model:EnableMouseWheel(true)
 	model:SetScript("OnMouseDown", function(_, button)
@@ -423,9 +491,11 @@ local function CreateWindow()
 		view.zoom = math.min(math.max(view.zoom - delta * ZOOM_STEP, MIN_ZOOM), MAX_ZOOM)
 		ApplyView()
 	end)
-	hint = model:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	hint:SetPoint("TOP", 0, -4)
-	hint:SetText("Drag to turn, right-drag to move, wheel to zoom")
+	-- Spec and item level (players), or how loading their gear is going, at the top of the model.
+	statusText = model:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	statusText:SetPoint("TOP", 0, -8)
+	statusText:SetWidth(WIDTH - 110)
+	statusText:SetWordWrap(false)
 
 	-- Gear slots, where the inspect window has them.
 	slotButtons = {}
@@ -449,13 +519,16 @@ local function CreateWindow()
 		end
 		previous = button
 	end
-	local mainHand = CreateSlot(WEAPON_SLOTS[1])
-	mainHand:SetPoint("BOTTOMRIGHT", inset, "BOTTOM", -SLOT_GAP / 2, 6)
-	local offHand = CreateSlot(WEAPON_SLOTS[2])
-	offHand:SetPoint("BOTTOMLEFT", inset, "BOTTOM", SLOT_GAP / 2, 6)
+	-- The weapons, centred along the bottom.
+	local weaponsWidth = #WEAPON_SLOTS * SLOT_SIZE + (#WEAPON_SLOTS - 1) * 5
+	for index, info in ipairs(WEAPON_SLOTS) do
+		local button = CreateSlot(info)
+		button:SetPoint("BOTTOMLEFT", inset, "BOTTOM", -weaponsWidth / 2 + (index - 1) * (SLOT_SIZE + 5), 6)
+	end
 
 	-- Buttons along the bottom edge.
-	local reset = CreateButton("Reset view", 90, inspect.ResetView, "Turn the model back to the front and undo the zoom.")
+	local reset = CreateButton("Reset view", 90, inspect.ResetView,
+		"Drag the model to turn it, right-drag to move it and use the mouse wheel to zoom. This puts it back.")
 	reset:SetPoint("BOTTOMRIGHT", -6, 3)
 	wowheadButton = CreateButton("Abilities on Wowhead", 150, function()
 		if shown and shown.npcID then
@@ -493,6 +566,7 @@ local function Show(unit)
 		isPlayer = isPlayer,
 		npcID = not isPlayer and ns.wowheadLink and ns.wowheadLink.NpcIDFromGUID(guid) or nil,
 		name = Readable(name) and name or nil,
+		class = isPlayer and UnitClass(unit) or nil,
 	}
 	if Readable(name) and Readable(surname) and surname ~= "" then
 		frame:SetTitle(name .. " " .. surname)
@@ -509,12 +583,10 @@ local function Show(unit)
 	blizzardButton:SetShown(isPlayer)
 	dressUpButton:SetShown(isPlayer)
 	UpdateDressUpButton()
-	if not frame:IsShown() then
-		PlaceLikeInspect() -- it can be dragged, but opens there each time
-	end
-	frame:Show()
+	Open()
 	model:ClearModel()
 	model:SetUnit(unit)
+	startFacing = model:GetFacing() or 0 -- the slight angle the game shows models at
 	inspect.ResetView()
 end
 
@@ -549,6 +621,18 @@ local function ReadGear(guid)
 	return true
 end
 
+local function StopWaiting()
+	waitingGUID = nil
+	retryFrame:Hide()
+end
+
+-- Asks for their gear, and keeps asking every few seconds until it comes (or for a while).
+local function StartWaiting(unit, guid)
+	waitingGUID, retries, sinceRetry = guid, 0, 0
+	retryFrame:Show()
+	NotifyInspect(unit)
+end
+
 local function Refresh()
 	if frame and frame:IsShown() and shown then
 		UpdateStatus()
@@ -568,13 +652,12 @@ function inspect.Inspect()
 		return
 	end
 	Show(unit)
-	waitingGUID = nil
+	StopWaiting()
 	if not shown.isPlayer then
 		return
 	end
 	if CanInspect(unit) then
-		waitingGUID = shown.guid
-		NotifyInspect(unit)
+		StartWaiting(unit, shown.guid)
 		if InCombatLockdown() and not gear[shown.guid] then
 			ns:Print("Their gear shows up after combat (the game answers late in combat).")
 		end
@@ -584,18 +667,36 @@ function inspect.Inspect()
 	UpdateStatus()
 end
 
+retryFrame:SetScript("OnUpdate", function(_, elapsed)
+	sinceRetry = sinceRetry + elapsed
+	if sinceRetry < RETRY_EVERY then
+		return
+	end
+	sinceRetry = 0
+	retries = retries + 1
+	if retries > RETRIES then
+		StopWaiting() -- given up; pressing the key again starts over
+		Refresh()
+		return
+	end
+	local unit = FindUnit(waitingGUID)
+	if unit and CanInspect(unit) then
+		NotifyInspect(unit)
+	end
+end)
+
 local eventFrame = CreateFrame("Frame")
 eventFrame:SetScript("OnEvent", function(_, event, guid)
 	if event == "INSPECT_READY" then
 		if guid and guid == waitingGUID and ReadGear(guid) then
-			waitingGUID = nil
+			StopWaiting()
 			Refresh()
 		end
 	elseif event == "PLAYER_REGEN_ENABLED" then
-		-- Answers in combat are often dropped: ask again.
+		-- Answers in combat are often dropped: ask again, with fresh retries.
 		local unit = waitingGUID and FindUnit(waitingGUID)
 		if unit and CanInspect(unit) then
-			NotifyInspect(unit)
+			StartWaiting(unit, waitingGUID)
 		end
 		Refresh()
 	end
@@ -630,7 +731,7 @@ end
 
 function module:OnEnabledChanged(enabled)
 	if not enabled and frame then
-		frame:Hide()
+		Close()
 	end
 end
 

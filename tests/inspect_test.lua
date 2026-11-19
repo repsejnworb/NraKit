@@ -23,6 +23,7 @@ end
 local LINKS = {
 	[1] = "|cff1eff00|Hitem:10001::::::::40:::::|h[Green Helm]|h|r",
 	[16] = "|cffa335ee|Hitem:10016::::::::40:::::|h[Purple Axe]|h|r",
+	[18] = "|cff1eff00|Hitem:10018::::::::40:::::|h[Green Bow]|h|r",
 }
 
 return {
@@ -53,8 +54,9 @@ return {
 		GetInspectSpecialization = function()
 			return 71
 		end
+		local specName = "Arms"
 		GetSpecializationInfoByID = function()
-			return 71, "Arms"
+			return 71, specName
 		end
 		C_TransmogCollection = { GetInspectItemTransmogInfoList = function()
 			return { "outfit" }
@@ -178,11 +180,22 @@ return {
 			wow.fire("INSPECT_READY", GRUNT.guid)
 			t.ok(Slot(LINKS[1]), "helm in its slot")
 			t.ok(Slot(LINKS[16]), "axe in its slot")
+			t.ok(Slot(LINKS[18]), "bow in the ranged slot")
 			t.ok(Shown("Arms  ·  Item level 31.5"), "spec and item level")
 			t.equal(cleared, 1, "inspect data cleared after copying")
 			local helm = Slot(LINKS[1])
 			helm.scripts.OnClick(helm)
 			t.equal(clicked[1], LINKS[1], "Shift-click links it")
+		end)
+
+		t.test("no spec on Forever: the class name the game gives instead isn't repeated", function()
+			specName = "Warrior" -- the stand-in's class
+			local orgrim = { name = "Orgrim", surname = "Hammer", isPlayer = true, level = 40, guid = "Player-1-00000009" }
+			Inspect("target", orgrim)
+			wow.fire("INSPECT_READY", orgrim.guid)
+			t.ok(Shown("Item level 31.5"), "just the item level")
+			specName = "Arms"
+			Inspect("mouseover", GRUNT)
 		end)
 
 		t.test("it stays when they leave: target change, mouse off, out of sight", function()
@@ -232,6 +245,31 @@ return {
 			t.equal(Slot(LINKS[1]), nil, "no gear")
 			t.ok(NraKitModelViewer:IsShown(), "window stays")
 			t.equal(Title(), "Rexxar Wild", "still them")
+		end)
+
+		-- Regression: gear sometimes needed a second key press; it's asked for again by itself.
+		t.test("no answer: asked again every 2 seconds while they're near, then it gives up", function()
+			local jaina = { name = "Jaina", surname = "Sea", isPlayer = true, level = 60, guid = "Player-1-00000005" }
+			Inspect("target", jaina)
+			local asked = #notified
+			wow.advance(1)
+			t.equal(#notified, asked, "not yet")
+			wow.advance(1)
+			t.equal(#notified, asked + 1, "asked again")
+			units.target = nil -- out of sight: nothing to ask with
+			wow.advance(2)
+			t.equal(#notified, asked + 1, "not while they're gone")
+			units.target = jaina
+			for _ = 1, 10 do
+				wow.advance(2)
+			end
+			t.ok(#notified <= asked + 8, "gives up after a while: " .. (#notified - asked))
+			t.ok(Shown("Their gear can't be read now: too far away?"), "says so")
+			wow.fire("INSPECT_READY", jaina.guid)
+			t.equal(Slot(LINKS[1]), nil, "a late answer after giving up isn't used")
+			NraKit_InspectAnything()
+			wow.fire("INSPECT_READY", jaina.guid)
+			t.ok(Slot(LINKS[1]), "the key starts over")
 		end)
 
 		t.test("a player you can't inspect: model, and a word in chat", function()
@@ -286,13 +324,23 @@ return {
 			t.noErrors()
 		end)
 
-		t.test("opens where the inspect window does, and stays put while open", function()
+		t.test("a UI panel out of combat (others push it aside); in combat, where the inspect window is", function()
+			t.equal(wow.panels[NraKitModelViewer].area, "left", "a left panel, like the inspect window")
+			NraKitModelViewer:Hide()
+			wow.panelShown = nil
+			Inspect("target", HOGGER)
+			t.equal(wow.panelShown, NraKitModelViewer, "opened with ShowUIPanel")
+			NraKitModelViewer:Hide()
+			wow.panelShown = nil
 			local placed
 			rawset(NraKitModelViewer, "SetPoint", function(_, point, relativeTo, relativePoint, x, y)
 				placed = { point, relativeTo, relativePoint, x, y }
 			end)
-			NraKitModelViewer:Hide()
+			wow.data.inCombat = true
 			Inspect("target", HOGGER)
+			wow.data.inCombat = false
+			t.equal(wow.panelShown, nil, "not as a panel in combat (Blizzard blocks it)")
+			t.ok(NraKitModelViewer:IsShown(), "shown anyway")
 			t.equal(placed and placed[1], "TOPLEFT", "point")
 			t.equal(placed[4], 16, "left offset")
 			t.equal(placed[5], -116, "top offset")
