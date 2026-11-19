@@ -16,7 +16,7 @@ local _, ns = ...
 --           "new" entry with its module (tests/changelog_test.lua checks).
 
 ns.changelog = {
-	{ version = "Unreleased", entries = {
+	{ version = "0.13.0", date = "2026-11-19", entries = {
 		{ "new", "Fill in mail subject: the subject of a mail you send is written from what you attach, e.g. \"Linen Cloth (40)\", \"25g\" or \"Linen Cloth (20) + 5g\". A subject you typed is left alone.", module = "mailSubject" },
 		{ "new", "Remember mail recipient: the To box keeps the name after you send a mail, so mailing your bank alt again needs no typing. It also fills in the last player you mailed when you open Send Mail.", module = "mailRecipient" },
 		{ "improved", "The mail features (Open selected mail, Fill in mail subject, Remember mail recipient) have their own Mail section in the NraKit window and settings." },

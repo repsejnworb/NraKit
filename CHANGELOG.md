@@ -1,12 +1,10 @@
-# NraKit 0.12.0
+# NraKit 0.13.0
 
 ### New
-- Player notes: give players a label (Kill on sight, Avoid, Neutral, Good, Friend, or your own) and keep dated notes on them. Shown in their tooltip; right-click a player for Player note or to set their label. Warns you when a player you've marked Avoid or Kill on sight joins your group, invites, whispers or trades you.
-- Unit Scanner alerts you when a player you've labelled Kill on sight (Player notes) shows up nearby.
-- What's new: this page. NraKit tells you in chat when it has been updated; new features can be turned on right here.
-- NraKit tells you when a newer version is out, when someone in your guild or group already has it. /nra who lists who in your guild and group runs NraKit, and which version. Switch it off on this page.
+- Fill in mail subject: the subject of a mail you send is written from what you attach, e.g. "Linen Cloth (40)", "25g" or "Linen Cloth (20) + 5g". A subject you typed is left alone.
+- Remember mail recipient: the To box keeps the name after you send a mail, so mailing your bank alt again needs no typing. It also fills in the last player you mailed when you open Send Mail.
 
 ### Improved
-- NraKit's windows (Settings, Inventory, Goals, Notes) are tabs of one window: same size and place, with tabs at the top for the features you have on. Right-click NraKit in the addon button by the minimap for a menu of them.
+- The mail features (Open selected mail, Fill in mail subject, Remember mail recipient) have their own Mail section in the NraKit window and settings.
 
 Type /nra new in game to see what's new in every version.
