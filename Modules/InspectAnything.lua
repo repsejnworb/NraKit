@@ -292,6 +292,12 @@ function inspect.Inspect()
 			return
 		end
 		ns:Print("The inspect window can't open in combat, so here's their model.")
+	else
+		-- NPCs simply get the viewer; a player you can't inspect is worth a word.
+		local isPlayer = UnitIsPlayer(unit)
+		if Readable(isPlayer) and isPlayer then
+			ns:Print("You can't inspect them right now, so here's their model.")
+		end
 	end
 	inspect.ShowModel(unit)
 end

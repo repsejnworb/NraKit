@@ -155,8 +155,14 @@ return {
 		t.test("a player you can't inspect shows their full name; secret names still show", function()
 			units.target = { name = "Ann", surname = "Hill", level = 30, race = "Human" }
 			units.target.isPlayer = false -- can't inspect (say, too far)
+			local isPlayer = UnitIsPlayer
+			UnitIsPlayer = function()
+				return true
+			end
 			NraKit_InspectAnything()
+			UnitIsPlayer = isPlayer
 			t.equal(Title(), "Ann Hill", "full name")
+			t.ok(Printed("can't inspect them right now"), "says why")
 			units.target = { name = SECRET, surname = SECRET, level = SECRET }
 			NraKit_InspectAnything()
 			t.equal(Title(), SECRET, "the secret name is passed straight to the title")
