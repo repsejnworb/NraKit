@@ -16,6 +16,10 @@ local _, ns = ...
 --           "new" entry with its module (tests/changelog_test.lua checks).
 
 ns.changelog = {
+	{ version = "Unreleased", entries = {
+		{ "new", "Mail: Alt+click an item in your bags with Send Mail open to attach every stack of it you have (all your Silk Cloth, all your Small Red Pouches), as many as fit.", module = "mail" },
+		{ "improved", "Mail: Open selected mail, Fill in mail subject and Remember mail recipient are now parts of one Mail feature, each with its own switch. If you had any of them on, Mail is on with the same parts." },
+	} },
 	{ version = "0.18.0", date = "2026-11-19", entries = {
 		{ "improved", "NraKit window: every tab is always there. Tabs of features that are off are dimmed and show what the feature does, with a button to turn it on." },
 		{ "fixed", "NraKit window: tabs update right away when you turn a feature on or off, instead of after switching tabs." },

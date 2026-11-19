@@ -8,7 +8,7 @@ local _, ns = ...
 -- Each file registers its part with ns.mail.Register({ key = <option key>, OnInitialize,
 -- OnEnabledChanged(on) }) and asks ns.mail.IsOn(key): the Mail feature and that option on.
 --
--- These were four features of their own before 0.18 (same keys, then module switches). Migrate
+-- Three of these were features of their own before 0.19 (same keys, then module switches). Migrate
 -- carries that over once: anyone who had one on gets Mail on with just those parts on (and the
 -- new Alt+click); anyone who had none gets every part on, for when they turn Mail on.
 
