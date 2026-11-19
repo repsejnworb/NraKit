@@ -7,6 +7,18 @@ local SECRET = setmetatable({}, { __tostring = function()
 	return "secret"
 end })
 
+-- The viewer's title (Blizzard's frame template sets it with SetTitle).
+local createFrame = CreateFrame
+CreateFrame = function(kind, name, ...)
+	local frame = createFrame(kind, name, ...)
+	if name == "NraKitModelViewer" then
+		rawset(frame, "SetTitle", function(self, title)
+			rawset(self, "titleValue", title)
+		end)
+	end
+	return frame
+end
+
 return {
 	enable = { "inspectAnything" },
 	run = function(t, ns, wow)
@@ -75,7 +87,7 @@ return {
 			end
 		end
 		local function Title()
-			return NraKitModelViewer.title:GetText()
+			return rawget(NraKitModelViewer, "titleValue")
 		end
 		local function Printed(text)
 			for _, line in ipairs(wow.printed) do
@@ -118,14 +130,35 @@ return {
 
 		-- Regression: opening the inspect window in combat was blocked ("Interface action failed").
 		t.test("in combat a player gets the model viewer, not the blocked inspect window", function()
-			units.mouseover = { name = "Grunt", surname = "Axe", isPlayer = true }
+			units.mouseover = { name = "Grunt", surname = "Axe", isPlayer = true, guid = "Player-1-00000001" }
 			wow.data.inCombat = true
 			NraKit_InspectAnything()
 			t.equal(#inspected, 1, "inspect window not opened")
 			t.equal(Title(), "Grunt Axe", "model shown")
 			t.ok(Printed("can't open in combat"), "says why")
+		end)
+
+		t.test("when combat ends, the real inspect window takes the viewer's place", function()
+			-- They're no longer under the mouse, but still targeted.
+			units.target, units.mouseover = units.mouseover, nil
 			wow.data.inCombat = false
-			units.mouseover = nil
+			wow.fire("PLAYER_REGEN_ENABLED")
+			t.equal(inspected[2], "target", "inspected, found again by GUID")
+			t.ok(not NraKitModelViewer:IsShown(), "viewer closed")
+		end)
+
+		t.test("if they're gone when combat ends, the viewer stays and says so", function()
+			units.mouseover = { name = "Grunt", surname = "Axe", isPlayer = true, guid = "Player-1-00000001" }
+			wow.data.inCombat = true
+			NraKit_InspectAnything()
+			units.mouseover, units.target = nil, nil
+			wow.data.inCombat = false
+			wow.fire("PLAYER_REGEN_ENABLED")
+			t.equal(#inspected, 2, "not inspected")
+			t.ok(NraKitModelViewer:IsShown(), "viewer stays")
+			t.ok(Printed("out of sight"), "says why")
+			units.target = { name = "Hogger", level = 11, classification = "elite", creatureType = "Humanoid" }
+			ns.inspectAnything.ShowModel("target")
 		end)
 
 		t.test("turn, zoom and reset", function()
@@ -141,15 +174,12 @@ return {
 			t.equal(applied.SetCamDistanceScale, 1, "zoom reset")
 		end)
 
-		t.test("follows your target while open, unless switched off", function()
+		t.test("doesn't change with your target until you press the key again", function()
 			units.target = { name = "Mother Fang", level = 10, classification = "rare", creatureType = "Beast" }
 			wow.fire("PLAYER_TARGET_CHANGED")
-			t.equal(Title(), "Mother Fang", "followed")
-			ns:SetSetting("inspectAnythingFollowTarget", false)
-			units.target = { name = "Kobold Vermin", level = 2 }
-			wow.fire("PLAYER_TARGET_CHANGED")
-			t.equal(Title(), "Mother Fang", "not followed")
-			ns:SetSetting("inspectAnythingFollowTarget", true)
+			t.equal(Title(), "Hogger", "unchanged")
+			NraKit_InspectAnything()
+			t.equal(Title(), "Mother Fang", "the key shows the new target")
 		end)
 
 		t.test("a player you can't inspect shows their full name; secret names still show", function()

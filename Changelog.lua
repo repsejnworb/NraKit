@@ -17,7 +17,7 @@ local _, ns = ...
 
 ns.changelog = {
 	{ version = "Unreleased", entries = {
-		{ "new", "Inspect anything: one key inspects what's under the mouse or your target. Players as normal, and NPCs in a model viewer where you can turn, move and zoom their 3D model, with their health, attack speed and a link to their abilities on Wowhead. Set the key under Key Bindings > NraKit, or right-click an NPC or enemy player and choose View 3D model.", module = "inspectAnything" },
+		{ "new", "Inspect anything: one key inspects what's under the mouse or your target. Players as normal, and NPCs in a model viewer, in the inspect window's style, where you can turn, move and zoom their 3D model, with their health, attack speed and a link to their abilities on Wowhead. Set the key under Key Bindings > NraKit, or right-click an NPC or enemy player and choose View 3D model.", module = "inspectAnything" },
 		{ "improved", "Key bindings: NraKit's keys have their own NraKit section in Key Bindings instead of being mixed in with other addons'." },
 	} },
 	{ version = "0.16.0", date = "2026-11-19", entries = {

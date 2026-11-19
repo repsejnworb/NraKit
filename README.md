@@ -120,11 +120,13 @@ addons share through LibSharedMedia.
   undiscovered items are also checked for again daily.
 - **Inspect anything**: one key (Key Bindings > NraKit) inspects what's under the mouse
   or your target. Players get the normal inspect window; NPCs (and players you can't inspect) get a
-  model viewer where the inspect window opens: drag to turn, right-drag to move, wheel to zoom.
+  model viewer that looks like the inspect window and opens in its place: drag to turn, right-drag
+  to move, wheel to zoom. In combat (when the game won't open the inspect window for addons) a
+  player is shown in the viewer, and the real inspect window takes over when combat ends.
   It shows level, type, health and attack speed (out of combat; the game hides NPC stats from
   addons), and "Abilities on Wowhead" gives the NPC's Wowhead link.
-  Optionally follows your target, and adds "View 3D model" to the right-click menu of NPCs and
-  enemy players.
+  It only changes when you press the key again. Optionally adds "View 3D model" to the right-click
+  menu of NPCs and enemy players.
 - **Copy Wowhead link**: hover an item, spell, NPC, quest, achievement or currency and press Ctrl+C.
   A box opens in the middle of the screen with its wowhead.com/forever link selected; copy it with
   Ctrl+C (Cmd+C on a Mac) and the box closes (addons can't reach the clipboard directly). Works in bags, chat links, quest log, achievements and the
