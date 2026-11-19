@@ -100,10 +100,10 @@ addons share through LibSharedMedia.
   `/nra goal` opens the goals window (new goal, active and shelved goals, history). Goals can also be
   added from chat: `/nra goal 4000 [item]`, `/nra goal level 40`, `/nra goal gold 1g 50s`, `/nra goal rep revered timbermaw`,
   `/nra goal skill swords`, `/nra goal currency 2000 honor`, ... (`/nra goal help` lists them all).
-  <img width="801" height="571" alt="newGoal" src="https://github.com/user-attachments/assets/3b662e70-47f4-4d32-9cc7-9d12320f3030" />
-  <img width="795" height="554" alt="activeGoals" src="https://github.com/user-attachments/assets/5bbc8d6d-750f-4bf5-bb8d-633b354eee78" />
-  <img width="211" height="63" alt="goalTrackerCompact" src="https://github.com/user-attachments/assets/6d4eeaa3-6b1f-4f58-860f-2bb6ee7ca1fe" />
-  <img width="54" height="67" alt="goalTrackerIconOnly" src="https://github.com/user-attachments/assets/3bbd94d4-45f0-43cc-9ea9-09e5d9af533a" />
+  <img width="801" height="571" alt="newGoal" src=".github/screenshots/newGoal.png" />
+  <img width="795" height="554" alt="activeGoals" src=".github/screenshots/activeGoals.png" />
+  <img width="211" height="63" alt="goalTrackerCompact" src=".github/screenshots/goalTrackerCompact.png" />
+  <img width="54" height="67" alt="goalTrackerIconOnly" src=".github/screenshots/goalTrackerIconOnly.png" />
 
   
 - **/leave leaves your group**: type `/leave` (with nothing after it) or `/leavegroup` to leave
@@ -124,8 +124,8 @@ addons share through LibSharedMedia.
   names are learned in the background (a few dozen a second, paused in combat, a few minutes once
   per game version). A progress bar in the tab has Pause / Resume, and Check again once it's done;
   undiscovered items are also checked for again daily.
-  <img width="1301" height="759" alt="itemLookup" src="https://github.com/user-attachments/assets/5bfb9d32-2eda-4fba-9d7d-e2d33d9b13c1" />
-  <img width="791" height="554" alt="itemLookup2" src="https://github.com/user-attachments/assets/cde67b52-6449-4340-b25a-1fc30fccc48c" />
+  <img width="1301" height="759" alt="itemLookup" src=".github/screenshots/itemLookup.png" />
+  <img width="791" height="554" alt="itemLookup2" src=".github/screenshots/itemLookup2.png" />
 
 - **Inspect anything**: one key (Key Bindings > NraKit) inspects your target (or what's under the mouse when you have none),
   in a window like the inspect window (same frame and place) that stays open until you close
@@ -136,13 +136,13 @@ addons share through LibSharedMedia.
   to zoom), level, type, health and attack speed (the game hides most NPC stats from addons), and
   "Abilities on Wowhead" gives the NPC's Wowhead link. Optionally adds "View 3D model" to the
   right-click menu of NPCs and enemy players.
-  <img width="343" height="430" alt="inspectAnything" src="https://github.com/user-attachments/assets/f77acb37-f986-4d5a-860e-0463ad2f42ef" />
+  <img width="343" height="430" alt="inspectAnything" src=".github/screenshots/inspectAnything.png" />
 
 - **Copy Wowhead link**: hover an item, spell, NPC, quest, achievement or currency and press Ctrl+C.
   A box opens in the middle of the screen with its wowhead.com/forever link selected; copy it with
   Ctrl+C (Cmd+C on a Mac) and the box closes (addons can't reach the clipboard directly). Works in bags, chat links, quest log, achievements and the
   objective tracker. Ctrl+C is bound on first use if it's free; change it under Key Bindings > NraKit.
-  <img width="483" height="133" alt="wowheadlink" src="https://github.com/user-attachments/assets/ed795613-b942-447c-9992-b948ca8bdfc8" />
+  <img width="483" height="133" alt="wowheadlink" src=".github/screenshots/wowheadlink.png" />
 
 - **Unit Scanner**: alerts you (sound, on-screen text, chat line, taskbar flash) when a mob or
   player from your list shows up in nameplate range, on mouseover, as your target, focus or a group

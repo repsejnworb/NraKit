@@ -128,5 +128,7 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   previews the next version, `just check` syntax-checks the Lua files, `just test` runs the tests (release runs it first). Only release when the user asks.
 - `.github/CURSEFORGE.md` is the CurseForge project description (Markdown). CurseForge has no API for it, so the
   user pastes it in by hand. Keep it in sync with README.md when features change.
+- Screenshots for README.md live in `.github/screenshots/` (left out of the zip with `.github/`); README.md links them
+  by relative path, CURSEFORGE.md by `https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/<name>.png`.
 - `.pkgmeta` leaves `.github/`, `CLAUDE.md`, `README.md` and `tests/` out of the zip. `.github/logo.png` is the full logo; `Media/Icon.png` is the in-game icon.
 - `.github/workflows/interface-version.yml` checks daily (or run it manually) for a new Forever interface number and opens a PR.

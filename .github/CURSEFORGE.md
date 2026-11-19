@@ -85,6 +85,11 @@ Just want to farm something? Set a goal like **loot 4000 Silk Cloth**, **reach l
 - Each goal can have **its own sounds** for milestones and for finishing.
 - **Icons** follow what a goal tracks (an axe for Axes, a pick for Mining, coins for gold), or **pick your own** like a macro icon: click the icon in the goal form and choose one, or drop an item or spell on it.
 
+![newGoal](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/newGoal.png)
+![activeGoals](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/activeGoals.png)
+![goalTrackerCompact](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/goalTrackerCompact.png)
+![goalTrackerIconOnly](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/goalTrackerIconOnly.png)
+
 ### /leave leaves your group
 Type **/leave** (with nothing after it) or **/leavegroup** to leave your party, raid or instance group. **/leave &lt;channel&gt;** still leaves a chat channel.
 
@@ -106,16 +111,23 @@ Hides the blue notification dot on the **Shop** button that never goes away, and
 - A **progress bar** in the tab shows how far it is, with **Pause / Resume**, and **Check again** once it's done.
 - Items nobody has discovered yet can't be looked up until they have been; NraKit checks for them again every day (or right away with Check again).
 
+![itemLookup](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/itemLookup.png)
+![itemLookup2](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/itemLookup2.png)
+
 ### Inspect anything
 **One key** (Key Bindings → NraKit) inspects **your target** (or whatever is **under your mouse** when you have none), in a window like the inspect window that **stays open until you close it**, even when they run off or you change target.
 - **Players**: their **gear** around the model (tooltips, Shift+click to link), **spec and item level**. Inspected in combat, their gear **fills in after combat**. **Blizzard's inspect** opens the game's own window (talents, PvP, guild) while they're near, and **Dressing room** tries their outfit on.
 - **NPCs**: their **3D model** to look at (**drag to turn**, **right-drag to move**, **mouse wheel to zoom**), level, type, health and attack speed, and an **Abilities on Wowhead** button (the game doesn't tell addons what NPCs can do, so it gives you their Wowhead link).
 - Also in the **right-click menu** of NPCs and enemy players: **View 3D model** (optional).
 
+![inspectAnything](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/inspectAnything.png)
+
 ### Copy Wowhead link
 Hover an **item, spell, NPC, quest, achievement or currency** and press **Ctrl+C**. A box opens in the middle of the screen with its **wowhead.com/forever** link selected; copy it with **Ctrl+C** (**Cmd+C** on a Mac) and the box closes (addons can't reach the clipboard directly).
 - Works on bag items, chat links, NPCs in the world, the quest log, achievements and the objective tracker.
 - Ctrl+C is bound on first use if it's free; change it under Key Bindings > NraKit.
+
+![wowheadlink](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/wowheadlink.png)
 
 ### Unit Scanner
 Get alerted when a **mob or player from your own list** shows up.
