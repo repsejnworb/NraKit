@@ -29,6 +29,11 @@ When a quest lets you choose a reward, a **gold coin** marks the one that sells 
 ### Quest level
 Shows the **quest's level in front of its title** in the quest dialog and quest details, like **[24] The Defias Brotherhood**, colored by difficulty just like the quest log.
 
+### Quests to turn in
+Running around with finished quests you forgot about? **/nra done** (or a key under Key Bindings → NraKit) shows a **small list of your finished quests by the zone you turn them in**, the zone you're in first.
+- **Click** a quest to open the map on it (its turn-in shows there, and the list stays open), **right-click** to make it your **waypoint**, **Shift+click** to link it.
+- Entering a zone where you have quests to turn in **says so in chat** (optional), and can open the list (off by default).
+
 ### Bag Tithe
 Find out what to throw away when your bags are full.
 - A button next to the bag sort button **highlights your least valuable slots** (sell price × stack size), ranked from red to yellow, with rank numbers and sell values.

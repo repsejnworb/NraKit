@@ -12,4 +12,6 @@
 	<Binding name="NRAKIT_PLAYER_NOTES" category="NraKit">NraKit_TogglePlayerNotes()</Binding>
 	<!-- Inspects what's under the mouse or the target (Modules/InspectAnything.lua). -->
 	<Binding name="NRAKIT_INSPECT_ANYTHING" category="NraKit">NraKit_InspectAnything()</Binding>
+	<!-- Shows finished quests by turn-in zone (Modules/TurnInQuests.lua). -->
+	<Binding name="NRAKIT_TURN_IN_QUESTS" category="NraKit">NraKit_ToggleTurnInQuests()</Binding>
 </Bindings>

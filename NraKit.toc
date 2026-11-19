@@ -24,6 +24,7 @@ Modules\ClassColorHealthBars.lua
 Modules\EngagedNameplates.lua
 Modules\QuestRewardValue.lua
 Modules\QuestLevel.lua
+Modules\TurnInQuests.lua
 Modules\BagTithe.lua
 Modules\BagTitheIgnoreList.lua
 Modules\PotentialUpgrades.lua
