@@ -3,8 +3,9 @@ local _, ns = ...
 -- Quests to turn in: a small window (/nra done, or a key) listing your finished quests by the
 -- zone you turn them in ("Wetlands: The Doomed Fleet, Seeking Caitlin"), the zone you're in
 -- first, each with its level and in its difficulty colour as in the quest log ("[32] Malin's
--- Request" in yellow). Click a quest to open the map on it (its turn-in shows there), right-click to make it
--- your waypoint, Shift-click to link it. Entering a zone with turn-ins says so in chat, and can
+-- Request" in yellow). Click a quest to open the map on it (its turn-in shows there); right-click
+-- it, or click its round quest icon (the objective tracker's, drawn with the same textures), to
+-- make it your waypoint; Shift-click to link it. Entering a zone with turn-ins says so in chat, and can
 -- open the window.
 --
 -- For a finished quest, GetQuestUiMapID gives the turn-in's map on Forever (Hemet Nesingwary
@@ -35,7 +36,7 @@ local module = {
 
 local WIDTH = 300
 local MAX_HEIGHT = 420
-local ROW_HEIGHT = 18
+local ROW_HEIGHT = 22
 local HEADER_HEIGHT = 22
 local TITLE_HEIGHT = 28
 local PAD = 10
@@ -109,12 +110,17 @@ local function ShowOnMap(questID)
 	end
 end
 
+-- Makes the quest your waypoint (the arrow points to its turn-in), or clears it if it was.
+local function ToggleWaypoint(questID)
+	local current = C_SuperTrack.GetSuperTrackedQuestID()
+	C_SuperTrack.SetSuperTrackedQuestID(current == questID and 0 or questID)
+	PlaySound(current == questID and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_OFF or SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+	turnIn.Refresh()
+end
+
 local function OnQuestClick(row, mouseButton)
 	if mouseButton == "RightButton" then
-		local current = C_SuperTrack.GetSuperTrackedQuestID()
-		C_SuperTrack.SetSuperTrackedQuestID(current == row.questID and 0 or row.questID)
-		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
-		turnIn.Refresh()
+		ToggleWaypoint(row.questID)
 	elseif IsModifiedClick("CHATLINK") then
 		local link = GetQuestLink(row.questID)
 		if link then
@@ -129,7 +135,7 @@ local function OnQuestEnter(row)
 	GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
 	GameTooltip_SetTitle(GameTooltip, row.title)
 	GameTooltip_AddInstructionLine(GameTooltip, "Click: show it on the map")
-	GameTooltip_AddInstructionLine(GameTooltip, "Right-click: make it your waypoint (again to clear)")
+	GameTooltip_AddInstructionLine(GameTooltip, "Right-click or its round icon: make it your waypoint (again to clear)")
 	GameTooltip_AddInstructionLine(GameTooltip, "Shift-click: link it in chat")
 	GameTooltip:Show()
 end
@@ -151,12 +157,43 @@ local function AcquireRow()
 		local highlight = row:CreateTexture(nil, "HIGHLIGHT")
 		highlight:SetAllPoints()
 		highlight:SetColorTexture(1, 1, 1, 0.06)
-		row.waypoint = row:CreateTexture(nil, "ARTWORK")
-		row.waypoint:SetSize(12, 12)
-		row.waypoint:SetPoint("LEFT", 2, 0)
-		row.waypoint:SetAtlas("Waypoint-MapPin-Untracked")
+		-- The objective tracker's round quest icon (a turn-in "?"), lit up while it's your waypoint.
+		local poi = CreateFrame("Button", nil, row)
+		poi:SetSize(20, 20)
+		poi:SetPoint("LEFT", 1, 0)
+		poi.glow = poi:CreateTexture(nil, "BACKGROUND")
+		poi.glow:SetAtlas("UI-QuestPoi-OuterGlow", true)
+		poi.glow:SetPoint("CENTER")
+		poi.normal = poi:CreateTexture(nil, "ARTWORK")
+		poi.normal:SetPoint("CENTER")
+		poi.icon = poi:CreateTexture(nil, "OVERLAY")
+		poi.icon:SetAtlas("UI-QuestIcon-TurnIn-Normal", true)
+		poi.icon:SetPoint("CENTER")
+		local glow = poi:CreateTexture(nil, "HIGHLIGHT")
+		glow:SetAtlas("UI-QuestPoi-InnerGlow", true)
+		glow:SetPoint("CENTER")
+		glow:SetBlendMode("ADD")
+		poi:SetScript("OnClick", function(self)
+			ToggleWaypoint(self:GetParent().questID)
+		end)
+		poi:SetScript("OnMouseDown", function(self)
+			self.normal:SetAtlas(self.selected and "UI-QuestPoi-QuestNumber-Pressed-SuperTracked" or "UI-QuestPoi-QuestNumber-Pressed", true)
+		end)
+		poi:SetScript("OnMouseUp", function(self)
+			self:SetSelected(self.selected)
+		end)
+		poi:SetScript("OnEnter", function(self)
+			OnQuestEnter(self:GetParent())
+		end)
+		poi:SetScript("OnLeave", GameTooltip_Hide)
+		function poi:SetSelected(selected)
+			self.selected = selected
+			self.normal:SetAtlas(selected and "UI-QuestPoi-QuestNumber-SuperTracked" or "UI-QuestPoi-QuestNumber", true)
+			self.glow:SetShown(selected)
+		end
+		row.poi = poi
 		row.text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-		row.text:SetPoint("LEFT", 18, 0)
+		row.text:SetPoint("LEFT", 26, 0)
 		row.text:SetPoint("RIGHT", -4, 0)
 		row.text:SetJustifyH("LEFT")
 		row.text:SetWordWrap(false)
@@ -197,7 +234,7 @@ function turnIn.Refresh()
 			else
 				row.text:SetTextColor(1, 1, 1)
 			end
-			row.waypoint:SetShown(quest.id == waypoint)
+			row.poi:SetSelected(quest.id == waypoint)
 			row:SetPoint("TOPLEFT", scroll.content, "TOPLEFT", 0, -y)
 			row:SetWidth(width)
 			y = y + ROW_HEIGHT

@@ -31,7 +31,7 @@ Shows the **quest's level in front of its title** in the quest dialog and quest 
 
 ### Quests to turn in
 Running around with finished quests you forgot about? **/nra done** (or a key under Key Bindings → NraKit) shows a **small list of your finished quests by the zone you turn them in**, the zone you're in first.
-- **Click** a quest to open the map on it (its turn-in shows there, and the list stays open), **right-click** to make it your **waypoint**, **Shift+click** to link it.
+- **Click** a quest to open the map on it (its turn-in shows there, and the list stays open), **right-click** it or click its **round quest icon** (as in the objective tracker) to make it your **waypoint**, **Shift+click** to link it.
 - Entering a zone where you have quests to turn in **says so in chat** (optional), and can open the list (off by default).
 
 ### Bag Tithe

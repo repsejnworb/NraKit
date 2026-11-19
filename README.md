@@ -47,7 +47,7 @@ addons share through LibSharedMedia.
 - **Quests to turn in**: `/nra done` (or a key under Key Bindings > NraKit) shows a small window
   listing your finished quests by the zone you turn them in, the zone you're in first ("Wetlands
   (6): The Doomed Fleet, ..."). Click a quest to open the map on it (its turn-in shows there; the
-  list stays open), right-click to make it your waypoint, Shift+click to link it. Entering a zone
+  list stays open), right-click it or click its round quest icon (as in the objective tracker) to make it your waypoint, Shift+click to link it. Entering a zone
   where you have quests to turn in says so in chat (optional), and can open the window (off by default).
 - **Bag Tithe**: a button next to the bag sort button (separate or combined bags) highlights
   your least valuable bag slots (vendor price × stack size), ranked from red to yellow, with

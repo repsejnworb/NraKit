@@ -116,6 +116,13 @@ return {
 			row = Row("Hemet Nesingwary")
 			row.scripts.OnClick(row, "RightButton")
 			t.equal(superTracked, 0, "and cleared")
+			row = Row("Hemet Nesingwary")
+			row.poi.scripts.OnClick(row.poi, "LeftButton")
+			t.equal(superTracked, 3, "its round quest icon sets the waypoint too")
+			t.equal(Row("Hemet Nesingwary").poi.selected, true, "and lights up")
+			row = Row("Hemet Nesingwary")
+			row.poi.scripts.OnClick(row.poi, "LeftButton")
+			t.equal(superTracked, 0, "clicked again: cleared")
 			row = Row("Hemet Nesingwary") -- the list redraws (and reuses rows) after a waypoint change
 			shift = true
 			row.scripts.OnClick(row, "LeftButton")
