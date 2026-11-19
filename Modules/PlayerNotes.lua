@@ -336,6 +336,13 @@ function notes.Ensure(name, info)
 	return Learn(record, key, nil, info)
 end
 
+-- Adds a player with the default label (or keeps an existing one).
+function notes.AddPlayer(name, info)
+	local record, key = notes.Ensure(name, info)
+	Changed()
+	return record, key
+end
+
 function notes.SetLabel(name, labelID, info)
 	local record = notes.Ensure(name, info)
 	record.label = labelID
@@ -728,7 +735,7 @@ local HELP = {
 	},
 }
 
-local function TargetPlayer()
+function notes.TargetPlayer()
 	if not UnitExists("target") then
 		return nil
 	end
@@ -798,7 +805,7 @@ local function OnSlashCommand(input)
 	end
 	input = strtrim(input or "")
 	if input == "" then
-		local name, info = TargetPlayer()
+		local name, info = notes.TargetPlayer()
 		ns:OpenPlayerNotes(name, info)
 		return
 	end
@@ -812,7 +819,7 @@ local function OnSlashCommand(input)
 	end
 
 	-- "<label> [note]" for your target.
-	local targetName, targetInfo = TargetPlayer()
+	local targetName, targetInfo = notes.TargetPlayer()
 	local firstLabel = notes.LabelByWord(words[1])
 	if targetName and firstLabel then
 		Apply(targetName, targetInfo, firstLabel, table.concat(words, " ", 2))
@@ -909,7 +916,7 @@ end
 _G["BINDING_NAME_NRAKIT_PLAYER_NOTES"] = "Open player notes (your target's, if it's a player)"
 function NraKit_TogglePlayerNotes()
 	if ns:IsModuleEnabled(module.key) then
-		local name, info = TargetPlayer()
+		local name, info = notes.TargetPlayer()
 		ns:OpenPlayerNotes(name, info)
 	end
 end

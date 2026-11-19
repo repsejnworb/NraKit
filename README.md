@@ -115,7 +115,7 @@ addons share through LibSharedMedia.
   labelled Avoid or Kill on sight joins your group, invites, whispers or trades you. Labels can be
   renamed, recolored, added and deleted; each has a tone that decides what it does: Hostile (warnings
   and Unit Scanner alerts), Caution (warnings), Neutral or Friendly (tooltip only). `/nra note` opens
-  the notebook (search by name, label or note text) or your target's notes; from chat,
+  the notebook (**+ Add player** adds anyone by first name and surname; search by name, label or note text) or your target's notes; from chat,
   `/nra note Bob Stone kos stole my node` or `/nra note avoid ninja'd the loot` for your target.
 
 ## Development

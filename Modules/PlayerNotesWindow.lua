@@ -2,8 +2,9 @@ local _, ns = ...
 
 -- Player notes window (/nra note, or Player note... in a player's right-click menu).
 --
--- Sidebar: search (name, label or note text) and every noted player, newest change
--- first; typing a name nobody has offers "+ Add <name>". At the bottom, Labels.
+-- Sidebar: "+ Add player" (a page with a name box, and your target as a shortcut),
+-- search (name, label or note text) and every noted player, newest change first;
+-- typing a name nobody has offers "+ Add <name>" too. At the bottom, Labels.
 --
 -- A player's page: their label as chips (one click to change), a box to add a note
 -- (saved with the date, zone and your character) and the log, newest first. A player
@@ -20,11 +21,11 @@ local PAD = UI.PAD
 local FOOTER_HEIGHT = 34
 local BODY_WIDTH = WIDTH - SIDEBAR_WIDTH
 
-local frame, searchBox, sidebarScroll, labelsButton
-local playerPage, emptyPage, labelsPage
+local frame, searchBox, sidebarScroll, labelsButton, addButton
+local playerPage, emptyPage, labelsPage, addPage
 local sidebarPool, chipPool, logPool, labelPool = UI.CreatePool(), UI.CreatePool(), UI.CreatePool(), UI.CreatePool()
 
-local page = "empty" -- "player", "empty" or "labels"
+local page = "empty" -- "player", "empty", "add" or "labels"
 local selectedKey -- the shown player's key, or nil
 local pending -- { name, info } for a player opened before anything was saved
 local query, typedName = "", ""
@@ -424,7 +425,7 @@ local EMPTY_TEXT = table.concat({
 	"",
 	"|cffffd100Right-click a player|r (their portrait, a party frame or their name in chat) and pick |cffffd100Player note...|r, or set a label straight from |cffffd100Player label|r.",
 	"",
-	"|cffffd100Type a name|r in the search box on the left to find or add a player.",
+	"|cffffd100+ Add player|r (top left) adds someone by name, or your target.",
 	"",
 	"|cffffd100From chat:|r /nra note Bob Stone kos stole my node  (or /nra note kos ... for your target).",
 	"",
@@ -442,6 +443,87 @@ local function CreateEmptyPage(body)
 	text:SetWidth(BODY_WIDTH - 2 * PAD - 16)
 	text:SetWordWrap(true)
 	text:SetSpacing(2)
+end
+
+------------------------------------------------------------------------------
+-- Add page
+------------------------------------------------------------------------------
+
+-- What's in the name box: the name to add (nil if not valid yet) and a hint.
+local function CheckTypedName()
+	local text = strtrim(addPage.nameBox:GetText() or "")
+	if text == "" then
+		return nil, "First name and surname, the way they show in game (e.g. Bob Stone)."
+	end
+	local name = Capitalize(text)
+	if not name:find(" ", 1, true) then
+		return nil, "|cffff8c26Add their surname too|r: Forever names are first name and surname (e.g. Bob Stone)."
+	end
+	if notes.Find(name) then
+		return name, "Already in your notes: Add opens them."
+	end
+	return name, "Adds " .. name .. ", then you can label them and write a note."
+end
+
+local function RenderAdd()
+	local name, hint = CheckTypedName()
+	addPage.hint:SetText(hint)
+	addPage.add:SetEnabled(name ~= nil)
+	addPage.add:SetAlpha(name and 1 or 0.4)
+	local targetName = notes.TargetPlayer()
+	addPage.target:SetShown(targetName ~= nil)
+	if targetName then
+		addPage.target.text:SetText("Use your target: " .. targetName)
+		addPage.target:SetWidth(addPage.target.text:GetStringWidth() + 20)
+	end
+end
+
+local function AddTypedPlayer()
+	local name = CheckTypedName()
+	if not name then
+		return
+	end
+	local targetName, targetInfo = notes.TargetPlayer()
+	local info = targetName and notes.Key(targetName) == notes.Key(name) and targetInfo or nil
+	local _, key = notes.AddPlayer(name, info)
+	addPage.nameBox:SetText("")
+	addPage.nameBox:ClearFocus()
+	Select(key)
+	Render()
+	playerPage.noteBox:SetFocus()
+end
+
+local function CreateAddPage(body)
+	local p = CreateFrame("Frame", nil, body)
+	p:SetAllPoints()
+	addPage = p
+	local title = MakeLabel(p, "Add a player", "GameFontNormalLarge")
+	title:SetPoint("TOPLEFT", PAD, -PAD - 2)
+	local heading = MakeHeading(p, "Name")
+	heading:SetPoint("TOPLEFT", PAD, -60)
+	p.nameBox = MakeEditBox(p, 260)
+	p.nameBox:SetPoint("TOPLEFT", PAD + 6, -78)
+	p.nameBox:SetMaxLetters(60)
+	p.nameBox:SetScript("OnEnterPressed", AddTypedPlayer)
+	p.nameBox:HookScript("OnTextChanged", RenderAdd)
+	p.add = UI.CreateFlatButton(p, "Add", 22)
+	p.add:SetWidth(60)
+	p.add:SetPoint("LEFT", p.nameBox, "RIGHT", 6, 0)
+	p.add:SetScript("OnClick", AddTypedPlayer)
+	p.hint = MakeLabel(p, "", "GameFontDisableSmall")
+	p.hint:SetPoint("TOPLEFT", PAD, -106)
+	p.hint:SetWidth(BODY_WIDTH - 2 * PAD)
+	p.hint:SetWordWrap(true)
+	p.target = UI.CreateFlatButton(p, "", 22)
+	p.target:SetPoint("TOPLEFT", PAD, -132)
+	p.target:SetScript("OnClick", function()
+		p.nameBox:SetText(notes.TargetPlayer() or "")
+		p.nameBox:SetFocus()
+	end)
+	local more = MakeLabel(p, "You can also right-click a player (portrait, party frame, chat name) and pick Player note..., or type /nra note Bob Stone kos stole my node.", "GameFontDisableSmall")
+	more:SetPoint("TOPLEFT", PAD, -172)
+	more:SetWidth(BODY_WIDTH - 2 * PAD)
+	more:SetWordWrap(true)
 end
 
 ------------------------------------------------------------------------------
@@ -638,22 +720,36 @@ Render = function()
 		RenderPlayer()
 	elseif page == "labels" then
 		RenderLabels()
+	elseif page == "add" then
+		RenderAdd()
 	end
 	playerPage:SetShown(page == "player")
 	emptyPage:SetShown(page == "empty")
 	labelsPage:SetShown(page == "labels")
+	addPage:SetShown(page == "add")
 	RenderSidebar()
 end
 
 local function CreateNotesWindow()
 	frame = UI.CreateWindow("NraKitPlayerNotesFrame", "Player notes", WIDTH, HEIGHT, SIDEBAR_WIDTH)
 
+	addButton = UI.CreateFlatButton(frame.sidebar, "+  Add player", 28)
+	addButton:SetWidth(SIDEBAR_WIDTH - 2 * PAD)
+	addButton:SetPoint("TOPLEFT", PAD, -PAD)
+	addButton:SetSelected(true)
+	addButton:SetScript("OnClick", function()
+		Select(nil)
+		page = "add"
+		Render()
+		addPage.nameBox:SetFocus()
+	end)
+
 	searchBox = UI.CreateSearchBox(frame.sidebar, SIDEBAR_WIDTH - 2 * PAD - 6, function(text)
 		query = text
 		typedName = strtrim(searchBox:GetText() or "")
 		Render()
 	end)
-	searchBox:SetPoint("TOPLEFT", PAD + 6, -PAD)
+	searchBox:SetPoint("TOPLEFT", PAD + 6, -PAD - 40)
 	searchBox:HookScript("OnEnterPressed", function()
 		-- Enter on a new name adds it; on a match opens the first one.
 		if typedName == "" then
@@ -671,7 +767,7 @@ local function CreateNotesWindow()
 	end)
 
 	sidebarScroll = UI.CreateScrollArea(frame.sidebar)
-	sidebarScroll:SetPoint("TOPLEFT", PAD, -PAD - 32)
+	sidebarScroll:SetPoint("TOPLEFT", PAD, -PAD - 72)
 	sidebarScroll:SetPoint("BOTTOMRIGHT", -PAD, PAD + 36)
 
 	labelsButton = UI.CreateNavButton(frame.sidebar, SIDEBAR_WIDTH - 2 * PAD, 28, "Labels")
@@ -684,6 +780,7 @@ local function CreateNotesWindow()
 	CreatePlayerPage(frame.body)
 	CreateEmptyPage(frame.body)
 	CreateLabelsPage(frame.body)
+	CreateAddPage(frame.body)
 
 	frame:SetScript("OnShow", Render)
 	notes.onChanged = Render

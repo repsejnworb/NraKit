@@ -117,7 +117,7 @@ return {
 			local box
 			for _, frame in ipairs(wow.findAll(function(frame)
 				return frame.template == "InputBoxTemplate" and frame.scripts.OnEnterPressed
-					and not frame.scripts.OnEditFocusLost
+					and not frame.scripts.OnEditFocusLost and wow.visible(frame)
 			end)) do
 				box = frame
 			end
@@ -172,6 +172,27 @@ return {
 			end
 			t.ok(not notes.CanDeleteLabel("neutral"), "the last label stays")
 			t.equal(players()["fay dorn"].label, "neutral", "everyone ends on the last label")
+		end)
+
+		t.test("+ Add player: needs a surname, then opens the new player", function()
+			NraKitPlayerNotesFrame:Show()
+			t.ok(wow.click("+  Add player"), "add page")
+			local box
+			for _, frame in ipairs(wow.findAll(function(frame)
+				return frame.template == "InputBoxTemplate" and frame.scripts.OnTextChanged and wow.visible(frame)
+			end)) do
+				box = frame
+			end
+			wow.type(box, "gus")
+			t.equal(wow.click("Add"), false, "one word can't be added")
+			box.scripts.OnEnterPressed(box)
+			t.ok(NraKitDB.playerNotesData.players["gus"] == nil, "Enter doesn't add it either")
+			wow.type(box, "gus  hale")
+			t.ok(wow.click("Add"), "two words can")
+			local record = players()["gus hale"]
+			t.ok(record, "saved")
+			t.equal(record.name, "Gus Hale", "capitalised")
+			t.equal(record.label, "neutral", "default label")
 		end)
 
 		t.test("the labels page adds a label", function()

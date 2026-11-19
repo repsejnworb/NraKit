@@ -627,10 +627,21 @@ local function TextOf(frame)
 	return text
 end
 
--- Clicks the shown button with this label. Returns false if there's none.
+-- Whether a frame and all its parents are shown.
+function wow.visible(frame)
+	while frame do
+		if not frame.shown then
+			return false
+		end
+		frame = rawget(frame, "parent")
+	end
+	return true
+end
+
+-- Clicks the visible button with this label. Returns false if there's none.
 function wow.click(label, mouseButton)
 	for _, frame in ipairs(wow.frames) do
-		if frame.scripts.OnClick and frame.shown and TextOf(frame) == label then
+		if frame.scripts.OnClick and wow.visible(frame) and TextOf(frame) == label then
 			if frame.enabled == false then
 				return false, "disabled"
 			end
