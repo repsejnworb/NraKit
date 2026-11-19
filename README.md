@@ -50,6 +50,8 @@ addons share through LibSharedMedia.
   (6): The Doomed Fleet, ..."). Click a quest to open the map on it (its turn-in shows there; the
   list stays open), right-click it or click its round quest icon (as in the objective tracker) to make it your waypoint, Shift+click to link it. Entering a zone
   where you have quests to turn in shows a small message (click it to open the list; a chat line is optional), and can open the window (off by default).
+  <img width="293" height="409" alt="questsDoneList" src=".github/screenshots/questsDoneList.png" />
+  <img width="301" height="101" alt="questTurninReminderToast" src=".github/screenshots/questTurninReminderToast.png" />
 - **Bag Tithe**: a button next to the bag sort button (separate or combined bags) highlights
   your least valuable bag slots (vendor price × stack size), ranked from red to yellow, with
   rank numbers and sell values. Everything else is dimmed; the bags work as normal underneath.
@@ -86,6 +88,7 @@ addons share through LibSharedMedia.
   the camera, work as normal. The double-click time is adjustable.
 - **Unspent talent points**: a reminder in the middle of the screen while you have talent points
   to spend (hidden while dead and, optionally, in combat). Size and position are adjustable.
+  <img width="307" height="82" alt="unspentTalentPoints" src=".github/screenshots/unspentTalentPoints.png" />
 - **Campfire timer**: a progress bar in the middle of the screen while you rest at a Welcoming
   Campfire, with the time left. It turns green (with a sound) when Camp Benefits is ready. Width
   and position are adjustable; `/nra campfire` shows a 10-second preview.
@@ -115,6 +118,7 @@ addons share through LibSharedMedia.
   <img width="795" height="554" alt="activeGoals" src=".github/screenshots/activeGoals.png" />
   <img width="211" height="63" alt="goalTrackerCompact" src=".github/screenshots/goalTrackerCompact.png" />
   <img width="54" height="67" alt="goalTrackerIconOnly" src=".github/screenshots/goalTrackerIconOnly.png" />
+  <img width="270" height="151" alt="goalCompletionToast" src=".github/screenshots/goalCompletionToast.png" />
 
   
 - **/leave leaves your group**: type `/leave` (with nothing after it) or `/leavegroup` to leave
@@ -184,6 +188,7 @@ addons share through LibSharedMedia.
   `/nra note Bob Stone kos stole my node` and with a player targeted just
   `/nra note ninja'd the loot` (or `/nra note avoid ninja'd the loot` to label them too).
   `/nra note !remove` takes your target out of your notes (`!undo` brings them back).
+  <img width="447" height="27" alt="playerNoteWarning" src=".github/screenshots/playerNoteWarning.png" />
 
 ## Development
 Requires [just](https://github.com/casey/just), [cocogitto](https://github.com/cocogitto/cocogitto) and Lua (`luac` for the syntax check; LuaJIT for the tests, since it runs Lua 5.1 like the game).

@@ -34,6 +34,9 @@ Running around with finished quests you forgot about? **/nra done** (or a key un
 - **Click** a quest to open the map on it (its turn-in shows there, and the list stays open), **right-click** it or click its **round quest icon** (as in the objective tracker) to make it your **waypoint**, **Shift+click** to link it.
 - Entering a zone where you have quests to turn in **pops a small message** (click it to open the list; a chat line is optional), and can open the list itself (off by default).
 
+![questsDoneList](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/questsDoneList.png)
+![questTurninReminderToast](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/questTurninReminderToast.png)
+
 ### Bag Tithe
 Find out what to throw away when your bags are full.
 - A button next to the bag sort button **highlights your least valuable slots** (sell price × stack size), ranked from red to yellow, with rank numbers and sell values.
@@ -81,6 +84,8 @@ With a **fishing pole in your main hand**, **double right-click** the world to c
 ### Unspent talent points
 A **reminder in the middle of the screen** while you have talent points to spend. Size and position are adjustable, and it can hide in combat.
 
+![unspentTalentPoints](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/unspentTalentPoints.png)
+
 ### Campfire timer
 A **progress bar in the middle of the screen** while you rest at a Welcoming Campfire, with the time left. It turns green (with a sound) when Camp Benefits is ready.
 - Width and position are adjustable.
@@ -104,6 +109,8 @@ Just want to farm something? Set a goal like **loot 4000 Silk Cloth**, **reach l
 ![activeGoals](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/activeGoals.png)
 ![goalTrackerCompact](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/goalTrackerCompact.png)
 ![goalTrackerIconOnly](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/goalTrackerIconOnly.png)
+
+![goalCompletionToast](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/goalCompletionToast.png)
 
 ### /leave leaves your group
 Type **/leave** (with nothing after it) or **/leavegroup** to leave your party, raid or instance group. **/leave &lt;channel&gt;** still leaves a chat channel.
@@ -162,6 +169,8 @@ Remember who stole your mining node, who ninja'd the loot and who was a great he
 - **Warnings** when a player labelled Avoid or Kill on sight joins your group, invites you, whispers you or opens a trade (chat, on screen and a sound, each optional).
 - Labels can be renamed, recolored, added and deleted. Each has a **tone** that decides what it does: Hostile (warnings and Unit Scanner alerts), Caution (warnings), Neutral or Friendly (tooltip only).
 - **/nra note** opens your notebook (**+ Add player** adds anyone by first name and surname, or your target; search by name, label or note text), or your target's notes. From chat: **/nra note Bob Stone kos stole my node**, and with a player targeted just **/nra note ninja'd the loot** (or **/nra note avoid ninja'd the loot** to label them too). **/nra note !remove** takes your target out of your notes (**!undo** brings them back).
+
+![playerNoteWarning](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/playerNoteWarning.png)
 
 ## Feedback and bugs
 NraKit is a growing collection of small fixes. Found a bug or have an idea? **[Open an issue on GitHub](https://github.com/repsejnworb/NraKit/issues).**
