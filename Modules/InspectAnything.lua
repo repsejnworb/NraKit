@@ -54,8 +54,9 @@ local SLOT_SIZE, SLOT_GAP = 37, 4
 local RETRY_EVERY, RETRIES = 2, 8 -- seconds between asking again for gear, and how often
 local READ_EVERY, READ_FOR = 0.5, 10 -- once it answers: re-read this often, for at most this long
 
--- The race background, as the inspect window lays it out: four tiles of a 231 x 373 area
--- (the model shows its top), { point, width, height, texture coordinates }.
+-- The race background, as the inspect window lays it out: four tiles of a 231 x 373 area,
+-- { point, width, height, texture coordinates }. It's scaled to the model's width and cut
+-- off at its bottom (the inspect window lets it run on under the weapons).
 local BACKGROUND_TILES = {
 	{ "TOPLEFT", 212, 245, { 0.171875, 1, 0.0392156862745098, 1 } },
 	{ "TOPRIGHT", 19, 245, { 0, 0.296875, 0.0392156862745098, 1 } },
@@ -89,6 +90,7 @@ local inspect = {}
 ns.inspectAnything = inspect
 
 local frame, model, subtitle, statusText, stats, slotButtons, modelBorder, raceTiles, raceShade
+local LayoutBackground
 local wowheadButton, blizzardButton, dressUpButton
 local shown -- what the window shows: { guid, isPlayer, npcID, name }
 -- [guid] = { items = { [slotID] = link }, ids = { [slotID] = itemID } (items without a link
@@ -335,6 +337,28 @@ end
 
 -- Players: between the slot columns, above the weapons (where the inspect window has its
 -- model). NPCs: the whole inset. The black backdrop and the frame around it follow.
+-- Sizes the tiles to the model: scaled to its width, the bottom row cut to what fits
+-- (texture coordinates trimmed to match, so nothing is squashed).
+LayoutBackground = function()
+	local width, height = model:GetWidth() or 0, model:GetHeight() or 0
+	if width <= 0 or height <= 0 then
+		return
+	end
+	local scale = width / BACKGROUND_WIDTH
+	local topHeight = math.min(BACKGROUND_TILES[1][3] * scale, height)
+	local bottomHeight = math.min(BACKGROUND_TILES[3][3] * scale, height - topHeight)
+	for index, tile in ipairs(BACKGROUND_TILES) do
+		local texture = raceTiles[index]
+		local isTop = index <= 2
+		local shown = isTop and topHeight or bottomHeight
+		local full = tile[3] * scale
+		local left, right, top, bottom = unpack(tile[4])
+		bottom = top + (bottom - top) * (shown / full) -- keep the top part that fits
+		texture:SetSize(tile[2] * scale, math.max(shown, 0.01))
+		texture:SetTexCoord(left, right, top, bottom)
+	end
+end
+
 -- Their race's background (players), or none (NPCs, or a race that can't be read).
 local function UpdateBackground(unit, isPlayer)
 	local _, raceFile = UnitRace(unit)
@@ -349,7 +373,9 @@ local function UpdateBackground(unit, isPlayer)
 	local path = DressUpTexturePath and DressUpTexturePath(raceFile) or ("Interface\\DressUpFrame\\DressUpBackground-" .. raceFile)
 	for index, texture in ipairs(raceTiles) do
 		texture:SetTexture(path .. index)
+		texture:SetDesaturated(true)
 	end
+	LayoutBackground() -- after SetTexture, which resets the texture coordinates
 	raceShade:SetAlpha(BACKGROUND_DARKNESS[raceFile:upper()] or 0.85)
 end
 
@@ -508,22 +534,14 @@ local function CreateWindow()
 	modelBackground:SetColorTexture(0, 0, 0, 1)
 	-- A player's race background over it, scaled from the inspect window's layout.
 	raceTiles = {}
-	for index, tile in ipairs(BACKGROUND_TILES) do
-		local texture = model:CreateTexture(nil, "BACKGROUND", nil, 0)
-		texture:SetTexCoord(unpack(tile[4]))
-		texture:SetDesaturated(true)
-		raceTiles[index] = texture
+	for index in ipairs(BACKGROUND_TILES) do
+		raceTiles[index] = model:CreateTexture(nil, "BACKGROUND", nil, 0)
 	end
 	raceTiles[1]:SetPoint("TOPLEFT")
 	raceTiles[2]:SetPoint("TOPLEFT", raceTiles[1], "TOPRIGHT")
 	raceTiles[3]:SetPoint("TOPLEFT", raceTiles[1], "BOTTOMLEFT")
 	raceTiles[4]:SetPoint("TOPLEFT", raceTiles[1], "BOTTOMRIGHT")
-	model:HookScript("OnSizeChanged", function(self, width)
-		local scale = (width or self:GetWidth() or BACKGROUND_WIDTH) / BACKGROUND_WIDTH
-		for index, tile in ipairs(BACKGROUND_TILES) do
-			raceTiles[index]:SetSize(tile[2] * scale, tile[3] * scale)
-		end
-	end)
+	model:HookScript("OnSizeChanged", LayoutBackground)
 	raceShade = model:CreateTexture(nil, "BORDER")
 	raceShade:SetAllPoints()
 	raceShade:SetColorTexture(0, 0, 0, 1)
@@ -592,6 +610,11 @@ local function CreateWindow()
 	for index, info in ipairs(WEAPON_SLOTS) do
 		local button = CreateSlot(info)
 		button:SetPoint("BOTTOMLEFT", inset, "BOTTOM", -weaponsWidth / 2 + (index - 1) * (SLOT_SIZE + 5), 6)
+	end
+
+	-- Above the model and its background, as the inspect window's slots are (frame level 100 there).
+	for _, button in ipairs(slotButtons) do
+		button:SetFrameLevel(model:GetFrameLevel() + 5)
 	end
 
 	-- Buttons along the bottom edge.
