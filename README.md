@@ -65,7 +65,7 @@ addons share through LibSharedMedia.
   characters" lists who has what. Right-click a character to forget it.
 - **Open Clams**: a button at the bottom left of your bags (next to your money) opens the next clam (or any other
   "Right Click to Open" container, except locked boxes) one per click, showing its icon and how
-  many are left. Bindable under Keybindings → AddOns → NraKit. Openable items get a green border.
+  many are left. Bindable under Key Bindings → NraKit. Openable items get a green border.
 - **Sous Chef**: in the cooking window, recipes where you have the main ingredient (the meat,
   fish...) but are missing vendor-bought secondaries (spices, water, flour...) get an icon of what
   to buy, and the row tooltip says how much. Item tooltips on a main ingredient list what it cooks
@@ -118,13 +118,15 @@ addons share through LibSharedMedia.
   names are learned in the background (a few dozen a second, paused in combat, a few minutes once
   per game version). A progress bar in the tab has Pause / Resume, and Check again once it's done;
   undiscovered items are also checked for again daily.
-- **Inspect anything**: one key (Key Bindings > AddOns > NraKit) inspects what's under the mouse
+- **Inspect anything**: one key (Key Bindings > NraKit) inspects what's under the mouse
   or your target. Players get the normal inspect window; NPCs (and players you can't inspect) get a
-  model viewer: drag to turn, right-drag to move, wheel to zoom. Optionally follows your target.
+  model viewer where the inspect window opens: drag to turn, right-drag to move, wheel to zoom.
+  Optionally follows your target, and adds "View 3D model" to the right-click menu of NPCs and
+  enemy players.
 - **Copy Wowhead link**: hover an item, spell, NPC, quest, achievement or currency and press Ctrl+C.
   A box opens in the middle of the screen with its wowhead.com/forever link selected; copy it with
   Ctrl+C (Cmd+C on a Mac) and the box closes (addons can't reach the clipboard directly). Works in bags, chat links, quest log, achievements and the
-  objective tracker. Ctrl+C is bound on first use if it's free; change it under Key Bindings > AddOns.
+  objective tracker. Ctrl+C is bound on first use if it's free; change it under Key Bindings > NraKit.
 - **Unit Scanner**: alerts you (sound, on-screen text, chat line, taskbar flash) when a mob or
   player from your list shows up in nameplate range, on mouseover, as your target, focus or a group
   member's target, as a minimap marker (rares), or when an NPC yells, says or emotes. Optionally

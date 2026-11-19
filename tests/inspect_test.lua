@@ -38,6 +38,10 @@ return {
 		issecretvalue = function(value)
 			return value == SECRET
 		end
+		-- Blizzard's panel layout (a "Panel" name would otherwise be a stand-in frame).
+		GetUIPanelLayoutAttribute = function(name)
+			return ({ LEFT_OFFSET = 16, TOP_OFFSET = -116 })[name]
+		end
 
 		local model, shownUnit, applied = nil, nil, {}
 		local function FindModel()
@@ -135,12 +139,44 @@ return {
 			t.noErrors()
 		end)
 
+		t.test("opens where the inspect window does", function()
+			local placed
+			rawset(NraKitModelViewer, "SetPoint", function(_, point, relativeTo, relativePoint, x, y)
+				placed = { point, relativeTo, relativePoint, x, y }
+			end)
+			NraKitModelViewer:Hide()
+			NraKit_InspectAnything()
+			t.ok(placed, "placed when opened")
+			t.equal(placed[1], "TOPLEFT", "point")
+			t.equal(placed[4], 16, "left offset")
+			t.equal(placed[5], -116, "top offset")
+			placed = nil
+			wow.fire("PLAYER_TARGET_CHANGED")
+			t.equal(placed, nil, "not moved while open (it may have been dragged)")
+		end)
+
+		t.test("View 3D model in the right-click menu of NPCs and enemy players", function()
+			NraKitModelViewer:Hide()
+			units.focus = { name = "Gnoll Brute", level = 12 }
+			local entry = wow.menuEntry(wow.openMenu("MENU_UNIT_FOCUS", { unit = "focus" }), "View 3D model")
+			t.ok(entry, "in the focus menu")
+			entry.onClick()
+			t.ok(NraKitModelViewer:IsShown(), "viewer open")
+			t.equal(Title(), "Gnoll Brute", "the focus")
+			t.ok(wow.menuEntry(wow.openMenu("MENU_UNIT_TARGET", { unit = "target" }), "View 3D model"), "target menu")
+			t.ok(wow.menuEntry(wow.openMenu("MENU_UNIT_ENEMY_PLAYER", { unit = "target" }), "View 3D model"), "enemy players")
+			ns:SetSetting("inspectAnythingMenu", false)
+			t.equal(wow.menuEntry(wow.openMenu("MENU_UNIT_TARGET", { unit = "target" }), "View 3D model"), nil, "option off")
+			ns:SetSetting("inspectAnythingMenu", true)
+		end)
+
 		t.test("does nothing while off", function()
 			ns:SetSetting("inspectAnything", false)
 			t.ok(not NraKitModelViewer:IsShown(), "closed when turned off")
 			units.target = { name = "Hogger", level = 11 }
 			NraKit_InspectAnything()
 			t.ok(not NraKitModelViewer:IsShown(), "stays closed")
+			t.equal(wow.menuEntry(wow.openMenu("MENU_UNIT_TARGET", { unit = "target" }), "View 3D model"), nil, "no menu entry")
 			t.noErrors()
 		end)
 	end,

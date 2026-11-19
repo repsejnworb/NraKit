@@ -94,7 +94,7 @@ local module = {
 		{
 			key = "unitScanButton",
 			name = "Show a target button",
-			description = "Show a button with the marker icon and the unit's name; click it to target the unit (it runs /targetexact <name>). Right-click to dismiss it, Shift-drag to move it. Can also be bound to a key under Keybindings -> AddOns -> NraKit. Buttons that target can't be changed in combat, so a unit found in combat gets its button when combat ends.",
+			description = "Show a button with the marker icon and the unit's name; click it to target the unit (it runs /targetexact <name>). Right-click to dismiss it, Shift-drag to move it. Can also be bound to a key under Key Bindings -> NraKit. Buttons that target can't be changed in combat, so a unit found in combat gets its button when combat ends.",
 			default = true,
 		},
 		{

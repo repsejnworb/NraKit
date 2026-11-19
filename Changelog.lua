@@ -17,7 +17,8 @@ local _, ns = ...
 
 ns.changelog = {
 	{ version = "Unreleased", entries = {
-		{ "new", "Inspect anything: one key inspects what's under the mouse or your target. Players as normal, and NPCs in a model viewer where you can turn, move and zoom their 3D model. Set the key under Key Bindings > AddOns > NraKit.", module = "inspectAnything" },
+		{ "new", "Inspect anything: one key inspects what's under the mouse or your target. Players as normal, and NPCs in a model viewer where you can turn, move and zoom their 3D model. Set the key under Key Bindings > NraKit, or right-click an NPC or enemy player and choose View 3D model.", module = "inspectAnything" },
+		{ "improved", "Key bindings: NraKit's keys have their own NraKit section in Key Bindings instead of being mixed in with other addons'." },
 	} },
 	{ version = "0.16.0", date = "2026-11-19", entries = {
 		{ "new", "Item lookup: search every item in the game by name. /nra item nightbl lists the matching items in an Items tab, with their tooltips; Shift-click to link one in chat. The list of names fills in by itself in the background, with a progress bar in the tab to pause it or check again for newly discovered items.", module = "itemLookup" },

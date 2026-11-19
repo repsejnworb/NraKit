@@ -61,6 +61,7 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   options. Built entirely from the module definitions, so new modules need no work here. Custom per-module buttons
   go through `ns:AddOptionsButton(moduleKey, label, description, onClick)` and show in both UIs.
 - `Bindings.xml` – keybindings (auto-loaded by the game, not listed in the TOC); binding names are set in Lua.
+  Use `category="NraKit"`: in Key Bindings each category is a section (a `header` only adds a spacer line).
 - `Modules/*.lua` – one feature per file, registered with `ns:RegisterModule(module)`.
   `module:OnSettingsRegistered(root, subcategory, sublayout)` can add custom controls (e.g. buttons) or extra
   pages (canvas subcategories, like the Bag Tithe ignore list).

@@ -15,7 +15,7 @@ local module = {
 	key = "wowheadLink",
 	section = "Utilities",
 	name = "Copy Wowhead link",
-	description = "Hover an item, spell, NPC, quest, achievement or currency and press Ctrl+C to copy a Wowhead (Forever) link to it. Change the key under Key Bindings > AddOns.",
+	description = "Hover an item, spell, NPC, quest, achievement or currency and press Ctrl+C to copy a Wowhead (Forever) link to it. Change the key under Key Bindings > NraKit.",
 	default = false,
 }
 

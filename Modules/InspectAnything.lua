@@ -1,9 +1,11 @@
 local _, ns = ...
 
--- Inspect anything: one key (Key Bindings > AddOns > NraKit) for the unit under the mouse,
+-- Inspect anything: one key (Key Bindings > NraKit) for the unit under the mouse,
 -- or your target. Players you can inspect get Blizzard's inspect window; NPCs (and players
 -- you can't inspect) get a model viewer: their 3D model to turn (drag), move (right-drag)
--- and zoom (mouse wheel). While it's open it can follow your target.
+-- and zoom (mouse wheel). While it's open it can follow your target. It opens where the
+-- inspect window does. Right-clicking an NPC or enemy player (target, focus) also offers
+-- "View 3D model".
 --
 -- Names, levels and types can be secret values (instances, combat); the model still shows,
 -- the line under the title just leaves out what it can't read.
@@ -12,7 +14,7 @@ local module = {
 	key = "inspectAnything",
 	section = "Utilities",
 	name = "Inspect anything",
-	description = "One key (Key Bindings > AddOns > NraKit) inspects what's under the mouse or your target: players as normal, and NPCs in a model viewer where you can turn, move and zoom their 3D model.",
+	description = "One key (Key Bindings > NraKit) inspects what's under the mouse or your target: players as normal, and NPCs in a model viewer where you can turn, move and zoom their 3D model.",
 	default = false,
 	options = {
 		{
@@ -21,11 +23,19 @@ local module = {
 			description = "While the model viewer is open, show whoever you target next.",
 			default = true,
 		},
+		{
+			key = "inspectAnythingMenu",
+			name = "In the right-click menu",
+			description = "Add \"View 3D model\" to the right-click menu of NPCs and enemy players (target and focus frames).",
+			default = true,
+		},
 	},
 }
 
 local WIDTH, HEIGHT = 380, 520
 local SUBTITLE_HEIGHT = 26
+-- Right-click menus that get "View 3D model": NPCs (target and focus) and enemy players.
+local MENU_TAGS = { "TARGET", "FOCUS", "ENEMY_PLAYER" }
 local FOOTER_HEIGHT = 30
 local TURN_SPEED = 0.02 -- radians per pixel dragged
 local MOVE_SPEED = 0.005 -- model units per pixel dragged
@@ -88,21 +98,16 @@ function inspect.ResetView()
 	ApplyView()
 end
 
-local function SavePosition()
-	local point, _, relativePoint, x, y = frame:GetPoint()
-	if point then
-		NraKitDB.inspectAnythingPosition = { point, relativePoint, x, y }
-	end
+-- Where Blizzard puts the inspect window (a "left" panel), read from its panel layout.
+local function PlaceLikeInspect()
+	local left = GetUIPanelLayoutAttribute and GetUIPanelLayoutAttribute("LEFT_OFFSET") or 16
+	local top = GetUIPanelLayoutAttribute and GetUIPanelLayoutAttribute("TOP_OFFSET") or -116
+	frame:ClearAllPoints()
+	frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", left, top)
 end
 
 local function CreateViewer()
 	frame = UI.CreateWindow("NraKitModelViewer", "", WIDTH, HEIGHT, 0)
-	local position = NraKitDB.inspectAnythingPosition
-	if position then
-		frame:ClearAllPoints()
-		frame:SetPoint(position[1], UIParent, position[2], position[3], position[4])
-	end
-	frame.titleBar:HookScript("OnDragStop", SavePosition)
 	local body = frame.body
 
 	subtitle = body:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
@@ -182,6 +187,9 @@ function inspect.ShowModel(unit)
 		frame.title:SetText(name) -- may be secret; FontStrings take it as it is
 	end
 	subtitle:SetText(Describe(unit))
+	if not frame:IsShown() then
+		PlaceLikeInspect() -- it can be dragged, but opens there each time
+	end
 	frame:Show()
 	model:ClearModel()
 	model:SetUnit(unit)
@@ -215,6 +223,17 @@ eventFrame:SetScript("OnEvent", function()
 	end
 end)
 
+local function OnUnitMenu(_, root, contextData)
+	local unit = contextData and contextData.unit
+	if not unit or not ns:IsModuleEnabled(module.key) or not ns:GetOption("inspectAnythingMenu") then
+		return
+	end
+	root:CreateDivider()
+	root:CreateButton("View 3D model", function()
+		inspect.ShowModel(unit)
+	end)
+end
+
 -- Key binding (Bindings.xml).
 _G["BINDING_NAME_NRAKIT_INSPECT_ANYTHING"] = "Inspect anything (players as normal, NPCs as a 3D model)"
 function NraKit_InspectAnything()
@@ -223,6 +242,11 @@ end
 
 function module:OnInitialize()
 	eventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
+	if Menu and Menu.ModifyMenu then
+		for _, tag in ipairs(MENU_TAGS) do
+			Menu.ModifyMenu("MENU_UNIT_" .. tag, OnUnitMenu)
+		end
+	end
 end
 
 function module:OnEnabledChanged(enabled)

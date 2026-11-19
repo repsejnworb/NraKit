@@ -1,14 +1,15 @@
 <Bindings>
+	<!-- Each category is a section in Key Bindings, so all of NraKit's keys get their own "NraKit" section. -->
 	<!-- Clicks the Open Clams button (Modules/OpenClams.lua); names are set in Lua. -->
-	<Binding name="CLICK NraKitOpenClamsButton:LeftButton" header="NRAKIT" category="ADDONS"/>
+	<Binding name="CLICK NraKitOpenClamsButton:LeftButton" category="NraKit"/>
 	<!-- Clicks the Unit Scanner target button (Modules/UnitScanner.lua). -->
-	<Binding name="CLICK NraKitScanTargetButton:LeftButton" category="ADDONS"/>
+	<Binding name="CLICK NraKitScanTargetButton:LeftButton" category="NraKit"/>
 	<!-- Copies a Wowhead link to what's under the mouse (Modules/WowheadLink.lua). -->
-	<Binding name="NRAKIT_WOWHEAD_LINK" category="ADDONS">NraKit_CopyWowheadLink()</Binding>
+	<Binding name="NRAKIT_WOWHEAD_LINK" category="NraKit">NraKit_CopyWowheadLink()</Binding>
 	<!-- Opens the inventory browser (Modules/InventoryBrowser.lua). -->
-	<Binding name="NRAKIT_INVENTORY_BROWSER" category="ADDONS">NraKit_ToggleInventoryBrowser()</Binding>
+	<Binding name="NRAKIT_INVENTORY_BROWSER" category="NraKit">NraKit_ToggleInventoryBrowser()</Binding>
 	<!-- Opens player notes (Modules/PlayerNotes.lua). -->
-	<Binding name="NRAKIT_PLAYER_NOTES" category="ADDONS">NraKit_TogglePlayerNotes()</Binding>
+	<Binding name="NRAKIT_PLAYER_NOTES" category="NraKit">NraKit_TogglePlayerNotes()</Binding>
 	<!-- Inspects what's under the mouse or the target (Modules/InspectAnything.lua). -->
-	<Binding name="NRAKIT_INSPECT_ANYTHING" category="ADDONS">NraKit_InspectAnything()</Binding>
+	<Binding name="NRAKIT_INSPECT_ANYTHING" category="NraKit">NraKit_InspectAnything()</Binding>
 </Bindings>

@@ -54,7 +54,7 @@ Where did I put that? **Item tooltips show how many each of your characters has*
 
 ### Open Clams
 A small button at the bottom of your bags, next to your money, **opens the next clam** (or any other "Right Click to Open" container, except locked boxes) **one click at a time**, and shows how many are left.
-- Can be **bound to a key** (Keybindings → AddOns → NraKit).
+- Can be **bound to a key** (Key Bindings → NraKit).
 - Openable items get a **green border** in your bags.
 
 ### Sous Chef
@@ -107,12 +107,13 @@ Hides the blue notification dot on the **Shop** button that never goes away, and
 - Items nobody has discovered yet can't be looked up until they have been; NraKit checks for them again every day (or right away with Check again).
 
 ### Inspect anything
-**One key** (Key Bindings → AddOns → NraKit) inspects whatever is **under your mouse, or your target**. Players open the normal inspect window; **NPCs open a model viewer** with their **3D model** to look at: **drag to turn**, **right-drag to move**, **mouse wheel to zoom**, plus their level and type. While it's open it follows your target (optional).
+**One key** (Key Bindings → NraKit) inspects whatever is **under your mouse, or your target**. Players open the normal inspect window; **NPCs open a model viewer** with their **3D model** to look at: **drag to turn**, **right-drag to move**, **mouse wheel to zoom**, plus their level and type. It opens where the inspect window does, and follows your target while it's open (optional).
+- Also in the **right-click menu** of NPCs and enemy players: **View 3D model** (optional).
 
 ### Copy Wowhead link
 Hover an **item, spell, NPC, quest, achievement or currency** and press **Ctrl+C**. A box opens in the middle of the screen with its **wowhead.com/forever** link selected; copy it with **Ctrl+C** (**Cmd+C** on a Mac) and the box closes (addons can't reach the clipboard directly).
 - Works on bag items, chat links, NPCs in the world, the quest log, achievements and the objective tracker.
-- Ctrl+C is bound on first use if it's free; change it under Key Bindings > AddOns.
+- Ctrl+C is bound on first use if it's free; change it under Key Bindings > NraKit.
 
 ### Unit Scanner
 Get alerted when a **mob or player from your own list** shows up.

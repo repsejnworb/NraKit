@@ -14,7 +14,7 @@ local module = {
 	key = "openClams",
 	section = "Bags & Items",
 	name = "Open Clams",
-	description = "Adds a button at the bottom left of your bags, next to your money, that opens the next clam or other openable container in your bags, one per click. You can also bind it to a key under Keybindings > AddOns > NraKit.",
+	description = "Adds a button at the bottom left of your bags, next to your money, that opens the next clam or other openable container in your bags, one per click. You can also bind it to a key under Key Bindings > NraKit.",
 	default = false,
 	options = {
 		{
@@ -252,7 +252,7 @@ local function ShowTooltip(self)
 	if key then
 		GameTooltip_AddInstructionLine(GameTooltip, "Keybind: " .. GetBindingText(key))
 	else
-		GameTooltip_AddInstructionLine(GameTooltip, "Bind a key under Keybindings > AddOns > NraKit.")
+		GameTooltip_AddInstructionLine(GameTooltip, "Bind a key under Key Bindings > NraKit.")
 	end
 	GameTooltip:Show()
 end
