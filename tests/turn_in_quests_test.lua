@@ -6,7 +6,7 @@ local LOG = {
 	{ title = "The Doomed Fleet", id = 1, done = true, map = 1437 },
 	{ title = "Unfinished Business", id = 2, done = false, map = 1437 },
 	{ header = "Stormwind" },
-	{ title = "Hemet Nesingwary", id = 3, done = true, map = 1434 }, -- turned in in Stranglethorn
+	{ title = "Hemet Nesingwary", id = 3, done = true, map = 1434, level = 32 }, -- turned in in Stranglethorn
 	{ header = "Loch Modan" },
 	{ title = "Find Bingles", id = 4, done = true, map = 1432 },
 	{ title = "No Map", id = 5, done = true },
@@ -30,6 +30,16 @@ return {
 					return entry.done
 				end
 			end
+		end
+		C_QuestLog.GetQuestDifficultyLevel = function(id)
+			for _, entry in ipairs(LOG) do
+				if entry.id == id then
+					return entry.level
+				end
+			end
+		end
+		GetQuestDifficultyColor = function(level)
+			return { r = 1, g = level > 30 and 0.5 or 1, b = 0 }
 		end
 		GetQuestUiMapID = function(id)
 			for _, entry in ipairs(LOG) do
@@ -98,6 +108,7 @@ return {
 			t.ok(NraKitTurnInFrame:IsShown(), "window open")
 			local row = Row("Hemet Nesingwary")
 			t.ok(row, "a row per quest")
+			t.equal(row.text:GetText(), "[32] Hemet Nesingwary", "level in front")
 			row.scripts.OnClick(row, "LeftButton")
 			t.equal(opened[1], 3, "map opened on the quest")
 			row.scripts.OnClick(row, "RightButton")

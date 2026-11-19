@@ -2,7 +2,8 @@ local _, ns = ...
 
 -- Quests to turn in: a small window (/nra done, or a key) listing your finished quests by the
 -- zone you turn them in ("Wetlands: The Doomed Fleet, Seeking Caitlin"), the zone you're in
--- first. Click a quest to open the map on it (its turn-in shows there), right-click to make it
+-- first, each with its level and in its difficulty colour as in the quest log ("[32] Malin's
+-- Request" in yellow). Click a quest to open the map on it (its turn-in shows there), right-click to make it
 -- your waypoint, Shift-click to link it. Entering a zone with turn-ins says so in chat, and can
 -- open the window.
 --
@@ -72,7 +73,8 @@ function turnIn.Zones()
 				byZone[zone] = { zone = zone, quests = {} }
 				table.insert(zones, byZone[zone])
 			end
-			table.insert(byZone[zone].quests, { id = info.questID, title = info.title })
+			local level = C_QuestLog.GetQuestDifficultyLevel(info.questID) or info.level
+			table.insert(byZone[zone].quests, { id = info.questID, title = info.title, level = level })
 		end
 	end
 	local here = CurrentZone()
@@ -186,7 +188,15 @@ function turnIn.Refresh()
 		for _, quest in ipairs(zone.quests) do
 			local row = AcquireRow()
 			row.questID, row.title = quest.id, quest.title
-			row.text:SetText(quest.title)
+			-- "[32] Malin's Request", coloured by difficulty like the quest log.
+			local text = quest.level and quest.level > 0 and string.format("[%d] %s", quest.level, quest.title) or quest.title
+			row.text:SetText(text)
+			local color = quest.level and quest.level > 0 and GetQuestDifficultyColor(quest.level)
+			if color then
+				row.text:SetTextColor(color.r, color.g, color.b)
+			else
+				row.text:SetTextColor(1, 1, 1)
+			end
 			row.waypoint:SetShown(quest.id == waypoint)
 			row:SetPoint("TOPLEFT", scroll.content, "TOPLEFT", 0, -y)
 			row:SetWidth(width)
