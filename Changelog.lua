@@ -18,7 +18,7 @@ local _, ns = ...
 ns.changelog = {
 	{ version = "Unreleased", entries = {
 		{ "improved", "NraKit window: every tab is always there. Tabs of features that are off are dimmed and show what the feature does, with a button to turn it on." },
-		{ "fixed", "NraKit window: tabs appear and disappear right away when you turn a feature on or off, instead of after switching tabs." },
+		{ "fixed", "NraKit window: tabs update right away when you turn a feature on or off, instead of after switching tabs." },
 	} },
 	{ version = "0.17.2", date = "2026-11-19", entries = {
 		{ "improved", "Item lookup: the search box no longer grabs your keyboard when the window opens (or with /nra item <name>), so you can keep moving and fighting; click it to type, and Enter or Esc gives the keys back." },
