@@ -103,7 +103,8 @@ Hides the blue notification dot on the **Shop** button that never goes away, and
 ### Item lookup
 **Search every item in the game by name.** **/nra item nightbl** opens an **Items** tab listing every item whose name contains it, best matches first, with icon, type, required level and how many your characters have (with Inventory Tracker). Hover for the tooltip, **Shift+click** to link it in chat, **Ctrl+click** to preview it.
 - The game can't search items by name, so NraKit learns the names in the background, a few dozen a second (paused in combat). It takes a few minutes, once per game version; searching works right away and finds more as it fills.
-- Items nobody has discovered yet can't be looked up until they have been; NraKit checks for them again every day.
+- A **progress bar** in the tab shows how far it is, with **Pause / Resume**, and **Check again** once it's done.
+- Items nobody has discovered yet can't be looked up until they have been; NraKit checks for them again every day (or right away with Check again).
 
 ### Copy Wowhead link
 Hover an **item, spell, NPC, quest, achievement or currency** and press **Ctrl+C**. A box opens in the middle of the screen with its **wowhead.com/forever** link selected; copy it with **Ctrl+C** (**Cmd+C** on a Mac) and the box closes (addons can't reach the clipboard directly).

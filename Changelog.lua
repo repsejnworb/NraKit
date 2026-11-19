@@ -17,7 +17,7 @@ local _, ns = ...
 
 ns.changelog = {
 	{ version = "Unreleased", entries = {
-		{ "new", "Item lookup: search every item in the game by name. /nra item nightbl lists the matching items in an Items tab, with their tooltips; Shift-click to link one in chat. The list of names fills in by itself in the background (a few minutes, once per game version).", module = "itemLookup" },
+		{ "new", "Item lookup: search every item in the game by name. /nra item nightbl lists the matching items in an Items tab, with their tooltips; Shift-click to link one in chat. The list of names fills in by itself in the background, with a progress bar in the tab to pause it or check again for newly discovered items.", module = "itemLookup" },
 	} },
 	{ version = "0.15.0", date = "2026-11-19", entries = {
 		{ "new", "Double-click fishing: with a fishing pole in your main hand, double right-click the world to cast Fishing.", module = "doubleClickFishing" },

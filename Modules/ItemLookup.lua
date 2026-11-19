@@ -11,10 +11,11 @@ local _, ns = ...
 -- chat links) is added too.
 --
 -- Items the server doesn't answer for (not in Forever, or not discovered by anyone yet)
--- are asked again after a day. When the game version changes, the walk starts over for
--- the items without a name.
+-- are asked again after a day, or right away with "Check again" in the window. When the
+-- game version changes, the walk starts over for the items without a name. The window can
+-- pause it (remembered until resumed).
 --
--- Data (account-wide): NraKitDB.itemLookupData = { build, cursor, names = { [id] = name },
+-- Data (account-wide): NraKitDB.itemLookupData = { build, cursor, paused, names = { [id] = name },
 --   quality = { [id] = quality }, failed = { [id] = time() } }.
 
 local module = {
@@ -203,12 +204,44 @@ end)
 -- API for the window
 ------------------------------------------------------------------------------
 
--- How far the list is: named, total (nil while the item IDs are still being found), done.
+-- How far the list is: { named, total (nil while the item IDs are still being found),
+-- paused, done }.
 function lookup.Progress()
-	if not ids then
-		return named, nil, false
+	local paused = Data().paused == true
+	return {
+		named = named,
+		total = ids and #ids,
+		paused = paused,
+		done = ids ~= nil and not paused and not crawler:IsShown(),
+	}
+end
+
+local function Run()
+	if ns:IsModuleEnabled(module.key) and not Data().paused then
+		crawler:Show()
 	end
-	return named, #ids, not crawler:IsShown()
+end
+
+function lookup.SetPaused(paused)
+	Data().paused = paused or nil
+	if paused then
+		crawler:Hide()
+		-- Answers still arrive and are kept; nothing waits on them.
+		wipe(pending)
+		pendingCount = 0
+	else
+		Run()
+	end
+end
+
+-- Asks again now for every item that had no name (newly discovered ones, say).
+function lookup.CheckAgain()
+	local data = Data()
+	for itemID in pairs(data.failed) do
+		data.failed[itemID] = 0
+	end
+	retryQueue = nil
+	lookup.SetPaused(false)
 end
 
 -- Items whose name contains query (lower-case): { { id, name, quality }, ... }, best
@@ -260,7 +293,7 @@ local function Start()
 	end
 	retryQueue = nil -- failed items that are due by now
 	eventFrame:RegisterEvent("GET_ITEM_INFO_RECEIVED")
-	crawler:Show()
+	Run()
 end
 
 local function Stop()

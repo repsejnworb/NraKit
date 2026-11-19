@@ -116,7 +116,8 @@ addons share through LibSharedMedia.
   listing the matches (icon, type, required level, how many your characters have); hover for the
   tooltip, Shift+click to link, Ctrl+click to preview. The game can't search items by name, so the
   names are learned in the background (a few dozen a second, paused in combat, a few minutes once
-  per game version). Undiscovered items are checked for again daily.
+  per game version). A progress bar in the tab has Pause / Resume, and Check again once it's done;
+  undiscovered items are also checked for again daily.
 - **Copy Wowhead link**: hover an item, spell, NPC, quest, achievement or currency and press Ctrl+C.
   A box opens in the middle of the screen with its wowhead.com/forever link selected; copy it with
   Ctrl+C (Cmd+C on a Mac) and the box closes (addons can't reach the clipboard directly). Works in bags, chat links, quest log, achievements and the

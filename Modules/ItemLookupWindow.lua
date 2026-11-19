@@ -1,7 +1,7 @@
 local _, ns = ...
 
--- The Item lookup window (/nra item <name>): a search box, how complete the list of
--- names is, and the matching items (icon, name in its quality colour, type, required
+-- The Item lookup window (/nra item <name>): a search box, a bar showing how complete the
+-- list of names is (with Pause / Resume, or Check again once it's done), and the matching items (icon, name in its quality colour, type, required
 -- level, and how many your characters have if Inventory Tracker is on). Hover for the
 -- tooltip; Shift-click links an item in chat, Ctrl-click previews it. The list of names
 -- is ItemLookup.lua's.
@@ -14,7 +14,7 @@ local TOP_HEIGHT = 48
 local FOOTER_HEIGHT = 28
 local MAX_SHOWN = 200
 
-local frame, searchBox, statusText, scroll, footerLeft
+local frame, searchBox, progressBar, progressButton, scroll, footerLeft
 local pool = UI.CreatePool()
 local query = ""
 local shownIDs = {} -- [id] = true for the rows on screen
@@ -44,17 +44,39 @@ local function Owned(itemID)
 	return total
 end
 
-local function Status()
-	local named, total, done = ns.itemLookup.Progress()
-	local count = BreakUpLargeNumbers and BreakUpLargeNumbers(named) or tostring(named)
-	if not total then
-		return string.format("Finding the game's items... %s names known so far.", count)
-	elseif done then
-		return string.format("Searching %s items.", count)
-	end
-	return string.format("Learning item names in the background: %s of %s (%d%%). Results grow as it goes.",
-		count, BreakUpLargeNumbers and BreakUpLargeNumbers(total) or tostring(total), math.floor(named / math.max(total, 1) * 100))
+local function Number(value)
+	return BreakUpLargeNumbers and BreakUpLargeNumbers(value) or tostring(value)
 end
+
+-- The progress bar's text and fill, and the button next to it.
+local function UpdateProgress()
+	local progress = ns.itemLookup.Progress()
+	local text, button
+	if progress.done then
+		text = string.format("All %s known item names learned", Number(progress.named))
+		button = "Check again"
+	elseif progress.total then
+		text = string.format("%s %s of %s item names", progress.paused and "Paused:" or "Learning", Number(progress.named),
+			Number(progress.total))
+		button = progress.paused and "Resume" or "Pause"
+	else
+		text = progress.paused and string.format("Paused: %s item names", Number(progress.named)) or "Finding the game's items..."
+		button = progress.paused and "Resume" or "Pause"
+	end
+	progressBar.text:SetText(text)
+	progressBar:SetMinMaxValues(0, math.max(progress.total or 1, 1))
+	progressBar:SetValue(progress.done and math.max(progress.total or 1, 1) or progress.named)
+	progressBar:SetStatusBarColor(unpack(progress.done and { 0.3, 0.7, 0.3 } or progress.paused and UI.GREY or UI.ACCENT))
+	progressButton.action = button
+	progressButton.text:SetText(button)
+	progressButton:SetWidth(progressButton.text:GetStringWidth() + 20)
+end
+
+local BUTTON_TIPS = {
+	["Pause"] = "Stop learning item names for now (until you resume). Searching still works with the names learned so far.",
+	["Resume"] = "Carry on learning item names in the background.",
+	["Check again"] = "Ask the server again for the items that had no name yet, like items nobody had discovered. This happens by itself once a day.",
+}
 
 ------------------------------------------------------------------------------
 -- Rows
@@ -127,7 +149,7 @@ local function Render()
 	if not (frame and frame:IsShown()) then
 		return
 	end
-	statusText:SetText(Status())
+	UpdateProgress()
 	pool:ReleaseAll()
 	wipe(shownIDs)
 	local content = scroll.content
@@ -202,10 +224,42 @@ local function CreateWindow()
 	end)
 	searchBox:SetPoint("TOPLEFT", PAD + 6, -PAD - 1)
 
-	statusText = body:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	statusText:SetPoint("LEFT", searchBox, "RIGHT", 14, 0)
-	statusText:SetPoint("RIGHT", -PAD, 0)
-	statusText:SetJustifyH("LEFT")
+	progressButton = UI.CreateFlatButton(body, "Pause", 22)
+	progressButton:SetPoint("TOPRIGHT", -PAD, -PAD)
+	progressButton:SetScript("OnClick", function(self)
+		if self.action == "Check again" then
+			ns.itemLookup.CheckAgain()
+		else
+			ns.itemLookup.SetPaused(self.action == "Pause")
+		end
+		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+		UpdateProgress()
+		UI.ShowTooltip(self, self.action, BUTTON_TIPS[self.action])
+	end)
+	progressButton:SetScript("OnEnter", function(self)
+		UI.ShowTooltip(self, self.action, BUTTON_TIPS[self.action])
+	end)
+	progressButton:SetScript("OnLeave", GameTooltip_Hide)
+
+	progressBar = CreateFrame("StatusBar", nil, body)
+	progressBar:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
+	progressBar:SetHeight(22)
+	progressBar:SetPoint("LEFT", searchBox, "RIGHT", 16, 0)
+	progressBar:SetPoint("RIGHT", progressButton, "LEFT", -6, 0)
+	local barBg = progressBar:CreateTexture(nil, "BACKGROUND")
+	barBg:SetAllPoints()
+	barBg:SetColorTexture(1, 1, 1, 0.05)
+	progressBar.text = progressBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	progressBar.text:SetPoint("CENTER")
+	-- Kept up to date while the window is open.
+	local sinceUpdate = 0
+	progressBar:SetScript("OnUpdate", function(_, elapsed)
+		sinceUpdate = sinceUpdate + elapsed
+		if sinceUpdate >= 1 then
+			sinceUpdate = 0
+			UpdateProgress()
+		end
+	end)
 
 	local topLine = body:CreateTexture(nil, "BORDER")
 	topLine:SetColorTexture(unpack(UI.EDGE))
@@ -241,8 +295,6 @@ local function CreateWindow()
 		end
 		if not itemID or shownIDs[itemID] or (name and name:lower():find(query, 1, true)) then
 			RequestRender()
-		elseif statusText then
-			statusText:SetText(Status())
 		end
 	end
 end
