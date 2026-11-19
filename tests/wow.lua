@@ -286,6 +286,11 @@ function wow.install()
 	G.LOOT_ITEM_CREATED_SELF = "You create: %s."
 	G.LOOT_ITEM_CREATED_SELF_MULTIPLE = "You create: %sx%d."
 	G.OPEN_ALL_MAIL_BUTTON = "Open All"
+	-- Nothing attached to a mail being written (names with "Mail" would otherwise become frames).
+	G.HasSendMailItem = function()
+		return false
+	end
+	G.GetSendMailItem = function() end
 
 	G.C_Timer = { After = function() end, NewTicker = function()
 		return { Cancel = function() end }

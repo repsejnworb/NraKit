@@ -86,16 +86,16 @@ return {
 		end)
 
 		t.test("a new feature can be turned on from the page", function()
-			local check
-			for _, frame in ipairs(wow.findAll(function(frame)
-				return wow.visible(frame) and rawget(frame, "settingKey") == "playerNotes"
-			end)) do
-				check = frame
-			end
+			-- Any feature switch on the open versions (which ones depends on the changelog).
+			local check = wow.findAll(function(frame)
+				local key = rawget(frame, "settingKey")
+				return wow.visible(frame) and key and ns.modules[key] and not NraKitDB[key]
+			end)[1]
 			t.ok(check, "switch shown")
+			local key = check.settingKey -- the page redraws (and reuses the switch) after the click
 			check:SetChecked(true)
 			check.scripts.OnClick(check)
-			t.equal(NraKitDB.playerNotes, true, "turned on")
+			t.equal(NraKitDB[key], true, "turned on")
 			t.ok(wow.click("Settings"), "settings link")
 			t.noErrors()
 		end)
