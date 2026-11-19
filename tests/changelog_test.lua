@@ -86,7 +86,16 @@ return {
 		end)
 
 		t.test("a new feature can be turned on from the page", function()
-			-- Any feature switch on the open versions (which ones depends on the changelog).
+			-- Open every version, so a feature switch shows whatever the newest ones hold.
+			for _ = 1, #ns.changelog do
+				local closed = wow.findAll(function(frame)
+					return wow.visible(frame) and rawget(frame, "version") and rawget(frame, "isOpen") == false
+				end)[1]
+				if not closed then
+					break
+				end
+				closed.scripts.OnClick(closed)
+			end
 			local check = wow.findAll(function(frame)
 				local key = rawget(frame, "settingKey")
 				return wow.visible(frame) and key and ns.modules[key] and not NraKitDB[key]
