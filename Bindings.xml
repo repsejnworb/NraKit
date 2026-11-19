@@ -9,4 +9,6 @@
 	<Binding name="NRAKIT_INVENTORY_BROWSER" category="ADDONS">NraKit_ToggleInventoryBrowser()</Binding>
 	<!-- Opens player notes (Modules/PlayerNotes.lua). -->
 	<Binding name="NRAKIT_PLAYER_NOTES" category="ADDONS">NraKit_TogglePlayerNotes()</Binding>
+	<!-- Inspects what's under the mouse or the target (Modules/InspectAnything.lua). -->
+	<Binding name="NRAKIT_INSPECT_ANYTHING" category="ADDONS">NraKit_InspectAnything()</Binding>
 </Bindings>

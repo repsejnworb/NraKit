@@ -106,6 +106,9 @@ Hides the blue notification dot on the **Shop** button that never goes away, and
 - A **progress bar** in the tab shows how far it is, with **Pause / Resume**, and **Check again** once it's done.
 - Items nobody has discovered yet can't be looked up until they have been; NraKit checks for them again every day (or right away with Check again).
 
+### Inspect anything
+**One key** (Key Bindings → AddOns → NraKit) inspects whatever is **under your mouse, or your target**. Players open the normal inspect window; **NPCs open a model viewer** with their **3D model** to look at: **drag to turn**, **right-drag to move**, **mouse wheel to zoom**, plus their level and type. While it's open it follows your target (optional).
+
 ### Copy Wowhead link
 Hover an **item, spell, NPC, quest, achievement or currency** and press **Ctrl+C**. A box opens in the middle of the screen with its **wowhead.com/forever** link selected; copy it with **Ctrl+C** (**Cmd+C** on a Mac) and the box closes (addons can't reach the clipboard directly).
 - Works on bag items, chat links, NPCs in the world, the quest log, achievements and the objective tracker.
