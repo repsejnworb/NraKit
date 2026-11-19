@@ -118,15 +118,15 @@ addons share through LibSharedMedia.
   names are learned in the background (a few dozen a second, paused in combat, a few minutes once
   per game version). A progress bar in the tab has Pause / Resume, and Check again once it's done;
   undiscovered items are also checked for again daily.
-- **Inspect anything**: one key (Key Bindings > NraKit) inspects what's under the mouse
-  or your target. Players get the normal inspect window; NPCs (and players you can't inspect) get a
-  model viewer that looks like the inspect window and opens in its place: drag to turn, right-drag
-  to move, wheel to zoom. In combat (when the game won't open the inspect window for addons) a
-  player is shown in the viewer, and the real inspect window takes over when combat ends.
-  It shows level, type, health and attack speed (out of combat; the game hides NPC stats from
-  addons), and "Abilities on Wowhead" gives the NPC's Wowhead link.
-  It only changes when you press the key again. Optionally adds "View 3D model" to the right-click
-  menu of NPCs and enemy players.
+- **Inspect anything**: one key (Key Bindings > NraKit) inspects what's under the mouse or your
+  target, in a window like the inspect window (same frame and place) that stays open until you close
+  it, even when they run off or you change target. Players: their gear around the model (tooltips,
+  Shift-click to link), spec and item level; inspected in combat, the gear fills in after combat.
+  "Blizzard's inspect" opens the game's window (talents, PvP, guild) while they're near, and
+  "Dressing room" tries their outfit on. NPCs: the 3D model (drag to turn, right-drag to move, wheel
+  to zoom), level, type, health and attack speed (the game hides most NPC stats from addons), and
+  "Abilities on Wowhead" gives the NPC's Wowhead link. Optionally adds "View 3D model" to the
+  right-click menu of NPCs and enemy players.
 - **Copy Wowhead link**: hover an item, spell, NPC, quest, achievement or currency and press Ctrl+C.
   A box opens in the middle of the screen with its wowhead.com/forever link selected; copy it with
   Ctrl+C (Cmd+C on a Mac) and the box closes (addons can't reach the clipboard directly). Works in bags, chat links, quest log, achievements and the
