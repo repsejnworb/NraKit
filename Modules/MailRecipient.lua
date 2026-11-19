@@ -11,7 +11,7 @@ local _, ns = ...
 
 local module = {
 	key = "mailRecipient",
-	section = "Utilities",
+	section = "Mail",
 	name = "Remember mail recipient",
 	description = "Keeps the name in the To box after you send a mail, so you can send several to the same player (like your bank alt) without typing it again.",
 	default = false,

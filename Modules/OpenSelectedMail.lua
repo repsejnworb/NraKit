@@ -12,7 +12,7 @@ local _, ns = ...
 
 local module = {
 	key = "openSelectedMail",
-	section = "Utilities",
+	section = "Mail",
 	name = "Open selected mail",
 	description = "Adds a checkbox to each mail in your inbox. Tick some and the Open All button only opens those.",
 	default = false,

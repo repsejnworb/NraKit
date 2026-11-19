@@ -10,7 +10,7 @@ local _, ns = ...
 
 local module = {
 	key = "mailSubject",
-	section = "Utilities",
+	section = "Mail",
 	name = "Fill in mail subject",
 	description = "Writes the subject of a mail you're sending from what you attach: \"Linen Cloth (40)\", \"25g\" or \"Linen Cloth (20) + 5g\". A subject you typed yourself is left alone.",
 	default = false,
