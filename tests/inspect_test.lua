@@ -42,8 +42,12 @@ return {
 		ClearInspectPlayer = function()
 			cleared = cleared + 1
 		end
+		local notLoaded = {} -- [slot] = true: the item is there, its link hasn't come yet
 		GetInventoryItemLink = function(unit, slot)
-			return units[unit] and units[unit].isPlayer and LINKS[slot] or nil
+			return units[unit] and units[unit].isPlayer and not notLoaded[slot] and LINKS[slot] or nil
+		end
+		GetInventoryItemID = function(unit, slot)
+			return units[unit] and units[unit].isPlayer and LINKS[slot] and (10000 + slot) or nil
 		end
 		GetInventorySlotInfo = function(name)
 			return 0, "Interface\\PaperDoll\\UI-PaperDoll-Slot-" .. name
@@ -245,6 +249,32 @@ return {
 			t.equal(Slot(LINKS[1]), nil, "no gear")
 			t.ok(NraKitModelViewer:IsShown(), "window stays")
 			t.equal(Title(), "Rexxar Wild", "still them")
+		end)
+
+		-- Regression: often only 1-2 items showed; the rest load after the first answer.
+		t.test("items that load after the answer fill in, then the inspect data is let go", function()
+			local varian = { name = "Varian", surname = "Wrynn", isPlayer = true, level = 60, guid = "Player-1-00000006" }
+			notLoaded[16], notLoaded[18] = true, true
+			local clearedBefore = cleared
+			Inspect("target", varian)
+			wow.fire("INSPECT_READY", varian.guid)
+			t.ok(Slot(LINKS[1]), "the loaded helm")
+			t.equal(Slot(LINKS[16]), nil, "the axe hasn't come yet")
+			local waiting = false
+			for _, frame in ipairs(wow.frames) do
+				if rawget(frame, "slotID") == 16 and rawget(frame, "itemID") == 10016 and wow.visible(frame) then
+					waiting = true
+				end
+			end
+			t.ok(waiting, "its slot shows the item already (by ID)")
+			t.equal(cleared, clearedBefore, "inspect data kept while reading")
+			notLoaded[16] = nil
+			wow.advance(0.5)
+			t.ok(Slot(LINKS[16]), "the axe came in")
+			notLoaded[18] = nil
+			wow.advance(0.5)
+			t.ok(Slot(LINKS[18]), "the bow too")
+			t.equal(cleared, clearedBefore + 1, "then let go")
 		end)
 
 		-- Regression: gear sometimes needed a second key press; it's asked for again by itself.

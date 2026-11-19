@@ -10,7 +10,10 @@ local _, ns = ...
 -- your group: it only changes when you press the key again, and only closes when you close
 -- it. The server doesn't always answer (and answers late in combat; players inspected
 -- before answer at once), so it's asked again every couple of seconds while they're near,
--- for a while, and again when combat ends. "Blizzard's inspect" opens the real window (talents, PvP, guild) while they're near
+-- for a while, and again when combat ends. When it answers, often only some items are
+-- loaded and the rest follow over the next seconds (as in Blizzard's window, which updates
+-- its slots as they come), so the gear is read again twice a second until every slot with
+-- an item has it (or for a while), and only then is the inspect data let go. "Blizzard's inspect" opens the real window (talents, PvP, guild) while they're near
 -- and you're out of combat; "Dressing room" tries their outfit on.
 --
 -- NPCs: the model, level and type, max health and attack speed, and "Abilities on Wowhead"
@@ -46,6 +49,7 @@ local module = {
 local WIDTH, HEIGHT = PANEL_DEFAULT_WIDTH or 338, PANEL_DEFAULT_HEIGHT or 424
 local SLOT_SIZE, SLOT_GAP = 37, 4
 local RETRY_EVERY, RETRIES = 2, 8 -- seconds between asking again for gear, and how often
+local READ_EVERY, READ_FOR = 0.5, 10 -- once it answers: re-read this often, for at most this long
 -- Right-click menus that get "View 3D model": NPCs (target and focus) and enemy players.
 local MENU_TAGS = { "TARGET", "FOCUS", "ENEMY_PLAYER" }
 local TURN_SPEED = 0.02 -- radians per pixel dragged
@@ -72,9 +76,12 @@ ns.inspectAnything = inspect
 local frame, model, subtitle, statusText, stats, slotButtons, modelBorder
 local wowheadButton, blizzardButton, dressUpButton
 local shown -- what the window shows: { guid, isPlayer, npcID, name }
-local gear = {} -- [guid] = { items = { [slotID] = link }, itemLevel, spec, outfit }, this session
-local waitingGUID -- the player whose gear was asked for and hasn't arrived
-local retries, sinceRetry = 0, 0
+-- [guid] = { items = { [slotID] = link }, ids = { [slotID] = itemID } (items without a link
+-- yet), itemLevel, spec, outfit }, this session
+local gear = {}
+local waitingGUID -- the player whose gear is being asked for or read
+local reading = false -- it answered; reading until every item is in
+local retries, sinceRetry, sinceRead, readingFor = 0, 0, 0, 0
 local retryFrame = CreateFrame("Frame")
 retryFrame:Hide()
 local view = { facing = 0, x = 0, y = 0, zoom = 1 }
@@ -228,10 +235,11 @@ local function UpdateSlots()
 	for _, button in ipairs(slotButtons) do
 		button:SetShown(shown ~= nil and shown.isPlayer)
 		local link = data and data.items[button.slotID]
-		button.link = link
-		if link then
-			button.icon:SetTexture(select(5, C_Item.GetItemInfoInstant(link)) or 134400)
-			local quality = select(3, C_Item.GetItemInfo(link)) -- nil until loaded; refreshed then
+		local itemID = data and data.ids[button.slotID] -- an item whose link hasn't come yet
+		button.link, button.itemID = link, itemID
+		if link or itemID then
+			button.icon:SetTexture(select(5, C_Item.GetItemInfoInstant(link or itemID)) or 134400)
+			local quality = select(3, C_Item.GetItemInfo(link or itemID)) -- nil until loaded; refreshed then
 			local r, g, b = QualityColor(quality)
 			button.border:SetShown(r ~= nil and quality >= (Enum.ItemQuality.Uncommon or 2))
 			if r then
@@ -248,6 +256,8 @@ local function OnSlotEnter(self)
 	GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 	if self.link then
 		GameTooltip:SetHyperlink(self.link)
+	elseif self.itemID then
+		GameTooltip:SetItemByID(self.itemID)
 	else
 		GameTooltip_SetTitle(GameTooltip, _G[string.upper(self.slotName)] or self.slotName)
 	end
@@ -459,6 +469,10 @@ local function CreateWindow()
 	end
 
 	model = CreateFrame("PlayerModel", nil, modelBorder)
+	-- Black right behind the model (a model frame's own background layer, as Blizzard's has).
+	local modelBackground = model:CreateTexture(nil, "BACKGROUND")
+	modelBackground:SetAllPoints()
+	modelBackground:SetColorTexture(0, 0, 0, 1)
 	model:EnableMouse(true)
 	model:EnableMouseWheel(true)
 	model:SetScript("OnMouseDown", function(_, button)
@@ -595,40 +609,59 @@ function inspect.ShowModel(unit)
 	Show(unit)
 end
 
--- Their gear arrived: copy it, it's only readable while the unit is around.
+-- Copies what's come of their gear (it's only readable while the unit is around), keeping
+-- what was read before. Returns whether they were found, and whether every slot with an
+-- item has its link.
 local function ReadGear(guid)
 	local unit = FindUnit(guid)
 	if not unit then
-		return false
+		return false, false
 	end
-	local data = { items = {} }
+	local data = gear[guid] or { items = {}, ids = {} }
+	local complete = true
 	for _, list in ipairs({ LEFT_SLOTS, RIGHT_SLOTS, WEAPON_SLOTS }) do
 		for _, info in ipairs(list) do
-			data.items[info[2]] = GetInventoryItemLink(unit, info[2])
+			local slot = info[2]
+			local link = GetInventoryItemLink(unit, slot)
+			local itemID = GetInventoryItemID(unit, slot)
+			if link then
+				data.items[slot], data.ids[slot] = link, nil
+			elseif itemID and not data.items[slot] then
+				data.ids[slot] = itemID
+				complete = false
+			end
 		end
 	end
-	data.itemLevel = C_PaperDollInfo.GetInspectItemLevel(unit)
+	local itemLevel = C_PaperDollInfo.GetInspectItemLevel(unit)
+	if itemLevel and itemLevel > 0 then
+		data.itemLevel = itemLevel
+	end
 	local specID = GetInspectSpecialization(unit)
 	if specID and specID > 0 then
 		data.spec = select(2, GetSpecializationInfoByID(specID))
 	end
-	data.outfit = C_TransmogCollection.GetInspectItemTransmogInfoList()
+	data.outfit = C_TransmogCollection.GetInspectItemTransmogInfoList() or data.outfit
 	gear[guid] = data
-	-- Blizzard's inspect window does the same when it closes; leave it be while it's open.
-	if not (InspectFrame and InspectFrame:IsShown()) then
-		ClearInspectPlayer()
-	end
-	return true
+	return true, complete
 end
 
 local function StopWaiting()
-	waitingGUID = nil
+	waitingGUID, reading = nil, false
 	retryFrame:Hide()
+end
+
+-- Done reading: let the inspect data go (Blizzard's inspect window does the same when it
+-- closes; leave it be while that's open).
+local function FinishReading()
+	StopWaiting()
+	if not (InspectFrame and InspectFrame:IsShown()) then
+		ClearInspectPlayer()
+	end
 end
 
 -- Asks for their gear, and keeps asking every few seconds until it comes (or for a while).
 local function StartWaiting(unit, guid)
-	waitingGUID, retries, sinceRetry = guid, 0, 0
+	waitingGUID, reading, retries, sinceRetry = guid, false, 0, 0
 	retryFrame:Show()
 	NotifyInspect(unit)
 end
@@ -667,18 +700,48 @@ function inspect.Inspect()
 	UpdateStatus()
 end
 
+-- It answered: read what's there, and keep reading until the rest of the items are in.
+local function StartReading(guid)
+	local found, complete = ReadGear(guid)
+	if not found then
+		return
+	end
+	if complete then
+		FinishReading()
+	elseif not reading then
+		reading, sinceRead, readingFor, sinceRetry = true, 0, 0, 0
+	end
+	Refresh()
+end
+
 retryFrame:SetScript("OnUpdate", function(_, elapsed)
 	sinceRetry = sinceRetry + elapsed
+	if reading then
+		sinceRead, readingFor = sinceRead + elapsed, readingFor + elapsed
+		if sinceRead >= READ_EVERY then
+			sinceRead = 0
+			local _, complete = ReadGear(waitingGUID)
+			Refresh()
+			if complete or readingFor >= READ_FOR then
+				FinishReading()
+				Refresh()
+				return
+			end
+		end
+	end
 	if sinceRetry < RETRY_EVERY then
 		return
 	end
 	sinceRetry = 0
-	retries = retries + 1
-	if retries > RETRIES then
-		StopWaiting() -- given up; pressing the key again starts over
-		Refresh()
-		return
+	if not reading then
+		retries = retries + 1
+		if retries > RETRIES then
+			StopWaiting() -- given up; pressing the key again starts over
+			Refresh()
+			return
+		end
 	end
+	-- Not answered, or items still missing: ask again.
 	local unit = FindUnit(waitingGUID)
 	if unit and CanInspect(unit) then
 		NotifyInspect(unit)
@@ -688,9 +751,8 @@ end)
 local eventFrame = CreateFrame("Frame")
 eventFrame:SetScript("OnEvent", function(_, event, guid)
 	if event == "INSPECT_READY" then
-		if guid and guid == waitingGUID and ReadGear(guid) then
-			StopWaiting()
-			Refresh()
+		if guid and guid == waitingGUID then
+			StartReading(guid)
 		end
 	elseif event == "PLAYER_REGEN_ENABLED" then
 		-- Answers in combat are often dropped: ask again, with fresh retries.
