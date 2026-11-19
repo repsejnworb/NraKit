@@ -209,18 +209,14 @@ local function UpdateStats(unit)
 	end
 end
 
--- The level line, with "Fury · Item level 32.4" after it in a smaller font once their gear
--- is in, centred together under the title but kept clear of the portrait.
+-- The level line where the inspect window has it, or a little higher when "Fury · Item
+-- level 32.4" goes on a line of its own under it.
 local function LayoutHeader()
-	local extra = itemLevelText:IsShown() and (itemLevelText:GetStringWidth() or 0) + 8 or 0
-	local total = (subtitle:GetStringWidth() or 0) + extra
-	local left = math.max(WIDTH / 2 - total / 2, 66) -- the portrait ends about there
-	left = math.min(left, WIDTH - 10 - total)
 	subtitle:ClearAllPoints()
-	subtitle:SetPoint("TOPLEFT", frame, "TOPLEFT", math.max(left, 66), -40)
+	subtitle:SetPoint("TOP", frame, "TOP", 0, itemLevelText:IsShown() and -34 or -40)
 end
 
--- Players: spec and item level up by the level line once their gear is in, else how loading
+-- Players: spec and item level under the level line once their gear is in, else how loading
 -- it is going at the top of the model.
 local function UpdateStatus()
 	if not (shown and shown.isPlayer) then
@@ -239,7 +235,7 @@ local function UpdateStatus()
 			table.insert(parts, string.format("Item level %.1f", data.itemLevel))
 		end
 	end
-	itemLevelText:SetText("·  " .. table.concat(parts, "  ·  "))
+	itemLevelText:SetText(table.concat(parts, "  ·  "))
 	itemLevelText:SetShown(#parts > 0)
 	LayoutHeader()
 	statusText:SetShown(data == nil)
@@ -515,7 +511,7 @@ local function CreateWindow()
 	subtitle:SetPoint("TOP", 0, -40)
 	subtitle:SetWordWrap(false)
 	itemLevelText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-	itemLevelText:SetPoint("LEFT", subtitle, "RIGHT", 8, 0)
+	itemLevelText:SetPoint("TOP", subtitle, "BOTTOM", 0, -2)
 	itemLevelText:SetWordWrap(false)
 	itemLevelText:Hide()
 	stats = {}

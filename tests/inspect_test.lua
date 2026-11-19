@@ -197,7 +197,7 @@ return {
 			t.ok(Slot(LINKS[1]), "helm in its slot")
 			t.ok(Slot(LINKS[16]), "axe in its slot")
 			t.ok(Slot(LINKS[18]), "bow in the ranged slot")
-			t.ok(Shown("·  Arms  ·  Item level 31.5"), "spec and item level, by the level line")
+			t.ok(Shown("Arms  ·  Item level 31.5"), "spec and item level, under the level line")
 			t.equal(cleared, 1, "inspect data cleared after copying")
 			local helm = Slot(LINKS[1])
 			helm.scripts.OnClick(helm)
@@ -230,7 +230,7 @@ return {
 			local orgrim = { name = "Orgrim", surname = "Hammer", isPlayer = true, level = 40, guid = "Player-1-00000009" }
 			Inspect("target", orgrim)
 			wow.fire("INSPECT_READY", orgrim.guid)
-			t.ok(Shown("·  Item level 31.5"), "just the item level")
+			t.ok(Shown("Item level 31.5"), "just the item level")
 			specName = "Arms"
 			Inspect("mouseover", GRUNT)
 		end)
