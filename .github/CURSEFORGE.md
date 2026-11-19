@@ -21,6 +21,8 @@ See plates only for the enemies that are actually fighting you.
 - Optionally turns enemy nameplates **on when you enter combat and off when you leave it**, so you get clean overhead names while questing. (Forever's own "Always Show Nameplates" setting doesn't limit plates to combat at the moment.) If you turn enemy nameplates on yourself (V), they stay on.
 - Your target, focus and enemy players always get full nameplates.
 
+![engagedNameplatesOnly](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/engagedNameplatesOnly.png)
+
 ### Most valuable quest reward
 When a quest lets you choose a reward, a **gold coin** marks the one that sells to a vendor for the most gold (sell price × stack size).
 
@@ -33,11 +35,15 @@ Find out what to throw away when your bags are full.
 - Everything else is dimmed; your bags work as normal underneath.
 - **Alt+click** an item to leave it out of the ranking. The ignore list can be edited in the options.
 
+![bagTithe](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/bagTithe.png)
+
 ### Potential Upgrades
 **Arrows on bag items and quest rewards**, plus a tooltip line, for items that beat what you're wearing.
 - **Green**: clear upgrade. Usable now and at least as good on every stat that matters for your class (plus armor or weapon DPS).
 - **Yellow**: likely upgrade, using a simple per-class stat priority.
 - **Grey**: an upgrade once you reach the required level.
+
+![potentialUpgrade](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/potentialUpgrade.png)
 
 ### Known recipes
 No more mousing over every recipe at a vendor. Recipes you **already know get a green check** and a greyed-out icon at vendors, and a check in your bags.
@@ -62,6 +68,8 @@ Have the meat but not the spices? In the cooking window, recipes where you have 
 - Tooltips on main ingredients list what they cook into and what's missing.
 - Optionally only for recipes that still give skill, and optionally for all professions.
 
+![sousChef](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/sousChef.png)
+
 ### Double-click fishing
 With a **fishing pole in your main hand**, **double right-click** the world to cast Fishing. Right-clicking NPCs and players, and holding right-click to turn the camera, work as normal. The double-click time is adjustable.
 
@@ -72,6 +80,8 @@ A **reminder in the middle of the screen** while you have talent points to spend
 A **progress bar in the middle of the screen** while you rest at a Welcoming Campfire, with the time left. It turns green (with a sound) when Camp Benefits is ready.
 - Width and position are adjustable.
 - **/nra campfire** shows a 10-second preview.
+
+![welcomingCampfire](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/welcomingCampfire.png)
 
 ### Farm goals
 Just want to farm something? Set a goal like **loot 4000 Silk Cloth**, **reach level 40**, **gain 50,000 XP**, **earn 100 gold**, **reach Revered with a faction**, **get Swords to 300** (or to whatever your cap is) or **collect a currency**, and a small **movable tracker** shows the progress, how much you've gained, your **rate per hour** and **time left**.

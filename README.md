@@ -39,6 +39,7 @@ addons share through LibSharedMedia.
   combat and off when leaving it; if you turned them on yourself (V key), they stay on. Hidden
   plates can still be clicked where their bar would be, because addons can't change a plate's
   click area during combat.
+  <img width="600" height="441" alt="engagedNameplatesOnly" src=".github/screenshots/engagedNameplatesOnly.png" />
 - **Mark most valuable quest reward**: when a quest offers a choice of rewards, a gold coin
   marks the one that sells to a vendor for the most gold (vendor price × stack size).
 - **Show quest level**: the quest's level in front of its title in the quest dialog and quest
@@ -47,10 +48,12 @@ addons share through LibSharedMedia.
   your least valuable bag slots (vendor price × stack size), ranked from red to yellow, with
   rank numbers and sell values. Everything else is dimmed; the bags work as normal underneath.
   Alt+click an item to leave it out of the ranking; the ignore list is editable in the options.
+  <img width="191" height="483" alt="bagTithe" src=".github/screenshots/bagTithe.png" />
 - **Potential Upgrades**: arrows on bag items and quest rewards, plus a tooltip line, for items
   that beat what you have equipped. Green = clear upgrade (usable now and at least as good on every
   stat that matters for your class, plus armor or weapon DPS). Yellow = likely upgrade (better by a
   simple per-class stat priority). Grey = upgrade once you reach the required level.
+  <img width="283" height="254" alt="potentialUpgrade" src=".github/screenshots/potentialUpgrade.png" />
 - **Known recipes**: recipes you already know get a green check at vendors (with a greyed-out icon)
   and in your bags, so you don't have to mouse over each one. Works for anything the game calls
   "Already known". Optionally marks recipes for your professions you can learn now (green +) or once
@@ -71,6 +74,7 @@ addons share through LibSharedMedia.
   to buy, and the row tooltip says how much. Item tooltips on a main ingredient list what it cooks
   into and what's missing. Vendor items are recognised from a built-in list plus what you see at
   merchants. Open cooking once per character so it knows your recipes. Optionally all professions.
+  <img width="600" height="499" alt="sousChef" src=".github/screenshots/sousChef.png" />
 - **Double-click fishing**: with a fishing pole in your main hand, double right-click the world to
   cast Fishing (your highest rank). Right-clicking NPCs and players, and holding right-click to turn
   the camera, work as normal. The double-click time is adjustable.
@@ -79,6 +83,7 @@ addons share through LibSharedMedia.
 - **Campfire timer**: a progress bar in the middle of the screen while you rest at a Welcoming
   Campfire, with the time left. It turns green (with a sound) when Camp Benefits is ready. Width
   and position are adjustable; `/nra campfire` shows a 10-second preview.
+  <img width="261" height="57" alt="welcomingCampfire" src=".github/screenshots/welcomingCampfire.png" />
 - **Farm goals**: set goals like "loot 4000 Silk Cloth", "reach level 40", "gain 50,000 XP",
   "earn 100 gold", "reach Revered with Timbermaw Hold", "Swords to 300 (or to its cap)" or a
   currency amount (reach a level or gain an amount), and track them in a small movable window: progress bar, amount gained, rate per
