@@ -32,6 +32,7 @@ Modules\InventoryTracker.lua
 Modules\InventoryBrowser.lua
 Modules\OpenClams.lua
 Modules\SousChef.lua
+Modules\DoubleClickFishing.lua
 Modules\UnspentTalents.lua
 Modules\CampfireTimer.lua
 Modules\FarmGoals.lua

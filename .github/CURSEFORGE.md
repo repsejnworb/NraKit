@@ -62,6 +62,9 @@ Have the meat but not the spices? In the cooking window, recipes where you have 
 - Tooltips on main ingredients list what they cook into and what's missing.
 - Optionally only for recipes that still give skill, and optionally for all professions.
 
+### Double-click fishing
+With a **fishing pole in your main hand**, **double right-click** the world to cast Fishing. Right-clicking NPCs and players, and holding right-click to turn the camera, work as normal. The double-click time is adjustable.
+
 ### Unspent talent points
 A **reminder in the middle of the screen** while you have talent points to spend. Size and position are adjustable, and it can hide in combat.
 

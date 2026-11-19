@@ -71,6 +71,9 @@ addons share through LibSharedMedia.
   to buy, and the row tooltip says how much. Item tooltips on a main ingredient list what it cooks
   into and what's missing. Vendor items are recognised from a built-in list plus what you see at
   merchants. Open cooking once per character so it knows your recipes. Optionally all professions.
+- **Double-click fishing**: with a fishing pole in your main hand, double right-click the world to
+  cast Fishing (your highest rank). Right-clicking NPCs and players, and holding right-click to turn
+  the camera, work as normal. The double-click time is adjustable.
 - **Unspent talent points**: a reminder in the middle of the screen while you have talent points
   to spend (hidden while dead and, optionally, in combat). Size and position are adjustable.
 - **Campfire timer**: a progress bar in the middle of the screen while you rest at a Welcoming

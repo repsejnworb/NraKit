@@ -75,6 +75,13 @@ local methods = {
 	GetScript = function(self, name)
 		return self.scripts[name]
 	end,
+	SetAttribute = function(self, name, value)
+		rawset(self, "attributes", rawget(self, "attributes") or {})
+		self.attributes[name] = value
+	end,
+	GetAttribute = function(self, name)
+		return rawget(self, "attributes") and self.attributes[name]
+	end,
 	HookScript = function(self, name, fn)
 		local old = self.scripts[name]
 		self.scripts[name] = function(...)
