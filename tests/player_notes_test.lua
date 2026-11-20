@@ -272,7 +272,7 @@ return {
 			end
 			t.equal(Listed("Ann Lee"), 1, "shift-click: only that section open")
 			t.equal(Listed("Gil Rowe"), 0, "the others folded")
-			wow.click("Unfold all")
+			t.ok(wow.click("Fold all") and wow.click("Unfold all"), "everything open again")
 		end)
 
 		t.test("a player's page: + Tag picks your tags or makes a new one; a click removes one", function()
@@ -361,6 +361,36 @@ return {
 			wow.data.units.mouseover = nil
 
 			notes.SetTone("Ann Lee", "hostile")
+		end)
+
+		t.test("label filters narrow the list, together, and reset when the window closes", function()
+			NraKitPlayerNotesFrame:Hide()
+			ns:OpenPlayerNotes()
+			local function Listed(name)
+				return #wow.findAll(function(frame)
+					return wow.visible(frame) and rawget(frame, "key") and rawget(frame.text, "text") == name
+				end)
+			end
+			notes.SetTone("Ann Lee", "hostile")
+			notes.SetTone("Gil Rowe", "friendly")
+			t.ok(wow.click("KoS"), "KoS filter")
+			t.ok(Listed("Ann Lee") > 0, "Kill on sight shown")
+			t.equal(Listed("Gil Rowe"), 0, "Liked hidden")
+			t.ok(wow.click("Liked"), "and Liked")
+			t.ok(Listed("Ann Lee") > 0 and Listed("Gil Rowe") > 0, "both together")
+			t.ok(wow.click("KoS") and wow.click("Liked"), "off again")
+			for key, record in pairs(players()) do
+				if record.tone == "neutral" then
+					notes.SetTone(record.name, "caution")
+				end
+			end
+			t.ok(wow.click("Neutral"), "a label nobody has")
+			t.ok(wow.click("Clear filters"), "nobody matches: Clear filters")
+			t.ok(Listed("Ann Lee") > 0, "everyone back")
+			wow.click("Liked")
+			NraKitPlayerNotesFrame:Hide()
+			ns:OpenPlayerNotes()
+			t.ok(Listed("Ann Lee") > 0, "filters reset when the window closes")
 		end)
 
 		t.test("+ Add player: needs a surname, then opens the new player", function()

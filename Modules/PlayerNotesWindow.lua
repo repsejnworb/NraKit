@@ -3,7 +3,8 @@ local _, ns = ...
 -- Player notes window (/nra note, or Player note in a player's right-click menu).
 --
 -- Sidebar: "+ Add player" (a page with a name box, and your target as a shortcut),
--- search (name, label, tag or note text) and the players: in a section per tag
+-- search (name, label, tag or note text), a filter chip per label (any number on; they
+-- reset when the window closes) and the players: in a section per tag
 -- (foldable, Kill on sight first within each; shift-click folds all others), then those
 -- without tags, with Fold all above. A search gives one list, newest change first.
 -- Typing a name nobody has offers "+ Add <name>" too. At the bottom, Tags. Shift-click a
@@ -26,10 +27,11 @@ local PAD = UI.PAD
 local FOOTER_HEIGHT = 34
 local BODY_WIDTH = WIDTH - SIDEBAR_WIDTH
 
-local frame, searchBox, sidebarScroll, tagsButton, addButton
+local frame, searchBox, sidebarScroll, tagsButton, addButton, filterChips
 local playerPage, emptyPage, tagsPage, addPage
 local sidebarPool, chipPool, logPool, tagPool = UI.CreatePool(), UI.CreatePool(), UI.CreatePool(), UI.CreatePool()
 local newTagOpen = false -- the player page's "New tag" box is showing
+local toneFilter = {} -- [tone key] = true: the labels the list is narrowed to (none: all)
 local STAR_SIZE = 18
 
 local page = "empty" -- "player", "empty", "add" or "tags"
@@ -112,7 +114,14 @@ local function AfterSave(record)
 	end
 end
 
+local function Filtering()
+	return next(toneFilter) ~= nil
+end
+
 local function Matches(record)
+	if Filtering() and not toneFilter[record.tone] then
+		return false
+	end
 	if query == "" then
 		return true
 	end
@@ -143,7 +152,7 @@ end
 local function Section(tag)
 	local list = {}
 	for key, record in pairs(notes.GetData().players) do
-		if (tag and notes.HasTag(record, tag)) or (not tag and #record.tags == 0) then
+		if ((tag and notes.HasTag(record, tag)) or (not tag and #record.tags == 0)) and Matches(record) then
 			table.insert(list, { key = key, record = record })
 		end
 	end
@@ -327,26 +336,32 @@ local function RenderSidebar()
 		end
 	elseif next(notes.GetData().players) then
 		shown = 1
-		local used = {}
+		-- Sections with players (with a filter on: matching ones), counting those.
+		local used, sections = {}, {}
 		local keys = { UNTAGGED }
 		for _, tag in ipairs(tags) do
-			if tag.count > 0 then
+			sections[tag.key] = Section(tag.name)
+			if #sections[tag.key] > 0 then
 				table.insert(used, tag)
 				table.insert(keys, tag.key)
 			end
 		end
-		AddFoldAll(keys)
+		local untagged = Section(nil)
+		if Filtering() and #used == 0 and #untagged == 0 then
+			shown = 0
+		else
+			AddFoldAll(keys)
+		end
 		for _, tag in ipairs(used) do
-			if AddHeader("#" .. tag.name, tag.count, tag.key) then
-				for _, entry in ipairs(Section(tag.name)) do
+			if AddHeader("#" .. tag.name, #sections[tag.key], tag.key) then
+				for _, entry in ipairs(sections[tag.key]) do
 					AddPlayer(entry, false)
 				end
 			end
 		end
-		-- Always there, even empty: it shows that players can be grouped.
-		local untagged = Section(nil)
-		if AddHeader("No tags", #untagged, UNTAGGED) then
-			if #used == 0 then
+		-- Always there (unless filtered away), even empty: it shows that players can be grouped.
+		if (not Filtering() or #untagged > 0) and AddHeader("No tags", #untagged, UNTAGGED) then
+			if #used == 0 and not Filtering() then
 				AddHint("Tag players on their page (Ninjalooter, Good tank, ...) to group them here.")
 			end
 			for _, entry in ipairs(untagged) do
@@ -361,9 +376,27 @@ local function RenderSidebar()
 			text:SetWidth(width - 8)
 			return text
 		end)
-		empty:SetText(query ~= "" and "Nobody matches." or "No notes yet.")
+		local filtered = query ~= "" or Filtering()
+		empty:SetText(filtered and "Nobody matches." or "No notes yet.")
 		empty:SetPoint("TOPLEFT", content, "TOPLEFT", 6, y - 4)
 		y = y - 24
+		if Filtering() then
+			local clear = sidebarPool:Acquire("clear", function()
+				local button = UI.CreateFlatButton(content, "Clear filters", 20)
+				button:SetScript("OnClick", function()
+					wipe(toneFilter)
+					Render()
+				end)
+				return button
+			end)
+			clear:SetPoint("TOPLEFT", content, "TOPLEFT", 6, y - 2)
+			y = y - 28
+		end
+	end
+	for _, chip in ipairs(filterChips) do
+		local tone = notes.GetTone(chip.tone)
+		chip:SetSelected(toneFilter[chip.tone] == true)
+		chip.text:SetTextColor(notes.ToneColor(tone))
 	end
 	content:SetSize(width, -y)
 	sidebarScroll:UpdateThumb()
@@ -1072,8 +1105,37 @@ local function CreateNotesWindow()
 		Render()
 	end)
 
+	-- A filter chip per label, sharing the row.
+	filterChips = {}
+	local chipX, chipGap = PAD, 4
+	local chipWidth = (SIDEBAR_WIDTH - 2 * PAD - 3 * chipGap) / 4
+	for _, tone in ipairs(notes.TONES) do
+		local chip = UI.CreateFlatButton(frame.sidebar, tone.short, 20)
+		chip.tone = tone.key
+		chip:SetWidth(chipWidth)
+		chip:SetPoint("TOPLEFT", chipX, -PAD - 72)
+		chipX = chipX + chipWidth + chipGap
+		chip:SetScript("OnClick", function(self)
+			toneFilter[self.tone] = not toneFilter[self.tone] or nil
+			Render()
+		end)
+		chip:SetScript("OnEnter", function(self)
+			local count = 0
+			for _, record in pairs(notes.GetData().players) do
+				if record.tone == self.tone then
+					count = count + 1
+				end
+			end
+			UI.ShowTooltip(self, notes.GetTone(self.tone).name, string.format(
+				"Show only players labelled %s (%d). Turn on more than one to see them together.",
+				notes.GetTone(self.tone).name, count))
+		end)
+		chip:SetScript("OnLeave", GameTooltip_Hide)
+		table.insert(filterChips, chip)
+	end
+
 	sidebarScroll = UI.CreateScrollArea(frame.sidebar)
-	sidebarScroll:SetPoint("TOPLEFT", PAD, -PAD - 72)
+	sidebarScroll:SetPoint("TOPLEFT", PAD, -PAD - 100)
 	sidebarScroll:SetPoint("BOTTOMRIGHT", -PAD, PAD + 36)
 
 	tagsButton = UI.CreateNavButton(frame.sidebar, SIDEBAR_WIDTH - 2 * PAD, 28, "Tags")
@@ -1089,6 +1151,9 @@ local function CreateNotesWindow()
 	CreateAddPage(frame.body)
 
 	frame:HookScript("OnShow", Render)
+	frame:HookScript("OnHide", function()
+		wipe(toneFilter) -- a forgotten filter would make the list look broken next time
+	end)
 	notes.onChanged = Render
 end
 

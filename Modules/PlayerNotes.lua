@@ -115,13 +115,13 @@ local notes = {}
 ns.playerNotes = notes
 
 -- The four labels ("tones"), in the order they're listed. warn: group/whisper/... warnings;
--- scan: Unit Scanner. words: what you can type for them in /nra note.
+-- scan: Unit Scanner. short: for the notebook's filters. words: what you can type for them in /nra note.
 notes.TONES = {
-	{ key = "hostile", name = "Kill on sight", color = { 1, 0.25, 0.2 }, warn = true, scan = true,
+	{ key = "hostile", name = "Kill on sight", short = "KoS", color = { 1, 0.25, 0.2 }, warn = true, scan = true,
 		words = { "kos", "killonsight", "hostile" } },
-	{ key = "caution", name = "Avoid", color = { 1, 0.55, 0.15 }, warn = true, words = { "avoid", "caution" } },
-	{ key = "neutral", name = "Neutral", color = { 0.7, 0.7, 0.7 }, words = { "neutral" } },
-	{ key = "friendly", name = "Liked", color = { 0.3, 0.85, 0.35 }, words = { "liked", "like", "good", "friend", "friendly" } },
+	{ key = "caution", name = "Avoid", short = "Avoid", color = { 1, 0.55, 0.15 }, warn = true, words = { "avoid", "caution" } },
+	{ key = "neutral", name = "Neutral", short = "Neutral", color = { 0.7, 0.7, 0.7 }, words = { "neutral" } },
+	{ key = "friendly", name = "Liked", short = "Liked", color = { 0.3, 0.85, 0.35 }, words = { "liked", "like", "good", "friend", "friendly" } },
 }
 local TONE_BY_KEY, TONE_BY_WORD = {}, {}
 for index, tone in ipairs(notes.TONES) do

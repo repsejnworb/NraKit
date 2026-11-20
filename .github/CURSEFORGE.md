@@ -249,7 +249,7 @@ Remember who stole your mining node, who ninja'd the loot and who was a great he
 
 **Tags**
 - Group players your way: **Ninjalooter, Good tank, Guildie**. A player can have any number.
-- The notebook's list has a **section per tag**, then the players without tags. Click a section to fold it, shift-click to fold all the others, or use **Fold all**.
+- The notebook's list has a **section per tag**, then the players without tags. **Filter chips** under the search (KoS, Avoid, Neutral, Liked) narrow it to those labels. Click a section to fold it, shift-click to fold all the others, or use **Fold all**.
 - On a player's page, **+ Tag** lists your tags to tick, or makes a new one. From chat, use **#**.
 - The **Tags** page adds tags, renames them (renaming into an existing tag merges them) and deletes them.
 

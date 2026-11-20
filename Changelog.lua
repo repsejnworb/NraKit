@@ -21,6 +21,7 @@ ns.changelog = {
 		{ "improved", "Player notes: the label is now one of four (Kill on sight, Avoid, Neutral, Liked), and tags do the grouping. Your own labels became tags automatically, with the label they were based on; Good and Friend became Liked." },
 		{ "improved", "Player notes: right-click a player for Player note, where you can label them (Kill on sight, Avoid, Neutral, Liked) in one click, or open their notes." },
 		{ "new", "Player notes: rate the players you like, 1 to 5 stars in halves. Click the stars next to Liked on their page, or right-click a player: Player note, Like and rate (which then opens their notes for a note or tags; an option). The stars show in their tooltip and in your notes, and come along when you share a note." },
+		{ "new", "Player notes: filter the list by label. The KoS, Avoid, Neutral and Liked chips under the search show only those players (turn on more than one to see them together); they reset when you close the window." },
 	} },
 	{ version = "0.22.0", date = "2026-11-20", entries = {
 		{ "fixed", "Campfire timer: getting up early no longer says \"Camp Benefits ready\" when you already had Camp Benefits from an earlier rest." },
