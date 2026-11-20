@@ -1,9 +1,12 @@
-# NraKit 0.21.0
+# NraKit 0.22.0
 
 ### New
-- Damage meter look: a clean, flat look for the game's damage meter. A thin header with a small title and small buttons (shown only while your mouse is over the meter, if you like), flat bars in a softer class colour and outlined text. Size, style and colours are still set in Edit Mode.
+- Player notes: share a note in chat. Shift-click a player in your notes (or Link in chat on their page) to put [NraKit note: Name] in chat. Others with NraKit can click it to see the player's label and notes and add them to theirs; notes keep who wrote them, and their own label stays unless they pick yours.
+
+### Improved
+- Campfire timer: the bar shows once each time you sit down at the fire, not again every minute while you stay seated.
 
 ### Fixed
-- What's new: the Settings button next to a new feature can be clicked again; the feature's on/off switch no longer covers it.
+- Campfire timer: getting up early no longer says "Camp Benefits ready" when you already had Camp Benefits from an earlier rest.
 
 Type /nra new in game to see what's new in every version.
