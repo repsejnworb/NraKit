@@ -504,7 +504,21 @@ function wow.install()
 	G.CreateSettingsButtonInitializer = function()
 		return NewObject("Initializer")
 	end
-	G.ChatFrameUtil = { InsertLink = function() end }
+	-- Chat: links put in the chat box, and message filters (run them with wow.chat).
+	wow.chatFilters = {}
+	G.ChatFrameUtil = {
+		InsertLink = function(text)
+			wow.chatBox = text
+			return true
+		end,
+		OpenChat = function(text)
+			wow.chatBox = text
+		end,
+		AddMessageEventFilter = function(event, filter)
+			wow.chatFilters[event] = wow.chatFilters[event] or {}
+			table.insert(wow.chatFilters[event], filter)
+		end,
+	}
 
 	local function Unit(unit)
 		return wow.data.units[unit]
@@ -639,6 +653,16 @@ function wow.install()
 		end
 	end
 	G.EventRegistry = NewObject("EventRegistry")
+	wow.registryCallbacks = {}
+	rawset(G.EventRegistry, "RegisterCallback", function(_, event, callback, owner)
+		wow.registryCallbacks[event] = wow.registryCallbacks[event] or {}
+		table.insert(wow.registryCallbacks[event], { callback = callback, owner = owner })
+	end)
+	rawset(G.EventRegistry, "TriggerEvent", function(_, event, ...)
+		for _, entry in ipairs(wow.registryCallbacks[event] or {}) do
+			entry.callback(entry.owner, ...)
+		end
+	end)
 	G.GetCursorInfo = function()
 		if wow.data.cursorItem then
 			return "item", wow.data.cursorItem
@@ -748,6 +772,23 @@ end
 
 
 -- Moves the clock on and runs every shown frame's OnUpdate, like frames being drawn.
+-- A chat line as the chat window shows it, after every message filter: returns the text.
+function wow.chat(event, message, author)
+	for _, filter in ipairs(wow.chatFilters[event] or {}) do
+		local hide, newMessage = filter(nil, event, message, author)
+		if hide then
+			return nil
+		end
+		message = newMessage or message
+	end
+	return message
+end
+
+-- Clicks a link in chat ("addon:..." links go to EventRegistry's SetItemRef, like the game).
+function wow.clickLink(link)
+	EventRegistry:TriggerEvent("SetItemRef", link, link, "LeftButton")
+end
+
 function wow.advance(seconds)
 	wow.now = (wow.now or 1000) + seconds
 	for _, frame in ipairs(wow.frames) do

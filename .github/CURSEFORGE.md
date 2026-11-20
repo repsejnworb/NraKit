@@ -255,6 +255,12 @@ Remember who stole your mining node, who ninja'd the loot and who was a great he
 - With a player targeted, just **/nra note ninja'd the loot** (or **/nra note avoid ninja'd the loot** to label them too).
 - **/nra note !remove** takes your target out of your notes (**!undo** brings them back).
 
+**Share notes in chat**
+- **Shift-click a player** in your notebook (or **Link in chat** on their page) to put **[NraKit note: Name]** in your chat box.
+- Others with NraKit see it as a link. Clicking it shows the player's label and notes, with **Add** and **Cancel**.
+- Added notes keep who wrote them. Notes you already have are skipped, and your own label stays unless you pick theirs.
+- Only players you've linked can be fetched, and only while you're online.
+
 ![playerNoteWarning](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/playerNoteWarning.png)
 
 ## Feedback and bugs

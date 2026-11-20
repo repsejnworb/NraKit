@@ -43,6 +43,7 @@ Modules\FarmGoalsWindow.lua
 Modules\UnitScanner.lua
 Modules\PlayerNotes.lua
 Modules\PlayerNotesWindow.lua
+Modules\PlayerNotesShare.lua
 Modules\LeaveGroup.lua
 Modules\Mail.lua
 Modules\OpenSelectedMail.lua

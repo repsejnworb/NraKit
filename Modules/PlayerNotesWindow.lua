@@ -141,6 +141,10 @@ local function RenderSidebar()
 		local button = sidebarPool:Acquire("nav", function()
 			local nav = UI.CreateNavButton(content, width, 38, "")
 			nav:SetScript("OnClick", function(self)
+				if self.key and IsModifiedClick("CHATLINK") then
+					ns.playerNotesShare.Link(self.key)
+					return
+				end
 				if self.key then
 					Select(self.key)
 				else
@@ -261,17 +265,6 @@ local function RenderChips(record, y)
 	return y - 28
 end
 
-local function DescribeNote(note)
-	local parts = { FormatDate(note.time) }
-	if note.zone then
-		table.insert(parts, note.zone)
-	end
-	if note.by then
-		table.insert(parts, "by " .. note.by)
-	end
-	return table.concat(parts, "  ·  ")
-end
-
 local function RenderLog(record, key)
 	logPool:ReleaseAll()
 	local scroll = playerPage.scroll
@@ -303,7 +296,7 @@ local function RenderLog(record, key)
 			entry.delete:SetScript("OnLeave", GameTooltip_Hide)
 			return entry
 		end)
-		row.meta:SetText(DescribeNote(note))
+		row.meta:SetText(notes.DescribeNote(note))
 		row.text:SetWidth(width - 20)
 		row.text:SetText(note.text)
 		row.delete.key, row.delete.index = key, index
@@ -360,6 +353,7 @@ local function RenderPlayer()
 	p.scroll:SetPoint("BOTTOMRIGHT", -PAD - 14, FOOTER_HEIGHT + 6)
 	RenderLog(record, key)
 
+	p.linkButton:SetShown(record ~= nil)
 	p.deleteButton:SetShown(record ~= nil)
 	p.deleteButton.text:SetText(confirmDelete and "Click again to delete" or "Delete player")
 	p.deleteButton:SetWidth(p.deleteButton.text:GetStringWidth() + 20)
@@ -393,6 +387,18 @@ local function CreatePlayerPage(body)
 	footer:SetPoint("BOTTOMRIGHT")
 	footer:SetHeight(FOOTER_HEIGHT)
 	UI.AddLine(footer, "TOP")
+	p.linkButton = UI.CreateFlatButton(footer, "Link in chat", 22)
+	p.linkButton:SetPoint("LEFT", PAD, 0)
+	p.linkButton:SetScript("OnClick", function()
+		local _, key = Current()
+		if key then
+			ns.playerNotesShare.Link(key)
+		end
+	end)
+	p.linkButton:SetScript("OnEnter", function(self)
+		UI.ShowTooltip(self, "Link in chat", "Puts [NraKit note: " .. (CurrentName() or "") .. "] in your chat box. Others with NraKit can click it to see this player's label and notes, and add them to theirs (while you're online). Shift-click a player in the list does the same.")
+	end)
+	p.linkButton:SetScript("OnLeave", GameTooltip_Hide)
 	p.deleteButton = UI.CreateFlatButton(footer, "Delete player", 22)
 	p.deleteButton:SetPoint("RIGHT", -PAD, 0)
 	p.deleteButton:SetScript("OnClick", function()
@@ -429,6 +435,8 @@ local EMPTY_TEXT = table.concat({
 	"|cffffd100Right-click a player|r (their portrait, a party frame or their name in chat) and pick |cffffd100Player note...|r, or set a label straight from |cffffd100Player label|r.",
 	"",
 	"|cffffd100+ Add player|r (top left) adds someone by name, or your target.",
+	"",
+	"|cffffd100Shift-click a player|r in the list to link their note in chat. Others with NraKit can click the link to see it and add it to theirs.",
 	"",
 	"|cffffd100From chat:|r /nra note Bob Stone kos stole my node  (or /nra note kos ... for your target).",
 	"",

@@ -16,8 +16,10 @@ local _, ns = ...
 -- still matches after a rename. Names and GUIDs can be secret values (combat,
 -- instances); those players are skipped, the notes themselves are never touched.
 --
+-- Notes can be linked in chat and added from someone else's link (PlayerNotesShare.lua).
+--
 -- Data (account-wide): NraKitDB.playerNotesData = {
---   players = { [key] = { name, guid, class, label, notes = { { text, time, zone, by } }, created, updated } },
+--   players = { [key] = { name, guid, class, label, notes = { { text, time, zone, by, sharedBy? } }, created, updated } },
 --   labels = { { id, name, tone, color = { r, g, b }? }, ... }, nextLabel,
 -- }
 
@@ -79,6 +81,13 @@ local module = {
 			name = "Sound",
 			description = "Which sound to play with a warning.",
 			default = "kit:UI_RAID_BOSS_WHISPER_WARNING",
+		},
+		{
+			key = "playerNotesShareLinks",
+			header = "Sharing",
+			name = "Note links in chat",
+			description = "Show [NraKit note: Name] in chat as a link: click it to see that player's label and notes and add them to yours. Share your own by shift-clicking a player in your notes.",
+			default = true,
 		},
 		{
 			key = "playerNotesScanHostile",
@@ -445,6 +454,21 @@ function notes.LatestNote(record)
 	return record and record.notes[#record.notes]
 end
 
+-- "12 Mar 2026  ·  Westfall  ·  by Bob Stone  ·  shared by Ann Lee"
+function notes.DescribeNote(note)
+	local parts = { date("%d %b %Y", note.time) }
+	if note.zone then
+		table.insert(parts, note.zone)
+	end
+	if note.by then
+		table.insert(parts, "by " .. note.by)
+	end
+	if note.sharedBy and note.sharedBy ~= note.by then
+		table.insert(parts, "shared by " .. note.sharedBy)
+	end
+	return table.concat(parts, "  ·  ")
+end
+
 function notes.Snippet(text, length)
 	length = length or SNIPPET_LENGTH
 	if #text > length then
@@ -539,6 +563,66 @@ end
 
 function notes.RecordLabel(record)
 	return record and (notes.GetLabel(record.label) or DefaultLabel())
+end
+
+-- Your label for someone else's: the one with the same name, else the first of the same tone.
+function notes.MatchLabel(name, toneKey)
+	name = name and name:lower()
+	for _, label in ipairs(notes.GetLabels()) do
+		if label.name:lower() == name then
+			return label
+		end
+	end
+	return ToneDefault(TONE_BY_KEY[toneKey] and toneKey or "neutral") or DefaultLabel()
+end
+
+-- Whether the record already has this note (same text and time).
+function notes.HasNote(record, note)
+	for _, mine in ipairs(record and record.notes or {}) do
+		if mine.text == note.text and mine.time == note.time then
+			return true
+		end
+	end
+	return false
+end
+
+-- Adds a shared note: shared = { name, label, tone, notes = { { text, time, zone, by } }, from }.
+-- A new player gets the matching label; someone you have keeps yours unless useLabel.
+-- Notes you already have are skipped; the rest keep their author and say who shared them.
+-- Returns the record and how many notes were added.
+function notes.Import(shared, useLabel)
+	local isNew = notes.Find(shared.name) == nil
+	local record = notes.Ensure(shared.name)
+	if isNew or useLabel then
+		record.label = notes.MatchLabel(shared.label, shared.tone).id
+	end
+	local added = 0
+	for _, note in ipairs(shared.notes) do
+		if not notes.HasNote(record, note) then
+			table.insert(record.notes, {
+				text = note.text,
+				time = note.time,
+				zone = note.zone,
+				by = note.by or shared.from,
+				sharedBy = shared.from,
+			})
+			added = added + 1
+		end
+	end
+	-- By time, keeping the order of notes from the same second.
+	local order = {}
+	for index, note in ipairs(record.notes) do
+		order[note] = index
+	end
+	table.sort(record.notes, function(a, b)
+		if (a.time or 0) ~= (b.time or 0) then
+			return (a.time or 0) < (b.time or 0)
+		end
+		return order[a] < order[b]
+	end)
+	record.updated = time()
+	Changed()
+	return record, added
 end
 
 ------------------------------------------------------------------------------

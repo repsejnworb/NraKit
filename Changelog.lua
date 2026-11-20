@@ -19,6 +19,7 @@ ns.changelog = {
 	{ version = "Unreleased", entries = {
 		{ "fixed", "Campfire timer: getting up early no longer says \"Camp Benefits ready\" when you already had Camp Benefits from an earlier rest." },
 		{ "improved", "Campfire timer: the bar shows once each time you sit down at the fire, not again every minute while you stay seated." },
+		{ "new", "Player notes: share a note in chat. Shift-click a player in your notes (or Link in chat on their page) to put [NraKit note: Name] in chat. Others with NraKit can click it to see the player's label and notes and add them to theirs; notes keep who wrote them, and their own label stays unless they pick yours.", module = "playerNotes" },
 	} },
 	{ version = "0.21.0", date = "2026-11-20", entries = {
 		{ "new", "Damage meter look: a clean, flat look for the game's damage meter. A thin header with a small title and small buttons (shown only while your mouse is over the meter, if you like), flat bars in a softer class colour and outlined text. Size, style and colours are still set in Edit Mode.", module = "damageMeterLook" },

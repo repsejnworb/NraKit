@@ -390,6 +390,13 @@ of notes** (each saves the date, zone and your character).
   - with a player targeted, just `/nra note ninja'd the loot` (or `/nra note avoid ninja'd the loot`
     to label them too);
   - `/nra note !remove` takes your target out of your notes (`!undo` brings them back).
+- **Share a note in chat:** shift-click a player in your notebook (or **Link in chat** on their page) to
+  put `[NraKit note: Name]` in your chat box.
+  - Others with NraKit see it as a link. Clicking it shows the player's label and notes, with
+    **Add** and **Cancel**.
+  - Added notes keep who wrote them. Notes you already have are skipped, and your own label stays
+    unless you pick theirs.
+  - Only players you've linked can be fetched, and only while you're online.
 
 <img width="447" height="27" alt="playerNoteWarning" src=".github/screenshots/playerNoteWarning.png" />
 
