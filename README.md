@@ -90,8 +90,10 @@ addons share through LibSharedMedia.
   to spend (hidden while dead and, optionally, in combat). Size and position are adjustable.
   <img width="307" height="82" alt="unspentTalentPoints" src=".github/screenshots/unspentTalentPoints.png" />
 - **Campfire timer**: a progress bar in the middle of the screen while you rest at a Welcoming
-  Campfire, with the time left. It turns green (with a sound) when Camp Benefits is ready. Width
-  and position are adjustable; `/nra campfire` shows a 10-second preview.
+  Campfire, with the time left. It turns green (with a sound) when Camp Benefits is ready. In a
+  sleeping bag it counts your Well-Rested stacks up to 3 (with the time left once it has seen how
+  long a stack takes). Width and position are adjustable; `/nra campfire` shows a 10-second
+  preview, `/nra preview sleepingbag` the sleeping bag.
   <img width="261" height="57" alt="welcomingCampfire" src=".github/screenshots/welcomingCampfire.png" />
 - **Farm goals**: set goals like "loot 4000 Silk Cloth", "reach level 40", "gain 50,000 XP",
   "earn 100 gold", "reach Revered with Timbermaw Hold", "Swords to 300 (or to its cap)" or a

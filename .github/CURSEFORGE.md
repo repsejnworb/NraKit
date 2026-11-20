@@ -88,8 +88,9 @@ A **reminder in the middle of the screen** while you have talent points to spend
 
 ### Campfire timer
 A **progress bar in the middle of the screen** while you rest at a Welcoming Campfire, with the time left. It turns green (with a sound) when Camp Benefits is ready.
+- **Sleeping bags too:** it counts your Well-Rested stacks up to 3, with the time left once it has seen how long a stack takes.
 - Width and position are adjustable.
-- **/nra campfire** shows a 10-second preview.
+- **/nra campfire** shows a 10-second preview, **/nra preview sleepingbag** the sleeping bag.
 
 ![welcomingCampfire](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/welcomingCampfire.png)
 

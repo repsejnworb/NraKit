@@ -16,6 +16,9 @@ local _, ns = ...
 --           "new" entry with its module (tests/changelog_test.lua checks).
 
 ns.changelog = {
+	{ version = "Unreleased", entries = {
+		{ "new", "Campfire timer: also works in a sleeping bag. The bar counts your Well-Rested stacks up to 3 and turns green (with the sound) when you're fully rested. After the first stack it also knows how long the rest takes, and shows the time left. It can be turned off in its settings. /nra preview sleepingbag shows it." },
+	} },
 	{ version = "0.19.0", date = "2026-11-20", entries = {
 		{ "new", "/nra preview: see any of NraKit's on-screen messages with made-up content (goal complete, milestones, quest reminders, Unit Scanner alerts, player warnings, the talent reminder, the campfire bar), to check how they look. /nra preview lists them." },
 		{ "new", "Quests to turn in: /nra done (or a key) shows a small list of your finished quests by the zone you turn them in. Click one to see it on the map, right-click to make it your waypoint. The zones are sorted by how far away they are, and entering one where you have quests to turn in shows a small message you can click to open the list.", module = "turnInQuests" },

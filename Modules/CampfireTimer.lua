@@ -5,17 +5,27 @@ local _, ns = ...
 -- watching the buff icon. When the rest finishes you get "Camp Benefits"; the bar then
 -- turns green, says so for a few seconds and fades out. Walking away early just hides it.
 -- The look is borrowed from Leatrix Plus's flight progress bar.
+--
+-- Sleeping bags too: while you're in one ("Resting") you gain stacks of Well-Rested, and the
+-- bar waits for 3. The game doesn't say how often a stack comes, so the bar counts stacks
+-- and learns the time between them from your rests (saved), then shows the time left too.
 
 local module = {
 	key = "campfireTimer",
 	section = "Trackers & Reminders",
 	name = "Campfire timer",
-	description = "Show a progress bar in the middle of the screen while you rest at a Welcoming Campfire.",
+	description = "Show a progress bar in the middle of the screen while you rest at a Welcoming Campfire or in a sleeping bag.",
 	default = false,
 	options = {
 		{
-			key = "campfireTimerSound",
+			key = "campfireTimerSleepingBag",
 			header = "General",
+			name = "Sleeping bags",
+			description = "Also show the bar while you rest in a sleeping bag, until you have 3 stacks of Well-Rested.",
+			default = true,
+		},
+		{
+			key = "campfireTimerSound",
 			name = "Sound when done",
 			description = "Play a sound when the rest is finished.",
 			default = true,
@@ -49,18 +59,38 @@ local module = {
 -- Two spells carry the name "Welcoming Campfire"; 1229739 is the rest buff.
 local REST_SPELLS = { 1229739, 1289723 }
 local CAMP_BENEFITS = 1229741
+local SLEEPING_BAG = 1331671 -- "Resting": while you're in a sleeping bag
+local WELL_RESTED = 429959
+local WELL_RESTED_GOAL = 3
 
 local TITLE = "Welcoming Campfire"
 local DONE_TEXT = "Camp Benefits ready"
+local BAG_TITLE = "Well-Rested"
+local BAG_DONE_TEXT = "Fully Well-Rested"
 local FILL_COLOR = { 1, 0.6, 0.2 }
 local DONE_COLOR = { 0.3, 0.85, 0.3 }
 local DONE_SHOW_SECONDS = 3
 local FADE_SECONDS = 1
 local PREVIEW_SECONDS = 10
+local PREVIEW_STACK_SECONDS = 3
 
 local bar
-local resting -- { start, finish } while the buff is up (or a preview runs)
+-- While the bar counts down (or a preview runs):
+--   campfire: { start, finish }
+--   bag:      { bag = true, stacks, changedAt (when the last stack came, or you got in), interval? }
+local resting
 local doneAt -- GetTime() when the "done" message started
+local inBag -- in a sleeping bag at the last look
+
+-- Seconds between Well-Rested stacks, learned from your rests; nil until one is seen.
+local function StackInterval()
+	return NraKitDB.campfireTimerData and NraKitDB.campfireTimerData.wellRestedInterval
+end
+
+local function LearnStackInterval(seconds)
+	NraKitDB.campfireTimerData = NraKitDB.campfireTimerData or {}
+	NraKitDB.campfireTimerData.wellRestedInterval = seconds
+end
 
 local function Plain(value)
 	if issecretvalue and issecretvalue(value) then
@@ -90,9 +120,25 @@ local function MakeText(justify)
 	return text
 end
 
+local function OnUpdateBag(now)
+	local interval = resting.interval or StackInterval()
+	local count = string.format("%d/%d", resting.stacks, WELL_RESTED_GOAL)
+	if interval and interval > 0 then
+		local into = math.min((now - resting.changedAt) / interval, 0.99)
+		bar.track:SetValue((resting.stacks + into) / WELL_RESTED_GOAL)
+		local left = interval * (WELL_RESTED_GOAL - resting.stacks) - (now - resting.changedAt)
+		bar.time:SetText(count .. "  " .. FormatTime(left))
+	else
+		bar.track:SetValue(resting.stacks / WELL_RESTED_GOAL)
+		bar.time:SetText(count)
+	end
+end
+
 local function OnUpdate()
 	local now = GetTime()
-	if resting then
+	if resting and resting.bag then
+		OnUpdateBag(now)
+	elseif resting then
 		local total = resting.finish - resting.start
 		local progress = total > 0 and (now - resting.start) / total or 1
 		bar.track:SetValue(math.min(math.max(progress, 0), 1))
@@ -170,31 +216,46 @@ local function ApplyLayout()
 	bar:SetPoint("CENTER", UIParent, "CENTER", 0, ns:GetValue("campfireTimerOffsetY") or 160)
 end
 
-local function ShowResting(start, finish, icon)
+local function ShowBar(state, title, icon)
 	EnsureBar()
 	ApplyLayout()
-	resting = { start = start, finish = finish }
+	resting = state
 	doneAt = nil
-	bar.icon:SetTexture(icon or C_Spell.GetSpellTexture(REST_SPELLS[1]))
-	bar.title:SetText(TITLE)
+	bar.icon:SetTexture(icon)
+	bar.title:SetText(title)
 	bar.title:SetTextColor(1, 0.82, 0)
 	bar.track:SetStatusBarColor(unpack(FILL_COLOR))
 	bar.spark:Show()
 	bar:SetAlpha(1)
 	bar:Show()
-	OnUpdate()
+	if state then
+		OnUpdate()
+	end
 end
 
-local function ShowDone()
+local function ShowResting(start, finish, icon)
+	ShowBar({ start = start, finish = finish }, TITLE, icon or C_Spell.GetSpellTexture(REST_SPELLS[1]))
+end
+
+local function ShowBag(stacks)
+	ShowBar({ bag = true, stacks = stacks, changedAt = GetTime() }, BAG_TITLE, C_Spell.GetSpellTexture(WELL_RESTED))
+end
+
+-- silent: no sound (already done when you got in, so nothing was waited for).
+local function ShowDone(text, silent)
+	if not bar or not bar:IsShown() then
+		ShowBar(nil, "", C_Spell.GetSpellTexture(WELL_RESTED))
+	end
 	resting = nil
 	doneAt = GetTime()
-	bar.title:SetText(DONE_TEXT)
+	bar:SetAlpha(1)
+	bar.title:SetText(text or DONE_TEXT)
 	bar.title:SetTextColor(unpack(DONE_COLOR))
 	bar.time:SetText("")
 	bar.track:SetValue(1)
 	bar.track:SetStatusBarColor(unpack(DONE_COLOR))
 	bar.spark:Hide()
-	if ns:GetOption("campfireTimerSound") then
+	if not silent and ns:GetOption("campfireTimerSound") then
 		ns.sounds.PlayOption("campfireTimerSoundChoice", "kit:READY_CHECK")
 	end
 end
@@ -207,12 +268,53 @@ local function Stop()
 	end
 end
 
+local function WellRestedStacks()
+	local aura = C_UnitAuras.GetPlayerAuraBySpellID(WELL_RESTED)
+	if not aura then
+		return 0
+	end
+	return math.max(Plain(aura.applications) or 0, 1)
+end
+
+-- In a sleeping bag: count Well-Rested stacks up to the goal.
+local function UpdateBag()
+	local stacks = WellRestedStacks()
+	local gotIn = not inBag
+	inBag = true
+	local watching = resting and resting.bag
+	if watching and stacks > resting.stacks then
+		LearnStackInterval(GetTime() - resting.changedAt)
+	end
+	if stacks >= WELL_RESTED_GOAL then
+		if watching then
+			ShowDone(BAG_DONE_TEXT)
+		elseif gotIn then
+			ShowDone(BAG_DONE_TEXT, true)
+		end
+	elseif not watching then
+		ShowBag(stacks)
+	elseif stacks ~= resting.stacks then
+		resting.stacks = stacks
+		resting.changedAt = GetTime()
+	end
+end
+
 local function Update()
 	if not ns:IsModuleEnabled(module.key) then
+		inBag = nil
 		Stop()
 		return
 	end
 	if resting and resting.preview then
+		return
+	end
+	if ns:GetOption("campfireTimerSleepingBag") and C_UnitAuras.GetPlayerAuraBySpellID(SLEEPING_BAG) then
+		UpdateBag()
+		return
+	end
+	inBag = nil
+	if resting and resting.bag then
+		Stop() -- got out before the last stack
 		return
 	end
 	local aura = GetRestAura()
@@ -250,6 +352,32 @@ local function Preview()
 end
 
 ns:RegisterPreview("campfire", "Campfire timer: a 10-second rest (same as /nra campfire)", Preview)
+
+-- A sleeping bag rest with a stack every few seconds.
+local function PreviewBag()
+	if not ns:IsModuleEnabled(module.key) then
+		ns:Print("Campfire timer is turned off.")
+		return
+	end
+	ShowBag(0)
+	resting.preview = true
+	resting.interval = PREVIEW_STACK_SECONDS
+	local function NextStack()
+		if not (resting and resting.preview and resting.bag) then
+			return
+		end
+		resting.stacks = resting.stacks + 1
+		resting.changedAt = GetTime()
+		if resting.stacks >= WELL_RESTED_GOAL then
+			ShowDone(BAG_DONE_TEXT)
+		else
+			C_Timer.After(PREVIEW_STACK_SECONDS, NextStack)
+		end
+	end
+	C_Timer.After(PREVIEW_STACK_SECONDS, NextStack)
+end
+
+ns:RegisterPreview("sleepingbag", "Campfire timer: resting in a sleeping bag until 3 stacks of Well-Rested", PreviewBag)
 
 local eventFrame = CreateFrame("Frame")
 eventFrame:SetScript("OnEvent", Update)
