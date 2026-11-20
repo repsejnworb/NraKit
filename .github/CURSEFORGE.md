@@ -249,8 +249,8 @@ Remember who stole your mining node, who ninja'd the loot and who was a great he
 **Tags**
 - Group players your way: **Ninjalooter, Good tank, Guildie**. A player can have any number.
 - The notebook's list has a **section per tag**, then the players without tags. Click a section to fold it, shift-click to fold all the others, or use **Fold all**.
-- Add tags on a player's page (your other tags are suggested) or from chat with **#**.
-- The **Tags** page renames tags (renaming into an existing tag merges them) and deletes them.
+- On a player's page, **+ Tag** lists your tags to tick, or makes a new one. From chat, use **#**.
+- The **Tags** page adds tags, renames them (renaming into an existing tag merges them) and deletes them.
 
 **Your notebook**
 - **/nra note** opens your notebook, or your target's notes.

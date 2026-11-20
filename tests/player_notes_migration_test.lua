@@ -43,6 +43,11 @@ return {
 			Check("fay dorn", "neutral", "", "a label that no longer exists")
 			t.equal(players["ann lee"].notes[1].text, "ganked me", "notes kept")
 			t.ok(notes.GetData().labels == nil and notes.GetData().nextLabel == nil, "the label list is gone")
+			local tags = {}
+			for _, tag in ipairs(notes.AllTags()) do
+				table.insert(tags, tag.name)
+			end
+			t.equal(table.concat(tags, ","), "Gankers,Good tank", "the tag list")
 			t.noErrors()
 		end)
 	end,

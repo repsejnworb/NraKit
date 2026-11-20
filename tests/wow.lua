@@ -809,7 +809,7 @@ function wow.newMenu()
 		local function Add(kind, text, a, b)
 			local entry = Description()
 			entry.kind, entry.text = kind, text
-			if kind == "radio" then
+			if kind == "radio" or kind == "checkbox" then
 				entry.isSelected, entry.onClick = a, b
 			else
 				entry.onClick = a

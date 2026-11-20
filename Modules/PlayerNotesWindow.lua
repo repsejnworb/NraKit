@@ -10,11 +10,12 @@ local _, ns = ...
 -- player links them in chat.
 --
 -- A player's page: their label as four chips (one click to change), their tags (click
--- one to remove it; type to add, with your other tags as suggestions), a box to add a
+-- one to remove it; "+ Tag" opens a menu of your tags to tick, and New tag...), a box to add a
 -- note (saved with the date, zone and your character) and the log, newest first. A
 -- player opened from a menu who has no notes yet isn't saved until something is added.
 --
--- Tags page: every tag with how many players have it; rename (or merge) and delete.
+-- Tags page: add a tag, and every tag with how many players have it; rename (or merge)
+-- and delete.
 
 local UI = ns.UI
 local notes = ns.playerNotes
@@ -27,7 +28,7 @@ local BODY_WIDTH = WIDTH - SIDEBAR_WIDTH
 local frame, searchBox, sidebarScroll, tagsButton, addButton
 local playerPage, emptyPage, tagsPage, addPage
 local sidebarPool, chipPool, logPool, tagPool = UI.CreatePool(), UI.CreatePool(), UI.CreatePool(), UI.CreatePool()
-local MAX_SUGGESTIONS = 6
+local newTagOpen = false -- the player page's "New tag" box is showing
 
 local page = "empty" -- "player", "empty", "add" or "tags"
 local selectedKey -- the shown player's key, or nil
@@ -316,12 +317,16 @@ local function RenderSidebar()
 		end
 	elseif next(notes.GetData().players) then
 		shown = 1
+		local used = {}
 		local keys = { UNTAGGED }
 		for _, tag in ipairs(tags) do
-			table.insert(keys, tag.key)
+			if tag.count > 0 then
+				table.insert(used, tag)
+				table.insert(keys, tag.key)
+			end
 		end
 		AddFoldAll(keys)
-		for _, tag in ipairs(tags) do
+		for _, tag in ipairs(used) do
 			if AddHeader("#" .. tag.name, tag.count, tag.key) then
 				for _, entry in ipairs(Section(tag.name)) do
 					AddPlayer(entry, false)
@@ -331,7 +336,7 @@ local function RenderSidebar()
 		-- Always there, even empty: it shows that players can be grouped.
 		local untagged = Section(nil)
 		if AddHeader("No tags", #untagged, UNTAGGED) then
-			if #tags == 0 then
+			if #used == 0 then
 				AddHint("Tag players on their page (Ninjalooter, Good tank, ...) to group them here.")
 			end
 			for _, entry in ipairs(untagged) do
@@ -374,9 +379,40 @@ local function AddTag(text)
 		return
 	end
 	local info = pending and pending.info
-	playerPage.tagBox:SetText("")
 	AfterSave(notes.AddTag(name, text, info))
 	Render()
+end
+
+local function RemoveTag(tag)
+	local record, key = Current()
+	if record then
+		notes.RemoveTag(key, tag)
+	end
+end
+
+-- "+ Tag": every tag to tick (the menu stays open), then New tag...
+local function OpenTagMenu(owner)
+	MenuUtil.CreateContextMenu(owner, function(_, root)
+		for _, tag in ipairs(notes.AllTags()) do
+			root:CreateCheckbox("#" .. tag.name, function()
+				return notes.HasTag(Current(), tag.name)
+			end, function()
+				if notes.HasTag(Current(), tag.name) then
+					RemoveTag(tag.name)
+				else
+					AddTag(tag.name)
+				end
+			end)
+		end
+		if #notes.AllTags() > 0 then
+			root:CreateDivider()
+		end
+		root:CreateButton("New tag...", function()
+			newTagOpen = true
+			Render()
+			playerPage.tagBox:SetFocus()
+		end)
+	end)
 end
 
 local function AddTypedNote()
@@ -457,33 +493,19 @@ local function RenderTags(record, key, y)
 		chip:SetWidth(chip.text:GetStringWidth() + 20)
 		x, y = PlaceChip(chip, x, y)
 	end
-	if x > PAD then
-		x, y = PAD, y - 28
-	end
-	local box = playerPage.tagBox
-	box:SetPoint("TOPLEFT", playerPage, "TOPLEFT", PAD + 6, y)
-	x = PAD + box:GetWidth() + 14
-	-- Your other tags as one-click suggestions, narrowed by what's typed.
-	local typed = notes.CleanTag(box:GetText() or "")
-	local typedKey = typed and notes.TagKey(typed)
-	local shownCount = 0
-	for _, tag in ipairs(notes.AllTags()) do
-		if shownCount < MAX_SUGGESTIONS and not notes.HasTag(record, tag.name)
-			and (not typedKey or tag.key:find(typedKey, 1, true)) then
-			shownCount = shownCount + 1
-			local chip = chipPool:Acquire("suggestion", function()
-				local button = UI.CreateFlatButton(playerPage, "", 22)
-				button:SetScript("OnClick", function(self)
-					AddTag(self.tag)
-				end)
-				return button
-			end)
-			chip.tag = tag.name
-			chip.text:SetText("+ " .. tag.name)
-			chip:SetWidth(chip.text:GetStringWidth() + 20)
-			chip.text:SetTextColor(unpack(UI.TEXT_DIM))
-			x, y = PlaceChip(chip, x, y)
+	-- "+ Tag" after the tags, or the box for a new one in its place.
+	local add, box = playerPage.addTag, playerPage.tagBox
+	add:SetShown(not newTagOpen)
+	box:SetShown(newTagOpen)
+	add:ClearAllPoints()
+	box:ClearAllPoints()
+	if newTagOpen then
+		if x + box:GetWidth() + 8 > BODY_WIDTH - PAD and x > PAD then
+			x, y = PAD, y - 28
 		end
+		box:SetPoint("TOPLEFT", playerPage, "TOPLEFT", x + 6, y)
+	else
+		PlaceChip(add, x, y)
 	end
 	return y - 30
 end
@@ -596,20 +618,36 @@ local function CreatePlayerPage(body)
 
 	p.labelHeading = MakeHeading(p, "Label")
 	p.tagHeading = MakeHeading(p, "Tags")
+	p.addTag = UI.CreateFlatButton(p, "+ Tag", 22)
+	p.addTag:SetScript("OnClick", OpenTagMenu)
+	p.addTag:SetScript("OnEnter", function(self)
+		UI.ShowTooltip(self, "Tags", "Your own words to group players by, like Ninjalooter or Good tank. Pick from your tags, or make a new one. The list on the left has a section per tag.")
+	end)
+	p.addTag:SetScript("OnLeave", GameTooltip_Hide)
+	-- The new tag's name; it closes on Enter, Escape or clicking elsewhere.
 	p.tagBox = MakeEditBox(p, 150)
 	p.tagBox:SetMaxLetters(30)
+	p.tagBox:Hide()
+	local function CloseTagBox(self)
+		self:SetText("")
+		newTagOpen = false
+		Render()
+	end
 	p.tagBox:SetScript("OnEnterPressed", function(self)
-		AddTag(self:GetText())
+		local text = self:GetText()
+		self:SetText("")
+		newTagOpen = false
+		self:ClearFocus()
+		AddTag(text)
 	end)
-	p.tagBox:HookScript("OnTextChanged", function(_, userInput)
-		if userInput then
-			Render()
+	p.tagBox:SetScript("OnEscapePressed", function(self)
+		self:ClearFocus()
+	end)
+	p.tagBox:SetScript("OnEditFocusLost", function(self)
+		if newTagOpen then
+			CloseTagBox(self)
 		end
 	end)
-	p.tagBox:SetScript("OnEnter", function(self)
-		UI.ShowTooltip(self, "Add a tag", "Your own words to group players by, like Ninjalooter or Good tank. Type one and press Enter, or click a suggestion. The list on the left has a section per tag.")
-	end)
-	p.tagBox:SetScript("OnLeave", GameTooltip_Hide)
 	p.noteHeading = MakeHeading(p, "Add a note")
 	p.noteBox = MakeEditBox(p, BODY_WIDTH - 2 * PAD - 80)
 	p.noteBox:SetMaxLetters(500)
@@ -845,7 +883,7 @@ local function RenderTagsPage()
 			text:SetWordWrap(true)
 			return text
 		end)
-		empty:SetText("No tags yet. Add one on a player's page (under Label), or with /nra note Bob Stone #tank.")
+		empty:SetText("No tags yet. Add one above, on a player's page (+ Tag), or with /nra note Bob Stone #tank.")
 		empty:SetPoint("TOPLEFT", content, "TOPLEFT", 0, 0)
 		y = -20
 	end
@@ -853,7 +891,7 @@ local function RenderTagsPage()
 	p.scroll:UpdateThumb()
 end
 
-local TAGS_TEXT = "Tags are your own words for grouping players (Ninjalooter, Good tank, Guildie). A player can have any number, and the list on the left has a section for each. Rename a tag here (renaming it to another tag's name merges them), or delete it."
+local TAGS_TEXT = "Tags are your own words for grouping players (Ninjalooter, Good tank, Guildie). A player can have any number, and the list on the left has a section for each tag in use. Add tags here, rename them (renaming one to another tag's name merges them) or delete them."
 
 local function CreateTagsPage(body)
 	local p = CreateFrame("Frame", nil, body)
@@ -866,8 +904,21 @@ local function CreateTagsPage(body)
 	text:SetWidth(BODY_WIDTH - 2 * PAD)
 	text:SetWordWrap(true)
 
+	local function CreateTyped()
+		if notes.CreateTag(p.newBox:GetText()) then
+			p.newBox:SetText("")
+		end
+	end
+	p.newBox = MakeEditBox(p, 200)
+	p.newBox:SetPoint("TOPLEFT", PAD + 6, -96)
+	p.newBox:SetMaxLetters(30)
+	p.newBox:SetScript("OnEnterPressed", CreateTyped)
+	p.newButton = UI.CreateFlatButton(p, "+ New tag", 22)
+	p.newButton:SetPoint("LEFT", p.newBox, "RIGHT", 6, 0)
+	p.newButton:SetScript("OnClick", CreateTyped)
+
 	p.scroll = UI.CreateScrollArea(p)
-	p.scroll:SetPoint("TOPLEFT", PAD, -96)
+	p.scroll:SetPoint("TOPLEFT", PAD, -130)
 	p.scroll:SetPoint("BOTTOMRIGHT", -PAD - 14, PAD)
 end
 

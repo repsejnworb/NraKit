@@ -275,10 +275,34 @@ return {
 			wow.click("Unfold all")
 		end)
 
-		t.test("a player's page: tag suggestions and removing a tag", function()
+		t.test("a player's page: + Tag picks your tags or makes a new one; a click removes one", function()
+			local menu
+			MenuUtil.CreateContextMenu = function(owner, generator)
+				menu = wow.newMenu()
+				generator(owner, menu)
+			end
 			ns:OpenPlayerNotes("Bob Stone")
-			t.ok(wow.click("+ Ninja looter"), "your other tags are suggested")
+			t.ok(wow.click("+ Tag"), "+ Tag")
+			local entry = wow.menuEntry(menu.entries, "#Ninja looter")
+			t.ok(entry and entry.kind == "checkbox", "your tags to tick")
+			t.ok(not entry.isSelected(), "not ticked yet")
+			entry.onClick()
 			t.ok(notes.HasTag(players()["bob stone"], "Ninja looter"), "added")
+			t.ok(entry.isSelected(), "ticked")
+			entry.onClick()
+			t.ok(not notes.HasTag(players()["bob stone"], "Ninja looter"), "unticking removes it")
+			entry.onClick()
+			wow.menuEntry(menu.entries, "New tag...").onClick()
+			local box = NraKitPlayerNotesFrame and wow.findAll(function(frame)
+				return wow.visible(frame) and frame.template == "InputBoxTemplate" and frame.scripts.OnEditFocusLost
+					and frame:GetParent() ~= nil and not rawget(frame, "tag")
+			end)[1]
+			t.ok(box, "a box for the new tag")
+			t.ok(not wow.click("+ Tag"), "in place of + Tag")
+			wow.type(box, "#Pvp hero")
+			box.scripts.OnEnterPressed(box)
+			t.ok(notes.HasTag(players()["bob stone"], "Pvp hero"), "made and added")
+			t.ok(wow.click("+ Tag"), "+ Tag is back")
 			t.ok(wow.click("#Ninja looter  |cff808080x|r"), "the tag chip")
 			t.ok(not notes.HasTag(players()["bob stone"], "Ninja looter"), "removed")
 			t.ok(wow.click("Kill on sight") or wow.click(notes.ToneText(notes.GetTone("hostile"))), "label chip")
@@ -307,9 +331,25 @@ return {
 			t.equal(record.tone, "neutral", "default label")
 		end)
 
-		t.test("the tags page renames a tag", function()
+		t.test("the tags page adds and renames tags", function()
 			NraKitPlayerNotesFrame:Show()
 			t.ok(wow.click("Tags"), "tags page")
+			local newBox = wow.findAll(function(frame)
+				return wow.visible(frame) and frame.template == "InputBoxTemplate" and not rawget(frame, "tag")
+					and frame.scripts.OnEnterPressed and not frame.scripts.OnEditFocusLost
+			end)[1]
+			wow.type(newBox, "Healers")
+			t.ok(wow.click("+ New tag"), "+ New tag")
+			local healers
+			for _, tag in ipairs(notes.AllTags()) do
+				if tag.name == "Healers" then
+					healers = tag
+				end
+			end
+			t.ok(healers and healers.count == 0, "a tag nobody has yet")
+			t.ok(#wow.findAll(function(frame)
+				return wow.visible(frame) and rawget(frame, "label") == "#Healers"
+			end) == 0, "no empty section in the list")
 			local box = wow.findAll(function(frame)
 				return wow.visible(frame) and rawget(frame, "tag") == "Tank" and frame.template == "InputBoxTemplate"
 			end)[1]

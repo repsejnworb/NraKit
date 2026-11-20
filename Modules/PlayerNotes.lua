@@ -21,6 +21,7 @@ local _, ns = ...
 -- Data (account-wide): NraKitDB.playerNotesData = {
 --   players = { [key] = { name, guid, class, tone, tags = { "Tag", ... },
 --     notes = { { text, time, zone, by, sharedBy? } }, created, updated } },
+--   tags = { "Tag", ... }, -- every tag, including ones nobody has (yet)
 --   collapsed = { [tag key] = true }, -- tag sections closed in the window's list
 -- }
 -- Before tags, players had one of a list of editable labels (labels, nextLabel and
@@ -259,9 +260,20 @@ local function Migrate(data)
 		end
 		data.labels, data.nextLabel = nil, nil
 	end
+	local known = {}
+	data.tags = data.tags or {}
+	for _, tag in ipairs(data.tags) do
+		known[tag:lower()] = true
+	end
 	for _, record in pairs(data.players) do
 		record.tone = TONE_BY_KEY[record.tone] and record.tone or "neutral"
 		record.tags = record.tags or {}
+		for _, tag in ipairs(record.tags) do
+			if not known[tag:lower()] then
+				known[tag:lower()] = true
+				table.insert(data.tags, tag)
+			end
+		end
 	end
 	data.collapsed = data.collapsed or {}
 end
@@ -269,10 +281,10 @@ end
 function notes.GetData()
 	local data = NraKitDB.playerNotesData
 	if not data then
-		data = { players = {}, collapsed = {} }
+		data = { players = {}, tags = {}, collapsed = {} }
 		NraKitDB.playerNotesData = data
 	end
-	if not data.migrated then
+	if not data.migrated or not data.tags then
 		Migrate(data)
 		data.migrated = true
 	end
@@ -504,17 +516,21 @@ function notes.HasTag(record, tag)
 	return false
 end
 
--- Every tag in use: { { name, key, count } }, by name.
+-- Every tag: { { name, key, count } } (count: players with it, can be 0), by name.
 function notes.AllTags()
+	local data = notes.GetData()
 	local byKey, list = {}, {}
-	for _, record in pairs(notes.GetData().players) do
+	for _, tag in ipairs(data.tags) do
+		local key = notes.TagKey(tag)
+		byKey[key] = { name = tag, key = key, count = 0 }
+		table.insert(list, byKey[key])
+	end
+	for _, record in pairs(data.players) do
 		for _, tag in ipairs(record.tags) do
-			local key = notes.TagKey(tag)
-			if not byKey[key] then
-				byKey[key] = { name = tag, key = key, count = 0 }
-				table.insert(list, byKey[key])
+			local entry = byKey[notes.TagKey(tag)]
+			if entry then
+				entry.count = entry.count + 1
 			end
-			byKey[key].count = byKey[key].count + 1
 		end
 	end
 	table.sort(list, function(a, b)
@@ -523,17 +539,37 @@ function notes.AllTags()
 	return list
 end
 
--- A tag as already spelled on someone else ("tank" -> "Tank"), so one tag stays one.
-local function Spelling(tag)
+-- The tag as it's already spelled ("tank" -> "Tank"), so one tag stays one; a new
+-- tag is added to the list.
+local function Remember(tag)
+	local tags = notes.GetData().tags
 	local key = notes.TagKey(tag)
-	for _, record in pairs(notes.GetData().players) do
-		for _, other in ipairs(record.tags) do
-			if notes.TagKey(other) == key then
-				return other
-			end
+	for _, known in ipairs(tags) do
+		if notes.TagKey(known) == key then
+			return known
 		end
 	end
+	table.insert(tags, tag)
 	return tag
+end
+
+-- A tag nobody has yet (from the Tags page). Returns its name, or nil if not valid.
+function notes.CreateTag(text)
+	local tag = notes.CleanTag(text)
+	if tag then
+		tag = Remember(tag)
+		Changed()
+	end
+	return tag
+end
+
+local function ForgetTag(tag)
+	local tags = notes.GetData().tags
+	for index = #tags, 1, -1 do
+		if notes.TagKey(tags[index]) == notes.TagKey(tag) then
+			table.remove(tags, index)
+		end
+	end
 end
 
 -- Adds a tag to a player (created if new). Returns the record.
@@ -541,7 +577,7 @@ function notes.AddTag(name, text, info)
 	local tag = notes.CleanTag(text)
 	local record = notes.Ensure(name, info)
 	if tag and not notes.HasTag(record, tag) then
-		table.insert(record.tags, Spelling(tag))
+		table.insert(record.tags, Remember(tag))
 		table.sort(record.tags, function(a, b)
 			return a:lower() < b:lower()
 		end)
@@ -575,7 +611,8 @@ function notes.RenameTag(tag, text)
 	if not newTag or newTag == tag then
 		return
 	end
-	local merged = notes.TagKey(newTag) ~= notes.TagKey(tag) and Spelling(newTag) or newTag
+	ForgetTag(tag)
+	local merged = Remember(newTag)
 	for _, record in pairs(notes.GetData().players) do
 		if notes.HasTag(record, tag) then
 			Without(record, tag)
@@ -595,6 +632,7 @@ function notes.DeleteTag(tag)
 	for _, record in pairs(notes.GetData().players) do
 		Without(record, tag)
 	end
+	ForgetTag(tag)
 	Changed()
 end
 
@@ -629,7 +667,7 @@ function notes.Import(shared, useTone, tags)
 	for _, tag in ipairs(tags or shared.tags or {}) do
 		tag = notes.CleanTag(tag)
 		if tag and not notes.HasTag(record, tag) then
-			table.insert(record.tags, Spelling(tag))
+			table.insert(record.tags, Remember(tag))
 		end
 	end
 	table.sort(record.tags, function(a, b)

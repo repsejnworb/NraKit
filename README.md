@@ -377,8 +377,8 @@ log of notes** (each saves the date, zone and your character).
 - **Tags** group players your way: Ninjalooter, Good tank, Guildie. A player can have any number.
   - The notebook's list has a section per tag, then the players without tags. Click a section to
     fold it, shift-click to fold all the others, or use Fold all.
-  - Add tags on a player's page (your other tags are suggested) or from chat with `#`.
-  - The Tags page renames tags (renaming into an existing tag merges them) and deletes them.
+  - On a player's page, **+ Tag** lists your tags to tick, or makes a new one. From chat, use `#`.
+  - The Tags page adds tags, renames them (renaming into an existing tag merges them) and deletes them.
 - Their label, tags and latest note show in their tooltip.
 - **Right-click a player** (portrait, party frame, chat name, guild and friends lists) → **Player note**
   to label them in one click, or to open their notes.
