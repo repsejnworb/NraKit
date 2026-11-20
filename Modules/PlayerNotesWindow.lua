@@ -1,12 +1,13 @@
 local _, ns = ...
 
--- Player notes window (/nra note, or Player note... in a player's right-click menu).
+-- Player notes window (/nra note, or Player note in a player's right-click menu).
 --
 -- Sidebar: "+ Add player" (a page with a name box, and your target as a shortcut),
 -- search (name, label, tag or note text) and the players: in a section per tag
--- (collapsible, Kill on sight first within each), then those without tags. A search, or
--- having no tags at all, gives one list, newest change first. Typing a name nobody has
--- offers "+ Add <name>" too. At the bottom, Tags. Shift-click a player links them in chat.
+-- (foldable, Kill on sight first within each; shift-click folds all others), then those
+-- without tags, with Fold all above. A search gives one list, newest change first.
+-- Typing a name nobody has offers "+ Add <name>" too. At the bottom, Tags. Shift-click a
+-- player links them in chat.
 --
 -- A player's page: their label as four chips (one click to change), their tags (click
 -- one to remove it; type to add, with your other tags as suggestions), a box to add a
@@ -204,32 +205,94 @@ local function RenderSidebar()
 	local function AddHeader(text, count, collapseKey)
 		local header = sidebarPool:Acquire("header", function()
 			local button = CreateFrame("Button", nil, content)
-			button:SetHeight(22)
+			button:SetHeight(26)
 			local highlight = button:CreateTexture(nil, "HIGHLIGHT")
 			highlight:SetAllPoints()
 			highlight:SetColorTexture(1, 1, 1, 0.05)
-			button.text = MakeLabel(button, "", "GameFontNormalSmall")
-			button.text:SetPoint("LEFT", 4, 0)
+			UI.AddLine(button, "BOTTOM")
+			button.arrow = button:CreateTexture(nil, "ARTWORK")
+			button.arrow:SetSize(12, 12)
+			button.arrow:SetPoint("LEFT", 4, 0)
+			button.arrow:SetAtlas("common-icon-forwardarrow")
+			button.text = MakeLabel(button, "", "GameFontNormal")
+			button.text:SetPoint("LEFT", button.arrow, "RIGHT", 6, 0)
 			button.text:SetPoint("RIGHT", -30, 0)
 			button.text:SetWordWrap(false)
-			button.count = MakeLabel(button, "", "GameFontDisableSmall")
+			button.count = MakeLabel(button, "", "GameFontDisable")
 			button.count:SetPoint("RIGHT", -8, 0)
 			button:SetScript("OnClick", function(self)
 				local collapsed = notes.GetData().collapsed
-				collapsed[self.collapseKey] = not collapsed[self.collapseKey] or nil
+				if IsShiftKeyDown() then
+					-- Only this one open.
+					for _, tag in ipairs(notes.AllTags()) do
+						collapsed[tag.key] = true
+					end
+					collapsed[UNTAGGED] = true
+					collapsed[self.collapseKey] = nil
+				else
+					collapsed[self.collapseKey] = not collapsed[self.collapseKey] or nil
+				end
 				Render()
 			end)
+			button:SetScript("OnEnter", function(self)
+				UI.ShowTooltip(self, self.label, "Click to fold or unfold. Shift-click to fold all the others.")
+			end)
+			button:SetScript("OnLeave", GameTooltip_Hide)
 			return button
 		end)
 		local closed = notes.GetData().collapsed[collapseKey]
-		header.collapseKey = collapseKey
-		header.text:SetText((closed and "+  " or "-  ") .. text)
+		header.collapseKey, header.label = collapseKey, text
+		header.arrow:SetRotation(closed and 0 or -math.pi / 2)
+		header.text:SetText(text)
 		header.text:SetTextColor(unpack(UI.ACCENT))
 		header.count:SetText(count)
 		header:SetWidth(width)
 		header:SetPoint("TOPLEFT", content, "TOPLEFT", 0, y - 2)
-		y = y - 26
+		y = y - 30
 		return not closed
+	end
+
+	-- "Fold all" (or "Unfold all" when everything is folded) above the sections.
+	local function AddFoldAll(keys)
+		local collapsed = notes.GetData().collapsed
+		local allClosed = true
+		for _, key in ipairs(keys) do
+			allClosed = allClosed and collapsed[key] == true
+		end
+		local button = sidebarPool:Acquire("foldall", function()
+			local fold = CreateFrame("Button", nil, content)
+			fold:SetHeight(16)
+			fold.text = MakeLabel(fold, "", "GameFontDisableSmall")
+			fold.text:SetPoint("RIGHT", -8, 0)
+			local highlight = fold:CreateTexture(nil, "HIGHLIGHT")
+			highlight:SetAllPoints(fold.text)
+			highlight:SetColorTexture(1, 1, 1, 0.08)
+			fold:SetScript("OnClick", function(self)
+				local data = notes.GetData()
+				for _, key in ipairs(self.keys) do
+					data.collapsed[key] = not self.allClosed or nil
+				end
+				Render()
+			end)
+			return fold
+		end)
+		button.keys, button.allClosed = keys, allClosed
+		button.text:SetText(allClosed and "Unfold all" or "Fold all")
+		button:SetWidth(width)
+		button:SetPoint("TOPLEFT", content, "TOPLEFT", 0, y)
+		y = y - 18
+	end
+
+	local function AddHint(text)
+		local hint = sidebarPool:Acquire("hint", function()
+			local label = MakeLabel(content, "", "GameFontDisableSmall")
+			label:SetWidth(width - 12)
+			label:SetWordWrap(true)
+			return label
+		end)
+		hint:SetText(text)
+		hint:SetPoint("TOPLEFT", content, "TOPLEFT", 6, y - 2)
+		y = y - hint:GetStringHeight() - 10
 	end
 
 	-- A typed name nobody has yet: offer to add it.
@@ -244,24 +307,33 @@ local function RenderSidebar()
 
 	local tags = notes.AllTags()
 	local shown = 0
-	if query ~= "" or #tags == 0 then
+	if query ~= "" then
 		for _, entry in ipairs(notes.All()) do
 			if Matches(entry.record) then
 				shown = shown + 1
 				AddPlayer(entry, true)
 			end
 		end
-	else
+	elseif next(notes.GetData().players) then
+		shown = 1
+		local keys = { UNTAGGED }
 		for _, tag in ipairs(tags) do
-			shown = shown + 1
+			table.insert(keys, tag.key)
+		end
+		AddFoldAll(keys)
+		for _, tag in ipairs(tags) do
 			if AddHeader("#" .. tag.name, tag.count, tag.key) then
 				for _, entry in ipairs(Section(tag.name)) do
 					AddPlayer(entry, false)
 				end
 			end
 		end
+		-- Always there, even empty: it shows that players can be grouped.
 		local untagged = Section(nil)
-		if #untagged > 0 and AddHeader("No tags", #untagged, UNTAGGED) then
+		if AddHeader("No tags", #untagged, UNTAGGED) then
+			if #tags == 0 then
+				AddHint("Tag players on their page (Ninjalooter, Good tank, ...) to group them here.")
+			end
 			for _, entry in ipairs(untagged) do
 				AddPlayer(entry, false)
 			end
@@ -600,7 +672,7 @@ end
 local EMPTY_TEXT = table.concat({
 	"Keep notes on the players you meet: who stole your node, who ninja'd the loot, who was a great healer.",
 	"",
-	"|cffffd100Right-click a player|r (their portrait, a party frame or their name in chat) and pick |cffffd100Player note...|r, or set a label straight from |cffffd100Player label|r.",
+	"|cffffd100Right-click a player|r (their portrait, a party frame or their name in chat): |cffffd100Player note|r labels them in one click, or opens their notes.",
 	"",
 	"|cffffd100Tags|r group players your way (Ninjalooter, Good tank, Guildie): add them on a player's page, and the list gets a section per tag.",
 	"",
@@ -701,7 +773,7 @@ local function CreateAddPage(body)
 		p.nameBox:SetText(notes.TargetPlayer() or "")
 		p.nameBox:SetFocus()
 	end)
-	local more = MakeLabel(p, "You can also right-click a player (portrait, party frame, chat name) and pick Player note..., or type /nra note Bob Stone kos stole my node.", "GameFontDisableSmall")
+	local more = MakeLabel(p, "You can also right-click a player (portrait, party frame, chat name) and pick Player note, or type /nra note Bob Stone kos stole my node.", "GameFontDisableSmall")
 	more:SetPoint("TOPLEFT", PAD, -172)
 	more:SetWidth(BODY_WIDTH - 2 * PAD)
 	more:SetWordWrap(true)

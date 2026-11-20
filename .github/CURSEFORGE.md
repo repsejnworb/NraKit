@@ -240,15 +240,15 @@ A **clean, flat look** for the game's own damage meter.
 
 ### Player notes
 Remember who stole your mining node, who ninja'd the loot and who was a great healer.
-- Give a player a **label** (Kill on sight, Avoid, Neutral or Friend), **tags** of your own and a **dated log of notes** (each note saves the date, zone and your character).
+- Give a player a **label** (Kill on sight, Avoid, Neutral or Liked), **tags** of your own and a **dated log of notes** (each note saves the date, zone and your character).
 - Their label, tags and latest note show in their **tooltip**.
-- **Right-click a player** (portrait, party frame, their name in chat, guild and friends lists) for **Player note...** or to set their label right there.
+- **Right-click a player** (portrait, party frame, their name in chat, guild and friends lists) → **Player note** to label them in one click, or to open their notes.
 - **Warnings** when a player labelled Avoid or Kill on sight joins your group, invites you, whispers you or opens a trade (chat, on screen and a sound, each optional).
-- What the label does: **Kill on sight** (warnings and Unit Scanner alerts), **Avoid** (warnings), Neutral or Friend (tooltip only).
+- What the label does: **Kill on sight** (warnings and Unit Scanner alerts), **Avoid** (warnings), Neutral or Liked (tooltip only).
 
 **Tags**
 - Group players your way: **Ninjalooter, Good tank, Guildie**. A player can have any number.
-- The notebook's list has a **section per tag** (click a section's name to fold it), then the players without tags.
+- The notebook's list has a **section per tag**, then the players without tags. Click a section to fold it, shift-click to fold all the others, or use **Fold all**.
 - Add tags on a player's page (your other tags are suggested) or from chat with **#**.
 - The **Tags** page renames tags (renaming into an existing tag merges them) and deletes them.
 

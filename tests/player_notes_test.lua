@@ -33,7 +33,9 @@ return {
 			t.equal(notes.ToneByWord("kos").key, "hostile", "initials")
 			t.equal(notes.ToneByWord("KillOnSight").key, "hostile", "name without spaces")
 			t.equal(notes.ToneByWord("avoid").key, "caution", "one word")
-			t.equal(notes.ToneByWord("good").key, "friendly", "good is Friend")
+			t.equal(notes.ToneByWord("liked").key, "friendly", "liked")
+			t.equal(notes.ToneByWord("good").key, "friendly", "good (and friend) still mean Liked")
+			t.equal(notes.GetTone("friendly").name, "Liked", "named Liked")
 			t.ok(notes.ToneByWord("stole") == nil, "not a label")
 		end)
 
@@ -142,16 +144,17 @@ return {
 		t.test("right-click menu on a player: note and label", function()
 			wow.data.units.target = { name = "Dee", surname = "Rook", guid = "Player-1-0002" }
 			local entries = wow.openMenu("MENU_UNIT_PLAYER", { unit = "target" })
-			t.ok(wow.menuEntry(entries, "Add player note..."), "add note entry")
-			local labelMenu = wow.menuEntry(entries, "Player label")
-			t.ok(labelMenu, "label submenu")
-			local avoid = wow.menuEntry(labelMenu.entries, "Avoid")
+			local noteMenu = wow.menuEntry(entries, "Player note")
+			t.ok(noteMenu, "Player note submenu")
+			t.ok(wow.menuEntry(noteMenu.entries, "Add a note..."), "add note entry")
+			t.ok(wow.menuEntry(noteMenu.entries, "Kill on sight"), "Kill on sight in it")
+			local avoid = wow.menuEntry(noteMenu.entries, "Avoid")
 			t.ok(not avoid.isSelected(), "nothing selected yet")
 			avoid.onClick()
 			t.equal(players()["dee rook"].tone, "caution", "label set from the menu")
 			t.ok(avoid.isSelected(), "now selected")
 			entries = wow.openMenu("MENU_UNIT_PLAYER", { unit = "target" })
-			t.ok(wow.menuEntry(entries, "Player note..."), "existing player: Player note...")
+			t.ok(wow.menuEntry(wow.menuEntry(entries, "Player note").entries, "Open notes..."), "existing player: Open notes...")
 		end)
 
 		t.test("no menu entries for yourself or NPCs", function()
@@ -164,9 +167,12 @@ return {
 
 		t.test("chat name menu opens the window; the first note saves the player", function()
 			local entries = wow.openMenu("MENU_UNIT_FRIEND", { name = "Eli", surname = "Moss" })
-			wow.menuEntry(entries, "Add player note...").onClick()
+			wow.menuEntry(wow.menuEntry(entries, "Player note").entries, "Add a note...").onClick()
 			t.ok(NraKitPlayerNotesFrame:IsShown(), "window open")
 			t.ok(players()["eli moss"] == nil, "not saved just by opening")
+			t.ok(#wow.findAll(function(frame)
+				return wow.visible(frame) and rawget(frame, "label") == "No tags"
+			end) == 1, "No tags shows before there are any tags")
 			local box
 			for _, frame in ipairs(wow.findAll(function(frame)
 				return frame.template == "InputBoxTemplate" and frame.scripts.OnEnterPressed
@@ -243,16 +249,30 @@ return {
 					return wow.visible(frame) and rawget(frame, "key") and rawget(frame.text, "text") == name
 				end)
 			end
-			t.ok(wow.click("-  #Ninja looter"), "a section for the tag")
+			t.ok(wow.click("#Ninja looter"), "a section for the tag")
 			t.equal(Listed("Fay Dorn"), 0, "closed")
 			t.equal(NraKitDB.playerNotesData.collapsed["ninja looter"], true, "remembered")
-			t.ok(wow.click("+  #Ninja looter"), "and opened again")
+			t.ok(wow.click("#Ninja looter"), "and opened again")
 			t.equal(Listed("Gil Rowe"), 1, "its players")
 			t.equal(Listed("Ann Lee"), 1, "untagged players in No tags")
 			notes.AddTag("Ann Lee", "Tank")
 			t.equal(Listed("Ann Lee"), 1, "a tagged player leaves No tags")
 			notes.AddTag("Ann Lee", "Ninja looter")
 			t.equal(Listed("Ann Lee"), 2, "and shows under each of their tags")
+			t.ok(wow.click("Fold all"), "fold all")
+			t.equal(Listed("Ann Lee"), 0, "everything folded")
+			t.ok(wow.click("Unfold all"), "and unfold all")
+			t.equal(Listed("Ann Lee"), 2, "open again")
+			IsShiftKeyDown = function()
+				return true
+			end
+			wow.click("#Tank")
+			IsShiftKeyDown = function()
+				return false
+			end
+			t.equal(Listed("Ann Lee"), 1, "shift-click: only that section open")
+			t.equal(Listed("Gil Rowe"), 0, "the others folded")
+			wow.click("Unfold all")
 		end)
 
 		t.test("a player's page: tag suggestions and removing a tag", function()

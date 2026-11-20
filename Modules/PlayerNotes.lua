@@ -30,7 +30,7 @@ local module = {
 	key = "playerNotes",
 	section = "Utilities",
 	name = "Player notes",
-	description = "Keep notes on players: a label (Kill on sight, Avoid, Neutral or Friend), tags of your own to group them (Ninjalooter, Good tank, ...) and a dated log of what happened. Shown in their tooltip; right-click a player (portrait, party frame, chat name) for Player note. Warns you when a player you've marked Avoid or Kill on sight joins your group, invites, whispers or trades you. /nra note opens your notes.",
+	description = "Keep notes on players: a label (Kill on sight, Avoid, Neutral or Liked), tags of your own to group them (Ninjalooter, Good tank, ...) and a dated log of what happened. Shown in their tooltip; right-click a player (portrait, party frame, chat name) for Player note to label them or write a note. Warns you when a player you've marked Avoid or Kill on sight joins your group, invites, whispers or trades you. /nra note opens your notes.",
 	default = false,
 	options = {
 		{
@@ -113,7 +113,7 @@ notes.TONES = {
 		words = { "kos", "killonsight", "hostile" } },
 	{ key = "caution", name = "Avoid", color = { 1, 0.55, 0.15 }, warn = true, words = { "avoid", "caution" } },
 	{ key = "neutral", name = "Neutral", color = { 0.7, 0.7, 0.7 }, words = { "neutral" } },
-	{ key = "friendly", name = "Friend", color = { 0.3, 0.85, 0.35 }, words = { "friend", "friendly", "good" } },
+	{ key = "friendly", name = "Liked", color = { 0.3, 0.85, 0.35 }, words = { "liked", "like", "good", "friend", "friendly" } },
 }
 local TONE_BY_KEY, TONE_BY_WORD = {}, {}
 for index, tone in ipairs(notes.TONES) do
@@ -744,12 +744,13 @@ local function OnUnitMenu(_, root, contextData)
 	end
 	root:CreateDivider()
 	local record = notes.Find(name, info.guid)
-	root:CreateButton(record and "Player note..." or "Add player note...", function()
+	local noteMenu = root:CreateButton("Player note")
+	noteMenu:CreateButton(record and "Open notes..." or "Add a note...", function()
 		ns:OpenPlayerNotes(name, info)
 	end)
-	local labelMenu = root:CreateButton("Player label")
+	noteMenu:CreateDivider()
 	for _, tone in ipairs(notes.TONES) do
-		labelMenu:CreateRadio(notes.ToneText(tone), function()
+		noteMenu:CreateRadio(notes.ToneText(tone), function()
 			local current = notes.Find(name, info.guid)
 			return current ~= nil and current.tone == tone.key
 		end, function()
@@ -901,7 +902,7 @@ local HELP = {
 	usage = {
 		"/nra note - your target's notes, or the notebook",
 		"/nra note <note> - add a note to your target (a player)",
-		"/nra note <label> [#tags] [note] - set your target's label (kos, avoid, neutral, friend), add tags (#tank), and a note",
+		"/nra note <label> [#tags] [note] - set your target's label (kos, avoid, neutral, liked), add tags (#tank), and a note",
 		"/nra note <First Last> [label] [#tags] [note] - the same for anyone by name (nothing else: opens their notes)",
 		"/nra note <first name> [label or #tag ...] - someone you already have notes on (e.g. /nra note bob kos #ninja)",
 		"/nra note !remove [First Last] - remove your target (or that player) from your notes; also !rm, !forget",

@@ -371,23 +371,23 @@ A **clean, flat look** for the game's own damage meter.
 
 #### Player notes
 
-Give players a **label** (Kill on sight, Avoid, Neutral or Friend), **tags** of your own and a **dated
+Give players a **label** (Kill on sight, Avoid, Neutral or Liked), **tags** of your own and a **dated
 log of notes** (each saves the date, zone and your character).
 
 - **Tags** group players your way: Ninjalooter, Good tank, Guildie. A player can have any number.
-  - The notebook's list has a section per tag (click a section's name to fold it), then the players
-    without tags.
+  - The notebook's list has a section per tag, then the players without tags. Click a section to
+    fold it, shift-click to fold all the others, or use Fold all.
   - Add tags on a player's page (your other tags are suggested) or from chat with `#`.
   - The Tags page renames tags (renaming into an existing tag merges them) and deletes them.
 - Their label, tags and latest note show in their tooltip.
-- **Right-click a player** (portrait, party frame, chat name, guild and friends lists) for
-  **Player note...** or to set their label.
+- **Right-click a player** (portrait, party frame, chat name, guild and friends lists) → **Player note**
+  to label them in one click, or to open their notes.
 - **Warnings** (chat, on screen, sound) when a player labelled Avoid or Kill on sight joins your group,
   invites, whispers or trades you.
 - What the label does:
   - Kill on sight: warnings and Unit Scanner alerts;
   - Avoid: warnings;
-  - Neutral or Friend: tooltip only.
+  - Neutral or Liked: tooltip only.
 - `/nra note` opens the notebook, or your target's notes. In the notebook, **+ Add player** adds anyone
   by first name and surname, and you can search by name, label, tag or note text.
 - From chat:
