@@ -97,6 +97,8 @@ A small button at the bottom of your bags, next to your money, **opens the next 
 - Can be **bound to a key** (Key Bindings → NraKit).
 - Openable items get a **green border** in your bags.
 
+![clamOpening](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/clamOpening.png)
+
 ## Professions
 
 ### Known recipes

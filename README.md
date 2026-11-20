@@ -170,6 +170,8 @@ showing its icon and how many are left.
 - Bindable under Key Bindings → NraKit.
 - Openable items get a green border.
 
+<img width="230" height="315" alt="clamOpening" src=".github/screenshots/clamOpening.png" />
+
 ### Professions
 
 #### Known recipes
