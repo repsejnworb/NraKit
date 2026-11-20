@@ -3,15 +3,17 @@ local _, ns = ...
 -- Player notes window (/nra note, or Player note... in a player's right-click menu).
 --
 -- Sidebar: "+ Add player" (a page with a name box, and your target as a shortcut),
--- search (name, label or note text) and every noted player, newest change first;
--- typing a name nobody has offers "+ Add <name>" too. At the bottom, Labels.
+-- search (name, label, tag or note text) and the players: in a section per tag
+-- (collapsible, Kill on sight first within each), then those without tags. A search, or
+-- having no tags at all, gives one list, newest change first. Typing a name nobody has
+-- offers "+ Add <name>" too. At the bottom, Tags. Shift-click a player links them in chat.
 --
--- A player's page: their label as chips (one click to change), a box to add a note
--- (saved with the date, zone and your character) and the log, newest first. A player
--- opened from a menu who has no notes yet isn't saved until a label or note is added.
+-- A player's page: their label as four chips (one click to change), their tags (click
+-- one to remove it; type to add, with your other tags as suggestions), a box to add a
+-- note (saved with the date, zone and your character) and the log, newest first. A
+-- player opened from a menu who has no notes yet isn't saved until something is added.
 --
--- Labels page: rename, change tone or color, delete, add. The tone decides what a
--- label does (PlayerNotes.lua): Hostile warns and alerts, Caution warns.
+-- Tags page: every tag with how many players have it; rename (or merge) and delete.
 
 local UI = ns.UI
 local notes = ns.playerNotes
@@ -21,11 +23,12 @@ local PAD = UI.PAD
 local FOOTER_HEIGHT = 34
 local BODY_WIDTH = WIDTH - SIDEBAR_WIDTH
 
-local frame, searchBox, sidebarScroll, labelsButton, addButton
-local playerPage, emptyPage, labelsPage, addPage
-local sidebarPool, chipPool, logPool, labelPool = UI.CreatePool(), UI.CreatePool(), UI.CreatePool(), UI.CreatePool()
+local frame, searchBox, sidebarScroll, tagsButton, addButton
+local playerPage, emptyPage, tagsPage, addPage
+local sidebarPool, chipPool, logPool, tagPool = UI.CreatePool(), UI.CreatePool(), UI.CreatePool(), UI.CreatePool()
+local MAX_SUGGESTIONS = 6
 
-local page = "empty" -- "player", "empty", "add" or "labels"
+local page = "empty" -- "player", "empty", "add" or "tags"
 local selectedKey -- the shown player's key, or nil
 local pending -- { name, info } for a player opened before anything was saved
 local query, typedName = "", ""
@@ -56,10 +59,6 @@ local function MakeEditBox(parent, width)
 	box:SetAutoFocus(false)
 	box:SetScript("OnEscapePressed", box.ClearFocus)
 	return box
-end
-
-local function ColorText(text, r, g, b)
-	return string.format("|cff%02x%02x%02x%s|r", r * 255, g * 255, b * 255, text)
 end
 
 local function ClassColor(class)
@@ -116,8 +115,13 @@ local function Matches(record)
 	local function Has(text)
 		return text and text:lower():find(query, 1, true) ~= nil
 	end
-	if Has(record.name) or Has(notes.RecordLabel(record).name) then
+	if Has(record.name) or Has(notes.RecordTone(record).name) then
 		return true
+	end
+	for _, tag in ipairs(record.tags) do
+		if Has(tag) then
+			return true
+		end
 	end
 	for _, note in ipairs(record.notes) do
 		if Has(note.text) or Has(note.zone) then
@@ -130,6 +134,27 @@ end
 ------------------------------------------------------------------------------
 -- Sidebar
 ------------------------------------------------------------------------------
+
+-- Players with this tag (nil: without tags), Kill on sight first, then by name.
+local function Section(tag)
+	local list = {}
+	for key, record in pairs(notes.GetData().players) do
+		if (tag and notes.HasTag(record, tag)) or (not tag and #record.tags == 0) then
+			table.insert(list, { key = key, record = record })
+		end
+	end
+	table.sort(list, function(a, b)
+		local toneA, toneB = notes.RecordTone(a.record).order, notes.RecordTone(b.record).order
+		if toneA ~= toneB then
+			return toneA < toneB
+		end
+		return a.key < b.key
+	end)
+	return list
+end
+
+-- Tags are trimmed, so a leading space can't clash with a tag's key.
+local UNTAGGED = " untagged"
 
 local function RenderSidebar()
 	sidebarPool:ReleaseAll()
@@ -162,6 +187,51 @@ local function RenderSidebar()
 		return button
 	end
 
+	local function AddPlayer(entry, withTags)
+		local record = entry.record
+		local button = AddButton()
+		button.key, button.addName = entry.key, nil
+		button.text:SetText(record.name)
+		local subtext = notes.ToneText(notes.RecordTone(record))
+		if withTags and #record.tags > 0 then
+			subtext = subtext .. "  " .. notes.TagsText(record)
+		end
+		button:SetSubtext(subtext)
+		button.count:SetText(#record.notes > 0 and tostring(#record.notes) or "")
+		button:SetSelected(page == "player" and selectedKey == entry.key, { ClassColor(record.class) })
+	end
+
+	local function AddHeader(text, count, collapseKey)
+		local header = sidebarPool:Acquire("header", function()
+			local button = CreateFrame("Button", nil, content)
+			button:SetHeight(22)
+			local highlight = button:CreateTexture(nil, "HIGHLIGHT")
+			highlight:SetAllPoints()
+			highlight:SetColorTexture(1, 1, 1, 0.05)
+			button.text = MakeLabel(button, "", "GameFontNormalSmall")
+			button.text:SetPoint("LEFT", 4, 0)
+			button.text:SetPoint("RIGHT", -30, 0)
+			button.text:SetWordWrap(false)
+			button.count = MakeLabel(button, "", "GameFontDisableSmall")
+			button.count:SetPoint("RIGHT", -8, 0)
+			button:SetScript("OnClick", function(self)
+				local collapsed = notes.GetData().collapsed
+				collapsed[self.collapseKey] = not collapsed[self.collapseKey] or nil
+				Render()
+			end)
+			return button
+		end)
+		local closed = notes.GetData().collapsed[collapseKey]
+		header.collapseKey = collapseKey
+		header.text:SetText((closed and "+  " or "-  ") .. text)
+		header.text:SetTextColor(unpack(UI.ACCENT))
+		header.count:SetText(count)
+		header:SetWidth(width)
+		header:SetPoint("TOPLEFT", content, "TOPLEFT", 0, y - 2)
+		y = y - 26
+		return not closed
+	end
+
 	-- A typed name nobody has yet: offer to add it.
 	if typedName ~= "" and not notes.Find(typedName) then
 		local add = AddButton()
@@ -172,17 +242,29 @@ local function RenderSidebar()
 		add:SetSelected(pending ~= nil and pending.name == add.addName, UI.ACCENT)
 	end
 
+	local tags = notes.AllTags()
 	local shown = 0
-	for _, entry in ipairs(notes.All()) do
-		if Matches(entry.record) then
+	if query ~= "" or #tags == 0 then
+		for _, entry in ipairs(notes.All()) do
+			if Matches(entry.record) then
+				shown = shown + 1
+				AddPlayer(entry, true)
+			end
+		end
+	else
+		for _, tag in ipairs(tags) do
 			shown = shown + 1
-			local record = entry.record
-			local button = AddButton()
-			button.key, button.addName = entry.key, nil
-			button.text:SetText(record.name)
-			button:SetSubtext(notes.LabelText(notes.RecordLabel(record)))
-			button.count:SetText(#record.notes > 0 and tostring(#record.notes) or "")
-			button:SetSelected(page == "player" and selectedKey == entry.key, { ClassColor(record.class) })
+			if AddHeader("#" .. tag.name, tag.count, tag.key) then
+				for _, entry in ipairs(Section(tag.name)) do
+					AddPlayer(entry, false)
+				end
+			end
+		end
+		local untagged = Section(nil)
+		if #untagged > 0 and AddHeader("No tags", #untagged, UNTAGGED) then
+			for _, entry in ipairs(untagged) do
+				AddPlayer(entry, false)
+			end
 		end
 	end
 
@@ -198,20 +280,31 @@ local function RenderSidebar()
 	end
 	content:SetSize(width, -y)
 	sidebarScroll:UpdateThumb()
-	labelsButton:SetSelected(page == "labels")
+	tagsButton:SetSelected(page == "tags")
 end
 
 ------------------------------------------------------------------------------
 -- Player page
 ------------------------------------------------------------------------------
 
-local function SaveLabel(labelID)
+local function SaveTone(toneKey)
 	local name = CurrentName()
 	if not name then
 		return
 	end
 	local info = pending and pending.info
-	AfterSave(notes.SetLabel(name, labelID, info))
+	AfterSave(notes.SetTone(name, toneKey, info))
+end
+
+local function AddTag(text)
+	local name = CurrentName()
+	if not name or not notes.CleanTag(text) then
+		return
+	end
+	local info = pending and pending.info
+	playerPage.tagBox:SetText("")
+	AfterSave(notes.AddTag(name, text, info))
+	Render()
 end
 
 local function AddTypedNote()
@@ -227,42 +320,100 @@ local function AddTypedNote()
 	Render()
 end
 
+local TONE_HELP = {
+	hostile = "Warnings when they join your group, invite, whisper or trade you, and Unit Scanner alerts when they're nearby.",
+	caution = "Warnings when they join your group, invite, whisper or trade you.",
+	neutral = "Shown in their tooltip.",
+	friendly = "Shown in their tooltip.",
+}
+
+-- Flat chips in rows from x = PAD, wrapping at the page's edge. Returns the next free x and y.
+local function PlaceChip(chip, x, y)
+	if x + chip:GetWidth() > BODY_WIDTH - PAD and x > PAD then
+		x = PAD
+		y = y - 28
+	end
+	chip:SetPoint("TOPLEFT", playerPage, "TOPLEFT", x, y)
+	return x + chip:GetWidth() + 4, y
+end
+
 local function RenderChips(record, y)
 	chipPool:ReleaseAll()
-	local current = record and record.label
-	local x, maxX = PAD, BODY_WIDTH - PAD
-	for _, label in ipairs(notes.SortedLabels()) do
-		local chip = chipPool:Acquire("chip", function()
+	local current = record and record.tone
+	local x = PAD
+	for _, tone in ipairs(notes.TONES) do
+		local chip = chipPool:Acquire("tone", function()
 			local button = UI.CreateFlatButton(playerPage, "", 24)
 			button:SetScript("OnClick", function(self)
-				SaveLabel(self.labelID)
+				SaveTone(self.tone)
 				PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
 				Render()
 			end)
 			button:SetScript("OnEnter", function(self)
-				local tone = notes.Tone(notes.GetLabel(self.labelID))
-				local what = tone.scan and "Warnings, and Unit Scanner alerts when they're nearby."
-					or tone.warn and "Warnings when they join your group, invite, whisper or trade you."
-					or "Shown in their tooltip."
-				UI.ShowTooltip(self, tone.name, what)
+				UI.ShowTooltip(self, notes.GetTone(self.tone).name, TONE_HELP[self.tone])
 			end)
 			button:SetScript("OnLeave", GameTooltip_Hide)
 			return button
 		end)
-		chip.labelID = label.id
-		chip.text:SetText(notes.LabelText(label))
+		chip.tone = tone.key
+		chip.text:SetText(notes.ToneText(tone))
 		chip:SetWidth(chip.text:GetStringWidth() + 20)
-		chip:SetSelected(current == label.id)
-		-- Keep the label's own color (SetSelected sets gold/grey).
-		chip.text:SetTextColor(1, 1, 1)
-		if x + chip:GetWidth() > maxX and x > PAD then
-			x = PAD
-			y = y - 28
-		end
-		chip:SetPoint("TOPLEFT", playerPage, "TOPLEFT", x, y)
-		x = x + chip:GetWidth() + 4
+		chip:SetSelected(current == tone.key)
+		chip.text:SetTextColor(1, 1, 1) -- keep the label's own color (SetSelected sets gold/grey)
+		x, y = PlaceChip(chip, x, y)
 	end
 	return y - 28
+end
+
+-- The player's tags (click to remove), then the box to add one and suggestions.
+local function RenderTags(record, key, y)
+	local x = PAD
+	for _, tag in ipairs(record and record.tags or {}) do
+		local chip = chipPool:Acquire("tag", function()
+			local button = UI.CreateFlatButton(playerPage, "", 22)
+			button:SetScript("OnClick", function(self)
+				notes.RemoveTag(self.key, self.tag)
+			end)
+			button:SetScript("OnEnter", function(self)
+				UI.ShowTooltip(self, "#" .. self.tag, "Click to remove this tag.")
+			end)
+			button:SetScript("OnLeave", GameTooltip_Hide)
+			return button
+		end)
+		chip.key, chip.tag = key, tag
+		chip.text:SetText("#" .. tag .. "  |cff808080x|r")
+		chip:SetWidth(chip.text:GetStringWidth() + 20)
+		x, y = PlaceChip(chip, x, y)
+	end
+	if x > PAD then
+		x, y = PAD, y - 28
+	end
+	local box = playerPage.tagBox
+	box:SetPoint("TOPLEFT", playerPage, "TOPLEFT", PAD + 6, y)
+	x = PAD + box:GetWidth() + 14
+	-- Your other tags as one-click suggestions, narrowed by what's typed.
+	local typed = notes.CleanTag(box:GetText() or "")
+	local typedKey = typed and notes.TagKey(typed)
+	local shownCount = 0
+	for _, tag in ipairs(notes.AllTags()) do
+		if shownCount < MAX_SUGGESTIONS and not notes.HasTag(record, tag.name)
+			and (not typedKey or tag.key:find(typedKey, 1, true)) then
+			shownCount = shownCount + 1
+			local chip = chipPool:Acquire("suggestion", function()
+				local button = UI.CreateFlatButton(playerPage, "", 22)
+				button:SetScript("OnClick", function(self)
+					AddTag(self.tag)
+				end)
+				return button
+			end)
+			chip.tag = tag.name
+			chip.text:SetText("+ " .. tag.name)
+			chip:SetWidth(chip.text:GetStringWidth() + 20)
+			chip.text:SetTextColor(unpack(UI.TEXT_DIM))
+			x, y = PlaceChip(chip, x, y)
+		end
+	end
+	return y - 30
 end
 
 local function RenderLog(record, key)
@@ -335,12 +486,14 @@ local function RenderPlayer()
 		p.sub:SetText(string.format("Noted since %s  ·  %d %s", FormatDate(record.created or time()), count,
 			count == 1 and "note" or "notes"))
 	else
-		p.sub:SetText("Not saved yet: pick a label or add a note.")
+		p.sub:SetText("Not saved yet: pick a label, add a tag or write a note.")
 	end
 
 	local y = -64
 	p.labelHeading:SetPoint("TOPLEFT", PAD, y)
 	y = RenderChips(record, y - 18)
+	p.tagHeading:SetPoint("TOPLEFT", PAD, y - 4)
+	y = RenderTags(record, key, y - 22)
 
 	p.noteHeading:SetPoint("TOPLEFT", PAD, y - 8)
 	p.noteBox:SetPoint("TOPLEFT", PAD + 6, y - 26)
@@ -370,6 +523,21 @@ local function CreatePlayerPage(body)
 	p.sub:SetPoint("TOPLEFT", PAD, -PAD - 30)
 
 	p.labelHeading = MakeHeading(p, "Label")
+	p.tagHeading = MakeHeading(p, "Tags")
+	p.tagBox = MakeEditBox(p, 150)
+	p.tagBox:SetMaxLetters(30)
+	p.tagBox:SetScript("OnEnterPressed", function(self)
+		AddTag(self:GetText())
+	end)
+	p.tagBox:HookScript("OnTextChanged", function(_, userInput)
+		if userInput then
+			Render()
+		end
+	end)
+	p.tagBox:SetScript("OnEnter", function(self)
+		UI.ShowTooltip(self, "Add a tag", "Your own words to group players by, like Ninjalooter or Good tank. Type one and press Enter, or click a suggestion. The list on the left has a section per tag.")
+	end)
+	p.tagBox:SetScript("OnLeave", GameTooltip_Hide)
 	p.noteHeading = MakeHeading(p, "Add a note")
 	p.noteBox = MakeEditBox(p, BODY_WIDTH - 2 * PAD - 80)
 	p.noteBox:SetMaxLetters(500)
@@ -396,7 +564,7 @@ local function CreatePlayerPage(body)
 		end
 	end)
 	p.linkButton:SetScript("OnEnter", function(self)
-		UI.ShowTooltip(self, "Link in chat", "Puts [NraKit note: " .. (CurrentName() or "") .. "] in your chat box. Others with NraKit can click it to see this player's label and notes, and add them to theirs (while you're online). Shift-click a player in the list does the same.")
+		UI.ShowTooltip(self, "Link in chat", "Puts [NraKit note: " .. (CurrentName() or "") .. "] in your chat box. Others with NraKit can click it to see this player's label, tags and notes, and add them to theirs (while you're online). Shift-click a player in the list does the same.")
 	end)
 	p.linkButton:SetScript("OnLeave", GameTooltip_Hide)
 	p.deleteButton = UI.CreateFlatButton(footer, "Delete player", 22)
@@ -434,11 +602,13 @@ local EMPTY_TEXT = table.concat({
 	"",
 	"|cffffd100Right-click a player|r (their portrait, a party frame or their name in chat) and pick |cffffd100Player note...|r, or set a label straight from |cffffd100Player label|r.",
 	"",
+	"|cffffd100Tags|r group players your way (Ninjalooter, Good tank, Guildie): add them on a player's page, and the list gets a section per tag.",
+	"",
 	"|cffffd100+ Add player|r (top left) adds someone by name, or your target.",
 	"",
 	"|cffffd100Shift-click a player|r in the list to link their note in chat. Others with NraKit can click the link to see it and add it to theirs.",
 	"",
-	"|cffffd100From chat:|r /nra note Bob Stone kos stole my node  (or /nra note kos ... for your target).",
+	"|cffffd100From chat:|r /nra note Bob Stone kos #ninjalooter stole my node  (or /nra note kos ... for your target).",
 	"",
 	"Their label and latest note show in their tooltip. Players labelled Avoid or Kill on sight warn you when they join your group, invite, whisper or trade you, and Unit Scanner alerts you when a Kill on sight player is nearby.",
 }, "\n")
@@ -473,7 +643,7 @@ local function CheckTypedName()
 	if notes.Find(name) then
 		return name, "Already in your notes: Add opens them."
 	end
-	return name, "Adds " .. name .. ", then you can label them and write a note."
+	return name, "Adds " .. name .. ", then you can label and tag them and write a note."
 end
 
 local function RenderAdd()
@@ -538,182 +708,95 @@ local function CreateAddPage(body)
 end
 
 ------------------------------------------------------------------------------
--- Labels page
+-- Tags page
 ------------------------------------------------------------------------------
 
-local function PlayersWithLabel(id)
-	local count = 0
-	for _, record in pairs(notes.GetData().players) do
-		if record.label == id then
-			count = count + 1
-		end
-	end
-	return count
-end
-
-local function PickColor(label)
-	if not ColorPickerFrame or not ColorPickerFrame.SetupColorPickerAndShow then
-		return
-	end
-	local r, g, b = notes.LabelColor(label)
-	local id = label.id
-	ColorPickerFrame:SetupColorPickerAndShow({
-		r = r, g = g, b = b,
-		swatchFunc = function()
-			local newR, newG, newB = ColorPickerFrame:GetColorRGB()
-			notes.SetLabelColor(id, { newR, newG, newB })
-		end,
-		cancelFunc = function()
-			notes.SetLabelColor(id, { r, g, b })
-		end,
-	})
-end
-
-local function CommitName(box)
-	if box.labelID then
-		notes.RenameLabel(box.labelID, box:GetText())
+local function CommitRename(box)
+	if box.tag and notes.CleanTag(box:GetText()) then
+		notes.RenameTag(box.tag, box:GetText())
 	end
 end
 
-local function CreateLabelRow(content)
+local function CreateTagRow(content)
 	local row = CreateFrame("Frame", nil, content)
 	row:SetHeight(30)
-	row.swatch = CreateFrame("Button", nil, row)
-	row.swatch:SetSize(16, 16)
-	row.swatch:SetPoint("LEFT", 2, 0)
-	row.swatch.color = row.swatch:CreateTexture(nil, "ARTWORK")
-	row.swatch.color:SetAllPoints()
-	row.swatch:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-	row.swatch:SetScript("OnClick", function(self, mouseButton)
-		local label = notes.GetLabel(self.labelID)
-		if not label then
-			return
-		end
-		if mouseButton == "RightButton" then
-			notes.SetLabelColor(label.id, nil)
-		else
-			PickColor(label)
-		end
-	end)
-	row.swatch:SetScript("OnEnter", function(self)
-		UI.ShowTooltip(self, "Color", "Click to pick a color. Right-click for the tone's color.")
-	end)
-	row.swatch:SetScript("OnLeave", GameTooltip_Hide)
-
-	row.nameBox = MakeEditBox(row, 150)
-	row.nameBox:SetPoint("LEFT", row.swatch, "RIGHT", 12, 0)
+	row.nameBox = MakeEditBox(row, 200)
+	row.nameBox:SetPoint("LEFT", 6, 0)
 	row.nameBox:SetMaxLetters(30)
 	row.nameBox:SetScript("OnEnterPressed", function(self)
-		CommitName(self)
+		CommitRename(self)
 		self:ClearFocus()
 	end)
-	row.nameBox:SetScript("OnEditFocusLost", CommitName)
-
-	row.tones = {}
-	local anchor = row.nameBox
-	for _, tone in ipairs(notes.TONES) do
-		local chip = UI.CreateFlatButton(row, tone.name, 20)
-		chip.tone = tone.key
-		chip:SetPoint("LEFT", anchor, "RIGHT", anchor == row.nameBox and 10 or 2, 0)
-		chip:SetScript("OnClick", function(self)
-			notes.SetLabelTone(row.labelID, self.tone)
-		end)
-		anchor = chip
-		table.insert(row.tones, chip)
-	end
-
+	row.nameBox:SetScript("OnEditFocusLost", CommitRename)
 	row.count = MakeLabel(row, "", "GameFontDisableSmall")
-	row.count:SetPoint("LEFT", anchor, "RIGHT", 8, 0)
-
+	row.count:SetPoint("LEFT", row.nameBox, "RIGHT", 12, 0)
 	row.delete = CreateFrame("Button", nil, row)
 	row.delete:SetSize(18, 18)
 	row.delete:SetPoint("RIGHT", -2, 0)
 	row.delete.text = MakeLabel(row.delete, "x", "GameFontDisable")
 	row.delete.text:SetPoint("CENTER")
 	row.delete:SetScript("OnClick", function()
-		notes.DeleteLabel(row.labelID)
+		notes.DeleteTag(row.tag)
 	end)
 	row.delete:SetScript("OnEnter", function(self)
-		local count = PlayersWithLabel(row.labelID)
-		UI.ShowTooltip(self, "Delete this label", count > 0
-			and string.format("Its %d %s get the first other label of the same tone.", count, count == 1 and "player" or "players")
-			or nil)
+		UI.ShowTooltip(self, "Delete this tag", string.format("Takes #%s off %s. Their notes stay.", row.tag,
+			row.players == 1 and "1 player" or (row.players .. " players")))
 	end)
 	row.delete:SetScript("OnLeave", GameTooltip_Hide)
 	return row
 end
 
-local function RenderLabels()
-	labelPool:ReleaseAll()
-	local p = labelsPage
+local function RenderTagsPage()
+	tagPool:ReleaseAll()
+	local p = tagsPage
 	local content = p.scroll.content
 	local width = BODY_WIDTH - 2 * PAD - 14
 	content:SetWidth(width)
 	local y = 0
-	local lastTone
-	for _, label in ipairs(notes.SortedLabels()) do
-		local tone = notes.Tone(label)
-		if tone.key ~= lastTone then
-			lastTone = tone.key
-			local heading = labelPool:Acquire("heading", function()
-				return MakeHeading(content, "")
-			end)
-			heading:SetText(ColorText(tone.name:upper(), unpack(tone.color)))
-			heading:SetPoint("TOPLEFT", content, "TOPLEFT", 2, y - 6)
-			y = y - 24
-		end
-		local row = labelPool:Acquire("row", function()
-			return CreateLabelRow(content)
+	local tags = notes.AllTags()
+	for _, tag in ipairs(tags) do
+		local row = tagPool:Acquire("row", function()
+			return CreateTagRow(content)
 		end)
-		row.labelID = label.id
-		row.swatch.labelID = label.id
-		row.nameBox.labelID = label.id
-		row.swatch.color:SetColorTexture(notes.LabelColor(label))
-		row.nameBox:SetText(label.name)
-		for _, chip in ipairs(row.tones) do
-			chip:SetSelected(chip.tone == label.tone)
-		end
-		local count = PlayersWithLabel(label.id)
-		row.count:SetText(count > 0 and (count .. (count == 1 and " player" or " players")) or "")
-		row.delete:SetEnabled(notes.CanDeleteLabel(label.id))
-		row.delete:SetAlpha(notes.CanDeleteLabel(label.id) and 1 or 0.3)
+		row.tag, row.players = tag.name, tag.count
+		row.nameBox.tag = tag.name
+		row.nameBox:SetText(tag.name)
+		row.count:SetText(tag.count == 1 and "1 player" or (tag.count .. " players"))
 		row:SetWidth(width)
 		row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, y)
 		y = y - 32
 	end
-	content:SetHeight(-y)
+	if #tags == 0 then
+		local empty = tagPool:Acquire("empty", function()
+			local text = MakeLabel(content, "", "GameFontDisable")
+			text:SetWidth(width)
+			text:SetWordWrap(true)
+			return text
+		end)
+		empty:SetText("No tags yet. Add one on a player's page (under Label), or with /nra note Bob Stone #tank.")
+		empty:SetPoint("TOPLEFT", content, "TOPLEFT", 0, 0)
+		y = -20
+	end
+	content:SetHeight(math.max(-y, 1))
 	p.scroll:UpdateThumb()
 end
 
-local LABELS_TEXT = "Each label has a tone, and the tone decides what it does. |cffff4033Hostile|r: warnings, and Unit Scanner alerts when they're nearby. |cffff8c26Caution|r: warnings when they join your group, invite, whisper or trade you. Neutral and Friendly: shown in tooltips only."
+local TAGS_TEXT = "Tags are your own words for grouping players (Ninjalooter, Good tank, Guildie). A player can have any number, and the list on the left has a section for each. Rename a tag here (renaming it to another tag's name merges them), or delete it."
 
-local function CreateLabelsPage(body)
+local function CreateTagsPage(body)
 	local p = CreateFrame("Frame", nil, body)
 	p:SetAllPoints()
-	labelsPage = p
-	local title = MakeLabel(p, "Labels", "GameFontNormalLarge")
+	tagsPage = p
+	local title = MakeLabel(p, "Tags", "GameFontNormalLarge")
 	title:SetPoint("TOPLEFT", PAD, -PAD - 2)
-	local text = MakeLabel(p, LABELS_TEXT, "GameFontHighlightSmall")
+	local text = MakeLabel(p, TAGS_TEXT, "GameFontHighlightSmall")
 	text:SetPoint("TOPLEFT", PAD, -PAD - 28)
 	text:SetWidth(BODY_WIDTH - 2 * PAD)
 	text:SetWordWrap(true)
 
 	p.scroll = UI.CreateScrollArea(p)
 	p.scroll:SetPoint("TOPLEFT", PAD, -96)
-	p.scroll:SetPoint("BOTTOMRIGHT", -PAD - 14, FOOTER_HEIGHT + 6)
-
-	local footer = CreateFrame("Frame", nil, p)
-	footer:SetPoint("BOTTOMLEFT")
-	footer:SetPoint("BOTTOMRIGHT")
-	footer:SetHeight(FOOTER_HEIGHT)
-	UI.AddLine(footer, "TOP")
-	local add = UI.CreateFlatButton(footer, "+ New label", 22)
-	add:SetPoint("LEFT", PAD, 0)
-	add:SetScript("OnClick", function()
-		notes.AddLabel("New label", "neutral")
-	end)
-	local hint = MakeLabel(footer, "Click a name to rename it.", "GameFontDisableSmall")
-	hint:SetPoint("RIGHT", -PAD, 0)
+	p.scroll:SetPoint("BOTTOMRIGHT", -PAD - 14, PAD)
 end
 
 ------------------------------------------------------------------------------
@@ -729,14 +812,14 @@ Render = function()
 	end
 	if page == "player" then
 		RenderPlayer()
-	elseif page == "labels" then
-		RenderLabels()
+	elseif page == "tags" then
+		RenderTagsPage()
 	elseif page == "add" then
 		RenderAdd()
 	end
 	playerPage:SetShown(page == "player")
 	emptyPage:SetShown(page == "empty")
-	labelsPage:SetShown(page == "labels")
+	tagsPage:SetShown(page == "tags")
 	addPage:SetShown(page == "add")
 	RenderSidebar()
 end
@@ -781,16 +864,16 @@ local function CreateNotesWindow()
 	sidebarScroll:SetPoint("TOPLEFT", PAD, -PAD - 72)
 	sidebarScroll:SetPoint("BOTTOMRIGHT", -PAD, PAD + 36)
 
-	labelsButton = UI.CreateNavButton(frame.sidebar, SIDEBAR_WIDTH - 2 * PAD, 28, "Labels")
-	labelsButton:SetPoint("BOTTOMLEFT", PAD, PAD)
-	labelsButton:SetScript("OnClick", function()
-		page = "labels"
+	tagsButton = UI.CreateNavButton(frame.sidebar, SIDEBAR_WIDTH - 2 * PAD, 28, "Tags")
+	tagsButton:SetPoint("BOTTOMLEFT", PAD, PAD)
+	tagsButton:SetScript("OnClick", function()
+		page = "tags"
 		Render()
 	end)
 
 	CreatePlayerPage(frame.body)
 	CreateEmptyPage(frame.body)
-	CreateLabelsPage(frame.body)
+	CreateTagsPage(frame.body)
 	CreateAddPage(frame.body)
 
 	frame:HookScript("OnShow", Render)
@@ -837,6 +920,6 @@ UI.RegisterTab({
 	module = "playerNotes",
 })
 
-ns:AddOptionsButton("playerNotes", "Open player notes", "Everyone you have notes on, and your labels (/nra note).", function()
+ns:AddOptionsButton("playerNotes", "Open player notes", "Everyone you have notes on, and your tags (/nra note).", function()
 	ns:OpenPlayerNotes()
 end)

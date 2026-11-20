@@ -240,25 +240,31 @@ A **clean, flat look** for the game's own damage meter.
 
 ### Player notes
 Remember who stole your mining node, who ninja'd the loot and who was a great healer.
-- Give a player a **label** (Kill on sight, Avoid, Neutral, Good, Friend, or your own) and keep a **dated log of notes** on them (each note saves the date, zone and your character).
-- Their label and latest note show in their **tooltip**.
+- Give a player a **label** (Kill on sight, Avoid, Neutral or Friend), **tags** of your own and a **dated log of notes** (each note saves the date, zone and your character).
+- Their label, tags and latest note show in their **tooltip**.
 - **Right-click a player** (portrait, party frame, their name in chat, guild and friends lists) for **Player note...** or to set their label right there.
 - **Warnings** when a player labelled Avoid or Kill on sight joins your group, invites you, whispers you or opens a trade (chat, on screen and a sound, each optional).
-- Labels can be renamed, recolored, added and deleted. Each has a **tone** that decides what it does: Hostile (warnings and Unit Scanner alerts), Caution (warnings), Neutral or Friendly (tooltip only).
+- What the label does: **Kill on sight** (warnings and Unit Scanner alerts), **Avoid** (warnings), Neutral or Friend (tooltip only).
+
+**Tags**
+- Group players your way: **Ninjalooter, Good tank, Guildie**. A player can have any number.
+- The notebook's list has a **section per tag** (click a section's name to fold it), then the players without tags.
+- Add tags on a player's page (your other tags are suggested) or from chat with **#**.
+- The **Tags** page renames tags (renaming into an existing tag merges them) and deletes them.
 
 **Your notebook**
 - **/nra note** opens your notebook, or your target's notes.
-- **+ Add player** adds anyone by first name and surname, or your target. Search by name, label or note text.
+- **+ Add player** adds anyone by first name and surname, or your target. Search by name, label, tag or note text.
 
 **From chat**
-- **/nra note Bob Stone kos stole my node**
+- **/nra note Bob Stone kos #ninjalooter stole my node**
 - With a player targeted, just **/nra note ninja'd the loot** (or **/nra note avoid ninja'd the loot** to label them too).
 - **/nra note !remove** takes your target out of your notes (**!undo** brings them back).
 
 **Share notes in chat**
 - **Shift-click a player** in your notebook (or **Link in chat** on their page) to put **[NraKit note: Name]** in your chat box.
-- Others with NraKit see it as a link. Clicking it shows the player's label and notes, with **Add** and **Cancel**.
-- Added notes keep who wrote them. Notes you already have are skipped, and your own label stays unless you pick theirs.
+- Others with NraKit see it as a link. Clicking it shows the player's label, tags and notes, with **Add** and **Cancel**.
+- Added notes keep who wrote them. Notes you already have are skipped, their tags can be left out, and your own label stays unless you pick theirs.
 - Only players you've linked can be fetched, and only while you're online.
 
 ![playerNoteWarning](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/playerNoteWarning.png)

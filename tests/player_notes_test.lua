@@ -1,4 +1,4 @@
--- Player notes: names, labels, the chat command, tooltip, right-click menu, warnings,
+-- Player notes: names, labels, tags, the chat command, tooltip, right-click menu, warnings,
 -- the window, and Unit Scanner alerts for Hostile players.
 
 return {
@@ -26,14 +26,15 @@ return {
 			t.equal(notes.Key("Bob-Stone"), "bob stone", "dash")
 			notes.AddNote("Bob Stone", "stole my node")
 			t.ok(notes.Find("bob-stone"), "found by dash name")
-			t.equal(players()["bob stone"].label, "neutral", "a note alone gets the neutral label")
+			t.equal(players()["bob stone"].tone, "neutral", "a note alone makes them Neutral")
 		end)
 
 		t.test("labels by what you'd type", function()
-			t.equal(notes.LabelByWord("kos").id, "kos", "initials")
-			t.equal(notes.LabelByWord("KillOnSight").id, "kos", "name without spaces")
-			t.equal(notes.LabelByWord("avoid").id, "avoid", "one word")
-			t.ok(notes.LabelByWord("stole") == nil, "not a label")
+			t.equal(notes.ToneByWord("kos").key, "hostile", "initials")
+			t.equal(notes.ToneByWord("KillOnSight").key, "hostile", "name without spaces")
+			t.equal(notes.ToneByWord("avoid").key, "caution", "one word")
+			t.equal(notes.ToneByWord("good").key, "friendly", "good is Friend")
+			t.ok(notes.ToneByWord("stole") == nil, "not a label")
 		end)
 
 		t.test("/nra note <First Last> <label> <note>", function()
@@ -41,7 +42,7 @@ return {
 			local record = players()["ann lee"]
 			t.ok(record, "saved")
 			t.equal(record.name, "Ann Lee", "name")
-			t.equal(record.label, "kos", "label")
+			t.equal(record.tone, "hostile", "label")
 			local note = record.notes[1]
 			t.equal(note.text, "ganked me at the flight master", "note")
 			t.equal(note.zone, "Elwynn Forest", "zone")
@@ -50,7 +51,7 @@ return {
 
 		t.test("/nra note <first name> <label> picks a noted player", function()
 			Slash("note bob avoid")
-			t.equal(players()["bob stone"].label, "avoid", "Bob Stone relabelled")
+			t.equal(players()["bob stone"].tone, "caution", "Bob Stone relabelled")
 			t.ok(players()["bob"] == nil, "no new player called Bob")
 		end)
 
@@ -59,7 +60,7 @@ return {
 			Slash("note good healed me through the whole dungeon")
 			local record = players()["cid vale"]
 			t.ok(record, "target saved")
-			t.equal(record.label, "good", "label")
+			t.equal(record.tone, "friendly", "label")
 			t.equal(record.guid, "Player-1-0001", "GUID kept")
 			t.equal(record.class, "ROGUE", "class kept")
 			wow.data.units.target = nil
@@ -72,7 +73,7 @@ return {
 			local record = players()["hal pike"]
 			t.ok(record and record.notes[1].text == "testing", "note on the target")
 			Slash("note Hal Pike avoid camped the mailbox")
-			t.equal(record.label, "avoid", "naming your target works too")
+			t.equal(record.tone, "caution", "naming your target works too")
 			t.equal(record.notes[2].text, "camped the mailbox", "and its note")
 			Slash("note Ann Lee was here again")
 			t.equal(players()["ann lee"].notes[2].text, "was here again", "a noted player named in full wins over the target")
@@ -129,6 +130,7 @@ return {
 			wow.data.units.mouseover = { name = "Ann", surname = "Lee" }
 			local lines = wow.unitTooltip("mouseover")
 			t.ok(lines[1] and lines[1]:find("Kill on sight", 1, true), "label line")
+			t.ok(not lines[1]:find("#", 1, true), "no tags, no tag text")
 			t.ok(lines[2] and lines[2]:find("was here again", 1, true), "latest note line")
 			NraKitDB.playerNotesTooltip = false
 			t.equal(#wow.unitTooltip("mouseover"), 0, "option off")
@@ -146,7 +148,7 @@ return {
 			local avoid = wow.menuEntry(labelMenu.entries, "Avoid")
 			t.ok(not avoid.isSelected(), "nothing selected yet")
 			avoid.onClick()
-			t.equal(players()["dee rook"].label, "avoid", "label set from the menu")
+			t.equal(players()["dee rook"].tone, "caution", "label set from the menu")
 			t.ok(avoid.isSelected(), "now selected")
 			entries = wow.openMenu("MENU_UNIT_PLAYER", { unit = "target" })
 			t.ok(wow.menuEntry(entries, "Player note..."), "existing player: Player note...")
@@ -182,11 +184,11 @@ return {
 		t.test("Avoid and Kill on sight warn when they join your group, once", function()
 			wow.printed, wow.raidNotices = {}, {}
 			wow.data.units.party1 = { name = "Ann", surname = "Lee" } -- Kill on sight
-			wow.data.units.party2 = { name = "Cid", surname = "Newname" } -- Good
+			wow.data.units.party2 = { name = "Cid", surname = "Newname" } -- Friend
 			wow.data.party = { "party1", "party2" }
 			wow.fire("GROUP_ROSTER_UPDATE")
 			t.ok(Printed("Ann Lee"), "warned about Ann")
-			t.ok(not Printed("Cid"), "not about a Good player")
+			t.ok(not Printed("Cid"), "not about a Friend")
 			t.equal(#wow.raidNotices, 1, "on screen")
 			wow.printed = {}
 			wow.fire("GROUP_ROSTER_UPDATE")
@@ -208,21 +210,60 @@ return {
 			NraKitDB.playerNotesWarnWhisper = true
 		end)
 
-		t.test("labels: add, rename, retone, delete moves players", function()
-			local label = notes.AddLabel("Ninja", "caution")
-			notes.SetLabel("Fay Dorn", label.id)
-			notes.RenameLabel(label.id, "Loot ninja")
-			t.equal(notes.LabelByWord("lootninja").id, label.id, "renamed")
-			notes.SetLabelTone(label.id, "hostile")
-			notes.DeleteLabel(label.id)
-			t.equal(players()["fay dorn"].label, "kos", "moved to the first Hostile label")
-			for _, other in ipairs(notes.SortedLabels()) do
-				if other.id ~= "neutral" then
-					notes.DeleteLabel(other.id)
-				end
+		t.test("tags: added from chat, one spelling, renamed (merging) and deleted", function()
+			Slash("note Fay Dorn avoid #ninjalooter #Tank took the boe")
+			local record = players()["fay dorn"]
+			t.equal(record.tone, "caution", "label")
+			t.equal(table.concat(record.tags, ","), "ninjalooter,Tank", "tags, sorted")
+			t.equal(record.notes[1].text, "took the boe", "note after the tags")
+			Slash("note fay #Ninja_Looter")
+			notes.AddTag("Gil Rowe", "#NinjaLooter")
+			t.equal(players()["gil rowe"].tags[1], "ninjalooter", "a tag keeps the spelling it has")
+			notes.AddTag("Gil Rowe", "  #tank,  healer ")
+			t.equal(players()["gil rowe"].tags[2], "tank healer", "no #, commas or extra spaces")
+			local names = {}
+			for _, tag in ipairs(notes.AllTags()) do
+				table.insert(names, tag.name .. "=" .. tag.count)
 			end
-			t.ok(not notes.CanDeleteLabel("neutral"), "the last label stays")
-			t.equal(players()["fay dorn"].label, "neutral", "everyone ends on the last label")
+			t.equal(table.concat(names, " "), "Ninja_Looter=1 ninjalooter=2 Tank=1 tank healer=1", "every tag with its count")
+			notes.RenameTag("Ninja_Looter", "NINJALOOTER")
+			t.equal(table.concat(record.tags, ","), "ninjalooter,Tank", "renaming into another tag merges them")
+			notes.RenameTag("ninjalooter", "Ninja looter")
+			t.equal(players()["gil rowe"].tags[1], "Ninja looter", "renamed on everyone")
+			notes.DeleteTag("tank healer")
+			t.equal(#players()["gil rowe"].tags, 1, "deleted")
+			notes.RemoveTag("fay dorn", "tank")
+			t.equal(table.concat(record.tags, ","), "Ninja looter", "removed from one player")
+		end)
+
+		t.test("the list has a section per tag, closed with a click", function()
+			NraKitPlayerNotesFrame:Show()
+			local function Listed(name)
+				return #wow.findAll(function(frame)
+					return wow.visible(frame) and rawget(frame, "key") and rawget(frame.text, "text") == name
+				end)
+			end
+			t.ok(wow.click("-  #Ninja looter"), "a section for the tag")
+			t.equal(Listed("Fay Dorn"), 0, "closed")
+			t.equal(NraKitDB.playerNotesData.collapsed["ninja looter"], true, "remembered")
+			t.ok(wow.click("+  #Ninja looter"), "and opened again")
+			t.equal(Listed("Gil Rowe"), 1, "its players")
+			t.equal(Listed("Ann Lee"), 1, "untagged players in No tags")
+			notes.AddTag("Ann Lee", "Tank")
+			t.equal(Listed("Ann Lee"), 1, "a tagged player leaves No tags")
+			notes.AddTag("Ann Lee", "Ninja looter")
+			t.equal(Listed("Ann Lee"), 2, "and shows under each of their tags")
+		end)
+
+		t.test("a player's page: tag suggestions and removing a tag", function()
+			ns:OpenPlayerNotes("Bob Stone")
+			t.ok(wow.click("+ Ninja looter"), "your other tags are suggested")
+			t.ok(notes.HasTag(players()["bob stone"], "Ninja looter"), "added")
+			t.ok(wow.click("#Ninja looter  |cff808080x|r"), "the tag chip")
+			t.ok(not notes.HasTag(players()["bob stone"], "Ninja looter"), "removed")
+			t.ok(wow.click("Kill on sight") or wow.click(notes.ToneText(notes.GetTone("hostile"))), "label chip")
+			t.equal(players()["bob stone"].tone, "hostile", "label set")
+			notes.SetTone("Bob Stone", "caution")
 		end)
 
 		t.test("+ Add player: needs a surname, then opens the new player", function()
@@ -243,15 +284,19 @@ return {
 			local record = players()["gus hale"]
 			t.ok(record, "saved")
 			t.equal(record.name, "Gus Hale", "capitalised")
-			t.equal(record.label, "neutral", "default label")
+			t.equal(record.tone, "neutral", "default label")
 		end)
 
-		t.test("the labels page adds a label", function()
+		t.test("the tags page renames a tag", function()
 			NraKitPlayerNotesFrame:Show()
-			t.ok(wow.click("Labels"), "labels page")
-			local before = #notes.GetLabels()
-			t.ok(wow.click("+ New label"), "new label button")
-			t.equal(#notes.GetLabels(), before + 1, "label added")
+			t.ok(wow.click("Tags"), "tags page")
+			local box = wow.findAll(function(frame)
+				return wow.visible(frame) and rawget(frame, "tag") == "Tank" and frame.template == "InputBoxTemplate"
+			end)[1]
+			t.ok(box, "a row per tag")
+			wow.type(box, "Good tank")
+			box.scripts.OnEnterPressed(box)
+			t.ok(notes.HasTag(players()["ann lee"], "Good tank"), "renamed")
 		end)
 
 		t.test("chat command lists players and has help", function()

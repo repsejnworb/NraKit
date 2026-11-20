@@ -3,7 +3,7 @@ local _, ns = ...
 -- Player notes in chat: shift-click a player in your notes (or Link in chat on their
 -- page) to put "[NraKit note: Name]" in your chat box. For others with NraKit the text
 -- becomes a link; clicking it asks your client for the note over hidden addon whispers,
--- and a window shows the name, label and notes with Add and Cancel.
+-- and a window shows the name, label, tags and notes with Add and Cancel.
 --
 -- What you send in chat is plain text (the server strips addon links from chat); each
 -- client turns it into a link itself. Only players you linked this session are sent,
@@ -15,8 +15,11 @@ local _, ns = ...
 --   DENY <id>                  not linked by me (or gone)
 --   PART <id> <i> <n> <data>   piece i of n of the note
 -- The note: lines split by "\n", fields by "\t" (both escaped inside fields):
---   <name> <label> <tone> <how many notes you have>
+--   <name> <label name> <tone> <how many notes you have> <tags, comma-separated>
 --   <time> <by> <zone> <text>  per note, oldest first (the oldest are left out past MAX_BYTES)
+-- NraKit 0.22.0 had editable labels and no tags: its header has no tags, and its label
+-- name becomes a tag unless it's a built-in one (notes.FromOldLabel). It reads our label
+-- name ("Kill on sight", ...) as a label of its own.
 
 local notes = ns.playerNotes
 local UI = ns.UI
@@ -30,7 +33,7 @@ local MAX_BYTES = 4000 -- the newest notes that fit; a few seconds to send
 local TIMEOUT = 10
 local SEND_GAP = 0.1
 local RESULT_THROTTLED, RESULT_OFFLINE = 3, 12 -- Enum.SendAddonMessageResult
-local WIDTH, HEIGHT = 460, 420
+local WIDTH, HEIGHT = 460, 450
 local PAD = UI.PAD
 
 local CHAT_EVENTS = {
@@ -51,6 +54,7 @@ local sending = false
 local frame, pool -- the review window
 local shown -- the note in the review window: { name, label, tone, total, notes, from }
 local useTheirLabel = false
+local pickedTags = {} -- [tag] = true: their tags to add
 
 local function IsSecret(value)
 	return issecretvalue ~= nil and issecretvalue(value)
@@ -94,8 +98,9 @@ end
 
 -- A player's record as text: the header line and as many of the newest notes as fit.
 function share.Encode(record)
-	local label = notes.RecordLabel(record)
-	local header = table.concat({ Escape(record.name), Escape(label.name), Escape(label.tone), #record.notes }, "\t")
+	local tone = notes.RecordTone(record)
+	local header = table.concat({ Escape(record.name), Escape(tone.name), tone.key, #record.notes,
+		Escape(table.concat(record.tags, ",")) }, "\t")
 	local lines, size = {}, #header
 	for index = #record.notes, 1, -1 do
 		local note = record.notes[index]
@@ -110,15 +115,24 @@ function share.Encode(record)
 	return table.concat(lines, "\n")
 end
 
--- The text back to { name, label, tone, total, notes = { { time, by, zone, text } } }, or nil.
+-- The text back to { name, tone, tags, total, notes = { { time, by, zone, text } } }, or nil.
 function share.Decode(text)
 	local lines = { strsplit("\n", text) }
-	local name, label, tone, total = strsplit("\t", lines[1] or "")
+	local name, label, toneKey, total, tagText = strsplit("\t", lines[1] or "")
 	if not name or name == "" then
 		return nil
 	end
-	local shared = { name = Unescape(name), label = Unescape(label or ""), tone = Unescape(tone or ""),
-		total = tonumber(total) or 0, notes = {} }
+	local tone, tags = notes.GetTone(toneKey).key, {}
+	if tagText then
+		for _, tag in ipairs({ strsplit(",", Unescape(tagText)) }) do
+			table.insert(tags, notes.CleanTag(tag))
+		end
+	else
+		local oldTag
+		tone, oldTag = notes.FromOldLabel(Unescape(label or ""), toneKey)
+		tags[1] = oldTag
+	end
+	local shared = { name = Unescape(name), tone = tone, tags = tags, total = tonumber(total) or 0, notes = {} }
 	for index = 2, #lines do
 		local stamp, by, zone, noteText = strsplit("\t", lines[index])
 		if noteText then
@@ -324,10 +338,6 @@ end
 -- Review window
 ------------------------------------------------------------------------------
 
-local function TheirLabel()
-	return { name = shown.label, tone = shown.tone }
-end
-
 local function NewNotes(record)
 	local count = 0
 	for _, note in ipairs(shown.notes) do
@@ -341,28 +351,55 @@ end
 local function Render()
 	pool:ReleaseAll()
 	local record = notes.Find(shown.name)
-	local mine = notes.RecordLabel(record)
-	local theirs = notes.MatchLabel(shown.label, shown.tone)
+	local mine = notes.RecordTone(record)
+	local theirs = notes.GetTone(shown.tone)
 	frame.name:SetText(shown.name)
-	frame.from:SetText(string.format("Shared by %s  ·  their label: %s", shown.from, notes.LabelText(TheirLabel())))
+	frame.from:SetText(string.format("Shared by %s  ·  their label: %s", shown.from, notes.ToneText(theirs)))
 
-	local differs = record and mine.id ~= theirs.id
+	local differs = record and mine.key ~= theirs.key
 	frame.keep:SetShown(differs)
 	frame.use:SetShown(differs)
 	if differs then
-		frame.status:SetText("In your notes as " .. notes.LabelText(mine) .. ".")
-		frame.keep.text:SetText("Keep " .. notes.LabelText(mine))
+		frame.status:SetText("In your notes as " .. notes.ToneText(mine) .. ".")
+		frame.keep.text:SetText("Keep " .. notes.ToneText(mine))
 		frame.keep:SetWidth(frame.keep.text:GetStringWidth() + 20)
-		frame.use.text:SetText("Use " .. notes.LabelText(theirs))
+		frame.use.text:SetText("Use " .. notes.ToneText(theirs))
 		frame.use:SetWidth(frame.use.text:GetStringWidth() + 20)
 		frame.keep:SetSelected(not useTheirLabel)
 		frame.use:SetSelected(useTheirLabel)
 		frame.keep.text:SetTextColor(1, 1, 1)
 		frame.use.text:SetTextColor(1, 1, 1)
 	elseif record then
-		frame.status:SetText("In your notes as " .. notes.LabelText(mine) .. ".")
+		frame.status:SetText("In your notes as " .. notes.ToneText(mine) .. ".")
 	else
-		frame.status:SetText("New to your notes: they'll be " .. notes.LabelText(theirs) .. ".")
+		frame.status:SetText("New to your notes: they'll be " .. notes.ToneText(theirs) .. ".")
+	end
+
+	-- Their tags: click to leave one out; ones you already have are just shown.
+	local x, newTags = 0, 0
+	frame.tagsLabel:SetShown(#shown.tags > 0)
+	for _, tag in ipairs(shown.tags) do
+		local chip = pool:Acquire("tag", function()
+			local button = UI.CreateFlatButton(frame.body, "", 22)
+			button:SetScript("OnClick", function(self)
+				pickedTags[self.tag] = not pickedTags[self.tag] or nil
+				Render()
+			end)
+			return button
+		end)
+		local have = notes.HasTag(record, tag)
+		chip.tag = tag
+		chip:SetEnabled(not have)
+		chip.text:SetText("#" .. tag .. (have and "  (have it)" or ""))
+		chip:SetWidth(chip.text:GetStringWidth() + 20)
+		chip:SetSelected(not have and pickedTags[tag])
+		if have then
+			chip.text:SetTextColor(unpack(UI.TEXT_DIM))
+		elseif pickedTags[tag] then
+			newTags = newTags + 1
+		end
+		chip:SetPoint("LEFT", frame.tagsLabel, "RIGHT", 8 + x, 0)
+		x = x + chip:GetWidth() + 4
 	end
 
 	local content = frame.scroll.content
@@ -408,7 +445,7 @@ local function Render()
 	frame.scroll:UpdateThumb()
 
 	local count = NewNotes(record)
-	local changes = count > 0 or not record or (differs and useTheirLabel)
+	local changes = count > 0 or newTags > 0 or not record or (differs and useTheirLabel)
 	frame.add.text:SetText(count > 0 and string.format("Add %d %s", count, count == 1 and "note" or "notes") or "Add")
 	frame.add:SetWidth(frame.add.text:GetStringWidth() + 24)
 	frame.add:SetEnabled(changes)
@@ -416,7 +453,13 @@ local function Render()
 end
 
 local function AddShown()
-	local record, added = notes.Import(shown, useTheirLabel)
+	local tags = {}
+	for _, tag in ipairs(shown.tags) do
+		if pickedTags[tag] then
+			table.insert(tags, tag)
+		end
+	end
+	local record, added = notes.Import(shown, useTheirLabel, tags)
 	ns:Print(string.format("%s: %d %s added from %s.", record.name, added, added == 1 and "note" or "notes", shown.from))
 	frame:Hide()
 end
@@ -446,8 +489,12 @@ local function CreateReviewWindow()
 		Render()
 	end)
 
+	frame.tagsLabel = body:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	frame.tagsLabel:SetPoint("TOPLEFT", PAD, -PAD - 104)
+	frame.tagsLabel:SetText("Their tags:")
+
 	frame.scroll = UI.CreateScrollArea(body)
-	frame.scroll:SetPoint("TOPLEFT", PAD, -PAD - 98)
+	frame.scroll:SetPoint("TOPLEFT", PAD, -PAD - 128)
 	frame.scroll:SetPoint("BOTTOMRIGHT", -PAD - 14, 44)
 
 	local footer = CreateFrame("Frame", nil, body)
@@ -472,6 +519,11 @@ ShowReview = function(shared)
 	end
 	shown = shared
 	useTheirLabel = false
+	pickedTags = {}
+	for _, tag in ipairs(shared.tags or {}) do
+		pickedTags[tag] = true
+	end
+	shared.tags = shared.tags or {}
 	frame:Show()
 	Render()
 end

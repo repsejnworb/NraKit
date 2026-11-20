@@ -16,6 +16,10 @@ local _, ns = ...
 --           "new" entry with its module (tests/changelog_test.lua checks).
 
 ns.changelog = {
+	{ version = "Unreleased", entries = {
+		{ "new", "Player notes: tags. Give players any number of tags of your own (Ninjalooter, Good tank, Guildie) on their page, where your other tags are suggested, or from chat: /nra note Bob Stone kos #ninjalooter stole my node. The notebook lists players in a section per tag (click a section to fold it), and the Tags page renames and deletes tags. Shared notes bring their tags along.", module = "playerNotes" },
+		{ "improved", "Player notes: the label is now one of four (Kill on sight, Avoid, Neutral, Friend), and tags do the grouping. Your own labels became tags automatically, with the label they were based on; Good became Friend." },
+	} },
 	{ version = "0.22.0", date = "2026-11-20", entries = {
 		{ "fixed", "Campfire timer: getting up early no longer says \"Camp Benefits ready\" when you already had Camp Benefits from an earlier rest." },
 		{ "improved", "Campfire timer: the bar shows once each time you sit down at the fire, not again every minute while you stay seated." },

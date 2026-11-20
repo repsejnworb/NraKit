@@ -1,14 +1,14 @@
 local _, ns = ...
 
--- Player notes: a label and a dated log of notes per player. The label shows in unit
--- tooltips; the right-click menu on a player (unit frames, chat names, group, guild
--- and friends lists) opens the notes or sets the label.
+-- Player notes: per player a label, any number of tags and a dated log of notes. The
+-- label and tags show in unit tooltips; the right-click menu on a player (unit frames,
+-- chat names, group, guild and friends lists) opens the notes or sets the label.
 --
--- Every label has a tone, and the tone decides what happens: Hostile and Caution
--- players trigger warnings when they join your group, invite you, whisper you or open
--- a trade, and Unit Scanner alerts for Hostile ones nearby (it asks ScanEntry). The
--- five built-in labels are only a starting set; they can be renamed, recolored or
--- deleted, and more added (PlayerNotesWindow.lua has the editor).
+-- The label is one of four fixed ones (called "tone" in the code), and it decides what
+-- happens: Kill on sight and Avoid players trigger warnings when they join your group,
+-- invite you, whisper you or open a trade, and Unit Scanner alerts for Kill on sight
+-- ones nearby (it asks ScanEntry). Tags are your own words ("Ninjalooter", "Good tank")
+-- for grouping players; the window lists players by tag.
 --
 -- Forever has no realms: players are "Firstname Surname" (UnitName returns the two
 -- parts). Names match case-insensitively, and "Firstname-Surname" (realm style, as
@@ -19,15 +19,18 @@ local _, ns = ...
 -- Notes can be linked in chat and added from someone else's link (PlayerNotesShare.lua).
 --
 -- Data (account-wide): NraKitDB.playerNotesData = {
---   players = { [key] = { name, guid, class, label, notes = { { text, time, zone, by, sharedBy? } }, created, updated } },
---   labels = { { id, name, tone, color = { r, g, b }? }, ... }, nextLabel,
+--   players = { [key] = { name, guid, class, tone, tags = { "Tag", ... },
+--     notes = { { text, time, zone, by, sharedBy? } }, created, updated } },
+--   collapsed = { [tag key] = true }, -- tag sections closed in the window's list
 -- }
+-- Before tags, players had one of a list of editable labels (labels, nextLabel and
+-- record.label); GetData turns those into a tone plus, for your own labels, a tag.
 
 local module = {
 	key = "playerNotes",
 	section = "Utilities",
 	name = "Player notes",
-	description = "Keep notes on players: a label (Kill on sight, Avoid, Friend, or your own) and a dated log of what happened. Shown in their tooltip; right-click a player (portrait, party frame, chat name) for Player note. Warns you when a player you've marked Avoid or Kill on sight joins your group, invites, whispers or trades you. /nra note opens your notes.",
+	description = "Keep notes on players: a label (Kill on sight, Avoid, Neutral or Friend), tags of your own to group them (Ninjalooter, Good tank, ...) and a dated log of what happened. Shown in their tooltip; right-click a player (portrait, party frame, chat name) for Player note. Warns you when a player you've marked Avoid or Kill on sight joins your group, invites, whispers or trades you. /nra note opens your notes.",
 	default = false,
 	options = {
 		{
@@ -41,25 +44,25 @@ local module = {
 			key = "playerNotesWarnGroup",
 			header = "Warnings",
 			name = "When they join your group",
-			description = "Warn when a player with a Caution or Hostile label (Avoid, Kill on sight, ...) is in a group you join, or joins yours.",
+			description = "Warn when a player labelled Avoid or Kill on sight is in a group you join, or joins yours.",
 			default = true,
 		},
 		{
 			key = "playerNotesWarnInvite",
 			name = "When they invite you",
-			description = "Warn when a player with a Caution or Hostile label invites you to a group.",
+			description = "Warn when a player labelled Avoid or Kill on sight invites you to a group.",
 			default = true,
 		},
 		{
 			key = "playerNotesWarnWhisper",
 			name = "When they whisper you",
-			description = "Warn when a player with a Caution or Hostile label whispers you (at most every few minutes per player).",
+			description = "Warn when a player labelled Avoid or Kill on sight whispers you (at most every few minutes per player).",
 			default = true,
 		},
 		{
 			key = "playerNotesWarnTrade",
 			name = "When they open a trade",
-			description = "Warn when a player with a Caution or Hostile label opens a trade with you.",
+			description = "Warn when a player labelled Avoid or Kill on sight opens a trade with you.",
 			default = true,
 		},
 		{
@@ -86,7 +89,7 @@ local module = {
 			key = "playerNotesShareLinks",
 			header = "Sharing",
 			name = "Note links in chat",
-			description = "Show [NraKit note: Name] in chat as a link: click it to see that player's label and notes and add them to yours. Share your own by shift-clicking a player in your notes.",
+			description = "Show [NraKit note: Name] in chat as a link: click it to see that player's label, tags and notes and add them to yours. Share your own by shift-clicking a player in your notes.",
 			default = true,
 		},
 		{
@@ -94,7 +97,7 @@ local module = {
 			header = "Unit Scanner",
 			requires = "unitScanner",
 			name = "Alert when Hostile players are nearby",
-			description = "Unit Scanner alerts you (with its sound, marker and target button) when a player with a Hostile label (Kill on sight, ...) shows up: nameplates, mouseover, targets. Needs Unit Scanner turned on. Players of your own faction are only seen on mouseover and as targets unless friendly nameplates are on.",
+			description = "Unit Scanner alerts you (with its sound, marker and target button) when a player labelled Kill on sight shows up: nameplates, mouseover, targets. Needs Unit Scanner turned on. Players of your own faction are only seen on mouseover and as targets unless friendly nameplates are on.",
 			default = true,
 		},
 	},
@@ -103,26 +106,28 @@ local module = {
 local notes = {}
 ns.playerNotes = notes
 
--- Tones, in the order labels are listed. warn: group/whisper/... warnings; scan: Unit Scanner.
+-- The four labels ("tones"), in the order they're listed. warn: group/whisper/... warnings;
+-- scan: Unit Scanner. words: what you can type for them in /nra note.
 notes.TONES = {
-	{ key = "hostile", name = "Hostile", color = { 1, 0.25, 0.2 }, warn = true, scan = true },
-	{ key = "caution", name = "Caution", color = { 1, 0.55, 0.15 }, warn = true },
-	{ key = "neutral", name = "Neutral", color = { 0.7, 0.7, 0.7 } },
-	{ key = "friendly", name = "Friendly", color = { 0.3, 0.85, 0.35 } },
+	{ key = "hostile", name = "Kill on sight", color = { 1, 0.25, 0.2 }, warn = true, scan = true,
+		words = { "kos", "killonsight", "hostile" } },
+	{ key = "caution", name = "Avoid", color = { 1, 0.55, 0.15 }, warn = true, words = { "avoid", "caution" } },
+	{ key = "neutral", name = "Neutral", color = { 0.7, 0.7, 0.7 }, words = { "neutral" } },
+	{ key = "friendly", name = "Friend", color = { 0.3, 0.85, 0.35 }, words = { "friend", "friendly", "good" } },
 }
-local TONE_BY_KEY = {}
+local TONE_BY_KEY, TONE_BY_WORD = {}, {}
 for index, tone in ipairs(notes.TONES) do
 	tone.order = index
 	TONE_BY_KEY[tone.key] = tone
+	for _, word in ipairs(tone.words) do
+		TONE_BY_WORD[word] = tone
+	end
 end
 
-local DEFAULT_LABELS = {
-	{ id = "kos", name = "Kill on sight", tone = "hostile" },
-	{ id = "avoid", name = "Avoid", tone = "caution" },
-	{ id = "neutral", name = "Neutral", tone = "neutral" },
-	{ id = "good", name = "Good", tone = "friendly" },
-	{ id = "friend", name = "Friend", tone = "friendly", color = { 0.35, 0.7, 1 } },
-}
+-- The built-in labels from before tags; these names become just a tone, others a tag too.
+local OLD_LABEL_NAMES = { ["kill on sight"] = true, avoid = true, neutral = true, good = true, friend = true }
+
+local MAX_TAG_LENGTH = 30
 
 local SKULL = "|TInterface\\TargetingFrame\\UI-RaidTargetingIcon_8:0|t "
 local WARN_COOLDOWN = 300
@@ -192,90 +197,86 @@ local function IsMe(name)
 end
 
 ------------------------------------------------------------------------------
+-- Labels (tones)
+------------------------------------------------------------------------------
+
+function notes.GetTone(key)
+	return TONE_BY_KEY[key] or TONE_BY_KEY.neutral
+end
+
+function notes.RecordTone(record)
+	return notes.GetTone(record and record.tone)
+end
+
+function notes.ToneColor(tone)
+	return tone.color[1], tone.color[2], tone.color[3]
+end
+
+-- The label as colored text, with a skull for Kill on sight.
+function notes.ToneText(tone)
+	if not tone then
+		return ""
+	end
+	local r, g, b = notes.ToneColor(tone)
+	return string.format("%s|cff%02x%02x%02x%s|r", tone.scan and SKULL or "", r * 255, g * 255, b * 255, tone.name)
+end
+
+-- A label by what you'd type ("kos", "Kill on sight", "avoid", "good"), or nil.
+function notes.ToneByWord(word)
+	word = word and word:lower():gsub("%s", "")
+	return word and TONE_BY_WORD[word] or nil
+end
+
+-- A label from before tags (or from an older NraKit's shared note): its tone, and a tag
+-- for a label of your own (the built-in names need none).
+function notes.FromOldLabel(name, toneKey)
+	local tag = name and notes.CleanTag(name)
+	if tag and (OLD_LABEL_NAMES[tag:lower()] or notes.ToneByWord(tag)) then
+		tag = nil
+	end
+	return TONE_BY_KEY[toneKey] and toneKey or "neutral", tag
+end
+
+------------------------------------------------------------------------------
 -- Data
 ------------------------------------------------------------------------------
 
-local function CopyLabels()
-	local labels = {}
-	for index, label in ipairs(DEFAULT_LABELS) do
-		labels[index] = { id = label.id, name = label.name, tone = label.tone, color = label.color and { unpack(label.color) } }
+local function Migrate(data)
+	if data.labels then
+		local labels = {}
+		for _, label in ipairs(data.labels) do
+			labels[label.id] = label
+		end
+		for _, record in pairs(data.players) do
+			local label = labels[record.label]
+			local tone, tag = notes.FromOldLabel(label and label.name, label and label.tone)
+			record.tone = record.tone or tone
+			record.tags = record.tags or {}
+			if tag then
+				table.insert(record.tags, tag)
+			end
+			record.label = nil
+		end
+		data.labels, data.nextLabel = nil, nil
 	end
-	return labels
+	for _, record in pairs(data.players) do
+		record.tone = TONE_BY_KEY[record.tone] and record.tone or "neutral"
+		record.tags = record.tags or {}
+	end
+	data.collapsed = data.collapsed or {}
 end
 
 function notes.GetData()
 	local data = NraKitDB.playerNotesData
 	if not data then
-		data = { players = {}, labels = CopyLabels(), nextLabel = 1 }
+		data = { players = {}, collapsed = {} }
 		NraKitDB.playerNotesData = data
 	end
+	if not data.migrated then
+		Migrate(data)
+		data.migrated = true
+	end
 	return data
-end
-
-function notes.GetLabels()
-	return notes.GetData().labels
-end
-
-function notes.GetLabel(id)
-	for _, label in ipairs(notes.GetLabels()) do
-		if label.id == id then
-			return label
-		end
-	end
-	return nil
-end
-
-function notes.Tone(label)
-	return label and TONE_BY_KEY[label.tone] or TONE_BY_KEY.neutral
-end
-
-function notes.LabelColor(label)
-	local color = label and label.color or notes.Tone(label).color
-	return color[1], color[2], color[3]
-end
-
--- The label as colored text, with a skull for Hostile ones.
-function notes.LabelText(label)
-	if not label then
-		return ""
-	end
-	local r, g, b = notes.LabelColor(label)
-	local icon = notes.Tone(label).scan and SKULL or ""
-	return string.format("%s|cff%02x%02x%02x%s|r", icon, r * 255, g * 255, b * 255, label.name)
-end
-
--- Labels sorted by tone (Hostile first), keeping their order within a tone.
-function notes.SortedLabels()
-	local list = {}
-	for index, label in ipairs(notes.GetLabels()) do
-		list[index] = label
-	end
-	local position = {}
-	for index, label in ipairs(list) do
-		position[label] = index
-	end
-	table.sort(list, function(a, b)
-		local toneA, toneB = notes.Tone(a).order, notes.Tone(b).order
-		if toneA ~= toneB then
-			return toneA < toneB
-		end
-		return position[a] < position[b]
-	end)
-	return list
-end
-
--- The first label of a tone (where players go when their label is deleted).
-local function ToneDefault(toneKey)
-	for _, label in ipairs(notes.SortedLabels()) do
-		if label.tone == toneKey then
-			return label
-		end
-	end
-	return nil
-end
-
-local function DefaultLabel()
-	return ToneDefault("neutral") or notes.SortedLabels()[1]
 end
 
 -- The player's record (and its key) by name and/or GUID.
@@ -336,7 +337,8 @@ function notes.Ensure(name, info)
 	key = notes.Key(name)
 	record = {
 		name = notes.Display(name),
-		label = DefaultLabel().id,
+		tone = "neutral",
+		tags = {},
 		notes = {},
 		created = time(),
 		updated = time(),
@@ -352,9 +354,9 @@ function notes.AddPlayer(name, info)
 	return record, key
 end
 
-function notes.SetLabel(name, labelID, info)
+function notes.SetTone(name, toneKey, info)
 	local record = notes.Ensure(name, info)
-	record.label = labelID
+	record.tone = notes.GetTone(toneKey).key
 	record.updated = time()
 	Changed()
 	return record
@@ -478,102 +480,130 @@ function notes.Snippet(text, length)
 end
 
 ------------------------------------------------------------------------------
--- Labels
+-- Tags
 ------------------------------------------------------------------------------
 
-function notes.AddLabel(name, toneKey)
-	local data = notes.GetData()
-	local id = "custom" .. data.nextLabel
-	data.nextLabel = data.nextLabel + 1
-	local label = { id = id, name = name, tone = toneKey or "neutral" }
-	table.insert(data.labels, label)
-	Changed()
-	return label
+-- What's typed, as a tag: no "#" in front, no commas, single spaces, at most 30 letters.
+function notes.CleanTag(text)
+	text = strtrim((tostring(text or ""):gsub("^%s*#+", ""):gsub(",", " "):gsub("%s+", " ")))
+	text = strtrim(text:sub(1, MAX_TAG_LENGTH))
+	return text ~= "" and text or nil
 end
 
-function notes.RenameLabel(id, name)
-	local label = notes.GetLabel(id)
-	name = strtrim(name or "")
-	if label and name ~= "" then
-		label.name = name
+function notes.TagKey(tag)
+	return tag:lower()
+end
+
+function notes.HasTag(record, tag)
+	local key = notes.TagKey(tag)
+	for _, mine in ipairs(record and record.tags or {}) do
+		if notes.TagKey(mine) == key then
+			return true
+		end
+	end
+	return false
+end
+
+-- Every tag in use: { { name, key, count } }, by name.
+function notes.AllTags()
+	local byKey, list = {}, {}
+	for _, record in pairs(notes.GetData().players) do
+		for _, tag in ipairs(record.tags) do
+			local key = notes.TagKey(tag)
+			if not byKey[key] then
+				byKey[key] = { name = tag, key = key, count = 0 }
+				table.insert(list, byKey[key])
+			end
+			byKey[key].count = byKey[key].count + 1
+		end
+	end
+	table.sort(list, function(a, b)
+		return a.key < b.key
+	end)
+	return list
+end
+
+-- A tag as already spelled on someone else ("tank" -> "Tank"), so one tag stays one.
+local function Spelling(tag)
+	local key = notes.TagKey(tag)
+	for _, record in pairs(notes.GetData().players) do
+		for _, other in ipairs(record.tags) do
+			if notes.TagKey(other) == key then
+				return other
+			end
+		end
+	end
+	return tag
+end
+
+-- Adds a tag to a player (created if new). Returns the record.
+function notes.AddTag(name, text, info)
+	local tag = notes.CleanTag(text)
+	local record = notes.Ensure(name, info)
+	if tag and not notes.HasTag(record, tag) then
+		table.insert(record.tags, Spelling(tag))
+		table.sort(record.tags, function(a, b)
+			return a:lower() < b:lower()
+		end)
+		record.updated = time()
+		Changed()
+	end
+	return record
+end
+
+local function Without(record, tag)
+	local key = notes.TagKey(tag)
+	for index = #record.tags, 1, -1 do
+		if notes.TagKey(record.tags[index]) == key then
+			table.remove(record.tags, index)
+		end
+	end
+end
+
+function notes.RemoveTag(key, tag)
+	local record = notes.GetData().players[key]
+	if record and notes.HasTag(record, tag) then
+		Without(record, tag)
+		record.updated = time()
 		Changed()
 	end
 end
 
-function notes.SetLabelTone(id, toneKey)
-	local label = notes.GetLabel(id)
-	if label and TONE_BY_KEY[toneKey] then
-		label.tone = toneKey
-		Changed()
-	end
-end
-
--- color = { r, g, b }, or nil for the tone's color.
-function notes.SetLabelColor(id, color)
-	local label = notes.GetLabel(id)
-	if label then
-		label.color = color
-		Changed()
-	end
-end
-
--- The last label can't go. Its players move to the first label of the same tone,
--- or to the default label if it was the last of its tone.
-function notes.CanDeleteLabel(id)
-	return #notes.GetLabels() > 1 and notes.GetLabel(id) ~= nil
-end
-
-function notes.DeleteLabel(id)
-	if not notes.CanDeleteLabel(id) then
+-- Renames a tag on everyone (into another tag, if that name is taken: they merge).
+function notes.RenameTag(tag, text)
+	local newTag = notes.CleanTag(text)
+	if not newTag or newTag == tag then
 		return
 	end
-	local labels = notes.GetLabels()
-	local deleted
-	for index, label in ipairs(labels) do
-		if label.id == id then
-			deleted = table.remove(labels, index)
-			break
+	local merged = notes.TagKey(newTag) ~= notes.TagKey(tag) and Spelling(newTag) or newTag
+	for _, record in pairs(notes.GetData().players) do
+		if notes.HasTag(record, tag) then
+			Without(record, tag)
+			Without(record, merged)
+			table.insert(record.tags, merged)
+			table.sort(record.tags, function(a, b)
+				return a:lower() < b:lower()
+			end)
 		end
 	end
-	local replacement = ToneDefault(deleted.tone) or DefaultLabel()
+	local collapsed = notes.GetData().collapsed
+	collapsed[notes.TagKey(merged)] = collapsed[notes.TagKey(tag)]
+	Changed()
+end
+
+function notes.DeleteTag(tag)
 	for _, record in pairs(notes.GetData().players) do
-		if record.label == id then
-			record.label = replacement.id
-		end
+		Without(record, tag)
 	end
 	Changed()
 end
 
--- A label by what you'd type: its name without spaces ("killonsight"), its initials
--- ("kos"), or its ID.
-function notes.LabelByWord(word)
-	word = word and word:lower()
-	if not word or word == "" then
-		return nil
+-- "#Ninjalooter #Tank" in grey, or "".
+function notes.TagsText(record)
+	if not record or #record.tags == 0 then
+		return ""
 	end
-	for _, label in ipairs(notes.GetLabels()) do
-		local name = label.name:lower()
-		local initials = name:gsub("(%w)%w*", "%1"):gsub("%s", "")
-		if word == name:gsub("%s", "") or word == label.id or (#initials > 1 and word == initials) then
-			return label
-		end
-	end
-	return nil
-end
-
-function notes.RecordLabel(record)
-	return record and (notes.GetLabel(record.label) or DefaultLabel())
-end
-
--- Your label for someone else's: the one with the same name, else the first of the same tone.
-function notes.MatchLabel(name, toneKey)
-	name = name and name:lower()
-	for _, label in ipairs(notes.GetLabels()) do
-		if label.name:lower() == name then
-			return label
-		end
-	end
-	return ToneDefault(TONE_BY_KEY[toneKey] and toneKey or "neutral") or DefaultLabel()
+	return "|cff9a9a9a#" .. table.concat(record.tags, "  #") .. "|r"
 end
 
 -- Whether the record already has this note (same text and time).
@@ -586,16 +616,25 @@ function notes.HasNote(record, note)
 	return false
 end
 
--- Adds a shared note: shared = { name, label, tone, notes = { { text, time, zone, by } }, from }.
--- A new player gets the matching label; someone you have keeps yours unless useLabel.
--- Notes you already have are skipped; the rest keep their author and say who shared them.
--- Returns the record and how many notes were added.
-function notes.Import(shared, useLabel)
+-- Adds a shared note: shared = { name, tone, tags, notes = { { text, time, zone, by } }, from }.
+-- A new player gets their label; someone you have keeps yours unless useTone. tags: the
+-- ones to add (default all of theirs). Notes you already have are skipped; the rest keep
+-- their author and say who shared them. Returns the record and how many notes were added.
+function notes.Import(shared, useTone, tags)
 	local isNew = notes.Find(shared.name) == nil
 	local record = notes.Ensure(shared.name)
-	if isNew or useLabel then
-		record.label = notes.MatchLabel(shared.label, shared.tone).id
+	if isNew or useTone then
+		record.tone = notes.GetTone(shared.tone).key
 	end
+	for _, tag in ipairs(tags or shared.tags or {}) do
+		tag = notes.CleanTag(tag)
+		if tag and not notes.HasTag(record, tag) then
+			table.insert(record.tags, Spelling(tag))
+		end
+	end
+	table.sort(record.tags, function(a, b)
+		return a:lower() < b:lower()
+	end)
 	local added = 0
 	for _, note in ipairs(shared.notes) do
 		if not notes.HasNote(record, note) then
@@ -644,9 +683,11 @@ local function OnUnitTooltip(tooltip)
 	if not record then
 		return
 	end
-	local label = notes.RecordLabel(record)
 	local count = #record.notes
-	local line = notes.LabelText(label)
+	local line = notes.ToneText(notes.RecordTone(record))
+	if #record.tags > 0 then
+		line = line .. "  " .. notes.TagsText(record)
+	end
 	if count > 1 then
 		line = line .. string.format("  |cff808080%d notes|r", count)
 	end
@@ -707,12 +748,12 @@ local function OnUnitMenu(_, root, contextData)
 		ns:OpenPlayerNotes(name, info)
 	end)
 	local labelMenu = root:CreateButton("Player label")
-	for _, label in ipairs(notes.SortedLabels()) do
-		labelMenu:CreateRadio(notes.LabelText(label), function()
+	for _, tone in ipairs(notes.TONES) do
+		labelMenu:CreateRadio(notes.ToneText(tone), function()
 			local current = notes.Find(name, info.guid)
-			return current ~= nil and current.label == label.id
+			return current ~= nil and current.tone == tone.key
 		end, function()
-			notes.SetLabel(name, label.id, info)
+			notes.SetTone(name, tone.key, info)
 		end)
 	end
 end
@@ -730,14 +771,14 @@ local REASONS = {
 
 local lastWarn = {} -- key .. reason -> time()
 
--- Warns if the player has a Caution or Hostile label. Returns true if it did.
+-- Warns if the player is labelled Avoid or Kill on sight. Returns true if it did.
 function notes.Warn(name, guid, reason)
 	if not ns:IsModuleEnabled(module.key) or not ns:GetOption(REASONS[reason].option) then
 		return false
 	end
 	local record, key = notes.Find(name, guid)
-	local label = notes.RecordLabel(record)
-	if not record or not notes.Tone(label).warn then
+	local tone = notes.RecordTone(record)
+	if not record or not tone.warn then
 		return false
 	end
 	local now = time()
@@ -747,15 +788,15 @@ function notes.Warn(name, guid, reason)
 	end
 	lastWarn[stamp] = now
 
-	local r, g, b = notes.LabelColor(label)
+	local r, g, b = notes.ToneColor(tone)
 	local latest = notes.LatestNote(record)
-	local message = string.format("%s (%s) %s", record.name, notes.LabelText(label), REASONS[reason].text)
+	local message = string.format("%s (%s) %s", record.name, notes.ToneText(tone), REASONS[reason].text)
 	if latest then
 		message = message .. ": \"" .. notes.Snippet(latest.text) .. "\""
 	end
 	ns:Print("|cffff8040Heads up:|r " .. message)
 	if ns:GetOption("playerNotesWarnScreen") and RaidNotice_AddMessage and RaidWarningFrame then
-		RaidNotice_AddMessage(RaidWarningFrame, string.format("%s - %s", record.name, label.name),
+		RaidNotice_AddMessage(RaidWarningFrame, string.format("%s - %s", record.name, tone.name),
 			{ r = r, g = g, b = b })
 	end
 	if ns:GetOption("playerNotesWarnSound") then
@@ -817,7 +858,7 @@ local function ScanEnabled()
 	return ns:IsModuleEnabled(module.key) and ns:GetOption("playerNotesScanHostile")
 end
 
--- Whether any player has a Hostile label (and scanning for them is on).
+-- Whether any player is labelled Kill on sight (and scanning for them is on).
 function notes.HasScanTargets()
 	if not ScanEnabled() then
 		return false
@@ -825,7 +866,7 @@ function notes.HasScanTargets()
 	if hasScanTargets == nil then
 		hasScanTargets = false
 		for _, record in pairs(notes.GetData().players) do
-			if notes.Tone(notes.RecordLabel(record)).scan then
+			if notes.RecordTone(record).scan then
 				hasScanTargets = true
 				break
 			end
@@ -840,14 +881,14 @@ function notes.ScanEntry(name, guid)
 		return nil
 	end
 	local record, key = notes.Find(name, guid)
-	local label = notes.RecordLabel(record)
-	if not record or not notes.Tone(label).scan then
+	local tone = notes.RecordTone(record)
+	if not record or not tone.scan then
 		return nil
 	end
 	local entry = scanEntries[key] or { noted = true }
 	scanEntries[key] = entry
 	entry.name = record.name
-	entry.label = label.name
+	entry.label = tone.name
 	return entry
 end
 
@@ -856,13 +897,13 @@ end
 ------------------------------------------------------------------------------
 
 local HELP = {
-	summary = "Player notes: label players and keep notes on them",
+	summary = "Player notes: label and tag players and keep notes on them",
 	usage = {
 		"/nra note - your target's notes, or the notebook",
 		"/nra note <note> - add a note to your target (a player)",
-		"/nra note <label> [note] - set your target's label (kos, avoid, neutral, good, friend, or yours), and add a note",
-		"/nra note <First Last> [label] [note] - the same for anyone by name (no note: opens their notes)",
-		"/nra note <first name> [label [note]] - someone you already have notes on (e.g. /nra note bob kos)",
+		"/nra note <label> [#tags] [note] - set your target's label (kos, avoid, neutral, friend), add tags (#tank), and a note",
+		"/nra note <First Last> [label] [#tags] [note] - the same for anyone by name (nothing else: opens their notes)",
+		"/nra note <first name> [label or #tag ...] - someone you already have notes on (e.g. /nra note bob kos #ninja)",
 		"/nra note !remove [First Last] - remove your target (or that player) from your notes; also !rm, !forget",
 		"/nra note !undo - bring back the player you last removed",
 		"/nra note !list - list the players you have notes on",
@@ -898,19 +939,25 @@ local function FindByPrefix(text)
 	return found
 end
 
--- Sets the label and/or adds the note, and says what it did.
-local function Apply(name, info, label, text)
-	if not label and text == "" then
+-- Sets the label, adds the tags and/or the note, and says what it did.
+local function Apply(name, info, tone, tags, text)
+	if not tone and #tags == 0 and text == "" then
 		ns:OpenPlayerNotes(name, info)
 		return
 	end
-	if label then
-		notes.SetLabel(name, label.id, info)
+	if tone then
+		notes.SetTone(name, tone.key, info)
+	end
+	for _, tag in ipairs(tags) do
+		notes.AddTag(name, tag, info)
 	end
 	local record = text ~= "" and notes.AddNote(name, text, info) or notes.Find(name)
 	local parts = {}
-	if label then
-		table.insert(parts, "label " .. notes.LabelText(label))
+	if tone then
+		table.insert(parts, "label " .. notes.ToneText(tone))
+	end
+	if #tags > 0 then
+		table.insert(parts, "tagged " .. notes.TagsText({ tags = tags }))
 	end
 	if text ~= "" then
 		table.insert(parts, "note added")
@@ -927,7 +974,8 @@ local function List()
 	ns:Print(string.format("%d players:", #players))
 	for _, entry in ipairs(players) do
 		local latest = notes.LatestNote(entry.record)
-		print(string.format("  %s - %s%s", entry.record.name, notes.LabelText(notes.RecordLabel(entry.record)),
+		local tags = #entry.record.tags > 0 and (" " .. notes.TagsText(entry.record)) or ""
+		print(string.format("  %s - %s%s%s", entry.record.name, notes.ToneText(notes.RecordTone(entry.record)), tags,
 			latest and (": " .. notes.Snippet(latest.text, 40)) or ""))
 	end
 end
@@ -1001,9 +1049,21 @@ local function OnSlashCommand(input)
 		table.insert(words, word)
 	end
 	local targetName, targetInfo = notes.TargetPlayer()
+	-- "[label] [#tag ...] [note]" from a word on.
 	local function RestFrom(index)
-		local label = notes.LabelByWord(words[index])
-		return label, table.concat(words, " ", label and index + 1 or index)
+		local tone = notes.ToneByWord(words[index])
+		if tone then
+			index = index + 1
+		end
+		local tags = {}
+		while words[index] and words[index]:match("^#.") do
+			table.insert(tags, notes.CleanTag(words[index]))
+			index = index + 1
+		end
+		return tone, tags, table.concat(words, " ", index)
+	end
+	local function LabelOrTag(word)
+		return word and (notes.ToneByWord(word) or word:match("^#."))
 	end
 
 	-- A player named in full: someone you have notes on, or your target by name.
@@ -1016,18 +1076,18 @@ local function OnSlashCommand(input)
 		return
 	end
 
-	-- Otherwise, with a player targeted, it's all about them: "[label] [note]".
+	-- Otherwise, with a player targeted, it's all about them: "[label] [#tags] [note]".
 	if targetName then
 		Apply(targetName, targetInfo, RestFrom(1))
 		return
 	end
 
-	-- No target: a noted player by first name, followed by a label or nothing ("bob kos"
+	-- No target: a noted player by first name, followed by a label, a tag or nothing ("bob kos"
 	-- -> Bob Stone; "bob smith kos" is a new Bob), or a new player's "First Last".
-	local known = (#words == 1 or notes.LabelByWord(words[2])) and FindByPrefix(words[1])
+	local known = (#words == 1 or LabelOrTag(words[2])) and FindByPrefix(words[1])
 	if known then
 		Apply(known.name, nil, RestFrom(2))
-	elseif notes.LabelByWord(words[1]) or #words == 1 then
+	elseif LabelOrTag(words[1]) or #words == 1 then
 		ns:Print(string.format("Who is that for? Target a player, or name them: |cffffd100/nra note <First Last> %s|r. (/nra note help)", input))
 	else
 		Apply(twoWords, nil, RestFrom(3))

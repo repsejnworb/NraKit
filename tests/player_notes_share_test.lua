@@ -51,7 +51,9 @@ return {
 		wow.data.units.player = { name = "Nra", surname = "Brown" }
 
 		local SPECIAL = "tab\there, a new\nline, a || pipe, a \\ backslash and Æsir åäö"
-		notes.SetLabel("Theron Nightbloom", "avoid")
+		notes.SetTone("Theron Nightbloom", "caution")
+		notes.AddTag("Theron Nightbloom", "Ninjalooter")
+		notes.AddTag("Theron Nightbloom", "Tank")
 		notes.AddNote("Theron Nightbloom", "Ninjad a crate back in Westfall.")
 		notes.AddNote("Theron Nightbloom", SPECIAL)
 		for index = 1, 3 do
@@ -136,10 +138,12 @@ return {
 				Message(pieces[index].message:gsub("^PART\t1\t", "PART\t" .. id .. "\t"), "Angry Nra")
 			end
 			t.ok(ReviewShown(), "review window")
+			t.ok(wow.click("#Tank"), "their tags can be left out")
 			t.ok(wow.click("Add 5 notes"), "Add, with the count")
 			t.ok(not ReviewShown(), "closes")
 			local record = notes.Find("Theron Nightbloom")
-			t.equal(record.label, "avoid", "their label, for someone new")
+			t.equal(record.tone, "caution", "their label, for someone new")
+			t.equal(table.concat(record.tags, ","), "Ninjalooter", "the tags you kept")
 			t.equal(#record.notes, 5, "every note")
 			t.equal(record.notes[1].by, "Banker Nra", "keeps who wrote it")
 			t.equal(record.notes[1].sharedBy, "Angry Nra", "and who shared it")
@@ -147,14 +151,14 @@ return {
 		end)
 
 		t.test("adding again skips notes you have; your label stays unless you pick theirs", function()
-			notes.SetLabel("Theron Nightbloom", "neutral")
-			local shared = { name = "Theron Nightbloom", label = "Kill on sight", tone = "hostile", total = 2, from = "Ann Lee",
+			notes.SetTone("Theron Nightbloom", "neutral")
+			local shared = { name = "Theron Nightbloom", tone = "hostile", tags = {}, total = 2, from = "Ann Lee",
 				notes = { notes.Find("Theron Nightbloom").notes[1], { time = 5, text = "new one", by = "Ann Lee" } } }
 			share.ShowReview(shared)
 			t.ok(wow.click("Add 1 note"), "only the new one counts")
 			local record = notes.Find("Theron Nightbloom")
 			t.equal(#record.notes, 6, "one added")
-			t.equal(record.label, "neutral", "kept your label")
+			t.equal(record.tone, "neutral", "kept your label")
 			share.ShowReview(shared)
 			t.equal(select(2, wow.click("Add")), "disabled", "nothing new to add")
 			for _, frame in ipairs(wow.frames) do
@@ -164,7 +168,21 @@ return {
 				end
 			end
 			t.ok(wow.click("Add"), "the label is a change")
-			t.equal(notes.Find("Theron Nightbloom").label, "kos", "their label, matched by name")
+			t.equal(notes.Find("Theron Nightbloom").tone, "hostile", "theirs")
+		end)
+
+		t.test("a note from NraKit 0.22.0 (labels, no tags) still reads", function()
+			local old = share.Decode("Cy Moor\tGankers\thostile\t1\n100\tAnn Lee\t\tcamps the flight path")
+			t.equal(old.tone, "hostile", "the label's tone")
+			t.equal(old.tags[1], "Gankers", "their own label becomes a tag")
+			t.equal(old.notes[1].text, "camps the flight path", "the note")
+			t.ok(old.notes[1].zone == nil, "no zone")
+			old = share.Decode("Cy Moor\tKill on sight\thostile\t0")
+			t.equal(#old.tags, 0, "a built-in label needs no tag")
+			local new = share.Decode(share.Encode(notes.Find("Theron Nightbloom")))
+			t.equal(new.tone, "hostile", "ours reads back")
+			t.equal(select(2, strsplit("\t", share.Encode(notes.Find("Theron Nightbloom")))), "Kill on sight",
+				"an old NraKit reads our label by its name")
 		end)
 
 		t.test("no answer, offline, or not linked: it says so", function()

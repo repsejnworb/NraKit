@@ -1,4 +1,4 @@
--- Unit Scanner alerts for players with a Hostile label (Player notes), with an empty scan list.
+-- Unit Scanner alerts for players labelled Kill on sight (Player notes), with an empty scan list.
 
 return {
 	enable = { "playerNotes", "unitScanner" },
@@ -14,15 +14,15 @@ return {
 		end
 		wow.data.units.nameplate1 = { name = "Ann", surname = "Lee", guid = "Player-1-0003" }
 
-		t.test("no alert for a player without a Hostile label", function()
-			notes.SetLabel("Ann Lee", "avoid")
+		t.test("no alert for a player labelled Avoid", function()
+			notes.SetTone("Ann Lee", "caution")
 			wow.printed = {}
 			wow.fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
 			t.ok(not Printed("found"), "no alert")
 		end)
 
 		t.test("a Kill on sight player on a nameplate alerts", function()
-			notes.SetLabel("Ann Lee", "kos")
+			notes.SetTone("Ann Lee", "hostile")
 			wow.printed = {}
 			wow.fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
 			t.ok(Printed("Ann Lee") and Printed("Kill on sight") and Printed("found"), "alerted")
