@@ -385,7 +385,7 @@ log of notes** (each saves the date, zone and your character).
 - **Warnings** (chat, on screen, sound) when a player labelled Avoid or Kill on sight joins your group,
   invites, whispers or trades you.
 - **Rate** the players you like, 1 to 5 stars in halves: the stars next to Liked on their page, or
-  right-click → Player note → **Like and rate**. The stars show in their tooltip and your notes.
+  right-click → Player note → **Like and rate**, which then opens their notes to add a note or tags (an option). The stars show in their tooltip and your notes.
 - What the label does:
   - Kill on sight: warnings and Unit Scanner alerts;
   - Avoid: warnings;

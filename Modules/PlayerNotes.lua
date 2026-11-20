@@ -43,6 +43,12 @@ local module = {
 			default = true,
 		},
 		{
+			key = "playerNotesOpenAfterRate",
+			name = "Open notes after Like and rate",
+			description = "After you rate a player from their right-click menu (Player note, Like and rate), open their notes, to add a note or tags too.",
+			default = true,
+		},
+		{
 			key = "playerNotesWarnGroup",
 			header = "Warnings",
 			name = "When they join your group",
@@ -899,6 +905,9 @@ local function OnUnitMenu(_, root, contextData)
 		end, function()
 			notes.SetTone(name, "friendly", info)
 			notes.SetRating(name, rating, info)
+			if ns:GetOption("playerNotesOpenAfterRate") then
+				ns:OpenPlayerNotes(name, info)
+			end
 		end)
 	end
 end

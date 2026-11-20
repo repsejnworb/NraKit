@@ -344,13 +344,20 @@ return {
 			t.equal(players()["ann lee"].tone, "friendly", "liked")
 			t.equal(players()["ann lee"].rating, 4.5, "and rated")
 			t.ok(wow.menuEntry(rate.entries, "4.5 stars").isSelected(), "shown as picked")
+			t.ok(NraKitPlayerNotesFrame:IsShown(), "their notes open, for a note or tags")
+			NraKitPlayerNotesFrame:Hide()
+			ns:SetSetting("playerNotesOpenAfterRate", false)
+			wow.menuEntry(rate.entries, "4 stars").onClick()
+			t.equal(players()["ann lee"].rating, 4, "rated")
+			t.ok(not NraKitPlayerNotesFrame:IsShown(), "and nothing opens with the option off")
+			ns:SetSetting("playerNotesOpenAfterRate", true)
 			wow.data.units.target = nil
 
 			wow.data.units.mouseover = { name = "Ann", surname = "Lee" }
 			t.ok(wow.unitTooltip("mouseover")[1]:find("favorite", 1, true), "stars in the tooltip")
 			notes.SetTone("Ann Lee", "caution")
 			t.ok(not wow.unitTooltip("mouseover")[1]:find("favorite", 1, true), "only while Liked")
-			t.equal(players()["ann lee"].rating, 4.5, "but the rating is kept")
+			t.equal(players()["ann lee"].rating, 4, "but the rating is kept")
 			wow.data.units.mouseover = nil
 
 			notes.SetTone("Ann Lee", "hostile")

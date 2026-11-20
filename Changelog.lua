@@ -20,7 +20,7 @@ ns.changelog = {
 		{ "new", "Player notes: tags. Give players any number of tags of your own (Ninjalooter, Good tank, Guildie) on their page (+ Tag lists your tags to tick, or makes a new one), or from chat: /nra note Bob Stone kos #ninjalooter stole my node. The notebook lists players in a section per tag (click a section to fold it, shift-click to fold the others, or Fold all), then the players without tags, and the Tags page adds, renames and deletes tags. Shared notes bring their tags along.", module = "playerNotes" },
 		{ "improved", "Player notes: the label is now one of four (Kill on sight, Avoid, Neutral, Liked), and tags do the grouping. Your own labels became tags automatically, with the label they were based on; Good and Friend became Liked." },
 		{ "improved", "Player notes: right-click a player for Player note, where you can label them (Kill on sight, Avoid, Neutral, Liked) in one click, or open their notes." },
-		{ "new", "Player notes: rate the players you like, 1 to 5 stars in halves. Click the stars next to Liked on their page, or right-click a player: Player note, Like and rate. The stars show in their tooltip and in your notes, and come along when you share a note." },
+		{ "new", "Player notes: rate the players you like, 1 to 5 stars in halves. Click the stars next to Liked on their page, or right-click a player: Player note, Like and rate (which then opens their notes for a note or tags; an option). The stars show in their tooltip and in your notes, and come along when you share a note." },
 	} },
 	{ version = "0.22.0", date = "2026-11-20", entries = {
 		{ "fixed", "Campfire timer: getting up early no longer says \"Camp Benefits ready\" when you already had Camp Benefits from an earlier rest." },
