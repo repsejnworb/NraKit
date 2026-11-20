@@ -7,8 +7,9 @@ local _, ns = ...
 -- The label is one of four fixed ones (called "tone" in the code), and it decides what
 -- happens: Kill on sight and Avoid players trigger warnings when they join your group,
 -- invite you, whisper you or open a trade, and Unit Scanner alerts for Kill on sight
--- ones nearby (it asks ScanEntry). Tags are your own words ("Ninjalooter", "Good tank")
--- for grouping players; the window lists players by tag.
+-- ones nearby (it asks ScanEntry). A Liked player can have a rating, 1 to 5 stars in
+-- halves. Tags are your own words ("Ninjalooter", "Good tank") for grouping players; the
+-- window lists players by tag.
 --
 -- Forever has no realms: players are "Firstname Surname" (UnitName returns the two
 -- parts). Names match case-insensitively, and "Firstname-Surname" (realm style, as
@@ -19,7 +20,7 @@ local _, ns = ...
 -- Notes can be linked in chat and added from someone else's link (PlayerNotesShare.lua).
 --
 -- Data (account-wide): NraKitDB.playerNotesData = {
---   players = { [key] = { name, guid, class, tone, tags = { "Tag", ... },
+--   players = { [key] = { name, guid, class, tone, rating? (0.5 to 5, shown while Liked), tags = { "Tag", ... },
 --     notes = { { text, time, zone, by, sharedBy? } }, created, updated } },
 --   tags = { "Tag", ... }, -- every tag, including ones nobody has (yet)
 --   collapsed = { [tag key] = true }, -- tag sections closed in the window's list
@@ -129,6 +130,8 @@ end
 local OLD_LABEL_NAMES = { ["kill on sight"] = true, avoid = true, neutral = true, good = true, friend = true }
 
 local MAX_TAG_LENGTH = 30
+local STAR, STAR_OFF = "auctionhouse-icon-favorite", "auctionhouse-icon-favorite-off"
+notes.STAR, notes.STAR_OFF = STAR, STAR_OFF
 
 local SKULL = "|TInterface\\TargetingFrame\\UI-RaidTargetingIcon_8:0|t "
 local WARN_COOLDOWN = 300
@@ -221,6 +224,91 @@ function notes.ToneText(tone)
 	local r, g, b = notes.ToneColor(tone)
 	return string.format("%s|cff%02x%02x%02x%s|r", tone.scan and SKULL or "", r * 255, g * 255, b * 255, tone.name)
 end
+
+------------------------------------------------------------------------------
+-- Ratings
+------------------------------------------------------------------------------
+
+-- 0.5 to 5 in halves, or nil.
+function notes.CleanRating(rating)
+	rating = tonumber(rating)
+	if not rating or rating <= 0 then
+		return nil
+	end
+	return math.min(math.floor(rating * 2 + 0.5) / 2, 5)
+end
+
+-- An atlas, or the half of it, as text markup; nil if the game doesn't say where it is.
+local function HalfStarMarkup(atlas, size, left)
+	local info = C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(atlas)
+	if type(info) ~= "table" or not (info.file or info.filename) or info.rightTexCoord <= info.leftTexCoord then
+		return nil
+	end
+	local fileWidth = info.width / (info.rightTexCoord - info.leftTexCoord)
+	local fileHeight = info.height / (info.bottomTexCoord - info.topTexCoord)
+	local l, r = info.leftTexCoord * fileWidth, info.rightTexCoord * fileWidth
+	local middle = (l + r) / 2
+	if left then
+		r = middle
+	else
+		l = middle
+	end
+	return string.format("|T%s:%d:%d:0:0:%d:%d:%d:%d:%d:%d|t", info.file or info.filename, size, size / 2,
+		fileWidth, fileHeight, l, r, info.topTexCoord * fileHeight, info.bottomTexCoord * fileHeight)
+end
+
+-- Five stars (full, half, empty) as text, for tooltips and lists; "" without a rating.
+function notes.StarsText(rating, size)
+	rating = notes.CleanRating(rating)
+	if not rating then
+		return ""
+	end
+	size = size or 12
+	local full = string.format("|A:%s:%d:%d|a", STAR, size, size)
+	local empty = string.format("|A:%s:%d:%d|a", STAR_OFF, size, size)
+	local parts = {}
+	for star = 1, 5 do
+		if rating >= star then
+			table.insert(parts, full)
+		elseif rating >= star - 0.5 then
+			local left, right = HalfStarMarkup(STAR, size, true), HalfStarMarkup(STAR_OFF, size, false)
+			table.insert(parts, left and right and (left .. right) or full)
+		else
+			table.insert(parts, empty)
+		end
+	end
+	return table.concat(parts)
+end
+
+-- The player's stars (only Liked players show theirs), or "".
+function notes.RecordStars(record, size)
+	if record and record.tone == "friendly" then
+		return notes.StarsText(record.rating, size)
+	end
+	return ""
+end
+
+function notes.SetRating(name, rating, info)
+	local record = notes.Ensure(name, info)
+	record.rating = notes.CleanRating(rating)
+	record.updated = time()
+	Changed()
+	return record
+end
+
+-- "4.5 stars", for menus and tooltips.
+function notes.RatingWords(rating)
+	rating = notes.CleanRating(rating)
+	if not rating then
+		return "No rating"
+	end
+	local number = rating % 1 == 0 and string.format("%d", rating) or string.format("%.1f", rating)
+	return number .. (rating == 1 and " star" or " stars")
+end
+
+------------------------------------------------------------------------------
+-- Labels by word
+------------------------------------------------------------------------------
 
 -- A label by what you'd type ("kos", "Kill on sight", "avoid", "good"), or nil.
 function notes.ToneByWord(word)
@@ -663,6 +751,9 @@ function notes.Import(shared, useTone, tags)
 	local record = notes.Ensure(shared.name)
 	if isNew or useTone then
 		record.tone = notes.GetTone(shared.tone).key
+		record.rating = notes.CleanRating(shared.rating) or record.rating
+	elseif record.tone == shared.tone and not record.rating then
+		record.rating = notes.CleanRating(shared.rating)
 	end
 	for _, tag in ipairs(tags or shared.tags or {}) do
 		tag = notes.CleanTag(tag)
@@ -723,6 +814,10 @@ local function OnUnitTooltip(tooltip)
 	end
 	local count = #record.notes
 	local line = notes.ToneText(notes.RecordTone(record))
+	local stars = notes.RecordStars(record, 14)
+	if stars ~= "" then
+		line = line .. "  " .. stars
+	end
 	if #record.tags > 0 then
 		line = line .. "  " .. notes.TagsText(record)
 	end
@@ -793,6 +888,17 @@ local function OnUnitMenu(_, root, contextData)
 			return current ~= nil and current.tone == tone.key
 		end, function()
 			notes.SetTone(name, tone.key, info)
+		end)
+	end
+	-- Like and rate: Liked with stars in one go.
+	local rateMenu = noteMenu:CreateButton("Like and rate")
+	for rating = 5, 0.5, -0.5 do
+		rateMenu:CreateRadio(notes.StarsText(rating, 14) .. "  " .. notes.RatingWords(rating), function()
+			local current = notes.Find(name, info.guid)
+			return current ~= nil and current.tone == "friendly" and current.rating == rating
+		end, function()
+			notes.SetTone(name, "friendly", info)
+			notes.SetRating(name, rating, info)
 		end)
 	end
 end

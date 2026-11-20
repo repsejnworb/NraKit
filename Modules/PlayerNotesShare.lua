@@ -15,7 +15,7 @@ local _, ns = ...
 --   DENY <id>                  not linked by me (or gone)
 --   PART <id> <i> <n> <data>   piece i of n of the note
 -- The note: lines split by "\n", fields by "\t" (both escaped inside fields):
---   <name> <label name> <tone> <how many notes you have> <tags, comma-separated>
+--   <name> <label name> <tone> <how many notes you have> <tags, comma-separated> <rating>
 --   <time> <by> <zone> <text>  per note, oldest first (the oldest are left out past MAX_BYTES)
 -- NraKit 0.22.0 had editable labels and no tags: its header has no tags, and its label
 -- name becomes a tag unless it's a built-in one (notes.FromOldLabel). It reads our label
@@ -100,7 +100,7 @@ end
 function share.Encode(record)
 	local tone = notes.RecordTone(record)
 	local header = table.concat({ Escape(record.name), Escape(tone.name), tone.key, #record.notes,
-		Escape(table.concat(record.tags, ",")) }, "\t")
+		Escape(table.concat(record.tags, ",")), record.rating or "" }, "\t")
 	local lines, size = {}, #header
 	for index = #record.notes, 1, -1 do
 		local note = record.notes[index]
@@ -118,7 +118,7 @@ end
 -- The text back to { name, tone, tags, total, notes = { { time, by, zone, text } } }, or nil.
 function share.Decode(text)
 	local lines = { strsplit("\n", text) }
-	local name, label, toneKey, total, tagText = strsplit("\t", lines[1] or "")
+	local name, label, toneKey, total, tagText, rating = strsplit("\t", lines[1] or "")
 	if not name or name == "" then
 		return nil
 	end
@@ -132,7 +132,8 @@ function share.Decode(text)
 		tone, oldTag = notes.FromOldLabel(Unescape(label or ""), toneKey)
 		tags[1] = oldTag
 	end
-	local shared = { name = Unescape(name), tone = tone, tags = tags, total = tonumber(total) or 0, notes = {} }
+	local shared = { name = Unescape(name), tone = tone, tags = tags, rating = notes.CleanRating(rating),
+		total = tonumber(total) or 0, notes = {} }
 	for index = 2, #lines do
 		local stamp, by, zone, noteText = strsplit("\t", lines[index])
 		if noteText then
@@ -354,7 +355,9 @@ local function Render()
 	local mine = notes.RecordTone(record)
 	local theirs = notes.GetTone(shown.tone)
 	frame.name:SetText(shown.name)
-	frame.from:SetText(string.format("Shared by %s  ·  their label: %s", shown.from, notes.ToneText(theirs)))
+	local theirStars = notes.RecordStars(shown, 12)
+	frame.from:SetText(string.format("Shared by %s  ·  their label: %s%s", shown.from, notes.ToneText(theirs),
+		theirStars ~= "" and (" " .. theirStars) or ""))
 
 	local differs = record and mine.key ~= theirs.key
 	frame.keep:SetShown(differs)

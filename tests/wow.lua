@@ -406,8 +406,13 @@ function wow.install()
 	for _, name in ipairs({ "C_Spell", "C_AddOns", "C_UnitAuras", "C_Container", "C_TooltipInfo", "C_Traits",
 		"C_MajorFactions", "C_QuestLog", "C_NamePlate", "C_ClassTalents", "C_TradeSkillUI", "C_MountJournal",
 		"C_Map", "C_VignetteInfo", "C_Engraving", "MenuUtil", "C_EventUtils", "C_PlayerInfo",
-		"C_CatalogShop", "C_StorePublic", "C_CVar", "TooltipDataProcessor", "C_ChatInfo" }) do
+		"C_CatalogShop", "C_StorePublic", "C_CVar", "TooltipDataProcessor", "C_ChatInfo", "C_Texture" }) do
 		G[name] = Namespace()
+	end
+	-- Atlases: one 32x32 picture in the top-right quarter of a 128x128 file.
+	G.C_Texture.GetAtlasInfo = function(atlas)
+		return { file = 1000, filename = atlas, width = 32, height = 32,
+			leftTexCoord = 0.75, rightTexCoord = 1, topTexCoord = 0, bottomTexCoord = 0.25 }
 	end
 	G.TooltipDataProcessor.AllTypes = "ALL"
 	-- UI panels (Blizzard's window manager): shown and hidden as asked, and remembered.

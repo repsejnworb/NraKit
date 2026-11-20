@@ -171,6 +171,23 @@ return {
 			t.equal(notes.Find("Theron Nightbloom").tone, "hostile", "theirs")
 		end)
 
+		t.test("a rating comes along with Liked", function()
+			notes.SetTone("Rae Moon", "friendly")
+			notes.SetRating("Rae Moon", 4.5)
+			local shared = share.Decode(share.Encode(notes.Find("Rae Moon")))
+			t.equal(shared.rating, 4.5, "sent and read")
+			notes.DeletePlayer("rae moon")
+			shared.from = "Ann Lee"
+			notes.Import(shared)
+			t.equal(notes.Find("Rae Moon").rating, 4.5, "someone new gets it")
+			notes.SetRating("Rae Moon", 2)
+			shared.rating = 5
+			notes.Import(shared)
+			t.equal(notes.Find("Rae Moon").rating, 2, "your own rating stays")
+			notes.Import(shared, true)
+			t.equal(notes.Find("Rae Moon").rating, 5, "unless you take their label")
+		end)
+
 		t.test("a note from NraKit 0.22.0 (labels, no tags) still reads", function()
 			local old = share.Decode("Cy Moor\tGankers\thostile\t1\n100\tAnn Lee\t\tcamps the flight path")
 			t.equal(old.tone, "hostile", "the label's tone")

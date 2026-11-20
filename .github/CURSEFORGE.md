@@ -244,6 +244,7 @@ Remember who stole your mining node, who ninja'd the loot and who was a great he
 - Their label, tags and latest note show in their **tooltip**.
 - **Right-click a player** (portrait, party frame, their name in chat, guild and friends lists) → **Player note** to label them in one click, or to open their notes.
 - **Warnings** when a player labelled Avoid or Kill on sight joins your group, invites you, whispers you or opens a trade (chat, on screen and a sound, each optional).
+- **Rate** the players you like, 1 to 5 stars in halves: the stars next to Liked on their page, or right-click → Player note → **Like and rate**. The stars show in their tooltip and your notes.
 - What the label does: **Kill on sight** (warnings and Unit Scanner alerts), **Avoid** (warnings), Neutral or Liked (tooltip only).
 
 **Tags**
@@ -264,7 +265,7 @@ Remember who stole your mining node, who ninja'd the loot and who was a great he
 **Share notes in chat**
 - **Shift-click a player** in your notebook (or **Link in chat** on their page) to put **[NraKit note: Name]** in your chat box.
 - Others with NraKit see it as a link. Clicking it shows the player's label, tags and notes, with **Add** and **Cancel**.
-- Added notes keep who wrote them. Notes you already have are skipped, their tags can be left out, and your own label stays unless you pick theirs.
+- Added notes keep who wrote them. Notes you already have are skipped, their tags can be left out, and your own label (and rating) stays unless you pick theirs.
 - Only players you've linked can be fetched, and only while you're online.
 
 ![playerNoteWarning](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/playerNoteWarning.png)

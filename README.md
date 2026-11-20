@@ -384,6 +384,8 @@ log of notes** (each saves the date, zone and your character).
   to label them in one click, or to open their notes.
 - **Warnings** (chat, on screen, sound) when a player labelled Avoid or Kill on sight joins your group,
   invites, whispers or trades you.
+- **Rate** the players you like, 1 to 5 stars in halves: the stars next to Liked on their page, or
+  right-click → Player note → **Like and rate**. The stars show in their tooltip and your notes.
 - What the label does:
   - Kill on sight: warnings and Unit Scanner alerts;
   - Avoid: warnings;
@@ -400,7 +402,7 @@ log of notes** (each saves the date, zone and your character).
   - Others with NraKit see it as a link. Clicking it shows the player's label, tags and notes, with
     **Add** and **Cancel**.
   - Added notes keep who wrote them. Notes you already have are skipped, their tags can be left out,
-    and your own label stays unless you pick theirs.
+    and your own label (and rating) stays unless you pick theirs.
   - Only players you've linked can be fetched, and only while you're online.
 
 <img width="447" height="27" alt="playerNoteWarning" src=".github/screenshots/playerNoteWarning.png" />

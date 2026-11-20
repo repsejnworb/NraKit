@@ -310,6 +310,52 @@ return {
 			notes.SetTone("Bob Stone", "caution")
 		end)
 
+		t.test("Liked players can be rated in half stars: page, menu and tooltip", function()
+			local text = notes.StarsText(4.5, 12)
+			local _, full = text:gsub("|A:auctionhouse%-icon%-favorite:12:12|a", "")
+			t.equal(full, 4, "four full stars")
+			t.ok(text:find("|T1000:12:6:0:0:128:128:96:112:0:32|t", 1, true), "the left half of a star")
+			t.ok(text:find(":112:128:0:32|t", 1, true), "and the right half of an empty one")
+			t.equal(notes.StarsText(nil), "", "no rating, no stars")
+			t.equal(notes.CleanRating(3.7), 3.5, "halves")
+			t.equal(notes.RatingWords(4.5), "4.5 stars", "in words")
+
+			ns:OpenPlayerNotes("Ann Lee")
+			local function Half(rating)
+				return wow.findAll(function(frame)
+					return wow.visible(frame) and rawget(frame, "rating") == rating
+				end)[1]
+			end
+			t.ok(not Half(3.5), "no stars unless Liked")
+			notes.SetTone("Ann Lee", "friendly")
+			local half = Half(3.5)
+			t.ok(half, "stars next to Liked")
+			half.scripts.OnClick(half)
+			t.equal(players()["ann lee"].rating, 3.5, "a click on a left half: half a star")
+			Half(3.5).scripts.OnClick(Half(3.5))
+			t.ok(players()["ann lee"].rating == nil, "clicking it again clears it")
+
+			wow.data.units.target = { name = "Ann", surname = "Lee" }
+			local entries = wow.openMenu("MENU_UNIT_PLAYER", { unit = "target" })
+			local rate = wow.menuEntry(wow.menuEntry(entries, "Player note").entries, "Like and rate")
+			t.ok(rate, "Like and rate")
+			notes.SetTone("Ann Lee", "hostile")
+			wow.menuEntry(rate.entries, "4.5 stars").onClick()
+			t.equal(players()["ann lee"].tone, "friendly", "liked")
+			t.equal(players()["ann lee"].rating, 4.5, "and rated")
+			t.ok(wow.menuEntry(rate.entries, "4.5 stars").isSelected(), "shown as picked")
+			wow.data.units.target = nil
+
+			wow.data.units.mouseover = { name = "Ann", surname = "Lee" }
+			t.ok(wow.unitTooltip("mouseover")[1]:find("favorite", 1, true), "stars in the tooltip")
+			notes.SetTone("Ann Lee", "caution")
+			t.ok(not wow.unitTooltip("mouseover")[1]:find("favorite", 1, true), "only while Liked")
+			t.equal(players()["ann lee"].rating, 4.5, "but the rating is kept")
+			wow.data.units.mouseover = nil
+
+			notes.SetTone("Ann Lee", "hostile")
+		end)
+
 		t.test("+ Add player: needs a surname, then opens the new player", function()
 			NraKitPlayerNotesFrame:Show()
 			t.ok(wow.click("+  Add player"), "add page")

@@ -9,7 +9,8 @@ local _, ns = ...
 -- Typing a name nobody has offers "+ Add <name>" too. At the bottom, Tags. Shift-click a
 -- player links them in chat.
 --
--- A player's page: their label as four chips (one click to change), their tags (click
+-- A player's page: their label as four chips (one click to change; Liked gets five stars
+-- next to it, click a star's left half for a half star), their tags (click
 -- one to remove it; "+ Tag" opens a menu of your tags to tick, and New tag...), a box to add a
 -- note (saved with the date, zone and your character) and the log, newest first. A
 -- player opened from a menu who has no notes yet isn't saved until something is added.
@@ -29,6 +30,7 @@ local frame, searchBox, sidebarScroll, tagsButton, addButton
 local playerPage, emptyPage, tagsPage, addPage
 local sidebarPool, chipPool, logPool, tagPool = UI.CreatePool(), UI.CreatePool(), UI.CreatePool(), UI.CreatePool()
 local newTagOpen = false -- the player page's "New tag" box is showing
+local STAR_SIZE = 18
 
 local page = "empty" -- "player", "empty", "add" or "tags"
 local selectedKey -- the shown player's key, or nil
@@ -150,6 +152,10 @@ local function Section(tag)
 		if toneA ~= toneB then
 			return toneA < toneB
 		end
+		local ratingA, ratingB = a.record.rating or 0, b.record.rating or 0
+		if a.record.tone == "friendly" and ratingA ~= ratingB then
+			return ratingA > ratingB -- best rated first
+		end
 		return a.key < b.key
 	end)
 	return list
@@ -195,6 +201,10 @@ local function RenderSidebar()
 		button.key, button.addName = entry.key, nil
 		button.text:SetText(record.name)
 		local subtext = notes.ToneText(notes.RecordTone(record))
+		local stars = notes.RecordStars(record, 11)
+		if stars ~= "" then
+			subtext = subtext .. " " .. stars
+		end
 		if withTags and #record.tags > 0 then
 			subtext = subtext .. "  " .. notes.TagsText(record)
 		end
@@ -432,7 +442,7 @@ local TONE_HELP = {
 	hostile = "Warnings when they join your group, invite, whisper or trade you, and Unit Scanner alerts when they're nearby.",
 	caution = "Warnings when they join your group, invite, whisper or trade you.",
 	neutral = "Shown in their tooltip.",
-	friendly = "Shown in their tooltip.",
+	friendly = "Shown in their tooltip, with a rating if you give them one (the stars next to Liked).",
 }
 
 -- Flat chips in rows from x = PAD, wrapping at the page's edge. Returns the next free x and y.
@@ -443,6 +453,76 @@ local function PlaceChip(chip, x, y)
 	end
 	chip:SetPoint("TOPLEFT", playerPage, "TOPLEFT", x, y)
 	return x + chip:GetWidth() + 4, y
+end
+
+-- Fill one star: 0, 0.5 (its left half) or 1.
+local function FillStar(star, fill)
+	star.fill:SetShown(fill > 0)
+	star.fill:SetAtlas(notes.STAR)
+	star.fill:SetWidth(STAR_SIZE)
+	if fill == 0.5 then
+		local left, top, _, bottom, right = star.fill:GetTexCoord()
+		if left and right then
+			star.fill:SetTexCoord(left, (left + right) / 2, top, bottom)
+			star.fill:SetWidth(STAR_SIZE / 2)
+		end
+	end
+end
+
+local function ShowStars(rating)
+	for index, star in ipairs(playerPage.stars.list) do
+		FillStar(star, rating >= index and 1 or (rating >= index - 0.5 and 0.5 or 0))
+	end
+end
+
+local function SaveRating(rating)
+	local record = Current()
+	local name = CurrentName()
+	if name then
+		if record and record.rating == rating then
+			rating = nil -- clicking the rating it has clears it
+		end
+		AfterSave(notes.SetRating(name, rating, pending and pending.info))
+		Render()
+	end
+end
+
+-- Five stars, each with a left (half) and right (full) half to click.
+local function CreateStars(parent)
+	local stars = CreateFrame("Frame", nil, parent)
+	stars:SetSize(STAR_SIZE * 5 + 8, STAR_SIZE)
+	stars.list = {}
+	for index = 1, 5 do
+		local star = CreateFrame("Frame", nil, stars)
+		star:SetSize(STAR_SIZE, STAR_SIZE)
+		star:SetPoint("LEFT", (index - 1) * (STAR_SIZE + 2), 0)
+		star.empty = star:CreateTexture(nil, "ARTWORK")
+		star.empty:SetAllPoints()
+		star.empty:SetAtlas(notes.STAR_OFF)
+		star.fill = star:CreateTexture(nil, "OVERLAY")
+		star.fill:SetPoint("TOPLEFT")
+		star.fill:SetHeight(STAR_SIZE)
+		for half = 1, 2 do
+			local button = CreateFrame("Button", nil, star)
+			button:SetSize(STAR_SIZE / 2, STAR_SIZE)
+			button:SetPoint("LEFT", (half - 1) * STAR_SIZE / 2, 0)
+			button.rating = index - 1 + half / 2
+			button:SetScript("OnClick", function(self)
+				SaveRating(self.rating)
+			end)
+			button:SetScript("OnEnter", function(self)
+				ShowStars(self.rating)
+				UI.ShowTooltip(self, notes.RatingWords(self.rating), "Click to rate. Click their rating again to clear it.")
+			end)
+			button:SetScript("OnLeave", function()
+				GameTooltip_Hide()
+				local record = Current()
+				ShowStars(record and record.rating or 0)
+			end)
+		end
+		table.insert(stars.list, star)
+	end
+	return stars
 end
 
 local function RenderChips(record, y)
@@ -469,6 +549,14 @@ local function RenderChips(record, y)
 		chip:SetSelected(current == tone.key)
 		chip.text:SetTextColor(1, 1, 1) -- keep the label's own color (SetSelected sets gold/grey)
 		x, y = PlaceChip(chip, x, y)
+	end
+	-- Liked: the stars after the chips.
+	local stars = playerPage.stars
+	stars:SetShown(current == "friendly")
+	if current == "friendly" then
+		stars:ClearAllPoints()
+		stars:SetPoint("TOPLEFT", playerPage, "TOPLEFT", x + 10, y - 3)
+		ShowStars(record.rating or 0)
 	end
 	return y - 28
 end
@@ -617,6 +705,7 @@ local function CreatePlayerPage(body)
 	p.sub:SetPoint("TOPLEFT", PAD, -PAD - 30)
 
 	p.labelHeading = MakeHeading(p, "Label")
+	p.stars = CreateStars(p)
 	p.tagHeading = MakeHeading(p, "Tags")
 	p.addTag = UI.CreateFlatButton(p, "+ Tag", 22)
 	p.addTag:SetScript("OnClick", OpenTagMenu)
