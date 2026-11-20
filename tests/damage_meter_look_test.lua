@@ -73,6 +73,16 @@ return {
 			t.equal(newFill:GetTexture(), FLAT, "again after Blizzard restyles it")
 		end)
 
+		-- Regression: they stayed visible after a reload until the first hover.
+		t.test("the header buttons hide again when something shows them, without a hover first", function()
+			wow.advance(0)
+			window.SettingsDropdown:SetAlpha(1)
+			window.MinimizeButton:SetAlpha(1)
+			wow.advance(0)
+			t.equal(window.SettingsDropdown:GetAlpha(), 0, "settings hidden again")
+			t.equal(window.MinimizeButton:GetAlpha(), 0, "minimize hidden again")
+		end)
+
 		t.test("the header buttons show while the mouse is over the meter", function()
 			wow.advance(0)
 			t.equal(window.SettingsDropdown:GetAlpha(), 0, "hidden at rest")

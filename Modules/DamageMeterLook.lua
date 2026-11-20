@@ -40,7 +40,7 @@ local RELOAD_DIALOG = "NRAKIT_DAMAGE_METER_RELOAD"
 
 local applied = false -- skinned this session (only a reload undoes it)
 local skinned = setmetatable({}, { __mode = "k" }) -- bar rows we've skinned and hooked
-local windows = {} -- session window -> our state: { glyphs, line, arrow, shown }
+local windows = {} -- session window -> our state: { glyphs, line, arrow }
 
 ------------------------------------------------------------------------------
 -- Bars
@@ -224,13 +224,15 @@ local function SkinHeader(window, state)
 end
 
 -- What fades in on hover: the buttons, the session name and the title's arrow. The title stays.
+-- Checked against their actual alpha every time, not a remembered state: something can show
+-- them again after we hid them (it did, right after loading).
 local function UpdateHover(window, state)
 	local shown = not ns:GetOption("damageMeterLookHover") or window:IsMouseOver()
 		or (EditModeManagerFrame and EditModeManagerFrame:IsShown())
-	if shown ~= state.shown then
-		state.shown = shown
-		for _, control in ipairs({ window.SessionDropdown, window.SettingsDropdown, window.MinimizeButton, state.arrow }) do
-			control:SetAlpha(shown and 1 or 0)
+	local alpha = shown and 1 or 0
+	for _, control in pairs({ window.SessionDropdown, window.SettingsDropdown, window.MinimizeButton, state.arrow }) do
+		if math.abs(control:GetAlpha() - alpha) > 0.01 then
+			control:SetAlpha(alpha)
 		end
 	end
 	-- Minimized or not.
@@ -288,7 +290,6 @@ local function SkinWindow(window)
 		end
 	end
 	SkinHeader(window, state)
-	state.shown = nil
 	UpdateHover(window, state)
 end
 
@@ -356,7 +357,6 @@ end
 
 function module:OnOptionChanged()
 	for window, state in pairs(windows) do
-		state.shown = nil
 		UpdateHover(window, state)
 	end
 end
