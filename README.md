@@ -4,214 +4,407 @@
 
 # NraKit
 
-A WoW Forever addon with a collection of small quality-of-life tweaks. Every feature is
-**off by default**, so turn on only what you want.
+A WoW Forever addon with a collection of small quality-of-life tweaks.
+
+Every feature is **off by default**, so turn on only what you want.
 
 ## Install
+
 Clone or symlink this repo into `World of Warcraft/_<flavor>_/Interface/AddOns/NraKit`
 (the folder name must be `NraKit`).
 
-## Settings
-Type `/nrakit` (`/nra`) to open NraKit's window: features grouped in a sidebar, a search box, an
-on/off switch per feature and its options right underneath. Everything is off until you turn it on.
-The same settings are also in the game's Settings panel under **AddOns → NraKit**.
-NraKit's windows (Settings, Inventory, Goals, Notes, Items) work as tabs of one window. Tabs of features
-that are off are dimmed: they say what the feature does and turn it on with one click. NraKit is also in the addon button by the minimap: left-click for settings,
-right-click for a menu of its windows. **What's new** (`/nra new`, top of the NraKit window) lists what changed in each
-version, and new features can be turned on right there. After an update, NraKit says so in one chat line.
-It also tells you when a newer version is out, if someone in your guild or group already has it (NraKit
-shares its version with other NraKit users there; switch it off on the What's new page). `/nra who` lists
-who in your guild and group runs NraKit, which version, and how many NraKit users you've come across
-(this session and in all). `/nra help` lists the chat commands; add `help` after one for details
-(e.g. `/nra goal help`). `/nra preview` shows any of NraKit's on-screen messages (goal complete,
-quest reminders, alerts...) with made-up content, to see how they look (`/nra preview goal`).
+## Getting started
 
-Sounds (Campfire timer, Unit Scanner, Farm goals, Player notes) can be changed: pick from a short list of good
-ones (hover to hear them) or **More sounds...** to search every game sound, plus any sounds other
-addons share through LibSharedMedia.
+### The NraKit window
+
+Type `/nrakit` (or `/nra`) to open NraKit's window.
+
+- Features are grouped in a sidebar, with a search box, an on/off switch per feature and its options
+  right underneath.
+- The same settings are also in the game's Settings panel under **AddOns → NraKit**.
+- NraKit's windows (Settings, Inventory, Goals, Notes, Items) work as **tabs of one window**. Tabs of
+  features that are off are dimmed: they say what the feature does and turn it on with one click.
+- NraKit is also in the **addon button by the minimap**: left-click for settings, right-click for a
+  menu of its windows.
+
+### What's new and updates
+
+- **What's new** (`/nra new`, at the top of the NraKit window) lists what changed in each version, and
+  new features can be turned on right there.
+- After an update, NraKit says so in one chat line.
+- It also tells you when a **newer version is out**, if someone in your guild or group already has it.
+  NraKit shares its version with other NraKit users there; switch it off on the What's new page.
+- `/nra who` lists who in your guild and group runs NraKit, which version, and how many NraKit users
+  you've come across (this session and in all).
+
+### Chat commands
+
+- `/nra help` lists the chat commands; add `help` after one for details (e.g. `/nra goal help`).
+- `/nra preview` shows any of NraKit's on-screen messages (goal complete, quest reminders, alerts...)
+  with made-up content, to see how they look (e.g. `/nra preview goal`).
+
+### Sounds
+
+Alert sounds (Campfire timer, Unit Scanner, Farm goals, Player notes) can be changed:
+
+- Pick from a short list of good ones (hover to hear them).
+- Or use **More sounds...** to search every game sound, plus any sounds other addons share through
+  LibSharedMedia.
 
 ## Features
-- **Class-colored health bars**: player, target, target of target, focus and party frames
-  show class-colored health bars when the unit is a player. NPCs keep the default color.
-- **Engaged-only nameplates**: shows full nameplates only for enemies that are actually
-  fighting you (optionally your group). Other enemy NPCs are hidden (in or out of combat), or
-  optionally show just their name, styled like the game's own overhead names. Target, focus
-  and enemy players always get full plates. Optionally turns enemy nameplates on when entering
-  combat and off when leaving it; if you turned them on yourself (V key), they stay on. Hidden
-  plates can still be clicked where their bar would be, because addons can't change a plate's
+
+Grouped as in the NraKit window.
+
+### Units & Nameplates
+
+#### Class-colored health bars
+
+Player, target, target of target, focus and party frames show **class-colored health bars** when the
+unit is a player. NPCs keep the default color.
+
+#### Engaged-only nameplates
+
+Full nameplates only for enemies that are **actually fighting you** (optionally your group too).
+
+- Other enemy NPCs are hidden (in or out of combat), or optionally show just their name, styled like
+  the game's own overhead names.
+- Target, focus and enemy players always get full plates.
+- Optionally turns enemy nameplates **on when entering combat and off when leaving it**. If you turned
+  them on yourself (V key), they stay on.
+- Hidden plates can still be clicked where their bar would be, because addons can't change a plate's
   click area during combat.
-  <img width="600" height="441" alt="engagedNameplatesOnly" src=".github/screenshots/engagedNameplatesOnly.png" />
-- **Mark most valuable quest reward**: when a quest offers a choice of rewards, a gold coin
-  marks the one that sells to a vendor for the most gold (vendor price × stack size).
-- **Show quest level**: the quest's level in front of its title in the quest dialog and quest
-  details, e.g. "[24] The Defias Brotherhood", colored by difficulty like the quest log.
-- **Quests to turn in**: `/nra done` (or a key under Key Bindings > NraKit) shows a small window
-  listing your finished quests by the zone you turn them in, the zone you're in first and then the nearest ("Wetlands
-  (6): The Doomed Fleet, ..."). Click a quest to open the map on it (its turn-in shows there; the
-  list stays open), right-click it or click its round quest icon (as in the objective tracker) to make it your waypoint, Shift+click to link it. Entering a zone
-  where you have quests to turn in shows a small message (click it to open the list; a chat line is optional), and can open the window (off by default).
-  <img width="293" height="409" alt="questsDoneList" src=".github/screenshots/questsDoneList.png" />
-  <img width="301" height="101" alt="questTurninReminderToast" src=".github/screenshots/questTurninReminderToast.png" />
-- **Bag Tithe**: a button next to the bag sort button (separate or combined bags) highlights
-  your least valuable bag slots (vendor price × stack size), ranked from red to yellow, with
-  rank numbers and sell values. Everything else is dimmed; the bags work as normal underneath.
-  Alt+click an item to leave it out of the ranking; the ignore list is editable in the options.
-  <img width="191" height="483" alt="bagTithe" src=".github/screenshots/bagTithe.png" />
-- **Potential Upgrades**: arrows on bag items and quest rewards, plus a tooltip line, for items
-  that beat what you have equipped. Green = clear upgrade (usable now and at least as good on every
-  stat that matters for your class, plus armor or weapon DPS). Yellow = likely upgrade (better by a
-  simple per-class stat priority). Grey = upgrade once you reach the required level.
-  <img width="283" height="254" alt="potentialUpgrade" src=".github/screenshots/potentialUpgrade.png" />
-- **Known recipes**: recipes you already know get a green check at vendors (with a greyed-out icon)
-  and in your bags, so you don't have to mouse over each one. Works for anything the game calls
-  "Already known". Optionally marks recipes for your professions you can learn now (green +) or once
-  your skill is high enough (yellow +), and can make Bag Tithe rank known recipes as junk.
-- **Inventory Tracker**: item tooltips list how many of the item each of your characters has and
-  where, e.g. "Bob 12 (Bags 5, Bank 7)", with a total. Bags and equipment are tracked as they change;
-  the bank and mailbox are read while open, so visit them once per character. Items you mail to your
-  own characters show up in their mail right away.
-  `/nra inv` (or a key binding) opens the **inventory browser**: every character in a sidebar with
-  level and gold, their bags, bank, mail and equipped items as a bag-style grid or a list, search,
-  category filters, how fresh each location is, and the vendor value of what's shown. "All
-  characters" lists who has what. Right-click a character to forget it.
-- **Open Clams**: a button at the bottom left of your bags (next to your money) opens the next clam (or any other
-  "Right Click to Open" container, except locked boxes) one per click, showing its icon and how
-  many are left. Bindable under Key Bindings → NraKit. Openable items get a green border.
-- **Sous Chef**: in the cooking window, recipes where you have the main ingredient (the meat,
-  fish...) but are missing vendor-bought secondaries (spices, water, flour...) get an icon of what
-  to buy, and the row tooltip says how much. Item tooltips on a main ingredient list what it cooks
-  into and what's missing. Vendor items are recognised from a built-in list plus what you see at
-  merchants. Open cooking once per character so it knows your recipes. Optionally all professions.
-  <img width="600" height="499" alt="sousChef" src=".github/screenshots/sousChef.png" />
-- **Double-click fishing**: with a fishing pole in your main hand, double right-click the world to
-  cast Fishing (your highest rank). Right-clicking NPCs and players, and holding right-click to turn
-  the camera, work as normal. The double-click time is adjustable.
-- **Unspent talent points**: a reminder in the middle of the screen while you have talent points
-  to spend (hidden while dead and, optionally, in combat). Size and position are adjustable.
-  <img width="307" height="82" alt="unspentTalentPoints" src=".github/screenshots/unspentTalentPoints.png" />
-- **Campfire timer**: a progress bar in the middle of the screen while you rest at a Welcoming
-  Campfire, with the time left. It turns green (with a sound) when Camp Benefits is ready. In a
-  sleeping bag it counts your Well-Rested stacks up to 3 (with the time left once it has seen how
-  long a stack takes). Width and position are adjustable; `/nra campfire` shows a 10-second
-  preview, `/nra preview sleepingbag` the sleeping bag.
-  <img width="261" height="57" alt="welcomingCampfire" src=".github/screenshots/welcomingCampfire.png" />
-- **Farm goals**: set goals like "loot 4000 Silk Cloth", "reach level 40", "gain 50,000 XP",
-  "earn 100 gold", "reach Revered with Timbermaw Hold", "Swords to 300 (or to its cap)" or a
-  currency amount (reach a level or gain an amount), and track them in a small movable window: progress bar, amount gained, rate per
-  hour and time left; the bars are marked at 25/50/75% (optionally with a chime and a small message
-  there). A fanfare and a big message in the middle of the screen
-  when a goal is done (shown again after the fight if it happened in combat); the finished goal glows
-  in the tracker until you hover it. Click a finished goal to clear it to the history (Restore brings
-  it back), or right-click it to **go again** (another run of the same amount) or set a new target. Item goals count what you loot (banking, mailing or selling never changes
-  them) and can start from what you already have in your bags, bank, mail or on other characters.
-  The tracker has three views (pick one from the arrow menu in its header, which also locks the tracker): **Full**, **Compact** (one line
-  per goal) and **Icons** (a tile per goal with a bar and the amount; the box is just the tiles, growing
-  sideways up to 3 per row, with the buttons appearing above it on hover). Right-click a goal to pause,
-  edit, **shelve** (hide it from the tracker, paused, until you bring it back from the goals window),
-  reset or remove it. **Edit** fixes a goal's target, item, starting count or sounds without starting
-  over, and each goal can have its own milestone and finish sounds.
-  Icons follow what a goal tracks (an axe for Axes, a pick for Mining, coins for gold, the level's
-  badge), or pick your own like a macro icon: click the icon in the goal form, then choose one, or drop
+
+<img width="600" height="441" alt="engagedNameplatesOnly" src=".github/screenshots/engagedNameplatesOnly.png" />
+
+#### Unit Scanner
+
+Alerts you when a **mob or player from your list** shows up.
+
+- **How it alerts:** sound, on-screen text, chat line and taskbar flash.
+- **Where it looks:** nameplate range, mouseover, your target, focus or a group member's target,
+  minimap markers (rares), and NPCs that yell, say or emote. Optionally raises the nameplate range
+  while scanning.
+- **Found units** get a raid marker (Moon by default) and a button with the marker and their name:
+  click it (or its keybind) to target them, right-click to dismiss, Shift-drag to move.
+- **Your list:** target a unit and type `/nra scan` to add or remove it, or use
+  `/nra scan <name or NPC ID>`, `/nra scan list`, `/nra scan remove <# or name>` and `/nra scan clear`.
+- Addons can only see units the game already shows you, so enemy nameplates should be on. With
+  Engaged-only nameplates, the scanner keeps them on while the list isn't empty.
+- With Player notes, it also alerts for players labelled Kill on sight (optional, on by default).
+
+### Quests
+
+#### Mark most valuable quest reward
+
+When a quest offers a choice of rewards, a **gold coin** marks the one that sells to a vendor for the
+most gold (vendor price × stack size).
+
+#### Show quest level
+
+The quest's level in front of its title in the quest dialog and quest details, e.g.
+"[24] The Defias Brotherhood", colored by difficulty like the quest log.
+
+#### Quests to turn in
+
+`/nra done` (or a key under Key Bindings → NraKit) shows a small window listing your **finished quests
+by the zone you turn them in**: the zone you're in first, then the nearest ("Wetlands (6): The Doomed
+Fleet, ...").
+
+- **Click** a quest to open the map on it (its turn-in shows there; the list stays open).
+- **Right-click** it, or click its **round quest icon** (as in the objective tracker), to make it your
+  waypoint.
+- **Shift+click** to link it.
+- Entering a zone where you have quests to turn in shows a **small message** (click it to open the
+  list; a chat line is optional), and can open the window (off by default).
+
+<img width="293" height="409" alt="questsDoneList" src=".github/screenshots/questsDoneList.png" />
+<img width="301" height="101" alt="questTurninReminderToast" src=".github/screenshots/questTurninReminderToast.png" />
+
+### Bags & Items
+
+#### Bag Tithe
+
+A button next to the bag sort button (separate or combined bags) **highlights your least valuable bag
+slots** (vendor price × stack size).
+
+- Ranked from red to yellow, with rank numbers and sell values.
+- Everything else is dimmed; the bags work as normal underneath.
+- **Alt+click** an item to leave it out of the ranking; the ignore list is editable in the options.
+
+<img width="191" height="483" alt="bagTithe" src=".github/screenshots/bagTithe.png" />
+
+#### Potential Upgrades
+
+Arrows on bag items and quest rewards, plus a tooltip line, for items that **beat what you have
+equipped**.
+
+- **Green:** clear upgrade. Usable now and at least as good on every stat that matters for your class,
+  plus armor or weapon DPS.
+- **Yellow:** likely upgrade, better by a simple per-class stat priority.
+- **Grey:** an upgrade once you reach the required level.
+
+<img width="283" height="254" alt="potentialUpgrade" src=".github/screenshots/potentialUpgrade.png" />
+
+#### Inventory Tracker
+
+Item tooltips list **how many of the item each of your characters has, and where**, e.g.
+"Bob 12 (Bags 5, Bank 7)", with a total.
+
+- Bags and equipment are tracked as they change. The bank and mailbox are read while open, so visit
+  them once per character.
+- Items you mail to your own characters show up in their mail right away.
+- `/nra inv` (or a key binding) opens the **inventory browser**:
+  - every character in a sidebar with level and gold;
+  - their bags, bank, mail and equipped items, as a bag-style grid or a list;
+  - search, category filters, how fresh each location is, and the vendor value of what's shown;
+  - "All characters" lists who has what. Right-click a character to forget it.
+
+#### Open Clams
+
+A button at the bottom left of your bags (next to your money) **opens the next clam** one per click,
+showing its icon and how many are left.
+
+- Works for any "Right Click to Open" container, except locked boxes.
+- Bindable under Key Bindings → NraKit.
+- Openable items get a green border.
+
+### Professions
+
+#### Known recipes
+
+Recipes you **already know get a green check** at vendors (with a greyed-out icon) and in your bags,
+so you don't have to mouse over each one.
+
+- Works for anything the game calls "Already known".
+- Optionally marks recipes for your professions you can learn now (green +) or once your skill is high
+  enough (yellow +).
+- Can make Bag Tithe rank known recipes as junk.
+
+#### Sous Chef
+
+In the cooking window, recipes where you have the **main ingredient** (the meat, fish...) but are
+missing **vendor-bought extras** (spices, water, flour...) get an icon of what to buy, and the row
+tooltip says how much.
+
+- Item tooltips on a main ingredient list what it cooks into and what's missing.
+- Vendor items are recognised from a built-in list plus what you see at merchants.
+- Open cooking once per character so it knows your recipes.
+- Optionally for all professions.
+
+<img width="600" height="499" alt="sousChef" src=".github/screenshots/sousChef.png" />
+
+#### Double-click fishing
+
+With a fishing pole in your main hand, **double right-click the world to cast Fishing** (your highest
+rank).
+
+- Right-clicking NPCs and players, and holding right-click to turn the camera, work as normal.
+- The double-click time is adjustable.
+
+### Trackers & Reminders
+
+#### Unspent talent points
+
+A reminder in the middle of the screen while you have **talent points to spend**.
+
+- Hidden while dead and, optionally, in combat.
+- Size and position are adjustable.
+
+<img width="307" height="82" alt="unspentTalentPoints" src=".github/screenshots/unspentTalentPoints.png" />
+
+#### Campfire timer
+
+A progress bar in the middle of the screen while you **rest at a Welcoming Campfire**, with the time
+left. It turns green (with a sound) when Camp Benefits is ready.
+
+- **Sleeping bags too:** it counts your Well-Rested stacks up to 3, with the time left once it has
+  seen how long a stack takes.
+- Width and position are adjustable.
+- `/nra campfire` shows a 10-second preview, `/nra preview sleepingbag` the sleeping bag.
+
+<img width="261" height="57" alt="welcomingCampfire" src=".github/screenshots/welcomingCampfire.png" />
+
+#### Farm goals
+
+Set goals and track them in a small movable window: progress bar, amount gained, **rate per hour** and
+**time left**.
+
+**Goals you can set:** "loot 4000 Silk Cloth", "reach level 40", "gain 50,000 XP", "earn 100 gold",
+"reach Revered with Timbermaw Hold", "Swords to 300 (or to its cap)", or a currency amount (reach a
+level or gain an amount).
+
+**Progress and finishing**
+
+- The bars are marked at 25/50/75%, optionally with a chime and a small message there.
+- A fanfare and a big message in the middle of the screen when a goal is done (shown again after the
+  fight if it happened in combat). The finished goal glows in the tracker until you hover it.
+- Click a finished goal to clear it to the history (Restore brings it back), or right-click it to
+  **go again** (another run of the same amount) or set a new target.
+- Item goals count **what you loot**, so banking, mailing or selling never changes them. They can start
+  from what you already have in your bags, bank, mail or on other characters.
+
+**The tracker**
+
+- Three views, picked from the arrow menu in its header (which also locks the tracker):
+  - **Full**;
+  - **Compact**: one line per goal;
+  - **Icons**: a tile per goal with a bar and the amount. The box is just the tiles, growing sideways
+    up to 3 per row, with the buttons appearing above it on hover.
+- Right-click a goal to pause, edit, **shelve** (hide it from the tracker, paused, until you bring it
+  back from the goals window), reset or remove it.
+- **Edit** fixes a goal's target, item, starting count or sounds without starting over.
+- Each goal can have its own milestone and finish sounds.
+- Icons follow what a goal tracks (an axe for Axes, a pick for Mining, coins for gold, the level's
+  badge). Or pick your own like a macro icon: click the icon in the goal form and choose one, or drop
   an item or spell on it to use its icon.
-  `/nra goal` opens the goals window (new goal, active and shelved goals, history). Goals can also be
-  added from chat: `/nra goal 4000 [item]`, `/nra goal level 40`, `/nra goal gold 1g 50s`, `/nra goal rep revered timbermaw`,
-  `/nra goal skill swords`, `/nra goal currency 2000 honor`, ... (`/nra goal help` lists them all).
-  <img width="801" height="571" alt="newGoal" src=".github/screenshots/newGoal.png" />
-  <img width="795" height="554" alt="activeGoals" src=".github/screenshots/activeGoals.png" />
-  <img width="211" height="63" alt="goalTrackerCompact" src=".github/screenshots/goalTrackerCompact.png" />
-  <img width="54" height="67" alt="goalTrackerIconOnly" src=".github/screenshots/goalTrackerIconOnly.png" />
-  <img width="270" height="151" alt="goalCompletionToast" src=".github/screenshots/goalCompletionToast.png" />
 
-  
-- **/leave leaves your group**: type `/leave` (with nothing after it) or `/leavegroup` to leave
-  your party, raid or instance group. `/leave <channel>` still leaves a chat channel.
-- **Mail**: helpers for the mailbox, each one an option (all on once you turn Mail on):
-  - **Open selected mail**: a checkbox on each mail in your inbox. Tick some and the Open All button
-    turns into "Open Selected (N)" and only opens those. The selection is cleared when you close the mailbox.
-  - **Open All menu**: an arrow next to Open All with more ways to open, each showing how many mails
-    and how much gold first: **Collect auction gold** (sales and outbid refunds), **Collect auction
-    purchases**, **Collect expired auctions** (unsold and cancelled), and **Take money only** (the gold
-    from every mail, items left in). Gold works with full bags; C.O.D. and GM mail are never touched.
-  - **Fill in mail subject**: the subject of a mail you're sending is written from what you attach,
-    like "Linen Cloth (40)", "Linen Cloth (40), Wool Cloth (20)", "25g", "Linen Cloth (20) + 5g" or
-    "Linen Cloth (20) (C.O.D. 5g)". A subject you typed yourself is never replaced.
-  - **Remember mail recipient**: the To box keeps the name after you send a mail, so you can send
-    several to the same player (like your bank alt) without typing it again. The name is selected, so typing
-    replaces it. Optionally the last player you mailed is filled in when you open Send Mail.
-  - **Alt+click to attach all**: with Send Mail open, Alt+click an item in your bags to attach every
-    stack of it you have (all your Silk Cloth, all 4 Small Red Pouches), as many as fit in the mail.
-  <img width="486" height="545" alt="mailInboxFeatures" src=".github/screenshots/mailInboxFeatures.png" />
-- **Hide micro menu notifications**: hides the blue "new" dot on the Shop button, and shows the
-  Legacy button's dot only while you have unspent Legacy Tree points (not for every new challenge).
-- **Item lookup**: search every item in the game by name. `/nra item nightbl` opens an Items tab
-  listing the matches (icon, type, required level, how many your characters have); hover for the
-  tooltip, Shift+click to link, Ctrl+click to preview. The game can't search items by name, so the
-  names are learned in the background (a few dozen a second, paused in combat, a few minutes once
-  per game version). A progress bar in the tab has Pause / Resume, and Check again once it's done;
-  undiscovered items are also checked for again daily.
-  <img width="1301" height="759" alt="itemLookup" src=".github/screenshots/itemLookup.png" />
-  <img width="791" height="554" alt="itemLookup2" src=".github/screenshots/itemLookup2.png" />
+**Commands**
 
-- **Inspect anything**: one key (Key Bindings > NraKit) inspects your target (or what's under the mouse when you have none),
-  in a window like the inspect window (same frame and place) that stays open until you close
-  it, even when they run off or you change target. Players: their gear around the model (tooltips,
-  Shift-click to link), spec and item level; inspected in combat, the gear fills in after combat.
-  "Blizzard's inspect" opens the game's window (talents, PvP, guild) while they're near, and
-  "Dressing room" tries their outfit on. NPCs: the 3D model (drag to turn, right-drag to move, wheel
-  to zoom), level, type, health and attack speed (the game hides most NPC stats from addons), and
-  "Abilities on Wowhead" gives the NPC's Wowhead link. Optionally adds "View 3D model" to the
-  right-click menu of NPCs and enemy players.
-  <img width="343" height="430" alt="inspectAnything" src=".github/screenshots/inspectAnything.png" />
+- `/nra goal` opens the goals window (new goal, active and shelved goals, history).
+- Add goals from chat: `/nra goal 4000 [item]`, `/nra goal level 40`, `/nra goal gold 1g 50s`,
+  `/nra goal rep revered timbermaw`, `/nra goal skill swords`, `/nra goal currency 2000 honor`, ...
+  (`/nra goal help` lists them all).
 
-- **Copy Wowhead link**: hover an item, spell, NPC, quest, achievement or currency and press Ctrl+C.
-  A box opens in the middle of the screen with its wowhead.com/forever link selected; copy it with
-  Ctrl+C (Cmd+C on a Mac) and the box closes (addons can't reach the clipboard directly). Works in bags, chat links, quest log, achievements and the
-  objective tracker. Ctrl+C is bound on first use if it's free; change it under Key Bindings > NraKit.
-  <img width="483" height="133" alt="wowheadlink" src=".github/screenshots/wowheadlink.png" />
+<img width="801" height="571" alt="newGoal" src=".github/screenshots/newGoal.png" />
+<img width="795" height="554" alt="activeGoals" src=".github/screenshots/activeGoals.png" />
+<img width="211" height="63" alt="goalTrackerCompact" src=".github/screenshots/goalTrackerCompact.png" />
+<img width="54" height="67" alt="goalTrackerIconOnly" src=".github/screenshots/goalTrackerIconOnly.png" />
+<img width="270" height="151" alt="goalCompletionToast" src=".github/screenshots/goalCompletionToast.png" />
 
-- **Damage meter look**: a clean, flat look for the game's own damage meter. The header becomes a
-  thin dark strip with a small gold title and small grey buttons (optionally only while the mouse
-  is over the meter), and the bars get a flat fill in a softer class colour with outlined text.
-  Size, style, icons and class colours are still set in Edit Mode. Turning it off asks for a
-  reload to bring back the game's look.
-  <img width="336" height="145" alt="damageMeterLook" src=".github/screenshots/damageMeterLook.png" />
+### Mail
 
-- **Unit Scanner**: alerts you (sound, on-screen text, chat line, taskbar flash) when a mob or
-  player from your list shows up in nameplate range, on mouseover, as your target, focus or a group
-  member's target, as a minimap marker (rares), or when an NPC yells, says or emotes. Optionally
-  raises the nameplate range while scanning. Found units get a raid marker (Moon by default) and a
-  button with the marker and their name: click it (or its keybind) to target them, right-click to
-  dismiss, Shift-drag to move. Target a unit and type `/nra scan` to add or remove it, or use
-  `/nra scan <name or NPC ID>`, `/nra scan list`, `/nra scan remove <# or name>` and
-  `/nra scan clear`. Addons can only see units the game already shows you, so enemy nameplates
-  should be on (with Engaged-only nameplates, the scanner keeps them on while the list isn't empty).
-  With Player notes, it also alerts for players labelled Kill on sight (optional, on by default).
-- **Player notes**: give players a label (Kill on sight, Avoid, Neutral, Good, Friend, or your own)
-  and a dated log of notes (each saves the date, zone and your character). Their label and latest note
-  show in their tooltip. Right-click a player (portrait, party frame, chat name, guild and friends
-  lists) for **Player note...** or to set their label. Warns you (chat, on screen, sound) when a player
-  labelled Avoid or Kill on sight joins your group, invites, whispers or trades you. Labels can be
-  renamed, recolored, added and deleted; each has a tone that decides what it does: Hostile (warnings
-  and Unit Scanner alerts), Caution (warnings), Neutral or Friendly (tooltip only). `/nra note` opens
-  the notebook (**+ Add player** adds anyone by first name and surname; search by name, label or note text) or your target's notes; from chat,
-  `/nra note Bob Stone kos stole my node` and with a player targeted just
-  `/nra note ninja'd the loot` (or `/nra note avoid ninja'd the loot` to label them too).
-  `/nra note !remove` takes your target out of your notes (`!undo` brings them back).
-  <img width="447" height="27" alt="playerNoteWarning" src=".github/screenshots/playerNoteWarning.png" />
+Helpers for the mailbox. Each one is an option, and all are on once you turn Mail on.
+
+- **Open selected mail:** a checkbox on each mail in your inbox. Tick some and the Open All button
+  turns into "Open Selected (N)" and only opens those. The selection is cleared when you close the
+  mailbox.
+- **Open All menu:** an arrow next to Open All with more ways to open, each showing how many mails and
+  how much gold first:
+  - **Collect auction gold** (sales and outbid refunds);
+  - **Collect auction purchases**;
+  - **Collect expired auctions** (unsold and cancelled);
+  - **Take money only** (the gold from every mail, items left in).
+
+  Gold works with full bags; C.O.D. and GM mail are never touched.
+- **Fill in mail subject:** the subject of a mail you're sending is written from what you attach, like
+  "Linen Cloth (40)", "Linen Cloth (40), Wool Cloth (20)", "25g", "Linen Cloth (20) + 5g" or
+  "Linen Cloth (20) (C.O.D. 5g)". A subject you typed yourself is never replaced.
+- **Remember mail recipient:** the To box keeps the name after you send a mail, so you can send several
+  to the same player (like your bank alt) without typing it again. The name is selected, so typing
+  replaces it. Optionally the last player you mailed is filled in when you open Send Mail.
+- **Alt+click to attach all:** with Send Mail open, Alt+click an item in your bags to attach every stack
+  of it you have (all your Silk Cloth, all 4 Small Red Pouches), as many as fit in the mail.
+
+<img width="486" height="545" alt="mailInboxFeatures" src=".github/screenshots/mailInboxFeatures.png" />
+
+### Utilities
+
+#### /leave leaves your group
+
+Type `/leave` (with nothing after it) or `/leavegroup` to leave your party, raid or instance group.
+`/leave <channel>` still leaves a chat channel.
+
+#### Hide micro menu notifications
+
+- Hides the blue "new" dot on the Shop button.
+- Shows the Legacy button's dot only while you have unspent Legacy Tree points (not for every new
+  challenge).
+
+#### Item lookup
+
+**Search every item in the game by name.** `/nra item nightbl` opens an Items tab listing the matches
+(icon, type, required level, how many your characters have).
+
+- Hover for the tooltip, **Shift+click** to link, **Ctrl+click** to preview.
+- The game can't search items by name, so the names are learned in the background: a few dozen a
+  second, paused in combat, a few minutes once per game version.
+- A progress bar in the tab has Pause / Resume, and Check again once it's done.
+- Undiscovered items are also checked for again daily.
+
+<img width="1301" height="759" alt="itemLookup" src=".github/screenshots/itemLookup.png" />
+<img width="791" height="554" alt="itemLookup2" src=".github/screenshots/itemLookup2.png" />
+
+#### Inspect anything
+
+One key (Key Bindings → NraKit) **inspects your target** (or what's under the mouse when you have
+none), in a window like the inspect window (same frame and place). It **stays open until you close
+it**, even when they run off or you change target.
+
+- **Players:** their gear around the model (tooltips, Shift-click to link), spec and item level.
+  - Inspected in combat, the gear fills in after combat.
+  - "Blizzard's inspect" opens the game's window (talents, PvP, guild) while they're near.
+  - "Dressing room" tries their outfit on.
+- **NPCs:** the 3D model (drag to turn, right-drag to move, wheel to zoom), level, type, health and
+  attack speed (the game hides most NPC stats from addons).
+  - "Abilities on Wowhead" gives the NPC's Wowhead link.
+- Optionally adds "View 3D model" to the right-click menu of NPCs and enemy players.
+
+<img width="343" height="430" alt="inspectAnything" src=".github/screenshots/inspectAnything.png" />
+
+#### Copy Wowhead link
+
+Hover an item, spell, NPC, quest, achievement or currency and press **Ctrl+C**. A box opens in the
+middle of the screen with its wowhead.com/forever link selected; copy it with Ctrl+C (Cmd+C on a Mac)
+and the box closes.
+
+- Addons can't reach the clipboard directly, hence the box.
+- Works in bags, chat links, the quest log, achievements and the objective tracker.
+- Ctrl+C is bound on first use if it's free; change it under Key Bindings → NraKit.
+
+<img width="483" height="133" alt="wowheadlink" src=".github/screenshots/wowheadlink.png" />
+
+#### Damage meter look
+
+A **clean, flat look** for the game's own damage meter.
+
+- The header becomes a thin dark strip with a small gold title and small grey buttons (optionally only
+  while the mouse is over the meter).
+- The bars get a flat fill in a softer class colour, with outlined text.
+- Size, style, icons and class colours are still set in Edit Mode.
+- Turning it off asks for a reload to bring back the game's look.
+
+<img width="336" height="145" alt="damageMeterLook" src=".github/screenshots/damageMeterLook.png" />
+
+#### Player notes
+
+Give players a **label** (Kill on sight, Avoid, Neutral, Good, Friend, or your own) and a **dated log
+of notes** (each saves the date, zone and your character).
+
+- Their label and latest note show in their tooltip.
+- **Right-click a player** (portrait, party frame, chat name, guild and friends lists) for
+  **Player note...** or to set their label.
+- **Warnings** (chat, on screen, sound) when a player labelled Avoid or Kill on sight joins your group,
+  invites, whispers or trades you.
+- Labels can be renamed, recolored, added and deleted. Each has a tone that decides what it does:
+  - Hostile: warnings and Unit Scanner alerts;
+  - Caution: warnings;
+  - Neutral or Friendly: tooltip only.
+- `/nra note` opens the notebook, or your target's notes. In the notebook, **+ Add player** adds anyone
+  by first name and surname, and you can search by name, label or note text.
+- From chat:
+  - `/nra note Bob Stone kos stole my node`;
+  - with a player targeted, just `/nra note ninja'd the loot` (or `/nra note avoid ninja'd the loot`
+    to label them too);
+  - `/nra note !remove` takes your target out of your notes (`!undo` brings them back).
+
+<img width="447" height="27" alt="playerNoteWarning" src=".github/screenshots/playerNoteWarning.png" />
 
 ## Development
-Requires [just](https://github.com/casey/just), [cocogitto](https://github.com/cocogitto/cocogitto) and Lua (`luac` for the syntax check; LuaJIT for the tests, since it runs Lua 5.1 like the game).
+
+Requires [just](https://github.com/casey/just), [cocogitto](https://github.com/cocogitto/cocogitto) and
+Lua (`luac` for the syntax check; LuaJIT for the tests, since it runs Lua 5.1 like the game).
 Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
 
-- `just check` syntax-checks the Lua files
+- `just check` syntax-checks the Lua files.
 - `just test` runs the tests: the addon is loaded into a stand-in WoW client (`tests/wow.lua`) and its
-  windows are clicked through (`tests/*_test.lua`). They also run on every push (GitHub Actions)
-- `Changelog.lua` is the player-facing changelog (in game under What's new, and the release notes): add a line
-  under `Unreleased` with every change players will notice
-- `just next` shows the next version, the commits going into it and whether the changelog has them
-- `just release` turns `Unreleased` into the next version, writes `CHANGELOG.md`, tags and pushes; CI packages it
-  and uploads to CurseForge and GitHub
-- `just release-pre alpha.1` does the same as an alpha/beta pre-release
+  windows are clicked through (`tests/*_test.lua`). They also run on every push (GitHub Actions).
+- `Changelog.lua` is the player-facing changelog (in game under What's new, and the release notes): add
+  a line under `Unreleased` with every change players will notice.
+- `just next` shows the next version, the commits going into it and whether the changelog has them.
+- `just release` turns `Unreleased` into the next version, writes `CHANGELOG.md`, tags and pushes; CI
+  packages it and uploads to CurseForge and GitHub.
+- `just release-pre alpha.1` does the same as an alpha/beta pre-release.
 
 ## License
+
 [MIT](LICENSE)
