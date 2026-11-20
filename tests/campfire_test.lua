@@ -1,5 +1,7 @@
--- Campfire timer: the sleeping bag (Resting) waits for 3 stacks of Well-Rested.
+-- Campfire timer: the campfire rest (once per time you sit down), and the sleeping bag
+-- (Resting) waits for 3 stacks of Well-Rested.
 
+local WELCOMING_CAMPFIRE, CAMP_BENEFITS = 1229739, 1229741
 local SLEEPING_BAG, WELL_RESTED = 1331671, 429959
 
 return {
@@ -30,6 +32,60 @@ return {
 		local function Time()
 			return select(2, Bar())
 		end
+
+		-- A round at the fire: the rest buff for 60 seconds, then Camp Benefits (as the game does it).
+		local function SitDown()
+			Set(WELCOMING_CAMPFIRE, { duration = 60, expirationTime = GetTime() + 60, icon = 1 })
+		end
+		local function FinishRound()
+			wow.advance(60)
+			auras[CAMP_BENEFITS] = { duration = 7200, expirationTime = GetTime() + 7200 }
+			Set(WELCOMING_CAMPFIRE, nil)
+		end
+
+		-- Regression: with Camp Benefits from an earlier rest, getting up early said "Camp Benefits ready".
+		t.test("getting up early hides the bar, even with Camp Benefits from before", function()
+			auras[CAMP_BENEFITS] = { duration = 7200, expirationTime = GetTime() + 3600 }
+			SitDown()
+			t.equal(Bar(), "Welcoming Campfire", "the bar shows")
+			wow.advance(3)
+			local played = #wow.played
+			Set(WELCOMING_CAMPFIRE, nil)
+			t.equal(Bar(), nil, "hidden, not done")
+			t.equal(#wow.played, played, "no sound")
+		end)
+
+		t.test("staying seated after the rest doesn't show the bar every round", function()
+			wow.advance(20)
+			SitDown()
+			local played = #wow.played
+			FinishRound()
+			t.equal(Bar(), "Camp Benefits ready", "done")
+			t.ok(#wow.played > played, "with the sound")
+			wow.advance(5)
+			SitDown() -- the next round, still seated
+			wow.advance(5)
+			t.equal(Bar(), nil, "no bar for the next round")
+			FinishRound()
+			wow.advance(5)
+			SitDown()
+			t.equal(Bar(), nil, "nor the one after")
+		end)
+
+		t.test("sitting down again shows the bar again", function()
+			wow.advance(10)
+			Set(WELCOMING_CAMPFIRE, nil) -- got up during a round
+			wow.advance(1)
+			SitDown()
+			t.equal(Bar(), "Welcoming Campfire", "after getting up during a round")
+			FinishRound()
+			wow.advance(15) -- got up between rounds
+			SitDown()
+			t.equal(Bar(), "Welcoming Campfire", "after getting up between rounds")
+			Set(WELCOMING_CAMPFIRE, nil)
+			auras[CAMP_BENEFITS] = nil
+			wow.advance(10)
+		end)
 
 		t.test("in a sleeping bag the bar counts Well-Rested stacks, then says it's done", function()
 			Set(SLEEPING_BAG, IN_BAG)

@@ -4,6 +4,8 @@ local _, ns = ...
 -- campfire (the "Welcoming Campfire" buff), so you can see when you're done without
 -- watching the buff icon. When the rest finishes you get "Camp Benefits"; the bar then
 -- turns green, says so for a few seconds and fades out. Walking away early just hides it.
+-- While you stay seated the buff starts over every minute (gone for ~5 seconds between
+-- rounds); the bar shows once per time you sit down, not every round.
 -- The look is borrowed from Leatrix Plus's flight progress bar.
 --
 -- Sleeping bags too: while you're in one ("Resting") you gain stacks of Well-Rested, and the
@@ -73,6 +75,8 @@ local DONE_SHOW_SECONDS = 3
 local FADE_SECONDS = 1
 local PREVIEW_SECONDS = 10
 local PREVIEW_STACK_SECONDS = 3
+-- Between rounds while you stay seated the buff is gone for ~5 seconds; gone longer, you got up.
+local SAME_REST_SECONDS = 8
 
 local bar
 -- While the bar counts down (or a preview runs):
@@ -81,6 +85,8 @@ local bar
 local resting
 local doneAt -- GetTime() when the "done" message started
 local inBag -- in a sleeping bag at the last look
+-- The rest gave Camp Benefits and you may still be seated: { finish = end of the current round, goneAt = when the buff went }
+local restDone
 
 -- Seconds between Well-Rested stacks, learned from your rests; nil until one is seen.
 local function StackInterval()
@@ -302,6 +308,7 @@ end
 local function Update()
 	if not ns:IsModuleEnabled(module.key) then
 		inBag = nil
+		restDone = nil
 		Stop()
 		return
 	end
@@ -320,17 +327,35 @@ local function Update()
 	local aura = GetRestAura()
 	local finish = aura and Plain(aura.expirationTime)
 	local duration = aura and Plain(aura.duration)
+	local now = GetTime()
 	if finish and duration and finish > 0 and duration > 0 then
-		if not resting or resting.finish ~= finish then
+		if restDone and restDone.goneAt and now - restDone.goneAt > SAME_REST_SECONDS then
+			restDone = nil -- got up and sat down again
+		end
+		if restDone then
+			-- Another round while you stay seated: no bar.
+			restDone.finish = finish
+			restDone.goneAt = nil
+		elseif not resting or resting.finish ~= finish then
 			ShowResting(finish - duration, finish, Plain(aura.icon))
 		end
 	elseif resting then
-		-- The buff is gone: finished if it ran out (or Camp Benefits arrived), else we left early.
-		local finished = GetTime() >= resting.finish - 1 or C_UnitAuras.GetPlayerAuraBySpellID(CAMP_BENEFITS) ~= nil
-		if finished then
+		-- The buff is gone: finished if it ran out (or Camp Benefits just came), else we left early.
+		-- Camp Benefits lasts two hours, so having it doesn't mean this rest gave it.
+		local benefits = C_UnitAuras.GetPlayerAuraBySpellID(CAMP_BENEFITS)
+		local applied = benefits and Plain(benefits.expirationTime) and Plain(benefits.duration)
+			and benefits.expirationTime - benefits.duration
+		if now >= resting.finish - 1 or (applied and now - applied < 2) then
 			ShowDone()
+			restDone = { goneAt = now }
 		else
 			Stop()
+		end
+	elseif restDone and not restDone.goneAt then
+		if restDone.finish and now < restDone.finish - 1 then
+			restDone = nil -- got up during a round
+		else
+			restDone.goneAt = now
 		end
 	end
 end
