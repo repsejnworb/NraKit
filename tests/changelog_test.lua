@@ -109,6 +109,31 @@ return {
 			t.noErrors()
 		end)
 
+		-- Regression: a pooled switch kept the wide click area a feature card gave it, and it
+		-- covered the Settings button next to it, so clicking Settings toggled the feature.
+		t.test("a new feature's switch doesn't cover its Settings button", function()
+			ns:OpenSettings("a") -- feature cards (every name with an "a"): switches widened over the names
+			ns:OpenWhatsNew()
+			for _ = 1, #ns.changelog do
+				local closed = wow.findAll(function(frame)
+					return wow.visible(frame) and rawget(frame, "version") and rawget(frame, "isOpen") == false
+				end)[1]
+				if not closed then
+					break
+				end
+				closed.scripts.OnClick(closed)
+			end
+			local switches = wow.findAll(function(frame)
+				return wow.visible(frame) and rawget(frame, "tooltipText") == "Turn this feature on or off."
+			end)
+			t.ok(#switches > 0, "feature switches shown")
+			for _, switch in ipairs(switches) do
+				local _, right = switch:GetHitRectInsets()
+				-- 22 wide, Settings starts 62 to the right of the switch's left edge
+				t.ok(22 - right < 62, "click area ends before Settings: " .. tostring(switch.settingKey) .. " reaches " .. (22 - right))
+			end
+		end)
+
 		t.test("the page's chat switch is saved", function()
 			ns:OpenWhatsNew()
 			local check

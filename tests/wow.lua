@@ -191,6 +191,18 @@ local methods = {
 	IsMouseOver = function(self)
 		return rawget(self, "mouseOver") == true
 	end,
+	-- Click areas (a checkbox widened over its label), for tests that check what covers what.
+	SetHitRectInsets = function(self, left, right, top, bottom)
+		rawset(self, "hitRect", { left, right, top, bottom })
+	end,
+	GetHitRectInsets = function(self)
+		local insets = rawget(self, "hitRect") or { 0, 0, 0, 0 }
+		return insets[1], insets[2], insets[3], insets[4]
+	end,
+	-- Roughly as wide as the game would draw it (6 pixels a letter).
+	GetStringWidth = function(self)
+		return #tostring(rawget(self, "text") or "") * 6
+	end,
 }
 
 -- Method names start with a verb; other capitalised keys (NotificationOverlay, Items,

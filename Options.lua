@@ -117,8 +117,10 @@ local function AcquireTexture()
 	return texture
 end
 
+-- Checkboxes are pooled: the click area each use widens over its label is reset here, or a
+-- reused one could cover whatever is next to it (it covered What's new's Settings buttons).
 local function AcquireCheck()
-	return Acquire("check", function()
+	local check = Acquire("check", function()
 		local check = CreateFrame("CheckButton", nil, content, "UICheckButtonTemplate")
 		check:SetFrameLevel(content:GetFrameLevel() + 3)
 		check:SetScript("OnClick", function(self)
@@ -137,6 +139,8 @@ local function AcquireCheck()
 		check:SetScript("OnLeave", GameTooltip_Hide)
 		return check
 	end)
+	check:SetHitRectInsets(0, 0, 0, 0)
+	return check
 end
 
 local function AcquireSlider()
@@ -484,6 +488,7 @@ local function AddFeatureControls(module, x, y)
 	label:SetWordWrap(false)
 	label:SetTextColor(unpack(IsOn(module.key) and NAME_ON or TEXT_DIM))
 	label:SetPoint("LEFT", check, "RIGHT", 2, 1)
+	check:SetHitRectInsets(0, -(label:GetStringWidth() + 4), 0, 0) -- "On"/"Off" too, not the Settings button
 	local link = AcquireSettingsLink()
 	link.search, link.moduleKey = module.name, module.key
 	link:SetPoint("TOPLEFT", content, "TOPLEFT", x + 62, y + 1)
@@ -508,6 +513,7 @@ local function RenderWhatsNew(x, y, width)
 	chatLabel:SetWordWrap(false)
 	chatLabel:SetTextColor(unpack(TEXT))
 	chatLabel:SetPoint("LEFT", chat, "RIGHT", 2, 1)
+	chat:SetHitRectInsets(0, -(chatLabel:GetStringWidth() + 4), 0, 0)
 
 	local share = AcquireCheck()
 	share:SetSize(22, 22)
@@ -522,6 +528,7 @@ local function RenderWhatsNew(x, y, width)
 	shareLabel:SetWordWrap(false)
 	shareLabel:SetTextColor(unpack(TEXT))
 	shareLabel:SetPoint("LEFT", share, "RIGHT", 2, 1)
+	share:SetHitRectInsets(0, -(shareLabel:GetStringWidth() + 4), 0, 0)
 	y = y - 56
 
 	local newer = ns.versionCheck.Newer()
