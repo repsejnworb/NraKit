@@ -159,6 +159,8 @@ A **clean, flat look** for the game's own damage meter.
 - **Flat bars** in a softer class colour, with **outlined text**.
 - Size, style, icons and class colours are still set in **Edit Mode**. Turning it off asks for a **reload** to bring back the game's look.
 
+![damageMeterLook](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/damageMeterLook.png)
+
 ### Unit Scanner
 Get alerted when a **mob or player from your own list** shows up.
 - **Sound, on-screen text, chat line** and a flashing taskbar icon, each optional.

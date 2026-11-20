@@ -174,6 +174,7 @@ addons share through LibSharedMedia.
   is over the meter), and the bars get a flat fill in a softer class colour with outlined text.
   Size, style, icons and class colours are still set in Edit Mode. Turning it off asks for a
   reload to bring back the game's look.
+  <img width="336" height="145" alt="damageMeterLook" src=".github/screenshots/damageMeterLook.png" />
 
 - **Unit Scanner**: alerts you (sound, on-screen text, chat line, taskbar flash) when a mob or
   player from your list shows up in nameplate range, on mouseover, as your target, focus or a group
