@@ -27,6 +27,8 @@ Type `/nrakit` (or `/nra`) to open NraKit's window.
 - NraKit is also in the **addon button by the minimap**: left-click for settings, right-click for a
   menu of its windows.
 
+<img width="783" height="558" alt="nraKitUI" src=".github/screenshots/nraKitUI.png" />
+
 ### What's new and updates
 
 - **What's new** (`/nra new`, at the top of the NraKit window) lists what changed in each version, and

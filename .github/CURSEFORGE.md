@@ -12,6 +12,8 @@ Type **/nrakit** (or **/nra**) to open NraKit's own window.
 - **/nra help** lists the chat commands.
 - **/nra preview** shows any of NraKit's on-screen messages (goal complete, quest reminders, alerts...) with made-up content, to see how they look.
 
+![nraKitUI](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/nraKitUI.png)
+
 **What's new** (**/nra new**, at the top of the NraKit window) shows what changed in every version, and new features can be turned on right there.
 - After an update, NraKit tells you in one chat line (you can turn that off).
 - It also tells you when a **newer version is out**, if someone in your guild or group already has it.
