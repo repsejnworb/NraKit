@@ -37,6 +37,14 @@ rawset(window.MinimizeContainer, "ScrollBox", scrollBox)
 DamageMeter = CreateFrame("Frame")
 DamageMeterSessionWindow1 = window
 
+-- What the title and the combat timer are anchored to: anchors[name][point] = relativeTo.
+local anchors = { timer = {}, title = {} }
+for name, frame in pairs({ timer = window.SessionTimer, title = window.DamageMeterTypeDropdown }) do
+	rawset(frame, "SetPoint", function(_, point, relativeTo)
+		anchors[name][point] = relativeTo
+	end)
+end
+
 local popup
 StaticPopupDialogs = {}
 StaticPopup_Show = function(name)
@@ -60,6 +68,12 @@ return {
 			t.equal(fill:GetAlpha(), 0.55, "in a softer colour")
 			t.equal(row.StatusBar.BackgroundEdge.shown, false, "Blizzard's bar edge hidden")
 			t.ok(Glyph("-"), "a small minimize glyph")
+		end)
+
+		-- Regression: the combat timer sat before the title and pushed it right when it appeared.
+		t.test("the title keeps its place; the combat timer comes after it", function()
+			t.equal(anchors.title.LEFT, window.Header, "the title starts at the header's left")
+			t.ok(anchors.timer.LEFT ~= nil and anchors.timer.LEFT ~= window.Header, "the timer is anchored after the title")
 		end)
 
 		t.test("a new row is skinned once; a style change skins it again", function()

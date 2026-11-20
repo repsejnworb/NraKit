@@ -186,21 +186,17 @@ local function SkinHeader(window, state)
 		end
 	end
 
-	-- Left side: the timer, then the type as a gold title. The whole title is the type button
-	-- (Blizzard's is only its arrow), with a small arrow after it on hover.
+	-- Left side: the type as a gold title, then the combat timer. The whole title is the type
+	-- button (Blizzard's is only its arrow), with a small arrow after it on hover. The title has
+	-- a fixed place; the timer comes and goes after it (and after the arrow's place, which is
+	-- always kept), so nothing moves.
 	local timer = window.SessionTimer
-	if timer then
-		timer:SetFontObject("GameFontHighlightSmall")
-		timer:SetTextColor(unpack(DIM_COLOR))
-		timer:ClearAllPoints()
-		timer:SetPoint("LEFT", header, "LEFT", 6, 0)
-	end
 	local typeButton = window.DamageMeterTypeDropdown
 	if typeButton then
 		HideArt(typeButton)
 		typeButton:SetScale(1)
 		typeButton:ClearAllPoints()
-		typeButton:SetPoint("LEFT", timer or header, timer and "RIGHT" or "LEFT", 4, 0)
+		typeButton:SetPoint("LEFT", header, "LEFT", 4, 0)
 		typeButton:SetPoint("RIGHT", right, right == header and "RIGHT" or "LEFT", -6, 0)
 		typeButton:SetHeight(BUTTON_SIZE)
 		local title = typeButton.TypeName
@@ -219,6 +215,16 @@ local function SkinHeader(window, state)
 			local highlight = typeButton:CreateTexture(nil, "HIGHLIGHT")
 			highlight:SetAllPoints()
 			highlight:SetColorTexture(1, 1, 1, 0.05)
+		end
+	end
+	if timer then
+		timer:SetFontObject("GameFontHighlightSmall")
+		timer:SetTextColor(unpack(DIM_COLOR))
+		timer:ClearAllPoints()
+		if state.arrow then
+			timer:SetPoint("LEFT", state.arrow, "RIGHT", 4, 2)
+		else
+			timer:SetPoint("LEFT", header, "LEFT", 6, 0)
 		end
 	end
 end
