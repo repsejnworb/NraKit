@@ -108,7 +108,7 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   summaries, `/nra x help` / `/nra x ?` print the usage (Core handles both).
 - The **damage meter** (`Blizzard_DamageMeter`) shows secret values in combat, which its code only handles while
   untainted. Restyle it with post-hooks and widget calls on its regions only (`SetTexture`, `SetFont`, `SetAlpha`,
-  `SetPoint`); never call its Lua methods or write its fields, and keep clicks on its own buttons (see DamageMeterLook.lua).
+  `SetPoint`); never call its Lua methods that change state (reading, e.g. `ScrollBox:ForEachFrame`, is fine) or write its fields, and keep clicks on its own buttons (see DamageMeterLook.lua).
 - Overhead names (with nameplates off) are drawn by the engine, not Lua. A unit with a nameplate never gets its engine name back.
 
 ## Forever quirks
