@@ -169,6 +169,12 @@ addons share through LibSharedMedia.
   objective tracker. Ctrl+C is bound on first use if it's free; change it under Key Bindings > NraKit.
   <img width="483" height="133" alt="wowheadlink" src=".github/screenshots/wowheadlink.png" />
 
+- **Damage meter look**: a clean, flat look for the game's own damage meter. The header becomes a
+  thin dark strip with a small gold title and small grey buttons (optionally only while the mouse
+  is over the meter), and the bars get a flat fill in a softer class colour with outlined text.
+  Size, style, icons and class colours are still set in Edit Mode. Turning it off asks for a
+  reload to bring back the game's look.
+
 - **Unit Scanner**: alerts you (sound, on-screen text, chat line, taskbar flash) when a mob or
   player from your list shows up in nameplate range, on mouseover, as your target, focus or a group
   member's target, as a minimap marker (rares), or when an NPC yells, says or emotes. Optionally

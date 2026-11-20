@@ -153,6 +153,12 @@ Hover an **item, spell, NPC, quest, achievement or currency** and press **Ctrl+C
 
 ![wowheadlink](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/wowheadlink.png)
 
+### Damage meter look
+A **clean, flat look** for the game's own damage meter.
+- The header becomes a **thin dark strip** with a small gold title and small grey buttons, shown **only while your mouse is over the meter** (optional).
+- **Flat bars** in a softer class colour, with **outlined text**.
+- Size, style, icons and class colours are still set in **Edit Mode**. Turning it off asks for a **reload** to bring back the game's look.
+
 ### Unit Scanner
 Get alerted when a **mob or player from your own list** shows up.
 - **Sound, on-screen text, chat line** and a flashing taskbar icon, each optional.
