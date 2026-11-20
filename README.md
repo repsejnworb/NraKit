@@ -374,6 +374,8 @@ A **clean, flat look** for the game's own damage meter.
 Give players a **label** (Kill on sight, Avoid, Neutral or Liked), **tags** of your own and a **dated
 log of notes** (each saves the date, zone and your character).
 
+<img width="796" height="561" alt="playerNoteInterface" src=".github/screenshots/playerNoteInterface.png" />
+
 - **Tags** group players your way: Ninjalooter, Good tank, Guildie. A player can have any number.
   - The notebook's list has a section per tag, then the players without tags. Filter chips under the
     search (KoS, Avoid, Neutral, Liked) narrow it to those labels. Click a section to
@@ -386,7 +388,8 @@ log of notes** (each saves the date, zone and your character).
 - **Warnings** (chat, on screen, sound) when a player labelled Avoid or Kill on sight joins your group,
   invites, whispers or trades you.
 - **Rate** the players you like, 1 to 5 stars in halves: the stars next to Liked on their page, or
-  right-click → Player note → **Like and rate**, which then opens their notes to add a note or tags (an option). The stars show in their tooltip and your notes.
+  right-click → Player note → **Like and rate**, which then opens their notes to add a note or tags
+  (an option). The stars show in their tooltip and your notes.
 - What the label does:
   - Kill on sight: warnings and Unit Scanner alerts;
   - Avoid: warnings;
@@ -405,6 +408,8 @@ log of notes** (each saves the date, zone and your character).
   - Added notes keep who wrote them. Notes you already have are skipped, their tags can be left out,
     and your own label (and rating) stays unless you pick theirs.
   - Only players you've linked can be fetched, and only while you're online.
+
+<img width="746" height="725" alt="playerNoteQuickRate" src=".github/screenshots/playerNoteQuickRate.png" />
 
 <img width="447" height="27" alt="playerNoteWarning" src=".github/screenshots/playerNoteWarning.png" />
 

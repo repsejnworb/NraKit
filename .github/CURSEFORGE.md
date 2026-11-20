@@ -247,11 +247,15 @@ Remember who stole your mining node, who ninja'd the loot and who was a great he
 - **Rate** the players you like, 1 to 5 stars in halves: the stars next to Liked on their page, or right-click → Player note → **Like and rate**, which then opens their notes to add a note or tags (an option). The stars show in their tooltip and your notes.
 - What the label does: **Kill on sight** (warnings and Unit Scanner alerts), **Avoid** (warnings), Neutral or Liked (tooltip only).
 
+![playerNoteQuickRate](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/playerNoteQuickRate.png)
+
 **Tags**
 - Group players your way: **Ninjalooter, Good tank, Guildie**. A player can have any number.
 - The notebook's list has a **section per tag**, then the players without tags. **Filter chips** under the search (KoS, Avoid, Neutral, Liked) narrow it to those labels. Click a section to fold it, shift-click to fold all the others, or use **Fold all**.
 - On a player's page, **+ Tag** lists your tags to tick, or makes a new one. From chat, use **#**.
 - The **Tags** page adds tags, renames them (renaming into an existing tag merges them) and deletes them.
+
+![playerNoteInterface](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/playerNoteInterface.png)
 
 **Your notebook**
 - **/nra note** opens your notebook, or your target's notes.
