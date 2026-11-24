@@ -1,6 +1,6 @@
-# NraKit 0.23.1
+# NraKit 0.23.2
 
 ### Fixed
-- Potential Upgrades: green "Equip:" bonuses now count, on both the new item and the one you wear: attack power, spell power and healing, mana per 5, and chance to hit or crit. A ring with +8 Attack Power is no longer treated as having nothing on it, and the tooltip line shows the difference (e.g. -8 AP, +1% Crit). Still a rough clue while leveling, not a sim.
+- Unspent talent points: the reminder no longer shows on top of the talents window. It hides while the window is open, and other windows now cover it too.
 
 Type /nra new in game to see what's new in every version.

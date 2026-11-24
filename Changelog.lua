@@ -16,7 +16,7 @@ local _, ns = ...
 --           "new" entry with its module (tests/changelog_test.lua checks).
 
 ns.changelog = {
-	{ version = "Unreleased", entries = {
+	{ version = "0.23.2", date = "2026-11-24", entries = {
 		{ "fixed", "Unspent talent points: the reminder no longer shows on top of the talents window. It hides while the window is open, and other windows now cover it too." },
 	} },
 	{ version = "0.23.1", date = "2026-11-24", entries = {
