@@ -6,7 +6,9 @@ local _, ns = ...
 -- them and your note on where they come from (NraKit has no database of sources).
 --
 -- Items you have (bags, bank or worn) are ticked off; getting one after you added it
--- shows a message. Item tooltips say they're on your wishlist.
+-- shows a message. Item tooltips say they're on your wishlist, and a star marks them in
+-- your bags, at vendors, in quest rewards, the loot window and loot rolls (and Item
+-- lookup): gold while you want it, grey once you have it.
 --
 -- Saved per character in NraKitDB.wishlistData[<character>] = { items = { [itemID] =
 -- { id, link?, name?, note?, added, got? } }, collapsed = { [group] = true } }. `name` is
@@ -16,7 +18,7 @@ local module = {
 	key = "wishlist",
 	section = "Bags & Items",
 	name = "Wishlist",
-	description = "A list of gear you want, by slot, with the level to wear it and a note on where it comes from. Add items with /nra wishlist <item> (shift-click it in), by dropping them on the window or by right-clicking them in Item lookup. Items you get are ticked off with a message, and item tooltips say they're on your wishlist.",
+	description = "A list of gear you want, by slot, with the level to wear it and a note on where it comes from. Add items with /nra wishlist <item> (shift-click it in), by dropping them on the window or by right-clicking them in Item lookup. Items you get are ticked off with a message, a star marks them in your bags, at vendors and in loot, and item tooltips say they're on your wishlist.",
 	default = false,
 	options = {
 		{
@@ -24,6 +26,12 @@ local module = {
 			header = "General",
 			name = "Say so in item tooltips",
 			description = "A line in the tooltip of items on your wishlist, with your note.",
+			default = true,
+		},
+		{
+			key = "wishlistStars",
+			name = "Star them",
+			description = "A star on wishlist items in your bags, at vendors, in quest rewards, the loot window and loot rolls: gold while you want it, grey once you have it.",
 			default = true,
 		},
 		{
@@ -41,6 +49,8 @@ local module = {
 	},
 }
 
+local STAR_ATLAS = "auctionhouse-icon-favorite"
+local STAR_SIZE = 16
 local LOGIN_QUIET_SECONDS = 10 -- items you already had at login are ticked off without a message
 
 local wishlist = {}
@@ -49,6 +59,7 @@ ns.wishlist = wishlist
 local eventFrame = CreateFrame("Frame")
 local loginAt
 local checkQueued = false
+local QueueStars
 
 ------------------------------------------------------------------------------
 -- Data
@@ -66,6 +77,7 @@ function wishlist.GetData()
 end
 
 local function Changed()
+	QueueStars()
 	if wishlist.onChanged then
 		wishlist.onChanged()
 	end
@@ -102,6 +114,19 @@ end
 
 function wishlist.Get(id)
 	return id and wishlist.GetData().items[id]
+end
+
+-- The entry for an item link (or ID): an item with a random suffix only in that suffix.
+function wishlist.Find(item)
+	local id, link = wishlist.ParseItem(item)
+	local entry = wishlist.Get(id)
+	if entry and entry.name and link then
+		local shown = link:match("|h%[(.-)%]|h")
+		if shown and shown ~= entry.name then
+			return nil
+		end
+	end
+	return entry
 end
 
 -- The item's name, quality, required level, slot (equipLoc) and icon. Name, quality
@@ -288,6 +313,124 @@ local function OnItemTooltip(tooltip)
 end
 
 ------------------------------------------------------------------------------
+-- Stars on item icons
+------------------------------------------------------------------------------
+
+local stars = {}
+
+-- A star on the corner of an item button's icon (anchor) if the item (link or ID) is on
+-- the wishlist: gold while you want it, grey once you have it. Hidden otherwise.
+function wishlist.SetStar(button, item, anchor)
+	local entry = item and ns:IsModuleEnabled(module.key) and ns:GetOption("wishlistStars") and wishlist.Find(item)
+	local star = stars[button]
+	if not entry then
+		if star then
+			star:Hide()
+		end
+		return
+	end
+	if not star then
+		-- Own frame above the button's children; never takes the mouse.
+		local holder = CreateFrame("Frame", nil, button)
+		holder:SetAllPoints(anchor or button)
+		holder:SetFrameLevel(button:GetFrameLevel() + 6)
+		star = holder:CreateTexture(nil, "OVERLAY")
+		star:SetAtlas(STAR_ATLAS)
+		star:SetSize(STAR_SIZE, STAR_SIZE)
+		star:SetPoint("TOPRIGHT", holder, "TOPRIGHT", 3, 3)
+		star.holder = holder
+		stars[button] = star
+	end
+	star:SetDesaturated(entry.got == true)
+	star:SetAlpha(entry.got and 0.7 or 1)
+	star:Show()
+end
+
+local function UpdateBags()
+	ns:ForEachBagItemButton(function(itemButton)
+		local link = C_Container.GetContainerItemLink(itemButton:GetBagID(), itemButton:GetID())
+		wishlist.SetStar(itemButton, link, itemButton.icon or itemButton.Icon)
+	end)
+end
+
+local function UpdateMerchant()
+	if not (MerchantFrame and MerchantFrame:IsShown()) then
+		return
+	end
+	local onItemsTab = MerchantFrame.selectedTab == 1
+	for i = 1, MERCHANT_ITEMS_PER_PAGE or 10 do
+		local itemButton = _G["MerchantItem" .. i .. "ItemButton"]
+		if itemButton then
+			local index = (MerchantFrame.page - 1) * MERCHANT_ITEMS_PER_PAGE + i
+			local link = onItemsTab and itemButton:IsShown() and GetMerchantItemLink(index)
+				or not onItemsTab and itemButton:IsShown() and GetBuybackItemLink(i)
+			wishlist.SetStar(itemButton, link or nil, itemButton.icon or itemButton.Icon)
+		end
+	end
+end
+
+local function UpdateQuestRewards()
+	local rewardsFrame = QuestInfoFrame and QuestInfoFrame.rewardsFrame
+	if not rewardsFrame or not rewardsFrame.RewardButtons then
+		return
+	end
+	for _, button in ipairs(rewardsFrame.RewardButtons) do
+		local link
+		if button:IsShown() and button.objectType == "item" then
+			if QuestInfoFrame.questLog then
+				link = GetQuestLogItemLink(button.type, button:GetID())
+			else
+				link = GetQuestItemLink(button.type, button:GetID())
+			end
+		end
+		wishlist.SetStar(button, link, button.Icon)
+	end
+end
+
+local function UpdateLoot()
+	local scrollBox = LootFrame and LootFrame:IsShown() and LootFrame.ScrollBox
+	if not (scrollBox and scrollBox.ForEachFrame) then
+		return
+	end
+	scrollBox:ForEachFrame(function(element)
+		if element.Item and element.GetSlotIndex then
+			wishlist.SetStar(element.Item, GetLootSlotLink(element:GetSlotIndex()), element.Item.icon)
+		end
+	end)
+end
+
+local function UpdateRoll(rollFrame)
+	if rollFrame and rollFrame.IconFrame then
+		wishlist.SetStar(rollFrame.IconFrame, rollFrame.rollID and GetLootRollItemLink(rollFrame.rollID), rollFrame.IconFrame.Icon)
+	end
+end
+
+local starsQueued = false
+local function UpdateStars()
+	starsQueued = false
+	if not ns:IsModuleEnabled(module.key) and not next(stars) then
+		return -- off, and nothing to take off
+	end
+	UpdateBags()
+	UpdateMerchant()
+	UpdateQuestRewards()
+	UpdateLoot()
+	for i = 1, 4 do
+		local rollFrame = _G["GroupLootFrame" .. i]
+		if rollFrame and rollFrame:IsShown() then
+			UpdateRoll(rollFrame)
+		end
+	end
+end
+
+function QueueStars()
+	if not starsQueued then
+		starsQueued = true
+		C_Timer.After(0, UpdateStars)
+	end
+end
+
+------------------------------------------------------------------------------
 -- /nra wishlist
 ------------------------------------------------------------------------------
 
@@ -331,7 +474,8 @@ end
 -- Lifecycle
 ------------------------------------------------------------------------------
 
-local EVENTS = { "PLAYER_ENTERING_WORLD", "BAG_UPDATE_DELAYED", "PLAYER_EQUIPMENT_CHANGED", "GET_ITEM_INFO_RECEIVED" }
+local EVENTS = { "PLAYER_ENTERING_WORLD", "BAG_UPDATE_DELAYED", "PLAYER_EQUIPMENT_CHANGED", "GET_ITEM_INFO_RECEIVED",
+	"LOOT_SLOT_CLEARED" }
 
 eventFrame:SetScript("OnEvent", function(_, event, ...)
 	if event == "PLAYER_ENTERING_WORLD" then
@@ -345,8 +489,11 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 		if wishlist.Get(id) and wishlist.onItemLoaded then
 			wishlist.onItemLoaded(id)
 		end
+	elseif event == "LOOT_SLOT_CLEARED" then
+		QueueStars()
 	else
 		QueueCheck()
+		QueueStars()
 	end
 end)
 
@@ -372,6 +519,23 @@ function module:OnInitialize()
 	ns:RegisterSlashCommand("wishlist", OnSlashCommand, help)
 	ns:RegisterSlashCommand("wish", OnSlashCommand, help)
 	TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, OnItemTooltip)
+
+	-- Stars, after Blizzard fills the buttons.
+	for _, frame in ipairs(ContainerFrameContainer.ContainerFrames) do
+		if frame.UpdateItems then
+			hooksecurefunc(frame, "UpdateItems", QueueStars)
+		end
+	end
+	if ContainerFrameCombinedBags and ContainerFrameCombinedBags.UpdateItems then
+		hooksecurefunc(ContainerFrameCombinedBags, "UpdateItems", QueueStars)
+	end
+	hooksecurefunc("MerchantFrame_UpdateMerchantInfo", UpdateMerchant)
+	hooksecurefunc("MerchantFrame_UpdateBuybackInfo", UpdateMerchant)
+	hooksecurefunc("QuestInfo_Display", UpdateQuestRewards)
+	hooksecurefunc("GroupLootFrame_SetupItemDisplay", UpdateRoll)
+	if LootFrame and LootFrame.Open then
+		hooksecurefunc(LootFrame, "Open", UpdateLoot)
+	end
 	self:OnEnabledChanged(ns:IsModuleEnabled(self.key))
 end
 
@@ -387,6 +551,11 @@ function module:OnEnabledChanged(enabled)
 		loginAt = loginAt or GetTime()
 		QueueCheck()
 	end
+	QueueStars()
+end
+
+function module:OnOptionChanged()
+	QueueStars()
 end
 
 ns:RegisterModule(module)

@@ -190,6 +190,8 @@ A **list of gear you want**, by slot, ticked off when you get it.
   Right-click for got / not got, a Wowhead link, or remove.
 - Items you have (bags, bank or worn) are **ticked off**, with a message when one lands in your bags.
   An option takes them off the list instead.
+- A **star** marks wishlist items in your bags, at vendors, in quest rewards, the loot window, loot
+  rolls and Item lookup: gold while you want it, grey once you have it.
 - Item tooltips say when an item is on your wishlist, with your note.
 - `/nra preview wishlist` shows the message.
 

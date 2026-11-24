@@ -97,11 +97,13 @@ local function OpenRowMenu(row)
 		if ns.wishlist.Get(itemID) then
 			root:CreateButton("Remove from wishlist", function()
 				ns.wishlist.Remove(itemID)
+				ns.wishlist.SetStar(row, itemID, row.icon)
 				ns:Print("Removed it from your wishlist.")
 			end)
 		else
 			root:CreateButton("Add to wishlist", function()
 				local entry = ns.wishlist.Add(itemID)
+				ns.wishlist.SetStar(row, itemID, row.icon)
 				ns:Print("Added " .. (entry and ns.wishlist.Link(entry) or "it") .. " to your wishlist.")
 			end)
 		end
@@ -216,6 +218,7 @@ local function Render()
 		row.level:SetText(minLevel and minLevel > 1 and ("Level " .. minLevel) or "")
 		local owned = Owned(match.id)
 		row.owned:SetText(owned > 0 and ("|cff40c040You have " .. owned .. "|r") or "")
+		ns.wishlist.SetStar(row, match.id, row.icon)
 	end
 	content:SetHeight(PAD * 2 + #matches * ROW_HEIGHT)
 	scroll:SetScroll(scroll:GetVerticalScroll())

@@ -1,7 +1,20 @@
 -- Wishlist: adding items (command, drop, Item lookup's right-click), the window by slot
 -- and filter, notes, ticking off items you get (with a message), and the tooltip line.
 
--- This feature's timers run at once; other modules' don't run, as usual here.
+-- hooksecurefunc really hooks global functions here (loot rolls), and this feature's
+-- timers run at once; other modules' don't run, as usual here.
+local hook = hooksecurefunc
+hooksecurefunc = function(target, name, fn)
+	if type(target) == "string" then
+		local original = _G[target]
+		rawset(_G, target, function(...)
+			original(...)
+			name(...)
+		end)
+	else
+		hook(target, name, fn)
+	end
+end
 C_Timer.After = function(_, callback)
 	if debug.getinfo(callback, "S").source:find("Wishlist", 1, true) then
 		callback()
@@ -216,6 +229,46 @@ return {
 			row.scripts.OnClick(row, "RightButton")
 			wow.menuEntry(menu.entries, "Add to wishlist").onClick()
 			t.ok(wishlist.Get(SHOULDER), "added")
+		end)
+
+		-- The star on a button: shown or not.
+		local function Starred(button)
+			for _, frame in ipairs(wow.frames) do
+				if rawget(frame, "holder") and rawget(rawget(frame, "holder"), "parent") == button then
+					return frame.shown
+				end
+			end
+			return false
+		end
+
+		t.test("a star on wishlist items in Item lookup and loot rolls", function()
+			local row
+			for _, frame in ipairs(wow.frames) do
+				if rawget(frame, "itemID") == SHOULDER and wow.visible(frame) then
+					row = frame
+				end
+			end
+			t.ok(Starred(row), "the Item lookup row of a wishlist item")
+			row.scripts.OnClick(row, "RightButton")
+			wow.menuEntry(menu.entries, "Remove from wishlist").onClick()
+			t.ok(not Starred(row), "gone when it's removed")
+			row.scripts.OnClick(row, "RightButton")
+			wow.menuEntry(menu.entries, "Add to wishlist").onClick()
+			t.ok(Starred(row), "back when it's added")
+
+			local roll = CreateFrame("Frame")
+			rawset(roll, "IconFrame", CreateFrame("Frame"))
+			rawset(roll, "rollID", 1)
+			GetLootRollItemLink = function()
+				return Link(RING)
+			end
+			GroupLootFrame_SetupItemDisplay(roll)
+			t.ok(Starred(roll.IconFrame), "a loot roll for a wishlist item")
+			GetLootRollItemLink = function()
+				return Link(4306, "Silk Cloth")
+			end
+			GroupLootFrame_SetupItemDisplay(roll)
+			t.ok(not Starred(roll.IconFrame), "not for other items")
 		end)
 
 		t.test("option: take items off once you have them", function()
