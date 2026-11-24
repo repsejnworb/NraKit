@@ -110,6 +110,10 @@ A **list of gear you want**, by slot, **ticked off when you get it**.
 - A **star** marks wishlist items in your bags, at vendors, in quest rewards, the loot window, loot rolls and Item lookup: gold while you want it, grey once you have it.
 - **Item tooltips** say when an item is on your wishlist, with your note.
 
+![wishlistUI](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/wishlistUI.png)
+![wishlistFromItemLink](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/wishlistFromItemLink.png)
+![wishlistFromLookupAndStarOnWishedItem](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/wishlistFromLookupAndStarOnWishedItem.png)
+
 ## Professions
 
 ### Known recipes

@@ -196,6 +196,10 @@ A **list of gear you want**, by slot, ticked off when you get it.
 - Item tooltips say when an item is on your wishlist, with your note.
 - `/nra preview wishlist` shows the message.
 
+<img width="782" height="551" alt="wishlistUI" src=".github/screenshots/wishlistUI.png" />
+<img width="163" height="93" alt="wishlistFromItemLink" src=".github/screenshots/wishlistFromItemLink.png" />
+<img width="302" height="248" alt="wishlistFromLookupAndStarOnWishedItem" src=".github/screenshots/wishlistFromLookupAndStarOnWishedItem.png" />
+
 ### Professions
 
 #### Known recipes
