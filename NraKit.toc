@@ -58,3 +58,5 @@ Modules\ItemLookup.lua
 Modules\ItemLookupWindow.lua
 Modules\DamageMeterLook.lua
 Modules\UnlearnedAbilities.lua
+Modules\Wishlist.lua
+Modules\WishlistWindow.lua

@@ -3,8 +3,8 @@ local _, ns = ...
 -- The Item lookup window (/nra item <name>): a search box, a bar showing how complete the
 -- list of names is (with Pause / Resume, or Check again once it's done), and the matching items (icon, name in its quality colour, type, required
 -- level, and how many your characters have if Inventory Tracker is on). Hover for the
--- tooltip; Shift-click links an item in chat, Ctrl-click previews it. The list of names
--- is ItemLookup.lua's.
+-- tooltip; Shift-click links an item in chat, Ctrl-click previews it, right-click adds it to
+-- the wishlist (while Wishlist is on). The list of names is ItemLookup.lua's.
 
 local UI = ns.UI
 local WIDTH, HEIGHT = UI.WINDOW_WIDTH, UI.WINDOW_HEIGHT
@@ -89,8 +89,33 @@ local function OnRowEnter(self)
 	GameTooltip:Show()
 end
 
+-- Right-click: add it to (or take it off) your wishlist, while Wishlist is on.
+local function OpenRowMenu(row)
+	local itemID = row.itemID
+	MenuUtil.CreateContextMenu(row, function(_, root)
+		root:CreateTitle(C_Item.GetItemNameByID(itemID) or ("Item " .. itemID))
+		if ns.wishlist.Get(itemID) then
+			root:CreateButton("Remove from wishlist", function()
+				ns.wishlist.Remove(itemID)
+				ns:Print("Removed it from your wishlist.")
+			end)
+		else
+			root:CreateButton("Add to wishlist", function()
+				local entry = ns.wishlist.Add(itemID)
+				ns:Print("Added " .. (entry and ns.wishlist.Link(entry) or "it") .. " to your wishlist.")
+			end)
+		end
+	end)
+end
+
 -- Shift-click links it in chat, Ctrl-click previews it, like bag items.
-local function OnRowClick(self)
+local function OnRowClick(self, button)
+	if button == "RightButton" then
+		if ns:IsModuleEnabled("wishlist") then
+			OpenRowMenu(self)
+		end
+		return
+	end
 	local link = select(2, C_Item.GetItemInfo(self.itemID))
 	if link then
 		HandleModifiedItemClick(link)
@@ -103,6 +128,7 @@ local function AcquireRow(content)
 		row:SetHeight(ROW_HEIGHT)
 		row:SetScript("OnEnter", OnRowEnter)
 		row:SetScript("OnLeave", GameTooltip_Hide)
+		row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 		row:SetScript("OnClick", OnRowClick)
 		row.bg = row:CreateTexture(nil, "BACKGROUND")
 		row.bg:SetAllPoints()
@@ -287,12 +313,13 @@ local function CreateWindow()
 	footerLeft:SetPoint("LEFT", PAD, 0)
 	local hint = footer:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	hint:SetPoint("RIGHT", -PAD, 0)
-	hint:SetText("Shift-click to link in chat, Ctrl-click to preview")
 
 	-- The search box never takes the keyboard by itself (you may be moving or fighting):
 	-- click it to type. Enter (like Esc) gives the keys back to the game.
 	searchBox:HookScript("OnEnterPressed", searchBox.ClearFocus)
 	frame:HookScript("OnShow", function()
+		hint:SetText(ns:IsModuleEnabled("wishlist") and "Shift-click to link in chat, Ctrl-click to preview, right-click for your wishlist"
+			or "Shift-click to link in chat, Ctrl-click to preview")
 		Render()
 	end)
 

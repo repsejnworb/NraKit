@@ -22,7 +22,7 @@ Type `/nrakit` (or `/nra`) to open NraKit's window.
 - Features are grouped in a sidebar, with a search box, an on/off switch per feature and its options
   right underneath.
 - The same settings are also in the game's Settings panel under **AddOns → NraKit**.
-- NraKit's windows (Settings, Inventory, Goals, Notes, Items) work as **tabs of one window**. Tabs of
+- NraKit's windows (Settings, Inventory, Goals, Notes, Items, Wishlist) work as **tabs of one window**. Tabs of
   features that are off are dimmed: they say what the feature does and turn it on with one click.
 - NraKit is also in the **addon button by the minimap**: left-click for settings, right-click for a
   menu of its windows.
@@ -175,6 +175,23 @@ showing its icon and how many are left.
 - Openable items get a green border.
 
 <img width="230" height="315" alt="clamOpening" src=".github/screenshots/clamOpening.png" />
+
+#### Wishlist
+
+A **list of gear you want**, by slot, ticked off when you get it.
+
+- Add items with `/nra wishlist <item> [note]` (shift-click the item in; anything after it becomes its
+  note), by **dropping an item** on the window, or by **right-clicking** one in Item lookup.
+  `/nra wish` is short for it.
+- The Wishlist tab lists them in a section per slot, with the **level to wear** each one (grey while
+  it's above yours). Filter by **Ready** (you can wear it), **Not yet** or **Got**, or search names
+  and notes.
+- Click an item to write a **note** on where it comes from (NraKit has no database of sources).
+  Right-click for got / not got, a Wowhead link, or remove.
+- Items you have (bags, bank or worn) are **ticked off**, with a message when one lands in your bags.
+  An option takes them off the list instead.
+- Item tooltips say when an item is on your wishlist, with your note.
+- `/nra preview wishlist` shows the message.
 
 ### Professions
 
@@ -335,7 +352,8 @@ Type `/leave` (with nothing after it) or `/leavegroup` to leave your party, raid
 **Search every item in the game by name.** `/nra item nightbl` opens an Items tab listing the matches
 (icon, type, required level, how many your characters have).
 
-- Hover for the tooltip, **Shift+click** to link, **Ctrl+click** to preview.
+- Hover for the tooltip, **Shift+click** to link, **Ctrl+click** to preview, **right-click** to add it
+  to your Wishlist (while that's on).
 - The game can't search items by name, so the names are learned in the background: a few dozen a
   second, paused in combat, a few minutes once per game version.
 - A progress bar in the tab has Pause / Resume, and Check again once it's done.

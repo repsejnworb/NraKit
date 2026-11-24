@@ -7,7 +7,7 @@
 Type **/nrakit** (or **/nra**) to open NraKit's own window.
 - Features are grouped in a sidebar, with **search**, an on/off switch per feature and its options right underneath.
 - The same settings are also under **Options → AddOns → NraKit**.
-- NraKit's windows (Settings, Inventory, Goals, Notes, Items) work as **tabs of one window**. Tabs of features that are off are dimmed: they say what the feature does and **turn it on with one click**.
+- NraKit's windows (Settings, Inventory, Goals, Notes, Items, Wishlist) work as **tabs of one window**. Tabs of features that are off are dimmed: they say what the feature does and **turn it on with one click**.
 - NraKit is also in the **addon button by the minimap** (no extra minimap button): left-click for settings, right-click for a menu of its windows.
 - **/nra help** lists the chat commands.
 - **/nra preview** shows any of NraKit's on-screen messages (goal complete, quest reminders, alerts...) with made-up content, to see how they look.
@@ -100,6 +100,14 @@ A small button at the bottom of your bags, next to your money, **opens the next 
 - Openable items get a **green border** in your bags.
 
 ![clamOpening](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/clamOpening.png)
+
+### Wishlist
+A **list of gear you want**, by slot, **ticked off when you get it**.
+- Add items with **/nra wishlist &lt;item&gt; [note]** (shift-click the item in; anything after it becomes its note), by **dropping an item** on the window, or by **right-clicking** one in Item lookup. **/nra wish** is short for it.
+- The **Wishlist** tab lists them in a section per slot, with the **level to wear** each one (grey while it's above yours). Filter by **Ready** (you can wear it), **Not yet** or **Got**, or search names and notes.
+- Click an item to write a **note** on where it comes from (NraKit has no database of sources). Right-click for got / not got, a Wowhead link, or remove.
+- Items you have (bags, bank or worn) are **ticked off**, with a message when one lands in your bags. An option takes them off the list instead.
+- **Item tooltips** say when an item is on your wishlist, with your note.
 
 ## Professions
 
@@ -206,7 +214,7 @@ Type **/leave** (with nothing after it) or **/leavegroup** to leave your party, 
 
 ### Item lookup
 **Search every item in the game by name.** **/nra item nightbl** opens an **Items** tab listing every item whose name contains it, best matches first, with icon, type, required level and how many your characters have (with Inventory Tracker).
-- Hover for the tooltip, **Shift+click** to link it in chat, **Ctrl+click** to preview it.
+- Hover for the tooltip, **Shift+click** to link it in chat, **Ctrl+click** to preview it, **right-click** to add it to your **Wishlist** (while that's on).
 - The game can't search items by name, so NraKit learns the names in the background, a few dozen a second (paused in combat). It takes a few minutes, once per game version; searching works right away and finds more as it fills.
 - A **progress bar** in the tab shows how far it is, with **Pause / Resume**, and **Check again** once it's done.
 - Items nobody has discovered yet can't be looked up until they have been; NraKit checks for them again every day (or right away with Check again).
