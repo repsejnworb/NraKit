@@ -16,6 +16,9 @@ local _, ns = ...
 --           "new" entry with its module (tests/changelog_test.lua checks).
 
 ns.changelog = {
+	{ version = "Unreleased", entries = {
+		{ "fixed", "Potential Upgrades: green \"Equip:\" bonuses now count, on both the new item and the one you wear: attack power, spell power and healing, mana per 5, and chance to hit or crit. A ring with +8 Attack Power is no longer treated as having nothing on it, and the tooltip line shows the difference (e.g. -8 AP, +1% Crit). Still a rough clue while leveling, not a sim." },
+	} },
 	{ version = "0.23.0", date = "2026-11-20", entries = {
 		{ "new", "Player notes: tags. Give players any number of tags of your own (Ninjalooter, Good tank, Guildie) on their page (+ Tag lists your tags to tick, or makes a new one), or from chat: /nra note Bob Stone kos #ninjalooter stole my node. The notebook lists players in a section per tag (click a section to fold it, shift-click to fold the others, or Fold all), then the players without tags, and the Tags page adds, renames and deletes tags. Shared notes bring their tags along.", module = "playerNotes" },
 		{ "improved", "Player notes: the label is now one of four (Kill on sight, Avoid, Neutral, Liked), and tags do the grouping. Your own labels became tags automatically, with the label they were based on; Good and Friend became Liked." },

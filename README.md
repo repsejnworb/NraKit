@@ -144,6 +144,10 @@ equipped**.
   plus armor or weapon DPS.
 - **Yellow:** likely upgrade, better by a simple per-class stat priority.
 - **Grey:** an upgrade once you reach the required level.
+- Green "Equip:" bonuses count too: attack power, spell power and healing, mana per 5, and chance to
+  hit or crit, each at a rough worth for your class. Other effects (on use, procs, set bonuses) can't
+  be judged, so items with them are never called clear.
+- It's a clue while leveling, to help you decide, not an exact calculation.
 
 <img width="283" height="254" alt="potentialUpgrade" src=".github/screenshots/potentialUpgrade.png" />
 

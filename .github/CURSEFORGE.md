@@ -80,6 +80,8 @@ Find out what to throw away when your bags are full.
 - **Green**: clear upgrade. Usable now and at least as good on every stat that matters for your class (plus armor or weapon DPS).
 - **Yellow**: likely upgrade, using a simple per-class stat priority.
 - **Grey**: an upgrade once you reach the required level.
+- Green **"Equip:" bonuses** count too: attack power, spell power and healing, mana per 5, and chance to hit or crit, each at a rough worth for your class. Other effects (on use, procs, set bonuses) can't be judged, so items with them are never called clear.
+- It's a **clue while leveling**, to help you decide, not an exact calculation.
 
 ![potentialUpgrade](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/potentialUpgrade.png)
 

@@ -10,7 +10,10 @@ local _, ns = ...
 --   likely (yellow) not better on everything, but scores higher using a simple
 --                   per-class stat priority (1st > 2nd > 3rd).
 -- Items you can't use yet only because of your level are marked grey ("later").
--- Items with special effects (on use/equip/proc) are never called "clear".
+-- Common "Equip:" bonuses count like stats: attack power, spell power and healing, mana
+-- per 5, and chance to hit or crit (a rough worth each, per class). It's a clue while
+-- leveling, not a sim. Other effects (on use, procs, set bonuses) can't be judged:
+-- an item with one is never called "clear".
 
 local module = {
 	key = "potentialUpgrades",
@@ -65,10 +68,36 @@ local INT = "ITEM_MOD_INTELLECT_SHORT"
 local SPI = "ITEM_MOD_SPIRIT_SHORT"
 local ARMOR = "RESISTANCE0_NAME"
 local DPS = "ITEM_MOD_DAMAGE_PER_SECOND_SHORT"
+-- Equip bonuses, from the item's stats or its "Equip:" lines (our own names).
+local AP, RAP, SP, HEAL, MP5 = "AP", "RAP", "SP", "HEAL", "MP5"
+local HIT, CRIT, SPELL_HIT, SPELL_CRIT = "HIT", "CRIT", "SPELL_HIT", "SPELL_CRIT"
 
 local STAT_LABELS = {
 	[STR] = "Str", [AGI] = "Agi", [STA] = "Sta", [INT] = "Int", [SPI] = "Spi",
 	[ARMOR] = "Armor", [DPS] = "DPS",
+	[AP] = "AP", [RAP] = "Ranged AP", [SP] = "Spell Power", [HEAL] = "Healing", [MP5] = "MP5",
+	[HIT] = "Hit", [CRIT] = "Crit", [SPELL_HIT] = "Spell Hit", [SPELL_CRIT] = "Spell Crit",
+}
+local PERCENT_STATS = { [HIT] = true, [CRIT] = true, [SPELL_HIT] = true, [SPELL_CRIT] = true }
+
+-- Item stat keys for the same bonuses (the game's names vary a little), most specific first.
+local STAT_KEYS = {
+	{ "RANGED_ATTACK_POWER", RAP }, { "ATTACK_POWER", AP }, { "SPELL_HEALING", HEAL },
+	{ "SPELL_DAMAGE", SP }, { "SPELL_POWER", SP }, { "MANA_REGENERATION", MP5 },
+}
+
+-- "Equip:" lines we understand, and what they give. Anything conditional ("when fighting
+-- Undead", one school of magic) doesn't match and counts as a special effect.
+local EQUIP_PATTERNS = {
+	{ "^Equip: %+(%d+) ranged Attack Power%.?$", RAP },
+	{ "^Equip: %+(%d+) Attack Power%.?$", AP },
+	{ "^Equip: Increases damage and healing done by magical spells and effects by up to (%d+)%.?$", SP },
+	{ "^Equip: Increases healing done by spells and effects by up to (%d+)%.?$", HEAL },
+	{ "^Equip: Restores (%d+) mana per 5 sec%.?$", MP5 },
+	{ "^Equip: Improves your chance to hit with spells by (%d+)%%%.?$", SPELL_HIT },
+	{ "^Equip: Improves your chance to get a critical strike with spells by (%d+)%%%.?$", SPELL_CRIT },
+	{ "^Equip: Improves your chance to hit by (%d+)%%%.?$", HIT },
+	{ "^Equip: Improves your chance to get a critical strike by (%d+)%%%.?$", CRIT },
 }
 
 -- Leveling priorities: 1st > 2nd > 3rd. Stats not listed don't count either way.
@@ -84,6 +113,20 @@ local CLASS_PRIORITIES = {
 	PRIEST = { INT, SPI, STA },
 }
 local PRIORITY_WEIGHTS = { 1.0, 0.6, 0.35 }
+
+-- What equip bonuses are worth to each class, in points of its main stat: rough leveling
+-- rules of thumb (2 attack power is about 1 Strength, 1% crit or hit about 10).
+local BONUS_WEIGHTS = {
+	WARRIOR = { [AP] = 0.5, [HIT] = 10, [CRIT] = 10 },
+	PALADIN = { [AP] = 0.5, [HIT] = 8, [CRIT] = 8, [SP] = 0.3, [HEAL] = 0.2 },
+	ROGUE = { [AP] = 0.5, [HIT] = 10, [CRIT] = 10 },
+	HUNTER = { [RAP] = 0.5, [AP] = 0.15, [HIT] = 10, [CRIT] = 10 },
+	SHAMAN = { [AP] = 0.5, [HIT] = 6, [CRIT] = 6, [SP] = 0.4, [HEAL] = 0.2, [MP5] = 1 },
+	DRUID = { [SP] = 0.8, [HEAL] = 0.4, [MP5] = 1.5, [SPELL_HIT] = 6, [SPELL_CRIT] = 6 },
+	MAGE = { [SP] = 1.0, [MP5] = 1, [SPELL_HIT] = 8, [SPELL_CRIT] = 8 },
+	WARLOCK = { [SP] = 1.0, [MP5] = 1, [SPELL_HIT] = 8, [SPELL_CRIT] = 6 },
+	PRIEST = { [SP] = 0.8, [HEAL] = 0.6, [MP5] = 2, [SPELL_CRIT] = 5 },
+}
 
 -- Weapon DPS matters for weapon users; casters only care about it on wands/ranged.
 local MELEE_DPS_CLASSES = { WARRIOR = true, PALADIN = true, ROGUE = true, HUNTER = true, SHAMAN = true }
@@ -139,12 +182,31 @@ local function IsRed(color)
 	return color and color.r and color.r > 0.9 and color.g < 0.3 and color.b < 0.3
 end
 
+-- The bonus an "Equip:" line gives (stat, amount), or nil if it's something else.
+local function ParseEquipLine(text)
+	if type(text) ~= "string" then
+		return nil
+	end
+	for _, pattern in ipairs(EQUIP_PATTERNS) do
+		local amount = text:match(pattern[1])
+		if amount then
+			return pattern[2], tonumber(amount)
+		end
+	end
+	return nil
+end
+
 -- Reads the tooltip data: whether the player can use the item (red requirement
--- lines), whether only the level is in the way, and whether it has special effects.
+-- lines), whether only the level is in the way, whether it has special effects we
+-- can't judge, and the bonuses from the "Equip:" lines we understand.
 local function ReadTooltip(data)
 	local blockedByOther, blockedByLevel, hasEffect = false, false, false
+	local bonuses = {}
 	for _, line in ipairs(data and data.lines or {}) do
-		if EFFECT_LINES[line.type] then
+		local stat, amount = ParseEquipLine(line.leftText)
+		if stat then
+			bonuses[stat] = (bonuses[stat] or 0) + amount
+		elseif EFFECT_LINES[line.type] then
 			hasEffect = true
 		end
 		if IsRed(line.leftColor) or IsRed(line.rightColor) then
@@ -155,11 +217,31 @@ local function ReadTooltip(data)
 			end
 		end
 	end
-	return blockedByOther, blockedByLevel, hasEffect
+	return blockedByOther, blockedByLevel, hasEffect, bonuses
 end
 
-local function GetStats(link)
-	return link and C_Item.GetItemStats(link) or {}
+-- The item's stats, with equip bonuses under our names: from its stats or its "Equip:"
+-- lines, whichever says more (the game may give both; nothing counts twice).
+local function GetStats(link, tooltipData)
+	if not link then
+		return {}
+	end
+	local stats = {}
+	for key, value in pairs(C_Item.GetItemStats(link) or {}) do
+		local name = key
+		for _, entry in ipairs(STAT_KEYS) do
+			if key:find(entry[1], 1, true) then
+				name = entry[2]
+				break
+			end
+		end
+		stats[name] = (stats[name] or 0) + value
+	end
+	local _, _, _, bonuses = ReadTooltip(tooltipData or C_TooltipInfo.GetHyperlink(link))
+	for stat, amount in pairs(bonuses) do
+		stats[stat] = math.max(stats[stat] or 0, amount)
+	end
+	return stats
 end
 
 -- The metrics compared for this item type, with their weights.
@@ -167,6 +249,9 @@ local function GetMetrics(equipLoc)
 	local metrics = {}
 	for i, stat in ipairs(CLASS_PRIORITIES[playerClass] or {}) do
 		metrics[stat] = PRIORITY_WEIGHTS[i] or 0
+	end
+	for stat, weight in pairs(BONUS_WEIGHTS[playerClass] or {}) do
+		metrics[stat] = weight
 	end
 	if WEAPON_TYPES[equipLoc] then
 		if MELEE_DPS_CLASSES[playerClass] or RANGED_TYPES[equipLoc] then
@@ -263,14 +348,15 @@ local function Evaluate(link, tooltipData)
 		end
 	end
 
-	local blockedByOther, blockedByLevel, hasEffect = ReadTooltip(tooltipData or C_TooltipInfo.GetHyperlink(link))
+	tooltipData = tooltipData or C_TooltipInfo.GetHyperlink(link)
+	local blockedByOther, blockedByLevel, hasEffect = ReadTooltip(tooltipData)
 	if blockedByOther then
 		cache[link] = {}
 		return nil
 	end
 
 	local metrics = GetMetrics(equipLoc)
-	local newStats = GetStats(link)
+	local newStats = GetStats(link, tooltipData)
 	local oldStats, emptySlot = GetEquippedStats(equipLoc, slots, metrics)
 
 	local result, delta
@@ -288,6 +374,9 @@ local function Evaluate(link, tooltipData)
 			end
 			if diff ~= 0 then
 				local amount = stat == DPS and string.format("%.1f", math.abs(diff)) or tostring(math.floor(math.abs(diff) + 0.5))
+				if PERCENT_STATS[stat] then
+					amount = amount .. "%"
+				end
 				table.insert(parts, (diff > 0 and "+" or "-") .. amount .. " " .. STAT_LABELS[stat])
 			end
 		end
