@@ -88,6 +88,12 @@ local methods = {
 	GetAlpha = function(self)
 		return rawget(self, "alpha") or 1
 	end,
+	SetFrameStrata = function(self, strata)
+		rawset(self, "strata", strata)
+	end,
+	GetFrameStrata = function(self)
+		return rawget(self, "strata") or "MEDIUM"
+	end,
 	SetAttribute = function(self, name, value)
 		rawset(self, "attributes", rawget(self, "attributes") or {})
 		self.attributes[name] = value

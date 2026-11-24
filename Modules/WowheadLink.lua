@@ -125,7 +125,7 @@ local box
 local function CreateBox()
 	box = CreateFrame("Frame", nil, UIParent, "TooltipBackdropTemplate")
 	box:SetSize(440, 66)
-	box:SetFrameStrata("DIALOG")
+	box:SetFrameStrata("FULLSCREEN_DIALOG") -- above NraKit's windows (DIALOG), which open it too
 	box:SetClampedToScreen(true)
 	box:EnableMouse(true)
 	box:Hide()
