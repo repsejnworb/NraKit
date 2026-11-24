@@ -1,8 +1,8 @@
 local _, ns = ...
 
 -- Wishlist: gear you want, per character. Add items with /nra wishlist <item> [note]
--- (shift-click it in), by dropping one on the window, or with a right-click in Item
--- lookup. The window (WishlistWindow.lua) lists them by slot, with the level to wear
+-- (shift-click it in), with a right-click on an item link in chat or in Item lookup, or by
+-- dropping one on the window. The window (WishlistWindow.lua) lists them by slot, with the level to wear
 -- them and your note on where they come from (NraKit has no database of sources).
 --
 -- Items you have (bags, bank or worn) are ticked off; getting one after you added it
@@ -18,7 +18,7 @@ local module = {
 	key = "wishlist",
 	section = "Bags & Items",
 	name = "Wishlist",
-	description = "A list of gear you want, by slot, with the level to wear it and a note on where it comes from. Add items with /nra wishlist <item> (shift-click it in), by dropping them on the window or by right-clicking them in Item lookup. Items you get are ticked off with a message, a star marks them in your bags, at vendors and in loot, and item tooltips say they're on your wishlist.",
+	description = "A list of gear you want, by slot, with the level to wear it and a note on where it comes from. Add items with /nra wishlist <item> (shift-click it in), by right-clicking an item link in chat or an item in Item lookup, or by dropping them on the window. Items you get are ticked off with a message, a star marks them in your bags, at vendors and in loot, and item tooltips say they're on your wishlist.",
 	default = false,
 	options = {
 		{
@@ -431,6 +431,49 @@ function QueueStars()
 end
 
 ------------------------------------------------------------------------------
+-- Right-click menus: Item lookup rows and item links in chat
+------------------------------------------------------------------------------
+
+-- A menu to add the item (link or ID) to the wishlist, or take it off; then onDone().
+function wishlist.OpenItemMenu(owner, item, onDone)
+	local id, link = wishlist.ParseItem(item)
+	if not id then
+		return
+	end
+	local name = link and link:match("|h%[(.-)%]|h") or C_Item.GetItemNameByID(id) or ("Item " .. id)
+	MenuUtil.CreateContextMenu(owner, function(_, root)
+		root:CreateTitle(name)
+		if wishlist.Find(link or id) then
+			root:CreateButton("Remove from wishlist", function()
+				wishlist.Remove(id)
+				ns:Print("Removed " .. (link or name) .. " from your wishlist.")
+				if onDone then
+					onDone()
+				end
+			end)
+		else
+			root:CreateButton("Add to wishlist", function()
+				local entry = wishlist.Add(link or id)
+				ns:Print("Added " .. (entry and wishlist.Link(entry) or name) .. " to your wishlist.")
+				if onDone then
+					onDone()
+				end
+			end)
+		end
+	end)
+end
+
+-- Right-click an item link in chat (left-click still shows the item, as always).
+local function OnChatLinkClick(_, _, link, text, button)
+	if button ~= "RightButton" or IsModifiedClick() or not ns:IsModuleEnabled(module.key) then
+		return
+	end
+	if type(link) == "string" and link:match("^item:") then
+		wishlist.OpenItemMenu(UIParent, type(text) == "string" and text:find("|Hitem:", 1, true) and text or link)
+	end
+end
+
+------------------------------------------------------------------------------
 -- /nra wishlist
 ------------------------------------------------------------------------------
 
@@ -519,6 +562,7 @@ function module:OnInitialize()
 	ns:RegisterSlashCommand("wishlist", OnSlashCommand, help)
 	ns:RegisterSlashCommand("wish", OnSlashCommand, help)
 	TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, OnItemTooltip)
+	EventRegistry:RegisterCallback("ChatFrame.OnHyperlinkClick", OnChatLinkClick, module)
 
 	-- Stars, after Blizzard fills the buttons.
 	for _, frame in ipairs(ContainerFrameContainer.ContainerFrames) do

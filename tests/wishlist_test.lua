@@ -271,6 +271,23 @@ return {
 			t.ok(not Starred(roll.IconFrame), "not for other items")
 		end)
 
+		t.test("right-click an item link in chat to add it, or take it off", function()
+			wishlist.Remove(BOOTS)
+			local link = Link(BOOTS)
+			EventRegistry:TriggerEvent("ChatFrame.OnHyperlinkClick", ChatFrame1, link:match("|H(.-)|h"), link, "LeftButton")
+			t.ok(not wishlist.Get(BOOTS), "a left-click just shows the item")
+			EventRegistry:TriggerEvent("ChatFrame.OnHyperlinkClick", ChatFrame1, link:match("|H(.-)|h"), link, "RightButton")
+			wow.menuEntry(menu.entries, "Add to wishlist").onClick()
+			t.ok(wishlist.Get(BOOTS), "added")
+			EventRegistry:TriggerEvent("ChatFrame.OnHyperlinkClick", ChatFrame1, link:match("|H(.-)|h"), link, "RightButton")
+			wow.menuEntry(menu.entries, "Remove from wishlist").onClick()
+			t.ok(not wishlist.Get(BOOTS), "taken off")
+			local player = "|Hplayer:Bob|h[Bob]|h"
+			menu = nil
+			EventRegistry:TriggerEvent("ChatFrame.OnHyperlinkClick", ChatFrame1, "player:Bob", player, "RightButton")
+			t.ok(menu == nil, "no menu for other links")
+		end)
+
 		t.test("option: take items off once you have them", function()
 			ns:SetSetting("wishlistRemoveGot", true)
 			have[SHOULDER] = 0

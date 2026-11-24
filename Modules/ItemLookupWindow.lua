@@ -91,22 +91,8 @@ end
 
 -- Right-click: add it to (or take it off) your wishlist, while Wishlist is on.
 local function OpenRowMenu(row)
-	local itemID = row.itemID
-	MenuUtil.CreateContextMenu(row, function(_, root)
-		root:CreateTitle(C_Item.GetItemNameByID(itemID) or ("Item " .. itemID))
-		if ns.wishlist.Get(itemID) then
-			root:CreateButton("Remove from wishlist", function()
-				ns.wishlist.Remove(itemID)
-				ns.wishlist.SetStar(row, itemID, row.icon)
-				ns:Print("Removed it from your wishlist.")
-			end)
-		else
-			root:CreateButton("Add to wishlist", function()
-				local entry = ns.wishlist.Add(itemID)
-				ns.wishlist.SetStar(row, itemID, row.icon)
-				ns:Print("Added " .. (entry and ns.wishlist.Link(entry) or "it") .. " to your wishlist.")
-			end)
-		end
+	ns.wishlist.OpenItemMenu(row, row.itemID, function()
+		ns.wishlist.SetStar(row, row.itemID, row.icon)
 	end)
 end
 
