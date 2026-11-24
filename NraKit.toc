@@ -57,3 +57,4 @@ Modules\InspectAnything.lua
 Modules\ItemLookup.lua
 Modules\ItemLookupWindow.lua
 Modules\DamageMeterLook.lua
+Modules\UnlearnedAbilities.lua

@@ -221,6 +221,17 @@ A reminder in the middle of the screen while you have **talent points to spend**
 
 <img width="307" height="82" alt="unspentTalentPoints" src=".github/screenshots/unspentTalentPoints.png" />
 
+#### Unlearned abilities
+
+After a respec, abilities you don't know anymore stay on your bars, only greyed out like anything
+you can't use right now. This makes them stand out.
+
+- A **red cross** in the corner of their button, and a tooltip line saying it's not learned.
+- When your spells change, a message lists the abilities on your bars you lost. **Click it to take
+  them off** (after combat, if you're fighting).
+- It also lists new abilities that aren't on your bars yet.
+- `/nra unlearned` lists them, `/nra unlearned remove` takes them off.
+
 #### Campfire timer
 
 A progress bar in the middle of the screen while you **rest at a Welcoming Campfire**, with the time

@@ -16,6 +16,9 @@ local _, ns = ...
 --           "new" entry with its module (tests/changelog_test.lua checks).
 
 ns.changelog = {
+	{ version = "Unreleased", entries = {
+		{ "new", "Unlearned abilities: after a respec, abilities you don't know anymore stay on your bars, only greyed out. Now they get a red cross and a tooltip line, and when your spells change a message says which ones on your bars you lost (click it to take them off, after combat if you're fighting) and which new ones aren't on your bars yet. /nra unlearned lists them, /nra unlearned remove takes them off. /nra preview unlearned shows the message.", module = "unlearnedAbilities" },
+	} },
 	{ version = "0.23.2", date = "2026-11-24", entries = {
 		{ "fixed", "Unspent talent points: the reminder no longer shows on top of the talents window. It hides while the window is open, and other windows now cover it too." },
 	} },

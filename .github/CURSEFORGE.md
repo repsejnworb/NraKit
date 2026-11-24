@@ -128,6 +128,13 @@ A **reminder in the middle of the screen** while you have talent points to spend
 
 ![unspentTalentPoints](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/unspentTalentPoints.png)
 
+### Unlearned abilities
+After a respec, abilities you don't know anymore stay on your bars, only greyed out. This makes them stand out.
+- A **red cross** on their button, and a tooltip line saying it's not learned.
+- When your spells change, a message lists the abilities on your bars you lost. **Click it to take them off** (after combat, if you're fighting).
+- It also lists **new abilities** that aren't on your bars yet.
+- **/nra unlearned** lists them, **/nra unlearned remove** takes them off.
+
 ### Campfire timer
 A **progress bar in the middle of the screen** while you rest at a Welcoming Campfire, with the time left. It turns green (with a sound) when Camp Benefits is ready.
 - **Sleeping bags too:** it counts your Well-Rested stacks up to 3, with the time left once it has seen how long a stack takes.
