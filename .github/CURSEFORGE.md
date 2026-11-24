@@ -103,7 +103,7 @@ A small button at the bottom of your bags, next to your money, **opens the next 
 
 ### Wishlist
 A **list of gear you want**, by slot, **ticked off when you get it**.
-- Add items with **/nra wishlist &lt;item&gt; [note]** (shift-click the item in; anything after it becomes its note), by **right-clicking an item link in chat** or an item in Item lookup, or by **dropping an item** on the window. **/nra wish** is short for it.
+- Add items with **/nra wishlist &lt;item&gt; [note]** (shift-click the item in; anything after it becomes its note; shift-click several to add them all at once), by **right-clicking an item link in chat** or an item in Item lookup, or by **dropping an item** on the window. **/nra wish** is short for it.
 - The **Wishlist** tab lists them in a section per slot, with the **level to wear** each one (grey while it's above yours). Filter by **Ready** (you can wear it), **Not yet** or **Got**, or search names and notes.
 - Click an item to write a **note** on where it comes from (NraKit has no database of sources). Right-click for got / not got, a Wowhead link, or remove.
 - Items you have (bags, bank or worn) are **ticked off**, with a message when one lands in your bags. An option takes them off the list instead.

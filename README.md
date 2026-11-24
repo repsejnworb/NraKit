@@ -181,7 +181,7 @@ showing its icon and how many are left.
 A **list of gear you want**, by slot, ticked off when you get it.
 
 - Add items with `/nra wishlist <item> [note]` (shift-click the item in; anything after it becomes its
-  note), by **right-clicking an item link in chat** or an item in Item lookup, or by **dropping an
+  note; shift-click several to add them all at once), by **right-clicking an item link in chat** or an item in Item lookup, or by **dropping an
   item** on the window.
   `/nra wish` is short for it.
 - The Wishlist tab lists them in a section per slot, with the **level to wear** each one (grey while

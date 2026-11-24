@@ -112,6 +112,17 @@ return {
 			t.ok(NraKitDB.wishlistData["Nra Brown"].items[SHOULDER], "saved for this character")
 		end)
 
+		t.test("several items at once, each with its own note", function()
+			Slash("wishlist " .. Link(BOOTS) .. Link(CINCH) .. " belt, Gnomeregan " .. Link(BOOTS + 1, "Odd Boots"))
+			t.ok(wishlist.Get(BOOTS) and wishlist.Get(CINCH) and wishlist.Get(BOOTS + 1), "all three")
+			t.equal(wishlist.Get(BOOTS).note, nil, "no note for the first")
+			t.equal(wishlist.Get(CINCH).note, "belt, Gnomeregan", "the text after a link is its note")
+			t.equal(wishlist.Get(BOOTS + 1).note, nil, "not the next one's")
+			wishlist.Remove(BOOTS)
+			wishlist.Remove(CINCH)
+			wishlist.Remove(BOOTS + 1)
+		end)
+
 		t.test("an item you have already is ticked off without a message", function()
 			have[RING] = 1
 			Slash("wishlist " .. RING)

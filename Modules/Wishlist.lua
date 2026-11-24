@@ -477,6 +477,35 @@ end
 -- /nra wishlist
 ------------------------------------------------------------------------------
 
+-- The item links in a line, each with the text after it (up to the next link) as its note:
+-- { { link, note }, ... }.
+function wishlist.ParseLinks(text)
+	local found, from = {}, 1
+	while true do
+		local start, finish = text:find("|Hitem:[^|]*|h%[.-%]|h", from)
+		if not start then
+			break
+		end
+		-- With its colour around it, if it has one.
+		local color = text:sub(from, start - 1):match("(|c[^|]*)$")
+		if color then
+			start = start - #color
+		end
+		if text:sub(finish + 1, finish + 2) == "|r" then
+			finish = finish + 2
+		end
+		if #found > 0 then
+			found[#found].note = text:sub(found[#found].finish + 1, start - 1)
+		end
+		table.insert(found, { link = text:sub(start, finish), finish = finish })
+		from = finish + 1
+	end
+	if #found > 0 then
+		found[#found].note = text:sub(found[#found].finish + 1)
+	end
+	return found
+end
+
 local function OnSlashCommand(rest)
 	if not ns:IsModuleEnabled(module.key) then
 		ns:Print("Turn on Wishlist first (/nra).")
@@ -486,30 +515,31 @@ local function OnSlashCommand(rest)
 		ns:OpenWishlist()
 		return
 	end
-	local id, link = wishlist.ParseItem(rest)
-	if not id then
-		ns:Print("Shift-click an item after /nra wishlist to add it (or type its item ID).")
+	-- Any number of shift-clicked items, each with an optional note after it; or one item ID.
+	local items = wishlist.ParseLinks(rest)
+	if #items == 0 then
+		local id, note = rest:match("^%s*(%d+)%s*(.*)$")
+		if id then
+			items = { { link = tonumber(id), note = note } }
+		end
+	end
+	if #items == 0 then
+		ns:Print("Shift-click items after /nra wishlist to add them (or type an item ID).")
 		return
 	end
-	-- The note is whatever follows the link (or the ID).
-	local note
-	if link then
-		local _, finish = rest:find(link, 1, true)
-		note = finish and rest:sub(finish + 1)
-	else
-		note = rest:match("^%s*%d+%s*(.*)$")
-	end
-	local entry, isNew = wishlist.Add(link or id, note)
-	if not entry then
-		return
-	end
-	local shown = wishlist.Link(entry) or wishlist.Info(entry) or ("item " .. id)
-	if not isNew then
-		ns:Print(shown .. " is on your wishlist already" .. ((note and strtrim(note) ~= "") and " (note updated)." or "."))
-	elseif entry.got then
-		ns:Print("Added " .. shown .. " to your wishlist. You have it already, so it's ticked off.")
-	else
-		ns:Print("Added " .. shown .. " to your wishlist.")
+	for _, item in ipairs(items) do
+		local entry, isNew = wishlist.Add(item.link, item.note)
+		if entry then
+			local shown = wishlist.Link(entry) or wishlist.Info(entry) or ("item " .. entry.id)
+			local noted = strtrim(item.note or "") ~= ""
+			if not isNew then
+				ns:Print(shown .. " is on your wishlist already" .. (noted and " (note updated)." or "."))
+			elseif entry.got then
+				ns:Print("Added " .. shown .. " to your wishlist. You have it already, so it's ticked off.")
+			else
+				ns:Print("Added " .. shown .. " to your wishlist.")
+			end
+		end
 	end
 end
 
@@ -556,6 +586,7 @@ function module:OnInitialize()
 		usage = {
 			"/nra wishlist - open your wishlist",
 			"/nra wishlist <item> [note] - add an item (shift-click it in), with an optional note on where it comes from",
+			"/nra wishlist <item> <item> ... - add several at once (each can have a note after it)",
 			"/nra wish - short for /nra wishlist",
 		},
 	}
