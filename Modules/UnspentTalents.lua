@@ -1,8 +1,9 @@
 local _, ns = ...
 
 -- Shows a large reminder in the middle of the screen while you have unspent talent
--- points. Hidden while dead and (optionally) in combat. Based on EnhanceQoL's
--- "Unspent talent points" reminder.
+-- points. Hidden while dead, (optionally) in combat, and while the talents window is open
+-- (you're spending them). It sits below windows, so an open window covers it. Based on
+-- EnhanceQoL's "Unspent talent points" reminder.
 
 local module = {
 	key = "unspentTalents",
@@ -46,6 +47,7 @@ local TEXT = "Unspent talent points"
 local COLOR = { 1, 0.75, 0.2 }
 
 local frame, text
+local hookedTalents = false
 
 local function EnsureFrame()
 	if frame then
@@ -53,7 +55,7 @@ local function EnsureFrame()
 	end
 	frame = CreateFrame("Frame", nil, UIParent)
 	frame:SetSize(600, 60)
-	frame:SetFrameStrata("HIGH")
+	frame:SetFrameStrata("LOW") -- below windows (MEDIUM and up)
 	frame:EnableMouse(false)
 	text = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 	text:SetAllPoints()
@@ -93,6 +95,7 @@ local function Refresh()
 	local points = 0
 	local hidden = UnitIsDeadOrGhost("player")
 		or (ns:GetOption("unspentTalentsHideInCombat") and InCombatLockdown())
+		or (PlayerSpellsFrame and PlayerSpellsFrame:IsShown())
 	if not hidden then
 		points = GetUnspentPoints()
 	end
@@ -128,15 +131,35 @@ local function QueueRefresh()
 	end
 end
 
+-- The talents window (Blizzard_PlayerSpells) loads when first opened.
+local function HookTalentsWindow()
+	if hookedTalents or not PlayerSpellsFrame then
+		return
+	end
+	hookedTalents = true
+	PlayerSpellsFrame:HookScript("OnShow", QueueRefresh)
+	PlayerSpellsFrame:HookScript("OnHide", QueueRefresh)
+end
+
 local eventFrame = CreateFrame("Frame")
-eventFrame:SetScript("OnEvent", QueueRefresh)
+eventFrame:SetScript("OnEvent", function(_, event, addon)
+	if event == "ADDON_LOADED" then
+		if addon == "Blizzard_PlayerSpells" then
+			HookTalentsWindow()
+			QueueRefresh()
+		end
+		return
+	end
+	QueueRefresh()
+end)
 
 local EVENTS = {
-	"PLAYER_ENTERING_WORLD", "PLAYER_LEVEL_UP", "TRAIT_CONFIG_UPDATED", "ACTIVE_PLAYER_SPECIALIZATION_CHANGED",
+	"ADDON_LOADED", "PLAYER_ENTERING_WORLD", "PLAYER_LEVEL_UP", "TRAIT_CONFIG_UPDATED", "ACTIVE_PLAYER_SPECIALIZATION_CHANGED",
 	"PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED", "PLAYER_DEAD", "PLAYER_ALIVE", "PLAYER_UNGHOST",
 }
 
 function module:OnInitialize()
+	HookTalentsWindow()
 	self:OnEnabledChanged(ns:IsModuleEnabled(self.key))
 end
 

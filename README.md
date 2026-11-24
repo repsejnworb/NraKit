@@ -215,7 +215,8 @@ rank).
 
 A reminder in the middle of the screen while you have **talent points to spend**.
 
-- Hidden while dead and, optionally, in combat.
+- Hidden while dead, while the talents window is open and, optionally, in combat. Open windows
+  cover it.
 - Size and position are adjustable.
 
 <img width="307" height="82" alt="unspentTalentPoints" src=".github/screenshots/unspentTalentPoints.png" />

@@ -124,7 +124,7 @@ With a **fishing pole in your main hand**, **double right-click** the world to c
 ## Trackers & Reminders
 
 ### Unspent talent points
-A **reminder in the middle of the screen** while you have talent points to spend. Size and position are adjustable, and it can hide in combat.
+A **reminder in the middle of the screen** while you have talent points to spend. Size and position are adjustable. It hides while the talents window is open, and can hide in combat.
 
 ![unspentTalentPoints](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/unspentTalentPoints.png)
 
