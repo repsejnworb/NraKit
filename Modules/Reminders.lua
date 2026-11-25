@@ -1538,29 +1538,35 @@ local function CreateTracker()
 	tracker.arrow:SetSize(12, 12)
 	tracker.arrow:SetPoint("RIGHT", -10, 0)
 	tracker.arrow:SetAtlas("common-icon-forwardarrow")
-	header:SetScript("OnClick", function(self, button)
+	-- Click: fold. Shift-click: hide until the next login. Right-click: the tab. Shift-right-click:
+	-- the settings.
+	header:SetScript("OnClick", function(_, button)
+		GameTooltip:Hide()
 		if button == "RightButton" then
-			MenuUtil.CreateContextMenu(self, function(_, root)
-				root:CreateTitle("Reminders")
-				root:CreateButton(NraKitDB.remindersTrackerFolded and "Unfold" or "Fold", function()
-					reminders.SetTrackerFolded(not NraKitDB.remindersTrackerFolded)
-				end)
-				root:CreateButton("Hide until next login", function()
-					trackerHidden = true
-					RefreshTracker()
-					ns:Print("Reminders hidden until your next login. /nra remind show brings them back.")
-				end)
-				root:CreateButton("Open reminders", function()
-					ns:OpenReminders()
-				end)
-			end)
+			if IsShiftKeyDown() then
+				ns:OpenSettings("Reminders & to-dos", "reminders")
+			else
+				UI.ShowTab("reminders")
+			end
+		elseif IsShiftKeyDown() then
+			trackerHidden = true
+			RefreshTracker()
+			ns:Print("The list is hidden until your next login. /nra todo brings it back.")
 		else
 			reminders.SetTrackerFolded(not NraKitDB.remindersTrackerFolded)
 		end
 	end)
 	header:SetScript("OnEnter", function(self)
-		UI.ShowTooltip(self, "Reminders & To-do", (NraKitDB.remindersTrackerFolded and "Click to unfold." or "Click to fold.")
-			.. " Right-click to hide it until your next login. Drag to move.")
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip_SetTitle(GameTooltip, "Reminders & To-do")
+		GameTooltip_AddInstructionLine(GameTooltip, NraKitDB.remindersTrackerFolded and "Click: unfold" or "Click: fold")
+		GameTooltip_AddInstructionLine(GameTooltip, "Shift-click: hide until your next login")
+		GameTooltip_AddInstructionLine(GameTooltip, "Right-click: open Reminders & To-do")
+		GameTooltip_AddInstructionLine(GameTooltip, "Shift-right-click: settings")
+		if not ns:GetOption("remindersListLock") then
+			GameTooltip_AddInstructionLine(GameTooltip, "Drag to move")
+		end
+		GameTooltip:Show()
 	end)
 	header:SetScript("OnLeave", GameTooltip_Hide)
 	tracker.header = header
@@ -1724,7 +1730,16 @@ function RefreshTracker()
 	local layout = (up and "up" or "down") .. (headerHidden and " hidden" or "")
 	if layout ~= tracker.layout then
 		local growChanged = tracker.layout == nil or (tracker.layout:find("^up") ~= nil) ~= up
+		local wasHidden = tracker.layout ~= nil and tracker.layout:find("hidden") ~= nil
 		tracker.layout = layout
+		-- The header moves between just outside the list (hidden) and inside it (shown, also
+		-- when folded): shift the list by its height so neither the header nor the items move.
+		local position = NraKitDB.remindersTrackerPosition
+		if not growChanged and wasHidden ~= headerHidden and position and position.screen then
+			local shift = 28 * tracker:GetScale() * (headerHidden and -1 or 1)
+			position[4] = position[4] + (up and -shift or shift)
+			tracker:Place()
+		end
 		tracker.header:ClearAllPoints()
 		if headerHidden then
 			-- Just outside the list, on its side, while the mouse is over the list.

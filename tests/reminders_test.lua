@@ -301,11 +301,31 @@ return {
 			t.equal(#Rows(tracker), 0, "just the header")
 			header.scripts.OnClick(header, "LeftButton")
 			t.equal(#Rows(tracker), 1, "unfolded")
+			-- With the header hidden it shows just above the list; folding puts it inside: the
+			-- list moves up by its height, so the header stays where it was (and back).
+			ns:SetSetting("remindersListHideHeader", true)
+			t.equal(point[5], 672, "header hidden: the items stay where they were (the list's top is the header's bottom)")
+			header.scripts.OnClick(header, "LeftButton")
+			t.equal(point[5], 700, "folded: the header in the same place")
+			header.scripts.OnClick(header, "LeftButton")
+			t.equal(point[5], 672, "unfolded again")
+			ns:SetSetting("remindersListHideHeader", false)
+			t.equal(point[5], 700, "header shown again: nothing moved")
+			-- Right-click: the tab; shift-right-click: the settings; shift-click: hide until next login.
 			header.scripts.OnClick(header, "RightButton")
-			wow.menuEntry(menu.entries, "Fold").onClick()
+			t.ok(NraKitRemindersFrame:IsShown(), "right-click: Reminders & To-do")
+			NraKitRemindersFrame:Hide()
+			IsShiftKeyDown = function()
+				return true
+			end
 			header.scripts.OnClick(header, "RightButton")
-			wow.menuEntry(menu.entries, "Hide until next login").onClick()
-			t.ok(not tracker:IsShown(), "hidden")
+			t.ok(NraKitOptionsFrame:IsShown(), "shift-right-click: settings")
+			NraKitOptionsFrame:Hide()
+			header.scripts.OnClick(header, "LeftButton")
+			IsShiftKeyDown = function()
+				return false
+			end
+			t.ok(not tracker:IsShown(), "shift-click: hidden")
 			Remind("show")
 			t.ok(tracker:IsShown() and not NraKitDB.remindersTrackerFolded, "back, unfolded")
 			t.equal(Mine("show"), nil, "show isn't a reminder")
@@ -637,7 +657,7 @@ return {
 			row.scripts.OnClick(row, "LeftButton")
 			local editBox
 			for _, frame in ipairs(wow.frames) do
-				if frame.kind == "EditBox" and frame.shown and rawget(frame, "parent") ~= NraKitRemindersFrame.body then
+				if frame.kind == "EditBox" and wow.visible(frame) and rawget(frame, "parent") ~= NraKitRemindersFrame.body then
 					editBox = frame
 				end
 			end
