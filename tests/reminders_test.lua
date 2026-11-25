@@ -261,6 +261,21 @@ return {
 			wow.click("Later")
 			local tracker = NraKitRemindersTracker
 			local header = rawget(tracker, "header")
+			-- Dragged: held by its top-left corner, so folding keeps the header in place.
+			local point
+			rawset(tracker, "GetLeft", function()
+				return 1200
+			end)
+			rawset(tracker, "GetTop", function()
+				return 700
+			end)
+			rawset(tracker, "SetPoint", function(_, ...)
+				point = { ... }
+			end)
+			tracker.scripts.OnDragStop(tracker)
+			t.ok(point and point[1] == "TOPLEFT" and point[3] == "BOTTOMLEFT" and point[4] == 1200 and point[5] == 700,
+				"pinned by its top-left")
+			t.equal(NraKitDB.remindersTrackerPosition[1], "TOPLEFT", "saved that way")
 			header.scripts.OnClick(header, "LeftButton")
 			t.ok(NraKitDB.remindersTrackerFolded and tracker:IsShown(), "folded, still there")
 			t.equal(#Rows(tracker), 0, "just the header")

@@ -1277,12 +1277,19 @@ local function CreateTracker()
 			self:StartMoving()
 		end
 	end)
+	-- Held by its top-left corner, so folding it (or a shorter list) leaves the header where it
+	-- is and only the bottom moves. Dragging can leave it held by another point: put it back.
+	function tracker:PinTop()
+		local left, top = self:GetLeft(), self:GetTop()
+		if left and top then
+			self:ClearAllPoints()
+			self:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, top)
+			NraKitDB.remindersTrackerPosition = { "TOPLEFT", "BOTTOMLEFT", left, top }
+		end
+	end
 	tracker:SetScript("OnDragStop", function(self)
 		self:StopMovingOrSizing()
-		local point, _, relativePoint, x, y = self:GetPoint()
-		if point then
-			NraKitDB.remindersTrackerPosition = { point, relativePoint, x, y }
-		end
+		self:PinTop()
 	end)
 	local position = NraKitDB.remindersTrackerPosition
 	if position then
@@ -1290,6 +1297,7 @@ local function CreateTracker()
 	else
 		tracker:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -260, -420)
 	end
+	tracker:PinTop() -- older saved places (and the default) by their top-left too
 	tracker:Hide()
 
 	tracker.bg = tracker:CreateTexture(nil, "BACKGROUND")
