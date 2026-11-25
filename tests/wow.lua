@@ -88,6 +88,12 @@ local methods = {
 	GetAlpha = function(self)
 		return rawget(self, "alpha") or 1
 	end,
+	SetScale = function(self, scale)
+		rawset(self, "scale", scale)
+	end,
+	GetScale = function(self)
+		return rawget(self, "scale") or 1
+	end,
 	SetFrameStrata = function(self, strata)
 		rawset(self, "strata", strata)
 	end,

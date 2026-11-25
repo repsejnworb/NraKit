@@ -7,7 +7,7 @@
 Type **/nrakit** (or **/nra**) to open NraKit's own window.
 - Features are grouped in a sidebar, with **search**, an on/off switch per feature and its options right underneath.
 - The same settings are also under **Options → AddOns → NraKit**.
-- NraKit's windows (Settings, Inventory, Goals, Notes, Items, Wishlist, Reminders) work as **tabs of one window**. Tabs of features that are off are dimmed: they say what the feature does and **turn it on with one click**.
+- NraKit's windows (Settings, Inventory, Goals, Notes, Items, Wishlist, Reminders & To-do) work as **tabs of one window**. Tabs of features that are off are dimmed: they say what the feature does and **turn it on with one click**.
 - NraKit is also in the **addon button by the minimap** (no extra minimap button): left-click for settings, right-click for a menu of its windows.
 - **/nra help** lists the chat commands.
 - **/nra preview** shows any of NraKit's on-screen messages (goal complete, quest reminders, alerts...) with made-up content, to see how they look.
@@ -155,7 +155,8 @@ Notes to yourself that come back when they're due. **/nra remind Go to Darkshore
 - **Reminders** show on a **card that stays until you close it**, led by **why** each came due (you entered Darkshore, time's up, from Bankalt); at login it also lists the reminders still open from before. They wait for combat to end, and play a sound you can pick.
 - **To-dos** skip the card: they go straight on the list.
 - **The list on screen** holds both until you tick them, reminders and to-dos in their own parts, **in your order** (drag a row, or use its arrows). Tags say where, when or who from, and zone tags turn green while you're there. Ticked ones fade out. Fold it with a click on its header; **/nra todo** or a key brings it back if you hid it.
-- The **Reminders tab** (**/nra remind**) lists them all, with the ones you left your other characters. Edit them there, or right-click to be reminded again later. Click **Add** with the box empty for a **form** to pick when (a time, a zone from a list, a level), for which character, and whether it pops up.
+- Set the list's size, opacity and background, how many rows it shows, and lock it or hide it in combat.
+- The **Reminders & To-do tab** (**/nra remind**) lists them all, with the ones you left your other characters. Edit them there, or right-click to be reminded again later. Click **Add** with the box empty for a **form** to pick when (a time, a zone from a list, a level), for which character, and whether it pops up.
 
 ### Campfire timer
 A **progress bar in the middle of the screen** while you rest at a Welcoming Campfire, with the time left. It turns green (with a sound) when Camp Benefits is ready.

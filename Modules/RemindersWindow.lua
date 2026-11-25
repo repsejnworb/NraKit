@@ -1,7 +1,7 @@
 local _, ns = ...
 
 -- The Reminders window (/nra remind): a box to write a new one (same words as the command;
--- "Pop up" makes it a reminder, else a to-do), then your reminders and to-dos in sections:
+-- the Reminder / To-do switch next to it picks which), then your reminders and to-dos in sections:
 -- Reminders and To do (due, not ticked off, each in your order: drag or use the arrows),
 -- Waiting (with when they come due, and whether they pop up), For your other characters
 -- (ones you left them) and Done (folded; the last few).
@@ -42,7 +42,44 @@ local UNITS = {
 }
 local MAX_ZONE_MATCHES = 6
 
-local frame, addBox, scroll, footerLeft, editBox, helpButton, showButton, form, popUp
+local KINDS = {
+	{ quiet = false, label = "Reminder", tip = "Pops up on a card in the middle of the screen, with a sound, when it comes due. Then it waits on the list until you tick it." },
+	{ quiet = true, label = "To-do", tip = "Goes straight on the list on screen (now, or when its trigger comes). No card, no sound." },
+}
+
+local frame, addBox, scroll, footerLeft, editBox, helpButton, showButton, form, kindChips
+
+-- Whether new ones are to-dos (the switch next to the box; remembered).
+local function AddingQuiet()
+	return NraKitDB.remindersAddQuiet == true
+end
+
+-- A Reminder / To-do switch: two chips; onPick(quiet).
+local function CreateKindSwitch(parent, onPick)
+	local chips = {}
+	for index, kind in ipairs(KINDS) do
+		local chip = UI.CreateFlatButton(parent, kind.label, 22)
+		chip.quiet = kind.quiet
+		if index > 1 then
+			chip:SetPoint("LEFT", chips[index - 1], "RIGHT", 2, 0)
+		end
+		chip:SetScript("OnClick", function(self)
+			PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+			onPick(self.quiet)
+		end)
+		chip:SetScript("OnEnter", function(self)
+			UI.ShowTooltip(self, kind.label, kind.tip)
+		end)
+		chip:SetScript("OnLeave", GameTooltip_Hide)
+		chips[index] = chip
+	end
+	function chips:Select(quiet)
+		for _, chip in ipairs(self) do
+			chip:SetSelected(chip.quiet == quiet)
+		end
+	end
+	return chips
+end
 local pool = UI.CreatePool()
 local editingID
 local doneOpen = false -- the Done section, folded until you open it
@@ -64,7 +101,7 @@ local function AddFromBox()
 		OpenForm()
 		return
 	end
-	local add = popUp:GetChecked() and reminders.OnSlashCommand or reminders.OnTodoCommand
+	local add = AddingQuiet() and reminders.OnTodoCommand or reminders.OnSlashCommand
 	if add(text) then
 		addBox:SetText("") -- kept when it couldn't be read, to fix it
 	end
@@ -301,7 +338,9 @@ function Render()
 	content:SetHeight(-y + PAD)
 	scroll:SetScroll(scroll:GetVerticalScroll())
 	footerLeft:SetText(string.format("%d open", open))
-	showButton:SetShown(#reminders.Due() > 0)
+	local anyDue = #reminders.Due() > 0
+	showButton:SetEnabled(anyDue)
+	showButton.text:SetTextColor(unpack(anyDue and UI.TEXT or UI.TEXT_DIM))
 end
 
 ------------------------------------------------------------------------------
@@ -351,7 +390,8 @@ local function RefreshForm()
 		form.details[each.key]:SetShown(each.key == kind)
 	end
 	local other = form.character ~= ns:PlayerName()
-	local quiet = not form.popUp:GetChecked()
+	local quiet = form.quiet
+	form.kindChips:Select(quiet)
 	-- A to-do for you with no trigger goes on the list now.
 	form.whenChips[1].text:SetText(quiet and not other and "Now" or "Next login")
 	form.loginNote:SetText(quiet and not other and "On your to-do list right away."
@@ -407,7 +447,7 @@ local function SubmitForm()
 	if form.character ~= ns:PlayerName() then
 		spec.character, spec.known = form.character, true
 	end
-	spec.quiet = not form.popUp:GetChecked() or nil
+	spec.quiet = form.quiet or nil
 	local checked, problem = reminders.Validate(spec)
 	if not checked then
 		form.problem:SetText(problem)
@@ -432,6 +472,11 @@ local function CreateForm()
 	form.title = MakeLabel(form, "New reminder", "GameFontNormalLarge")
 	form.title:SetPoint("TOPLEFT", PAD + 8, -PAD - 4)
 	form.title:SetTextColor(unpack(UI.ACCENT))
+	form.kindChips = CreateKindSwitch(form, function(quiet)
+		form.quiet = quiet
+		RefreshForm()
+	end)
+	form.kindChips[1]:SetPoint("TOPLEFT", 180, -PAD - 1)
 	local LEFT = 130
 
 	FormLabel("Reminder", -56)
@@ -569,16 +614,9 @@ local function CreateForm()
 	})
 	form.characterSelect:SetPoint("TOPLEFT", LEFT, -242)
 
-	form.popUp = reminders.CreateCheck(form, function()
-		RefreshForm()
-	end)
-	form.popUp:SetPoint("TOPLEFT", LEFT + 2, -280)
-	local popUpLabel = MakeLabel(form, "Pop up with a sound when it comes due (off: a to-do, it just goes on the list)", "GameFontHighlight")
-	popUpLabel:SetPoint("LEFT", form.popUp, "RIGHT", 8, 0)
-
 	local add = UI.CreateFlatButton(form, "Add reminder", 26)
 	add:SetWidth(120)
-	add:SetPoint("TOPLEFT", LEFT, -320)
+	add:SetPoint("TOPLEFT", LEFT, -292)
 	form.addButton = add
 	add:SetScript("OnClick", SubmitForm)
 	local cancel = UI.CreateFlatButton(form, "Cancel", 26)
@@ -606,7 +644,7 @@ function OpenForm()
 		CreateForm()
 	end
 	form.kind, form.unit, form.character = "login", "m", ns:PlayerName()
-	form.popUp:SetChecked(popUp:GetChecked()) -- like the box at the top
+	form.quiet = AddingQuiet() -- like the switch at the top
 	form.textBox:SetText("")
 	form.amountBox:SetText("30")
 	form.zoneBox:SetText("")
@@ -622,39 +660,34 @@ end
 ------------------------------------------------------------------------------
 
 local function CreateWindow()
-	frame = UI.CreateWindow("NraKitRemindersFrame", "Reminders", WIDTH, HEIGHT, 0, "reminders")
+	frame = UI.CreateWindow("NraKitRemindersFrame", "Reminders & To-do", WIDTH, HEIGHT, 0, "reminders")
 	local body = frame.body
 
 	addBox = CreateFrame("EditBox", nil, body, "InputBoxTemplate")
 	addBox:SetHeight(22)
 	addBox:SetPoint("TOPLEFT", PAD + 8, -PAD - 1)
-	addBox:SetPoint("RIGHT", -PAD - 180, 0)
+	addBox:SetPoint("RIGHT", -PAD - 230, 0)
 	addBox:SetAutoFocus(false)
 	addBox:SetMaxLetters(255)
 	addBox:SetScript("OnEnterPressed", AddFromBox)
 	addBox:SetScript("OnEscapePressed", addBox.ClearFocus)
-	addBox.placeholder = MakeLabel(addBox, "New reminder (like /nra remind), or click Add for a form", "GameFontDisable")
+	addBox.placeholder = MakeLabel(addBox, "Type one (like /nra remind), or click Add for a form", "GameFontDisable")
 	addBox.placeholder:SetPoint("LEFT", 2, 0)
 	addBox:HookScript("OnTextChanged", function(self)
 		self.placeholder:SetShown(self:GetText() == "")
 	end)
 	local add = UI.CreateFlatButton(body, "Add", 22)
 	add:SetWidth(56)
-	popUp = reminders.CreateCheck(body, function(box)
-		NraKitDB.remindersAddQuiet = not box:GetChecked() or nil
+	kindChips = CreateKindSwitch(body, function(quiet)
+		NraKitDB.remindersAddQuiet = quiet or nil
+		kindChips:Select(quiet)
 	end)
-	popUp:SetPoint("LEFT", addBox, "RIGHT", 10, 0)
-	popUp:SetChecked(not NraKitDB.remindersAddQuiet)
-	local popUpLabel = MakeLabel(body, "Pop up", "GameFontHighlightSmall")
-	popUpLabel:SetPoint("LEFT", popUp, "RIGHT", 5, 0)
-	popUp:SetScript("OnEnter", function(self)
-		UI.ShowTooltip(self, "Pop up", "On: a reminder (a card in the middle of the screen with a sound when it comes due). Off: a to-do (it just goes on the list).")
-	end)
-	popUp:SetScript("OnLeave", GameTooltip_Hide)
-	add:SetPoint("LEFT", popUpLabel, "RIGHT", 10, 0)
+	kindChips[1]:SetPoint("LEFT", addBox, "RIGHT", 10, 0)
+	kindChips:Select(AddingQuiet())
+	add:SetPoint("LEFT", kindChips[#kindChips], "RIGHT", 8, 0)
 	add:SetScript("OnClick", AddFromBox)
 	add:SetScript("OnEnter", function(self)
-		UI.ShowTooltip(self, "Add", "Adds what you typed (the same words as /nra remind). With nothing typed, opens a form to pick when it comes due.")
+		UI.ShowTooltip(self, "Add", "Adds what you typed as a reminder or a to-do (the switch to the left), in the same words as /nra remind. With nothing typed, opens a form to pick when it comes due.")
 	end)
 	add:SetScript("OnLeave", GameTooltip_Hide)
 	helpButton = UI.CreateHelpButton(body, "How to write reminders", Render)
@@ -694,17 +727,26 @@ local function CreateWindow()
 	UI.AddLine(footer, "TOP")
 	footerLeft = MakeLabel(footer, "", "GameFontHighlightSmall")
 	footerLeft:SetPoint("LEFT", PAD, 0)
-	showButton = UI.CreateFlatButton(footer, "Show on screen", 20)
+	showButton = UI.CreateFlatButton(footer, "Show list", 20)
 	showButton:SetPoint("LEFT", footerLeft, "RIGHT", 12, 0)
 	showButton:SetScript("OnClick", function()
 		reminders.ShowTracker()
 	end)
 	showButton:SetScript("OnEnter", function(self)
-		UI.ShowTooltip(self, "Show on screen", "Shows the due reminders on screen again, after you hid or folded the list (also /nra remind show, or a key under Key Bindings > NraKit).")
+		UI.ShowTooltip(self, "Show list", "Shows the list on screen, unfolded, also after you hid it (or /nra todo, or a key under Key Bindings > NraKit). Greyed out while nothing is due.")
 	end)
 	showButton:SetScript("OnLeave", GameTooltip_Hide)
+	local settings = UI.CreateFlatButton(footer, "Settings", 20)
+	settings:SetPoint("RIGHT", -PAD + 4, 0)
+	settings:SetScript("OnClick", function()
+		ns:OpenSettings("Reminders & to-dos", "reminders")
+	end)
+	settings:SetScript("OnEnter", function(self)
+		UI.ShowTooltip(self, "Settings", "Sound, and how the list on screen looks: size, opacity, background, hide in combat, lock...")
+	end)
+	settings:SetScript("OnLeave", GameTooltip_Hide)
 	local hint = MakeLabel(footer, "Tick when done. Click to edit, right-click for more", "GameFontDisableSmall")
-	hint:SetPoint("RIGHT", -PAD, 0)
+	hint:SetPoint("RIGHT", settings, "LEFT", -12, 0)
 
 	frame:HookScript("OnShow", Render)
 	frame:HookScript("OnHide", function()
@@ -731,7 +773,7 @@ function ns:OpenReminders(editID)
 end
 
 UI.RegisterTab({
-	key = "reminders", label = "Reminders", menuLabel = "Reminders", order = 7, frameName = "NraKitRemindersFrame",
+	key = "reminders", label = "Reminders & To-do", menuLabel = "Reminders & To-do", order = 7, frameName = "NraKitRemindersFrame",
 	open = function()
 		if not frame then
 			CreateWindow()
@@ -741,6 +783,6 @@ UI.RegisterTab({
 	module = "reminders",
 })
 
-ns:AddOptionsButton("reminders", "Open reminders", "Your reminders (/nra remind).", function()
+ns:AddOptionsButton("reminders", "Open reminders & to-do", "Your reminders and to-dos (/nra remind).", function()
 	ns:OpenReminders()
 end)

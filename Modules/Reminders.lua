@@ -32,14 +32,8 @@ local module = {
 	default = false,
 	options = {
 		{
-			key = "remindersTracker",
-			header = "General",
-			name = "Keep reminders on the list",
-			description = "When you close the card with reminders not ticked off, they stay on the to-do list on screen until you tick them. (To-dos always go there.)",
-			default = true,
-		},
-		{
 			key = "remindersSound",
+			header = "Reminders",
 			name = "Play a sound",
 			description = "Play a sound when reminders come due.",
 			default = true,
@@ -51,6 +45,80 @@ local module = {
 			name = "Sound",
 			description = "Which sound plays when reminders come due.",
 			default = "kit:UI_BNET_TOAST",
+		},
+		{
+			key = "remindersTracker",
+			header = "List on screen",
+			name = "Keep reminders on the list",
+			description = "When you close the card with reminders not ticked off, they stay on the list on screen until you tick them. (To-dos always go there.)",
+			default = true,
+		},
+		{
+			key = "remindersListTags",
+			name = "Show tags",
+			description = "A coloured tag before each item saying where, when or who from (Ironforge:, 21:30:, Bankalt:). Zone tags turn green while you're there.",
+			default = true,
+		},
+		{
+			key = "remindersListLock",
+			name = "Lock in place",
+			description = "Stop the list being dragged by accident.",
+			default = false,
+		},
+		{
+			key = "remindersListHideInCombat",
+			name = "Hide in combat",
+			description = "Hide the list while you're fighting.",
+			default = false,
+		},
+		{
+			key = "remindersListScale",
+			type = "number",
+			name = "Size",
+			description = "How big the list is.",
+			default = 1,
+			min = 0.6,
+			max = 1.6,
+			step = 0.05,
+			format = function(value)
+				return math.floor(value * 100 + 0.5) .. "%"
+			end,
+		},
+		{
+			key = "remindersListAlpha",
+			type = "number",
+			name = "Opacity",
+			description = "How see-through the whole list is.",
+			default = 1,
+			min = 0.2,
+			max = 1,
+			step = 0.05,
+			format = function(value)
+				return math.floor(value * 100 + 0.5) .. "%"
+			end,
+		},
+		{
+			key = "remindersListBackground",
+			type = "number",
+			name = "Background",
+			description = "How dark the box behind the list is (0% for just the text).",
+			default = 0.95,
+			min = 0,
+			max = 1,
+			step = 0.05,
+			format = function(value)
+				return math.floor(value * 100 + 0.5) .. "%"
+			end,
+		},
+		{
+			key = "remindersListRows",
+			type = "number",
+			name = "Most rows shown",
+			description = "How many items the list shows before \"and N more\".",
+			default = 10,
+			min = 3,
+			max = 20,
+			step = 1,
 		},
 	},
 }
@@ -70,6 +138,7 @@ local eventFrame = CreateFrame("Frame")
 local ticker
 local showQueued = false -- due reminders wait for combat to end
 local card, tracker
+local inCombat = false -- from the combat events (InCombatLockdown is still false when the fight starts)
 local trackerHidden = false -- hidden until the next login (folded is NraKitDB.remindersTrackerFolded)
 local ready = false -- after the login check (timed reminders that passed while you were away count as such)
 local initialized = false
@@ -1191,7 +1260,9 @@ reminders.ShowCard = CardShow
 local TRACKER_WIDTH = 290
 local TRACKER_SECTION = 18
 local TRACKER_ROW = 24
-local TRACKER_MAX_ROWS = 10
+local function MaxRows()
+	return ns:GetValue("remindersListRows") or 10
+end
 
 local function CreateTracker()
 	tracker = CreateFrame("Frame", "NraKitRemindersTracker", UIParent)
@@ -1201,7 +1272,11 @@ local function CreateTracker()
 	tracker:SetMovable(true)
 	tracker:EnableMouse(true)
 	tracker:RegisterForDrag("LeftButton")
-	tracker:SetScript("OnDragStart", tracker.StartMoving)
+	tracker:SetScript("OnDragStart", function(self)
+		if not ns:GetOption("remindersListLock") then
+			self:StartMoving()
+		end
+	end)
 	tracker:SetScript("OnDragStop", function(self)
 		self:StopMovingOrSizing()
 		local point, _, relativePoint, x, y = self:GetPoint()
@@ -1217,10 +1292,12 @@ local function CreateTracker()
 	end
 	tracker:Hide()
 
-	local bg = tracker:CreateTexture(nil, "BACKGROUND")
-	bg:SetAllPoints()
-	bg:SetColorTexture(unpack(UI.BG))
-	UI.AddBorder(tracker)
+	tracker.bg = tracker:CreateTexture(nil, "BACKGROUND")
+	tracker.bg:SetAllPoints()
+	tracker.bg:SetColorTexture(unpack(UI.BG))
+	tracker.border = CreateFrame("Frame", nil, tracker)
+	tracker.border:SetAllPoints()
+	UI.AddBorder(tracker.border)
 
 	-- The header: click to fold or unfold, right-click for more, drag to move.
 	local header = CreateFrame("Button", nil, tracker)
@@ -1295,11 +1372,15 @@ local function CreateTracker()
 			row:SetAlpha(tickedAt and math.max(0, 1 - (now - tickedAt - TICKED_STAY) / TICKED_FADE) or 1)
 		end
 	end)
-	for index = 1, TRACKER_MAX_ROWS do
-		local row = CreateRow(tracker, TRACKER_ROW, OnTick)
-		reminders.AddReorder(row)
-		row.text:SetPoint("RIGHT", -20, 0) -- room for the arrows
-		tracker.rows[index] = row
+	-- Rows are made as the list needs them (up to the most rows shown).
+	function tracker:Row(index)
+		if not self.rows[index] then
+			local row = CreateRow(self, TRACKER_ROW, OnTick)
+			reminders.AddReorder(row)
+			row.text:SetPoint("RIGHT", -20, 0) -- room for the arrows
+			self.rows[index] = row
+		end
+		return self.rows[index]
 	end
 	tracker.more = tracker:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	tracker.list = {}
@@ -1322,6 +1403,7 @@ function RefreshTracker()
 		end
 	end
 	local wanted = (#due > 0 or fading) and not trackerHidden
+		and not (inCombat and ns:GetOption("remindersListHideInCombat"))
 	if not wanted then
 		if tracker then
 			tracker:Hide()
@@ -1332,6 +1414,11 @@ function RefreshTracker()
 	if not tracker then
 		CreateTracker()
 	end
+	tracker:SetScale(ns:GetValue("remindersListScale") or 1)
+	tracker:SetAlpha(ns:GetValue("remindersListAlpha") or 1)
+	local background = ns:GetValue("remindersListBackground") or 0.95
+	tracker.bg:SetAlpha(background / UI.BG[4])
+	tracker.border:SetAlpha(math.min(1, background * 2))
 	-- In your order, with the ones you ticked here where they were.
 	local list = {}
 	for _, reminder in ipairs(due) do
@@ -1376,19 +1463,19 @@ function RefreshTracker()
 				table.insert(section, reminder)
 			end
 		end
-		if #section > 0 and used < TRACKER_MAX_ROWS then
+		if #section > 0 and used < MaxRows() then
 			local label = tracker.sections[key]
 			label:ClearAllPoints()
 			label:SetPoint("TOPLEFT", 10, y - 2)
 			label:Show()
 			y = y - TRACKER_SECTION
 			for _, reminder in ipairs(section) do
-				if used >= TRACKER_MAX_ROWS then
+				if used >= MaxRows() then
 					break
 				end
 				used = used + 1
-				local row = tracker.rows[used]
-				FillRow(row, reminder, false, true)
+				local row = tracker:Row(used)
+				FillRow(row, reminder, false, ns:GetOption("remindersListTags"))
 				row:ClearAllPoints()
 				row:SetPoint("TOPLEFT", 8, y)
 				row:SetPoint("RIGHT", -6, 0)
@@ -1574,7 +1661,12 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 			ready = true
 			reminders.Check("zone")
 		end
+	elseif event == "PLAYER_REGEN_DISABLED" then
+		inCombat = true
+		RefreshTracker()
 	elseif event == "PLAYER_REGEN_ENABLED" then
+		inCombat = false
+		RefreshTracker()
 		if showQueued then
 			ShowDue()
 		end
@@ -1586,7 +1678,7 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 	end
 end)
 
-local EVENTS = { "PLAYER_ENTERING_WORLD", "PLAYER_REGEN_ENABLED", "PLAYER_LEVEL_UP", "ZONE_CHANGED", "ZONE_CHANGED_INDOORS",
+local EVENTS = { "PLAYER_ENTERING_WORLD", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED", "PLAYER_LEVEL_UP", "ZONE_CHANGED", "ZONE_CHANGED_INDOORS",
 	"ZONE_CHANGED_NEW_AREA" }
 
 -- Key binding (Bindings.xml).

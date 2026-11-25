@@ -389,6 +389,53 @@ return {
 			reminders.SetDone(row.reminder.id, true)
 		end)
 
+		t.test("the list's settings: size, opacity, background, rows, tags, lock, hide in combat", function()
+			SlashCmdList.NRAKIT("todo one")
+			SlashCmdList.NRAKIT("todo two")
+			SlashCmdList.NRAKIT("todo in Ironforge: three")
+			wow.data.zone = "Ironforge"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+			local tracker = NraKitRemindersTracker
+			ns:SetSetting("remindersListScale", 1.2)
+			ns:SetSetting("remindersListAlpha", 0.6)
+			ns:SetSetting("remindersListBackground", 0)
+			t.equal(tracker:GetScale(), 1.2, "size")
+			t.equal(tracker:GetAlpha(), 0.6, "opacity")
+			t.equal(rawget(tracker, "bg"):GetAlpha(), 0, "no background")
+			ns:SetSetting("remindersListRows", 2)
+			t.equal(#Rows(tracker), 2, "two rows")
+			t.equal(rawget(rawget(tracker, "more"), "text"), string.format("and %d more (/nra remind)", #reminders.Due() - 2), "the rest counted")
+			ns:SetSetting("remindersListRows", 10)
+			ns:SetSetting("remindersListTags", false)
+			for _, row in ipairs(Rows(tracker)) do
+				t.ok(not rawget(row.text, "text"):find("Ironforge", 1, true), "no tags")
+			end
+			ns:SetSetting("remindersListTags", true)
+			ns:SetSetting("remindersListLock", true)
+			local moved = false
+			rawset(tracker, "StartMoving", function()
+				moved = true
+			end)
+			tracker.scripts.OnDragStart(tracker)
+			t.ok(not moved, "locked")
+			ns:SetSetting("remindersListLock", false)
+			ns:SetSetting("remindersListHideInCombat", true)
+			wow.fire("PLAYER_REGEN_DISABLED")
+			t.ok(not tracker:IsShown(), "hidden in combat")
+			wow.fire("PLAYER_REGEN_ENABLED")
+			t.ok(tracker:IsShown(), "back after")
+			ns:SetSetting("remindersListHideInCombat", false)
+			for _, setting in ipairs({ "remindersListScale", "remindersListAlpha" }) do
+				ns:SetSetting(setting, 1)
+			end
+			ns:SetSetting("remindersListBackground", 0.95)
+			for _, text in ipairs({ "one", "two", "three" }) do
+				reminders.SetDone(Mine(text).id, true)
+			end
+			wow.data.zone = "Elwynn Forest"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+		end)
+
 		t.test("right-click turns a to-do into a reminder; the login card leaves to-dos out", function()
 			local menu
 			MenuUtil.CreateContextMenu = function(_, build)
@@ -437,15 +484,9 @@ return {
 			t.noErrors()
 		end)
 
-		t.test("the window's box: Pop up off adds a to-do (and the form follows it)", function()
+		t.test("the window: the Reminder / To-do switch, Show list and Settings", function()
 			t.ok(NraKitRemindersFrame:IsShown(), "open")
-			local popUp
-			for _, frame in ipairs(wow.frames) do
-				if rawget(frame, "checked") ~= nil and rawget(frame, "parent") == NraKitRemindersFrame.body then
-					popUp = frame
-				end
-			end
-			popUp.scripts.OnClick(popUp)
+			t.ok(wow.click("To-do"), "the switch")
 			t.ok(NraKitDB.remindersAddQuiet, "remembered")
 			local box
 			for _, frame in ipairs(wow.frames) do
@@ -458,8 +499,20 @@ return {
 			t.ok(Mine("polish the boots").quiet and Mine("polish the boots").state == "due", "a to-do, on the list")
 			wow.click("Add")
 			t.ok(wow.click("Add to-do"), "the form is for a to-do")
+			local formSwitch = rawget(NraKitReminderForm, "kindChips")[1]
+			formSwitch.scripts.OnClick(formSwitch)
+			t.ok(wow.click("Add reminder"), "switched in the form")
+			t.ok(NraKitDB.remindersAddQuiet, "the switch at the top stays")
 			NraKitReminderForm:Hide()
-			popUp.scripts.OnClick(popUp)
+			wow.click("Reminder")
+			t.equal(NraKitDB.remindersAddQuiet, nil, "back to reminders")
+			NraKitRemindersTracker:Hide()
+			t.ok(wow.click("Show list"), "Show list")
+			t.ok(NraKitRemindersTracker:IsShown(), "the list")
+			t.ok(wow.click("Settings"), "Settings")
+			t.ok(NraKitOptionsFrame:IsShown(), "the settings")
+			NraKitOptionsFrame:Hide()
+			ns:OpenReminders()
 			reminders.SetDone(Mine("polish the boots").id, true)
 		end)
 

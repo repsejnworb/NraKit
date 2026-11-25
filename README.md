@@ -22,7 +22,7 @@ Type `/nrakit` (or `/nra`) to open NraKit's window.
 - Features are grouped in a sidebar, with a search box, an on/off switch per feature and its options
   right underneath.
 - The same settings are also in the game's Settings panel under **AddOns → NraKit**.
-- NraKit's windows (Settings, Inventory, Goals, Notes, Items, Wishlist, Reminders) work as **tabs of one window**. Tabs of
+- NraKit's windows (Settings, Inventory, Goals, Notes, Items, Wishlist, Reminders & To-do) work as **tabs of one window**. Tabs of
   features that are off are dimmed: they say what the feature does and turn it on with one click.
 - NraKit is also in the **addon button by the minimap**: left-click for settings, right-click for a
   menu of its windows.
@@ -281,15 +281,18 @@ pops up the next time you log in; `/nra todo respec` just goes on your **to-do l
     top or bottom).
   - Ticked ones fade out after a moment (untick in time to keep one).
   - Click its header to **fold** it; right-click it to hide it until your next login. `/nra todo`, a
-    key (Key Bindings > NraKit) or **Show on screen** in the tab brings it back.
+    key (Key Bindings > NraKit) or **Show list** in the tab brings it back.
+  - Settings for it: size, opacity, background (down to just the text), most rows shown, tags on or
+    off, lock in place, hide in combat.
 - Right-click an item to make a to-do a reminder (or the other way), move it, be reminded again in 15
   minutes, an hour or next login, edit or delete it.
-- The **Reminders tab** (`/nra remind`) lists them: to do now, waiting (and when they'll come, and
-  whether they pop up), the ones you left your other characters, and done. Click one to edit it.
-- Write new ones in the tab's box in the same words as `/nra remind` (**Pop up** next to it picks a
-  reminder or a to-do), or click **Add** with the box empty for a **form**: the text, when (next login or
-  now, after a time, a zone you pick from a list or type, a level), which of your characters it's for,
-  and whether it pops up.
+- The **Reminders & To-do tab** (`/nra remind`) lists them: reminders and to-dos due now, waiting (and
+  when they'll come, and whether they pop up), the ones you left your other characters, and done.
+  Click one to edit it. **Show list** and **Settings** are at the bottom.
+- Write new ones in the tab's box in the same words as `/nra remind`, with the **Reminder | To-do**
+  switch next to it, or click **Add** with the box empty for a **form**: reminder or to-do, the text,
+  when (next login or now, after a time, a zone you pick from a list or type, a level), and which of
+  your characters it's for.
 - `/nra preview reminder` shows the card for one reminder, `/nra preview reminders` the one at login.
 
 #### Campfire timer
