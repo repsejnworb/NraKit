@@ -18,8 +18,9 @@ local _, ns = ...
 --   onClick = function,       makes it clickable (it closes when clicked); otherwise clicks go through
 --   skipIfBusy = true,        drop it instead of waiting when the screen is full of toasts
 -- }
--- Toasts stack, up to MAX_SHOWN at once: each new one above the others, which stay put. More
--- wait their turn (a big one first in line); when one goes, those above it slide down.
+-- Toasts stack, up to MAX_SHOWN at once: the newest pops up at the top, always the same place,
+-- and pushes the older ones down (they slide). More wait their turn (a big one first in line);
+-- when one goes, the older ones below it slide up into the gap.
 
 local UI = ns.UI
 local toast = {}
@@ -30,13 +31,13 @@ local HOVER_GRACE = 2 -- seconds a toast stays after the mouse leaves it
 local LIST_WIDTH = 420 -- the widest a list gets before its lines wrap
 local MAX_SHOWN = 3 -- at once; more wait their turn
 local MAX_QUEUE = 5 -- waiting; more are dropped
-local BOTTOM = 168 -- the lowest toast's bottom edge, above the middle of the screen
+local TOP = 260 -- the newest toast's top edge, above the middle of the screen
 local GAP = 8
 local SLIDE = 12 -- how quickly toasts slide down into a gap
 local DEFAULTS = { big = { duration = 6 }, small = { duration = 3 } }
 
 local free = { big = {}, small = {} } -- toast frames not in use
-local shown = {} -- on screen, oldest (lowest) first
+local shown = {} -- on screen, oldest first (the newest is at the top)
 local queue = {}
 local ShowNext, ShowLines
 
@@ -55,20 +56,21 @@ end
 
 local function Place(frame)
 	frame:ClearAllPoints()
-	frame:SetPoint("BOTTOM", UIParent, "CENTER", 0, frame.y)
+	frame:SetPoint("TOP", UIParent, "CENTER", 0, frame.y)
 end
 
--- Where each toast belongs: stacked upwards from the bottom, oldest lowest. A new one goes
--- straight to its place; the others slide (OnUpdate).
+-- Where each toast belongs: the newest at the top, the older ones below it. A new one goes
+-- straight to its place (and pops); the others slide there (OnUpdate).
 local function Restack()
-	local y = BOTTOM
-	for _, frame in ipairs(shown) do
+	local y = TOP
+	for index = #shown, 1, -1 do
+		local frame = shown[index]
 		frame.targetY = y
 		if not frame.y then
 			frame.y = y
 			Place(frame)
 		end
-		y = y + frame:GetHeight() + GAP
+		y = y - frame:GetHeight() - GAP
 	end
 end
 
