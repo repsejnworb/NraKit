@@ -451,6 +451,61 @@ function UI.CreateFlatButton(parent, label, height)
 	return button
 end
 
+-- Fading a frame in or out (e.g. hiding in combat), quickly.
+UI.FADE_SECONDS = 0.25
+local fading = {} -- frame -> { from, to, start, hide }
+local fader = CreateFrame("Frame")
+fader:Hide()
+fader:SetScript("OnUpdate", function(self)
+	local now = GetTime()
+	for frame, fade in pairs(fading) do
+		local progress = math.min(1, (now - fade.start) / UI.FADE_SECONDS)
+		frame:SetAlpha(fade.from + (fade.to - fade.from) * progress)
+		if progress >= 1 then
+			fading[frame] = nil
+			if fade.hide then
+				frame:Hide()
+			end
+		end
+	end
+	if not next(fading) then
+		self:Hide()
+	end
+end)
+
+local function StartFade(frame, to, hide)
+	fading[frame] = { from = frame:GetAlpha(), to = to, start = GetTime(), hide = hide }
+	fader:Show()
+end
+
+-- Shows a frame (from see-through, if it was hidden) and fades it to `alpha`.
+function UI.FadeIn(frame, alpha)
+	if not frame:IsShown() then
+		frame:SetAlpha(0)
+		frame:Show()
+	end
+	StartFade(frame, alpha or 1, false)
+end
+
+-- Fades a frame out, then hides it.
+function UI.FadeOut(frame)
+	if frame:IsShown() and not (fading[frame] and fading[frame].hide) then
+		StartFade(frame, 0, true)
+	end
+end
+
+function UI.IsFading(frame)
+	return fading[frame] ~= nil
+end
+
+function UI.IsFadingOut(frame)
+	return fading[frame] ~= nil and fading[frame].hide
+end
+
+function UI.StopFade(frame)
+	fading[frame] = nil
+end
+
 -- A dropdown: a flat button showing the choice, opening a menu of them.
 -- options = { get = fn() -> value, set = fn(value), choices = { { value, label }, ... } or a
 -- function returning them, width = number }.

@@ -1458,6 +1458,15 @@ local function CreateTracker()
 	tracker.more = tracker:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	tracker.list = {}
 	tracker.ticked = {} -- reminder -> GetTime() it was ticked here: it stays a moment, dimmed, then fades
+	-- Coming back after combat (or while fading out for it): fade in. Otherwise just show.
+	function tracker:ShowFaded(alpha)
+		if self.fadeIn or UI.IsFadingOut(self) then
+			self.fadeIn = nil
+			UI.FadeIn(self, alpha)
+		else
+			self:Show()
+		end
+	end
 end
 
 -- The tracker lists your due reminders and to-dos, whether the card is up or not. One you tick
@@ -1475,10 +1484,16 @@ function RefreshTracker()
 			fading = fading or (reminder.state == "done" and GetTime() - tickedAt < TICKED_STAY + TICKED_FADE)
 		end
 	end
-	local wanted = (#due > 0 or fading) and not trackerHidden
-		and not (inCombat and ns:GetOption("remindersListHideInCombat"))
-	if not wanted then
+	local combatHidden = inCombat and ns:GetOption("remindersListHideInCombat")
+	if (#due > 0 or fading) and not trackerHidden and combatHidden then
 		if tracker then
+			UI.FadeOut(tracker) -- back (faded in) when the fight ends
+		end
+		return
+	end
+	if not ((#due > 0 or fading) and not trackerHidden) then
+		if tracker then
+			UI.StopFade(tracker)
 			tracker:Hide()
 			tracker.list, tracker.ticked = {}, {}
 		end
@@ -1492,7 +1507,10 @@ function RefreshTracker()
 		tracker:SetScale(scale)
 		tracker:Place() -- the same corner, at the new size
 	end
-	tracker:SetAlpha(ns:GetValue("remindersListAlpha") or 1)
+	local overall = ns:GetValue("remindersListAlpha") or 1
+	if not UI.IsFading(tracker) then
+		tracker:SetAlpha(overall)
+	end
 	local headerAlpha = ns:GetValue("remindersListBackground") or 0.95
 	local itemsAlpha = headerAlpha
 	if ns:GetOption("remindersListBackgroundSplit") then
@@ -1561,7 +1579,7 @@ function RefreshTracker()
 	if folded then
 		tracker.more:SetText("")
 		tracker:SetHeight(28)
-		tracker:Show()
+		tracker:ShowFaded(overall)
 		return
 	end
 	-- Reminders first (with when, where or who from), then to-dos, each under its own label.
@@ -1600,7 +1618,7 @@ function RefreshTracker()
 	tracker.more:SetPoint("TOPLEFT", 34, y)
 	tracker.more:SetText(#list > used and string.format("and %d more (/nra remind)", #list - used) or "")
 	tracker:SetHeight(-y + (up and 28 or 6) + (#list > used and 16 or 0))
-	tracker:Show()
+	tracker:ShowFaded(overall)
 end
 
 reminders.RefreshTracker = function()
@@ -1777,6 +1795,9 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 		RefreshTracker()
 	elseif event == "PLAYER_REGEN_ENABLED" then
 		inCombat = false
+		if tracker and not tracker:IsShown() then
+			tracker.fadeIn = true
+		end
 		RefreshTracker()
 		if showQueued then
 			ShowDue()

@@ -323,7 +323,11 @@ local function CreateButton()
 	button:SetScript("OnEnter", OnEnter)
 	button:SetScript("OnLeave", GameTooltip_Hide)
 	button:SetScript("OnEvent", function(self, event)
-		self:SetShown(event ~= "PLAYER_REGEN_DISABLED")
+		if event == "PLAYER_REGEN_DISABLED" then
+			UI.FadeOut(self)
+		else
+			UI.FadeIn(self, 1)
+		end
 	end)
 end
 
