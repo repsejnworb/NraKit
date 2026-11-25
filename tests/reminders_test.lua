@@ -666,33 +666,6 @@ return {
 			wow.fire("ZONE_CHANGED_NEW_AREA")
 		end)
 
-		t.test("a long item goes on to a second line in the list, and the rows under it move down", function()
-			SlashCmdList.NRAKIT("todo short one")
-			SlashCmdList.NRAKIT("todo a really long to-do that needs a second line to fit in the list on screen")
-			local tracker = NraKitRemindersTracker
-			local function RowOf(text)
-				for _, row in ipairs(Rows(tracker)) do
-					if row.reminder.text == text then
-						return row
-					end
-				end
-			end
-			local long = RowOf("a really long to-do that needs a second line to fit in the list on screen")
-			local short = RowOf("short one")
-			rawset(long.text, "GetStringHeight", function()
-				return 26 -- two lines
-			end)
-			rawset(short.text, "GetStringHeight", function()
-				return 13
-			end)
-			reminders.RefreshTracker()
-			t.equal(rawget(long, "height") or long:GetHeight(), 36, "the long one is two lines tall")
-			t.equal(rawget(short, "height") or short:GetHeight(), 24, "a short one stays one line")
-			for _, text in ipairs({ "short one", "a really long to-do that needs a second line to fit in the list on screen" }) do
-				reminders.SetDone(Mine(text).id, true)
-			end
-		end)
-
 		t.test("right-click turns a to-do into a reminder; the login card leaves to-dos out", function()
 			local menu
 			MenuUtil.CreateContextMenu = function(_, build)

@@ -1684,9 +1684,6 @@ local function CreateTracker()
 			local row = CreateRow(self, TRACKER_ROW, OnTick)
 			reminders.AddReorder(row)
 			row.text:SetPoint("RIGHT", -20, 0) -- room for the arrows
-			-- A long one goes on to a second line; only past that it's cut short ("...").
-			row.text:SetWordWrap(true)
-			row.text:SetMaxLines(2)
 			self.rows[index] = row
 		end
 		return self.rows[index]
@@ -1867,10 +1864,7 @@ function RefreshTracker()
 				row:SetPoint("TOPLEFT", 8, y)
 				row:SetPoint("RIGHT", -6, 0)
 				row:Show()
-				-- As tall as its text (one or two lines).
-				local height = math.max(TRACKER_ROW, math.ceil(row.text:GetStringHeight()) + 10)
-				row:SetHeight(height)
-				y = y - height
+				y = y - TRACKER_ROW
 			end
 			y = y - 4
 		end

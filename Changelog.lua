@@ -16,9 +16,6 @@ local _, ns = ...
 --           "new" entry with its module (tests/changelog_test.lua checks).
 
 ns.changelog = {
-	{ version = "Unreleased", entries = {
-		{ "improved", "Reminders & to-dos: a long item on the list on screen goes on to a second line instead of being cut short (only longer ones still end in \"...\")." },
-	} },
 	{ version = "0.26.0", date = "2026-11-25", entries = {
 		{ "new", "Reminders & to-dos: notes to yourself that come back when you need them. /nra remind go to Darkshore pops up at your next login; /nra todo respec just goes on your to-do list. Put a trigger in front for later: a time (30m, 2h, 1d), a zone (in Ironforge: ..., straight away if you're there), a level (at 30: ...) or another of your characters (@Bankalt: ...). Reminders pop up on a card that stays until you close it and says why it came up, with a sound you can pick. The list on screen holds your reminders and to-dos until you tick them, in your order (drag or use the arrows), with tags for where, when and who from. Zone to-dos are there while you're in their zone: leave and a short countdown takes them off, return and they're back (with a small message for arriving); fold it, and pick its size, background (also a stronger one while the mouse is over it), which way it grows, whether it shows its header and whether it hides in combat. The Reminders & To-do tab lists everything, with a form for new ones and for changing any of them (right-click, Edit). /nra preview reminder shows the card.", module = "reminders" },
 		{ "new", "NraKit button: NraKit's icon, anywhere on your screen. A badge counts what you may have missed (reminders you haven't ticked off, and what's new if you like), and the tooltip says what. Pick what a click and a shift-click do; right-click opens NraKit's menu. Lock it, size it, or hide it in combat.", module = "nraButton" },
