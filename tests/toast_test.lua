@@ -87,20 +87,20 @@ return {
 				shown = spec
 			end
 			local opened = {}
-			ns.arrival.Add({ zone = "Ironforge", counts = { "7 TO-DOS" }, title = "TO-DO", icon = 1, order = 2,
+			ns.arrival.Add({ zone = "Ironforge", title = "TO-DO (7)", icon = 1, order = 2,
 				names = { "one", "two", "three", "four", "five", "six", "seven" }, onClick = function() table.insert(opened, "list") end })
-			ns.arrival.Add({ zone = "Ironforge", counts = { "1 QUEST TO TURN IN" }, title = "QUESTS", atlas = "quest", order = 1,
+			ns.arrival.Add({ zone = "Ironforge", title = "QUESTS (1)", atlas = "quest", order = 1,
 				names = { "The Missing Diplomat" }, onClick = function() table.insert(opened, "quests") end })
 			ns.arrival.Flush()
 			toast.Show = show
-			t.equal(shown.heading, "1 QUEST TO TURN IN  ·  7 TO-DOS", "the counts as its heading")
-			t.equal(shown.text, "Ironforge", "the zone as its line, like other toasts")
+			t.equal(shown.heading, nil, "no heading")
+			t.ok(shown.text == "Ironforge" and shown.textFont == "GameFontNormalHuge", "the zone is the headline, large")
 			t.equal(shown.atlas, nil, "no icon on the zone line (the sections have them)")
 			local texts = {}
 			for _, line in ipairs(shown.lines) do
 				table.insert(texts, (line.header and "# " or "") .. line.text)
 			end
-			local expected = { "# QUESTS", "The Missing Diplomat", "# TO-DO", "one", "two", "three", "four", "five",
+			local expected = { "# QUESTS (1)", "The Missing Diplomat", "# TO-DO (7)", "one", "two", "three", "four", "five",
 				"|cff999999and 2 more|r" }
 			t.equal(table.concat(texts, " | "), table.concat(expected, " | "), "a section per part, quests first, at most five each")
 			t.equal(shown.lines[1].atlas, "quest", "the section's icon")

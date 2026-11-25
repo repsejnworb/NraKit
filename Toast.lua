@@ -6,7 +6,9 @@ local _, ns = ...
 --   style = "big" | "small",  big: a heading, a large line with an icon and a detail line, with a
 --                             pop (Farm goals' "Goal complete"); small: quieter and lower (a
 --                             milestone, "3 quests to turn in here")
---   heading, text, detail,    the lines (detail is optional; without text, the list follows the heading)
+--   heading, text, detail,    the lines (each optional: without a heading the text is at the top,
+--                             without text the list follows the heading)
+--   textFont = font object,   for the text, e.g. "GameFontNormalHuge" (a zone's name)
 --   lines = { "..." or { text, onClick, header, icon / atlas, iconColor }, ... },
 --                             a list under it: one group, centred under the text, as wide as its
 --                             longest line but no wider than the text above it (long lines wrap),
@@ -239,6 +241,7 @@ local function Display(spec)
 	local frame = table.remove(free[style]) or CreateToastFrame(style)
 	frame.heading:SetText(spec.heading or "")
 	frame.heading:SetTextColor(unpack(spec.headingColor or UI.ACCENT))
+	frame.text:SetFontObject(spec.textFont or (style == "big" and "GameFontNormalHuge" or "GameFontNormalLarge"))
 	frame.text:SetText(spec.text or "")
 	frame.detail:SetText(spec.detail or "")
 	frame.detail:SetShown(spec.detail ~= nil)
@@ -255,7 +258,11 @@ local function Display(spec)
 	frame.icon:SetShown(hasIcon)
 	local shift = hasIcon and (frame.iconSize + 8) / 2 or 0
 	frame.text:ClearAllPoints()
-	frame.text:SetPoint("TOP", frame.heading, "BOTTOM", shift, style == "big" and -8 or -4)
+	if spec.heading then
+		frame.text:SetPoint("TOP", frame.heading, "BOTTOM", shift, style == "big" and -8 or -4)
+	else
+		frame.text:SetPoint("TOP", frame.inner, "TOP", shift, 0) -- the text is the headline
+	end
 	frame.icon:ClearAllPoints()
 	frame.icon:SetPoint("RIGHT", frame.text, "LEFT", -8, 0)
 	frame.detail:ClearAllPoints()
@@ -326,12 +333,11 @@ end
 -- (quests to turn in, to-dos). Features add their part as they notice; parts within a moment
 -- of each other share one message. Dropped in combat (stale by the end of the fight).
 --
--- ns.arrival.Add{ zone = "Ironforge", counts = { "|cff..1 QUEST TO TURN IN|r", ... }, title =
---   "|cff..QUESTS|r", icon = file / atlas = name, iconColor = { r, g, b }?, names = { ... }, onClick = function,
+-- ns.arrival.Add{ zone = "Ironforge", title = "|cff..QUESTS (2)|r", icon = file / atlas = name,
+--   iconColor = { r, g, b }?, names = { ... }, onClick = function,
 --   order = number (lower first; quests 1, reminders and to-dos 2) }
--- Shown like other toasts: every part's counts as its heading ("1 QUEST TO TURN IN · 2 TO-DOS",
--- in their colours), the zone as its line, then the sections as one group centred under it:
--- each its title in small capitals after its icon, and its names under the title, one per line.
+-- Shown as the zone's name (large), then the sections as one group centred under it: each its
+-- title in small capitals after its icon, and its names under the title, one per line.
 ------------------------------------------------------------------------------
 
 local arrival = {}
@@ -348,14 +354,11 @@ function arrival.Flush()
 	table.sort(parts, function(a, b)
 		return (a.order or 9) < (b.order or 9)
 	end)
-	local zones, seen, counts, lines, clicks = {}, {}, {}, {}, {}
+	local zones, seen, lines, clicks = {}, {}, {}, {}
 	for _, part in ipairs(parts) do
 		if part.zone and not seen[part.zone] then
 			seen[part.zone] = true
 			table.insert(zones, part.zone)
-		end
-		for _, count in ipairs(part.counts or {}) do
-			table.insert(counts, count)
 		end
 		table.insert(lines, { text = part.title, header = true, icon = part.icon, atlas = part.atlas, iconColor = part.iconColor,
 			onClick = part.onClick })
@@ -372,8 +375,8 @@ function arrival.Flush()
 	toast.Show({
 		style = "small",
 		key = "arrival:" .. table.concat(zones, ","), -- zoning in and out doesn't show it again
-		heading = table.concat(counts, "  ·  "),
-		text = table.concat(zones, " · "),
+		text = table.concat(zones, " · "), -- the headline
+		textFont = "GameFontNormalHuge",
 		lines = lines,
 		duration = 6 + math.min(4, #lines * 0.5), -- a longer list stays a little longer
 		-- Clicking the message opens all of it (a line opens just what it's about).

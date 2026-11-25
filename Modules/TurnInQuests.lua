@@ -392,12 +392,11 @@ end
 ------------------------------------------------------------------------------
 
 -- Its part of the message when you enter a zone (shared with other features, see Toast.lua):
--- "1 QUEST TO TURN IN", then a QUESTS section with the quests. Click to open the list.
+-- a QUESTS (3) section with the quests, under the zone's name. Click to open the list.
 local function ShowReminderToast(zoneName, titles)
 	ns.arrival.Add({
 		zone = zoneName,
-		counts = { string.format("|cffffd100%d %s|r", #titles, #titles == 1 and "QUEST TO TURN IN" or "QUESTS TO TURN IN") },
-		title = "|cffffd100QUESTS|r",
+		title = string.format("|cffffd100QUESTS (%d)|r", #titles),
 		atlas = "UI-QuestIcon-TurnIn-Normal",
 		names = titles,
 		order = 1,

@@ -592,8 +592,8 @@ return {
 			wow.fire("ZONE_CHANGED_NEW_AREA")
 			local todo = Mine("pick up the mats")
 			t.equal(todo.state, "due", "there: on the list")
-			t.ok(shown and shown.heading == "|cff66bfff1 TO-DO|r" and shown.text == "Ironforge"
-				and shown.lines[1].text == "|cff66bfffTO-DO|r" and shown.lines[1].header
+			t.ok(shown and shown.text == "Ironforge"
+				and shown.lines[1].text == "|cff66bfffTO-DO (1)|r" and shown.lines[1].header
 				and shown.lines[2].text == "pick up the mats", "and a message for arriving: 1 TO-DO, Ironforge, a TO-DO section")
 			ns.toast.Show = show
 			reminders.MoveTo(todo.id, 1)
@@ -655,8 +655,7 @@ return {
 			wow.fire("ZONE_CHANGED_NEW_AREA")
 			ns.toast.Show = show
 			t.ok(shown, "a message")
-			t.equal(shown.heading, "|cffff99331 REMINDER|r  ·  |cff66bfff1 TO-DO|r", "both counted")
-			t.equal(shown.lines[1].text, "|cffff9933REMINDERS|r & |cff66bfffTO-DO|r", "one section for both")
+			t.equal(shown.lines[1].text, "|cffff9933REMINDERS (1)|r & |cff66bfffTO-DO (1)|r", "one section for both, counted")
 			t.equal(shown.lines[2].text, "see the druid trainer", "the reminder first")
 			t.equal(shown.lines[3].text, "buy a moonberry juice", "then the to-do")
 			NraKitRemindersCard:Hide()

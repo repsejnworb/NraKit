@@ -825,8 +825,8 @@ function reminders.CheckLeaving()
 	end
 end
 
--- Zone reminders and to-dos that just came due join the message for entering the zone: their
--- counts, and a section headed REMINDERS & TO-DO (or just the one there is), reminders first.
+-- Zone reminders and to-dos that just came due join the message for entering the zone: a
+-- section headed REMINDERS (1) & TO-DO (2) (or just the one there is), reminders first.
 local function AnnounceArrival(fresh)
 	if not ns:GetOption("remindersArrivalToast") then
 		return
@@ -841,14 +841,12 @@ local function AnnounceArrival(fresh)
 	if #loud + #quiet == 0 then
 		return
 	end
-	local counts, titles, names = {}, {}, {}
+	local titles, names = {}, {}
 	if #loud > 0 then
-		table.insert(counts, reminders.Coloured("reminder", #loud .. (#loud == 1 and " REMINDER" or " REMINDERS")))
-		table.insert(titles, reminders.Coloured("reminder", "REMINDERS"))
+		table.insert(titles, reminders.Coloured("reminder", string.format("REMINDERS (%d)", #loud)))
 	end
 	if #quiet > 0 then
-		table.insert(counts, reminders.Coloured("todo", #quiet .. (#quiet == 1 and " TO-DO" or " TO-DOS")))
-		table.insert(titles, reminders.Coloured("todo", "TO-DO"))
+		table.insert(titles, reminders.Coloured("todo", string.format("TO-DO (%d)", #quiet)))
 	end
 	for _, list in ipairs({ loud, quiet }) do
 		for _, text in ipairs(list) do
@@ -857,7 +855,6 @@ local function AnnounceArrival(fresh)
 	end
 	ns.arrival.Add({
 		zone = zone,
-		counts = counts,
 		title = table.concat(titles, " & "),
 		atlas = "checkmark-minimal", -- flat, like the quests' "?"
 		iconColor = #quiet > 0 and TODO_COLOUR or REMINDER_COLOUR,
