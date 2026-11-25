@@ -391,15 +391,15 @@ end
 -- Entering a zone
 ------------------------------------------------------------------------------
 
--- The small message for a zone: "QUESTS TO TURN IN / Wetlands · 3 quests", the names under it.
+-- Its part of the message when you enter a zone (shared with other features, see Toast.lua):
+-- "WETLANDS / 3 quests to turn in", the names under it. Click to open the list.
 local function ShowReminderToast(zoneName, titles)
-	ns.toast.Show({
-		style = "small",
-		heading = "QUESTS TO TURN IN",
-		text = string.format("%s  ·  %d %s", zoneName, #titles, #titles == 1 and "quest" or "quests"),
+	ns.arrival.Add({
+		zone = zoneName,
+		text = string.format("%d %s to turn in", #titles, #titles == 1 and "quest" or "quests"),
+		names = titles,
 		atlas = "UI-QuestIcon-TurnIn-Normal",
-		detail = table.concat(titles, ", "),
-		duration = 6,
+		order = 1,
 		onClick = function()
 			turnIn.Toggle(true)
 		end,
@@ -417,6 +417,7 @@ ns:RegisterPreview("turnin", "Quests to turn in: the message when you enter a zo
 		titles = { "The Doomed Fleet", "Seeking Caitlin", "Unrequited Love" }
 	end
 	ShowReminderToast(zone and zone.zone or "Wetlands", titles)
+	ns.arrival.Flush()
 end)
 
 local function OnZoneChanged()

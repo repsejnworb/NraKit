@@ -400,6 +400,9 @@ local function RefreshForm()
 	form.loginNote:SetText(quiet and not other and "On your to-do list right away."
 		or other and "The next time they log in." or "The next time you log in.")
 	form.title:SetText(quiet and "New to-do" or "New reminder")
+	local stayShown = quiet and ns:GetOption("remindersZoneLeave") == true
+	form.stay:SetShown(stayShown)
+	form.stayLabel:SetShown(stayShown)
 	form.addButton.text:SetText(quiet and "Add to-do" or "Add reminder")
 
 	-- Zones: here, then the ones whose name has what you typed.
@@ -444,6 +447,7 @@ local function SubmitForm()
 		end
 	elseif spec.kind == "zone" then
 		spec.zone = strtrim(form.zoneBox:GetText() or "")
+		spec.stay = form.quiet and form.stay:GetChecked() or nil
 	elseif spec.kind == "level" then
 		spec.level = tonumber(form.levelBox:GetText())
 	end
@@ -601,6 +605,11 @@ local function CreateForm()
 		form.zoneMatches[index] = button
 		anchor = button
 	end
+	-- A to-do for a zone: whether it stays on the list when you leave.
+	form.stay = reminders.CreateCheck(zoned, function() end)
+	form.stay:SetPoint("TOPLEFT", 2, -100)
+	form.stayLabel = MakeLabel(zoned, "Keep it on the list when I leave the zone", "GameFontHighlightSmall")
+	form.stayLabel:SetPoint("LEFT", form.stay, "RIGHT", 8, 0)
 	form.details.zone = zoned
 
 	local leveled = Details()
@@ -658,6 +667,7 @@ function OpenForm()
 	form.kind, form.unit, form.character = "login", "m", ns:PlayerName()
 	form.quiet = AddingQuiet() -- like the switch at the top
 	form.textBox:SetText("")
+	form.stay:SetChecked(false)
 	form.amountBox:SetText("30")
 	form.zoneBox:SetText("")
 	form.levelBox:SetText(math.min((UnitLevel("player") or 1) + 1, GetMaxPlayerLevel and GetMaxPlayerLevel() or 999))

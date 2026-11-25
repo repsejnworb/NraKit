@@ -14,6 +14,13 @@ local LOG = {
 local MAPS = { [1437] = "Wetlands", [1434] = "Stranglethorn Vale", [1432] = "Loch Modan" }
 local opened, superTracked, linked = {}, 0, {}
 
+-- The shared arrival message waits a moment for other features' parts: run that at once.
+C_Timer.After = function(_, callback)
+	if debug.getinfo(callback, "S").source:find("Toast", 1, true) then
+		callback()
+	end
+end
+
 return {
 	enable = { "turnInQuests" },
 	run = function(t, ns, wow)
@@ -184,8 +191,8 @@ return {
 		t.test("entering a zone with turn-ins shows a toast (once); clicking it opens the list", function()
 			wow.data.zone = "Wetlands"
 			wow.fire("ZONE_CHANGED_NEW_AREA")
-			local toast = Shown("Wetlands  ·  1 quest")
-			t.ok(toast, "toast")
+			local toast = Shown("1 quest to turn in")
+			t.ok(toast and Shown("WETLANDS"), "toast, headed by the zone")
 			t.ok(Shown("The Doomed Fleet"), "with the quest")
 			t.ok(not Printed("to turn in here in Wetlands"), "no chat line by default")
 			local holder = wow.findAll(function(frame)

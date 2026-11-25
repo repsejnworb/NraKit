@@ -60,7 +60,7 @@ Running around with finished quests you forgot about? **/nra done** (or a key un
 - **Click** a quest to open the map on it (its turn-in shows there, and the list stays open).
 - **Right-click** it, or click its **round quest icon** (as in the objective tracker), to make it your **waypoint**.
 - **Shift+click** to link it.
-- Entering a zone where you have quests to turn in **pops a small message** (click it to open the list; a chat line is optional), and can open the list itself (off by default).
+- Entering a zone where you have quests to turn in **pops a small message**, headed by the zone and shared with your to-dos there (click it to open the list; a chat line is optional), and can open the list itself (off by default).
 
 ![questsDoneList](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/questsDoneList.png)
 ![questTurninReminderToast](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/questTurninReminderToast.png)
@@ -153,7 +153,7 @@ Notes to yourself that come back when they're due. **/nra remind Go to Darkshore
 - **Later instead:** a time (**/nra remind 30m check the AH**; s, m, h, d), a zone (**in Darkshore: ...**, straight away if you're there), a level (**at 30: ...**), or **another character's next login** (**@Bankalt: mail the bags**, also with a trigger). The same works for to-dos.
 - Shift-clicked items and quests work in the text.
 - **Reminders** show on a **card that stays until you close it**, led by **why** each came due (you entered Darkshore, time's up, from Bankalt); at login it also lists the reminders still open from before. They wait for combat to end, and play a sound you can pick.
-- **To-dos** skip the card: they go straight on the list.
+- **To-dos** skip the card: they go straight on the list. **Zone to-dos** are on the list while you're there: leave and a short countdown takes them off, and they come back when you return (with a small message for arriving).
 - **The list on screen** holds both until you tick them, reminders and to-dos in their own parts, **in your order** (drag a row, or use its arrows). Tags say where, when or who from, and zone tags turn green while you're there. Ticked ones fade out. Fold it with a click on its header; **/nra todo** or a key brings it back if you hid it.
 - Set the list's size, background opacity (header and items together or apart), overall opacity, how many rows it shows, which way it grows (down or up), hide its header, and lock it or hide it in combat.
 - The **Reminders & To-do tab** (**/nra remind**) lists them all, with the ones you left your other characters. Edit them there, or right-click to be reminded again later. Click **Add** with the box empty for a **form** to pick when (a time, a zone from a list, a level), for which character, and whether it pops up.

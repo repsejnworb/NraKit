@@ -47,6 +47,31 @@ local module = {
 			default = "kit:ALARM_CLOCK_WARNING_3",
 		},
 		{
+			key = "remindersZoneLeave",
+			header = "Zone to-dos",
+			name = "Leave the list when you leave the zone",
+			description = "A to-do for a zone (/nra todo in Ironforge: ...) is on the list while you're there. When you leave, a countdown starts and then it goes back to waiting; it comes back (in its place) when you return. Right-click one to keep it on the list anyway.",
+			default = true,
+		},
+		{
+			key = "remindersZoneLeaveDelay",
+			parent = "remindersZoneLeave",
+			type = "number",
+			name = "After",
+			description = "How long after you leave the zone (coming back in time keeps it).",
+			default = 10,
+			min = 0,
+			max = 60,
+			step = 1,
+			format = "%d s",
+		},
+		{
+			key = "remindersArrivalToast",
+			name = "Say so when you get there",
+			description = "A small message (no sound) when you enter the zone of to-dos, together with Quests to turn in's.",
+			default = true,
+		},
+		{
 			key = "remindersTracker",
 			header = "List on screen",
 			name = "Keep reminders on the list",
@@ -307,6 +332,7 @@ function reminders.Add(spec, character)
 		zone = spec.zone,
 		level = spec.level,
 		quiet = spec.quiet or nil,
+		stay = spec.stay or nil,
 		created = time(),
 		state = "waiting",
 	}
@@ -357,7 +383,7 @@ end
 
 -- Makes a reminder due now, at the bottom of the list.
 local function MakeDue(reminder, list)
-	reminder.order = NextOrder(list)
+	reminder.order = reminder.order or NextOrder(list) -- a zone to-do coming back keeps its place
 	reminder.state, reminder.dueAt = "due", time()
 end
 
@@ -395,6 +421,15 @@ function reminders.Section(reminder)
 		end
 	end
 	return section
+end
+
+-- A zone to-do that stays on the list when you leave the zone.
+function reminders.SetStay(id, stay)
+	local reminder = reminders.Find(id)
+	if reminder then
+		reminder.stay = stay or nil
+		Changed()
+	end
 end
 
 -- Moves one of your due reminders to `index` in its section (1 is the top). The other section
@@ -681,6 +716,16 @@ local function CurrentZones()
 	return zones
 end
 
+-- The zone's name as the game writes it ("ironforge" -> "Ironforge"), if you're there.
+local function ZoneHere(lowerName)
+	for _, get in ipairs({ GetRealZoneText, GetZoneText, GetSubZoneText, GetMinimapZoneText }) do
+		local name = get and get()
+		if type(name) == "string" and name:lower() == lowerName then
+			return name
+		end
+	end
+end
+
 -- Marks your waiting reminders that are due now. how: "login" (the session's first check:
 -- login reminders count, and timed ones that passed were while you were away), "zone" or
 -- nil. Returns the ones that came due.
@@ -699,6 +744,9 @@ local function Evaluate(how)
 			elseif reminder.kind == "zone" then
 				local zone = (reminder.zone or ""):lower()
 				due = zones[zone] == true -- while you're there, also when you write it there
+				if due then
+					reminder.zone = ZoneHere(zone) or reminder.zone -- as the game writes it
+				end
 			elseif reminder.kind == "level" then
 				due = level >= (reminder.level or 0)
 			end
@@ -709,6 +757,72 @@ local function Evaluate(how)
 		end
 	end
 	return fresh
+end
+
+-- Zone to-dos you've left: reminder -> GetTime() you left. After the delay they go back to
+-- waiting (keeping their place in the list) and fade off it; back in time, they stay.
+local leaving = {}
+
+function reminders.LeftAgo(reminder)
+	return leaving[reminder] and GetTime() - leaving[reminder]
+end
+
+function reminders.CheckLeaving()
+	if not ns:GetOption("remindersZoneLeave") then
+		wipe(leaving)
+		return
+	end
+	local zones, now = CurrentZones(), GetTime()
+	local delay = ns:GetValue("remindersZoneLeaveDelay") or 10
+	local changed = false
+	for _, reminder in ipairs(reminders.List()) do
+		if reminder.state == "due" and reminder.quiet and reminder.kind == "zone" and reminder.zone and not reminder.stay then
+			if zones[reminder.zone:lower()] then
+				leaving[reminder] = nil
+			else
+				leaving[reminder] = leaving[reminder] or now
+				if now - leaving[reminder] >= delay then
+					leaving[reminder] = nil
+					reminder.state, reminder.dueAt = "waiting", nil
+					if tracker then
+						tracker.fading[reminder] = now
+					end
+					changed = true
+				end
+			end
+		else
+			leaving[reminder] = nil
+		end
+	end
+	if changed then
+		Changed()
+		C_Timer.After(TICKED_FADE + 0.1, RefreshTracker) -- then close up the list
+	end
+end
+
+-- Zone to-dos that just came due join the message for entering the zone.
+local function AnnounceArrival(fresh)
+	if not ns:GetOption("remindersArrivalToast") then
+		return
+	end
+	local names, zone = {}, nil
+	for _, reminder in ipairs(fresh) do
+		if reminder.quiet and reminder.kind == "zone" and reminder.zone then
+			zone = zone or ZoneHere(reminder.zone:lower()) or reminder.zone
+			table.insert(names, reminder.text)
+		end
+	end
+	if #names > 0 then
+		ns.arrival.Add({
+			zone = zone,
+			text = string.format("%d %s", #names, #names == 1 and "to-do" or "to-dos"),
+			names = names,
+			order = 2,
+			onClick = function()
+				reminders.ShowTracker()
+			end,
+		})
+	end
 end
 
 -- Shows the card for reminders that just came due (after combat), with the sound. At login it
@@ -750,8 +864,10 @@ function reminders.Check(how)
 		Changed()
 		if how ~= "login" then
 			ShowDue(fresh)
+			AnnounceArrival(fresh)
 		end
 	end
+	reminders.CheckLeaving()
 	return fresh
 end
 
@@ -823,6 +939,13 @@ local function OpenRowMenu(owner, reminder)
 			end)
 			root:CreateButton("Move to bottom", function()
 				reminders.Move(reminder.id, 1, true)
+			end)
+		end
+		if reminder.quiet and reminder.kind == "zone" and ns:GetOption("remindersZoneLeave") then
+			root:CreateCheckbox("Keep it on the list outside " .. (reminder.zone or "the zone"), function()
+				return reminder.stay == true
+			end, function()
+				reminders.SetStay(reminder.id, not reminder.stay)
 			end)
 		end
 		root:CreateButton(reminder.quiet and "Make it a reminder (pops up)" or "Make it a to-do (no pop-up)", function()
@@ -1015,7 +1138,13 @@ function reminders.Tag(reminder)
 	end
 	if reminder.kind == "zone" and reminder.zone then
 		local here = CurrentZones()[reminder.zone:lower()]
-		table.insert(parts, (here and "|cff4cd94c" or "|cffffd100") .. reminder.zone .. "|r")
+		local tag = (here and "|cff4cd94c" or "|cffffd100") .. reminder.zone .. "|r"
+		local left = reminders.LeftAgo(reminder)
+		if left then -- counting down to leaving the list
+			local rest = math.max(0, math.ceil((ns:GetValue("remindersZoneLeaveDelay") or 10) - left))
+			tag = tag .. " |cff998844" .. rest .. "|r"
+		end
+		table.insert(parts, tag)
 	elseif not reminder.quiet and reminder.kind == "time" and reminder.at then
 		table.insert(parts, "|cffffd100" .. date("%H:%M", reminder.at) .. "|r")
 	elseif not reminder.quiet and reminder.kind == "level" and reminder.level then
@@ -1441,21 +1570,28 @@ local function CreateTracker()
 
 	tracker.rows = {}
 	local function OnTick(row, checked)
-		tracker.ticked[row.reminder] = checked and GetTime() or nil
+		tracker.fading[row.reminder] = checked and GetTime() + TICKED_STAY or nil
 		reminders.SetDone(row.reminderID, checked)
 		if checked then
 			C_Timer.After(TICKED_STAY + TICKED_FADE, RefreshTracker)
 		end
 	end
 	-- Ticked rows fade out, then the list closes up.
-	tracker:SetScript("OnUpdate", function(self)
+	tracker:SetScript("OnUpdate", function(self, elapsed)
+		-- Zone to-dos counting down after you left: tick the count, take them off at the end.
+		self.leaveClock = (self.leaveClock or 0) + (elapsed or 0)
+		if next(leaving) and self.leaveClock >= 0.25 then
+			self.leaveClock = 0
+			reminders.CheckLeaving()
+			RefreshTracker()
+		end
 		if self.headerHidden then -- shown while the mouse is over the list (or on it)
 			self.header:SetShown(self:IsMouseOver() or self.header:IsMouseOver())
 		end
 		local now = GetTime()
 		for _, row in ipairs(self.rows) do
-			local tickedAt = row:IsShown() and row.reminder and self.ticked[row.reminder]
-			row:SetAlpha(tickedAt and math.max(0, 1 - (now - tickedAt - TICKED_STAY) / TICKED_FADE) or 1)
+			local fadeAt = row:IsShown() and row.reminder and self.fading[row.reminder]
+			row:SetAlpha(fadeAt and math.max(0, math.min(1, 1 - (now - fadeAt) / TICKED_FADE)) or 1)
 		end
 	end)
 	-- Rows are made as the list needs them (up to the most rows shown).
@@ -1470,7 +1606,9 @@ local function CreateTracker()
 	end
 	tracker.more = tracker:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	tracker.list = {}
-	tracker.ticked = {} -- reminder -> GetTime() it was ticked here: it stays a moment, dimmed, then fades
+	-- reminder -> GetTime() it starts fading off the list: ticked here (after a moment, to untick
+	-- a slip) or a zone to-do you left.
+	tracker.fading = {}
 	-- Coming back after combat (or while fading out for it): fade in. Otherwise just show.
 	function tracker:ShowFaded(alpha)
 		if self.fadeIn or UI.IsFadingOut(self) then
@@ -1493,8 +1631,8 @@ function RefreshTracker()
 	end
 	local fading = false
 	if tracker then
-		for reminder, tickedAt in pairs(tracker.ticked) do
-			fading = fading or (reminder.state == "done" and GetTime() - tickedAt < TICKED_STAY + TICKED_FADE)
+		for reminder, fadeAt in pairs(tracker.fading) do
+			fading = fading or (reminder.state ~= "due" and GetTime() < fadeAt + TICKED_FADE)
 		end
 	end
 	local combatHidden = inCombat and ns:GetOption("remindersListHideInCombat")
@@ -1508,7 +1646,7 @@ function RefreshTracker()
 		if tracker then
 			UI.StopFade(tracker)
 			tracker:Hide()
-			tracker.list, tracker.ticked = {}, {}
+			tracker.list, tracker.fading = {}, {}
 		end
 		return
 	end
@@ -1545,17 +1683,17 @@ function RefreshTracker()
 		tracker.headerBorder.sides[side]:SetShown(side ~= headerSeam or headerDraws or headerHidden)
 		tracker.itemsBorder.sides[side]:SetShown(side ~= itemsSeam or not headerDraws or headerHidden)
 	end
-	-- In your order, with the ones you ticked here where they were.
+	-- In your order, with the ones fading off it (ticked here, or left behind) where they were.
 	local list = {}
 	for _, reminder in ipairs(due) do
 		table.insert(list, reminder)
 	end
 	local now = GetTime()
-	for reminder, tickedAt in pairs(tracker.ticked) do
-		if reminder.state == "done" and now - tickedAt < TICKED_STAY + TICKED_FADE and reminders.Find(reminder.id) then
+	for reminder, fadeAt in pairs(tracker.fading) do
+		if reminder.state ~= "due" and now < fadeAt + TICKED_FADE and reminders.Find(reminder.id) then
 			table.insert(list, reminder)
-		else
-			tracker.ticked[reminder] = nil
+		elseif reminder.state ~= "due" or now >= fadeAt + TICKED_FADE then
+			tracker.fading[reminder] = nil
 		end
 	end
 	table.sort(list, function(a, b)
@@ -1567,7 +1705,15 @@ function RefreshTracker()
 	tracker.list = list
 	local folded = NraKitDB.remindersTrackerFolded == true
 	tracker.arrow:SetRotation(folded and 0 or -math.pi / 2)
-	tracker.title:SetText(string.format("Reminders & To-do (%d)", #due))
+	-- Zone to-dos waiting for you to get there: counted, so you know they're not lost.
+	local elsewhere = 0
+	for _, reminder in ipairs(reminders.List()) do
+		if reminder.state == "waiting" and reminder.quiet and reminder.kind == "zone" then
+			elsewhere = elsewhere + 1
+		end
+	end
+	tracker.title:SetText(string.format("Reminders & To-do (%d)%s", #due,
+		elsewhere > 0 and string.format("  |cff888888· %d elsewhere|r", elsewhere) or ""))
 	for _, row in ipairs(tracker.rows) do
 		row:Hide()
 	end
@@ -1718,6 +1864,16 @@ end
 
 -- Adds a checked spec (reminders.Validate) and says so in chat.
 function reminders.Commit(spec)
+	if spec.kind == "zone" then
+		-- Written the way the game does ("ironforge" -> "Ironforge"), when it knows the zone.
+		local lower = spec.zone:lower()
+		for _, name in ipairs(reminders.ZoneNames()) do
+			if name:lower() == lower then
+				spec.zone = name
+			end
+		end
+		spec.zone = ZoneHere(lower) or spec.zone
+	end
 	local reminder = reminders.Add(spec, spec.character)
 	Confirm(reminder, spec)
 	if spec.quiet and spec.kind == "login" and not spec.character then

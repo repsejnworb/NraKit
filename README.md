@@ -129,6 +129,8 @@ Fleet, ...").
 A button next to the bag sort button (separate or combined bags) **highlights your least valuable bag
 slots** (vendor price × stack size).
 
+  The message is headed by the zone and shares one message with your **to-dos** there (Reminders &
+  to-dos).
 - Ranked from red to yellow, with rank numbers and sell values.
 - Everything else is dimmed; the bags work as normal underneath.
 - **Alt+click** an item to leave it out of the ranking; the ignore list is editable in the options.
@@ -274,6 +276,10 @@ pops up the next time you log in; `/nra todo respec` just goes on your **to-do l
   card also lists the reminders still open from before, under a line. They wait for combat to end, and
   play a sound (pick it in the settings).
 - **To-dos** skip the card and the sound: they go straight on the list when they come due.
+- **Zone to-dos** are on the list while you're there. Leave and a little countdown starts (10 s, a
+  setting); then they go back to waiting, and come back in their place when you return. The header
+  says how many are elsewhere. Right-click one to keep it on the list anyway.
+- Arriving in a zone with to-dos says so in a small message (no sound), shared with Quests to turn in.
 - **The list on screen** ("Reminders & To-do") holds both until you tick them (reminders after their
   card, an option), in two parts: **REMINDERS** first, then **TO DO**.
   - A coloured tag says where, when or who from (`Ironforge:`, `21:30:`, `Bankalt:`). Zone tags turn

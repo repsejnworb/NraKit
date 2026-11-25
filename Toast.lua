@@ -165,3 +165,56 @@ end
 function toast.IsShowing(style)
 	return frames[style] ~= nil and frames[style]:IsShown()
 end
+
+------------------------------------------------------------------------------
+-- Arrival: one small message when you enter a zone, with what features have for you there
+-- (quests to turn in, to-dos). Features add their part as they notice; parts within a moment
+-- of each other share one message. Dropped in combat (stale by the end of the fight).
+--
+-- ns.arrival.Add{ zone = "Ironforge", text = "2 to-dos", names = { ... }, onClick = function?,
+--   atlas = icon?, order = number (lower first; quests 1, to-dos 2) }
+------------------------------------------------------------------------------
+
+local arrival = {}
+ns.arrival = arrival
+local pending = {}
+
+function arrival.Flush()
+	local parts = pending
+	pending = {}
+	if #parts == 0 or InCombatLockdown() then
+		return
+	end
+	table.sort(parts, function(a, b)
+		return (a.order or 9) < (b.order or 9)
+	end)
+	local zones, seen, texts, names, onClick, atlas = {}, {}, {}, {}, nil, nil
+	for _, part in ipairs(parts) do
+		if part.zone and not seen[part.zone] then
+			seen[part.zone] = true
+			table.insert(zones, part.zone)
+		end
+		table.insert(texts, part.text)
+		for _, name in ipairs(part.names or {}) do
+			table.insert(names, name)
+		end
+		onClick = onClick or part.onClick
+		atlas = atlas or part.atlas
+	end
+	toast.Show({
+		style = "small",
+		heading = table.concat(zones, " · "):upper(),
+		text = table.concat(texts, "  ·  "),
+		atlas = atlas,
+		detail = #names > 0 and table.concat(names, ", ") or nil,
+		duration = 6,
+		onClick = onClick,
+	})
+end
+
+function arrival.Add(part)
+	table.insert(pending, part)
+	if #pending == 1 then
+		C_Timer.After(0.3, arrival.Flush)
+	end
+end

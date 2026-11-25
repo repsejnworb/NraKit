@@ -3,7 +3,8 @@
 
 -- This module's timers run at once; other modules' don't run, as usual here.
 C_Timer.After = function(_, callback)
-	if debug.getinfo(callback, "S").source:find("Reminders", 1, true) then
+	local source = debug.getinfo(callback, "S").source
+	if source:find("Reminders", 1, true) or source:find("Toast", 1, true) then
 		callback()
 	end
 end
@@ -517,6 +518,81 @@ return {
 			end
 			ns:SetSetting("remindersListBackground", 0.95)
 			for _, text in ipairs({ "one", "two", "three" }) do
+				reminders.SetDone(Mine(text).id, true)
+			end
+			wow.data.zone = "Elwynn Forest"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+		end)
+
+		t.test("zone to-dos: a countdown when you leave, then off the list; back (in place, with a message) when you return", function()
+			local function Visible(text)
+				for _, frame in ipairs(wow.frames) do
+					local value = rawget(frame, "text")
+					if type(value) == "table" then
+						value = rawget(value, "text")
+					end
+					if value == text and wow.visible(frame) then
+						return true
+					end
+				end
+			end
+			local tracker = NraKitRemindersTracker
+			wow.data.zone = "Elwynn Forest"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+			local show, shown = ns.toast.Show, nil
+			ns.toast.Show = function(spec)
+				shown = spec
+			end
+			SlashCmdList.NRAKIT("todo first")
+			SlashCmdList.NRAKIT("todo in ironforge: pick up the mats")
+			SlashCmdList.NRAKIT("todo last")
+			wow.data.zone = "Ironforge"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+			local todo = Mine("pick up the mats")
+			t.equal(todo.state, "due", "there: on the list")
+			t.ok(shown and shown.heading == "IRONFORGE" and shown.text == "1 to-do" and shown.detail == "pick up the mats",
+				"and a message for arriving")
+			ns.toast.Show = show
+			reminders.MoveTo(todo.id, 1)
+			local function RowText()
+				for _, row in ipairs(Rows(tracker)) do
+					if row.reminder == todo then
+						return rawget(row.text, "text")
+					end
+				end
+			end
+			wow.data.zone = "Dun Morogh"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+			t.ok(RowText():find("|cffffd100Ironforge|r |cff99884410|r", 1, true), "counting down, the zone as the game writes it: " .. RowText())
+			wow.advance(4)
+			t.ok(RowText():find("|cff9988446|r", 1, true), "6 left: " .. RowText())
+			wow.data.zone = "Ironforge"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+			t.ok(todo.state == "due" and not RowText():find("|cff998844", 1, true), "back in time: stays, no count")
+			wow.data.zone = "Dun Morogh"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+			wow.advance(11)
+			t.equal(todo.state, "waiting", "off the list")
+			t.ok(rawget(tracker.title, "text"):find("elsewhere", 1, true), "the header says some are elsewhere: " .. rawget(tracker.title, "text"))
+			wow.advance(2)
+			reminders.RefreshTracker() -- (the timer for when it has faded)
+			t.equal(RowText(), nil, "faded off")
+			wow.data.zone = "Ironforge"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+			t.equal(reminders.Due()[1], todo, "back, in its place at the top")
+			-- Kept on the list (right-click).
+			local menu
+			MenuUtil.CreateContextMenu = function(_, build)
+				menu = wow.newMenu()
+				build(nil, menu)
+			end
+			reminders.OpenRowMenu(UIParent, todo)
+			wow.menuEntry(menu.entries, "Keep it on the list outside Ironforge").onClick()
+			wow.data.zone = "Dun Morogh"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+			wow.advance(11)
+			t.equal(todo.state, "due", "kept")
+			for _, text in ipairs({ "first", "pick up the mats", "last" }) do
 				reminders.SetDone(Mine(text).id, true)
 			end
 			wow.data.zone = "Elwynn Forest"
