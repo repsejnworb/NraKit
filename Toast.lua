@@ -19,6 +19,8 @@ local _, ns = ...
 --   size = scale,             (default 1)
 --   onClick = function,       makes it clickable (it closes when clicked); otherwise clicks go through
 --   skipIfBusy = true,        drop it instead of waiting when the screen is full of toasts
+--   key = "...",              one of its kind: while a toast with this key is up (or waiting),
+--                             this one isn't shown; the one up stays a while longer instead
 -- }
 -- Toasts stack, up to MAX_SHOWN at once: the newest pops up at the top, always the same place,
 -- and pushes the older ones down (they slide). More wait their turn (a big one first in line);
@@ -263,6 +265,7 @@ local function Display(spec)
 	frame:SetHeight(height)
 	frame.inner:SetHeight(height)
 
+	frame.key = spec.key
 	frame.onClick = spec.onClick
 	frame:EnableMouse(spec.onClick ~= nil)
 	frame.size = spec.size or 1
@@ -281,6 +284,20 @@ function ShowNext()
 end
 
 function toast.Show(spec)
+	if spec.key then
+		for _, frame in ipairs(shown) do
+			if frame.key == spec.key then
+				-- Already up: it stays as if it had just come.
+				frame.holdUntil = math.max(frame.holdUntil, GetTime() + (spec.duration or DEFAULTS[frame.style].duration))
+				return
+			end
+		end
+		for _, waiting in ipairs(queue) do
+			if waiting.key == spec.key then
+				return
+			end
+		end
+	end
 	if #shown < MAX_SHOWN then
 		Display(spec)
 	elseif not spec.skipIfBusy and #queue < MAX_QUEUE then
@@ -349,6 +366,7 @@ function arrival.Flush()
 	end
 	toast.Show({
 		style = "small",
+		key = "arrival:" .. table.concat(zones, ","), -- zoning in and out doesn't show it again
 		heading = table.concat(counts, "  ·  "),
 		text = table.concat(zones, " · "),
 		lines = lines,

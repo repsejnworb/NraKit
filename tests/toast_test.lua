@@ -68,6 +68,18 @@ return {
 			t.noErrors()
 		end)
 
+		t.test("a toast with the same key as one already up isn't shown again; that one stays longer", function()
+			toast.Show({ style = "small", text = "Stranglethorn", key = "arrival:Stranglethorn Vale", duration = 2 })
+			Wait(1.5)
+			toast.Show({ style = "small", text = "Stranglethorn again", key = "arrival:Stranglethorn Vale", duration = 2 })
+			t.ok(not Shown("Stranglethorn again"), "not twice")
+			Wait(1.5)
+			t.ok(Shown("Stranglethorn"), "the first one stayed")
+			toast.Show({ style = "small", text = "Wetlands", key = "arrival:Wetlands" })
+			t.ok(Shown("Wetlands"), "another key shows")
+			Wait(8)
+		end)
+
 		t.test("arriving in a zone: one message, each part a title with its things under it", function()
 			local shown
 			local show = toast.Show
