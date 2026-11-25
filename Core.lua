@@ -23,7 +23,8 @@ ns.moduleOrder = {}
 --                                                                   string.format pattern, or
 --                                                                   a function(value) -> label)
 --               An option with `parent = <option key>` is nested under that checkbox,
---               `header = "..."` starts a new sub-section before the option, and
+--               `header = "..."` starts a new sub-section before the option (`headerColor =
+--               { r, g, b }` colours it in the NraKit window), and
 --               `requires = <module key>` greys it out while that other module is off, and
 --               `disabledBy = <option key>` greys it out while that other option is on (it
 --               takes this one's place).

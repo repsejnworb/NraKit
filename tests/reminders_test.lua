@@ -348,7 +348,7 @@ return {
 			t.ok(not NraKitRemindersCard:IsShown(), "no card")
 			t.equal(#wow.played, 0, "no sound")
 			t.ok(NraKitRemindersTracker:IsShown() and #Rows(NraKitRemindersTracker) == 1, "on the list")
-			t.equal(rawget(NraKitRemindersTracker.title, "text"), "Reminders & To-do (1)", "the list's name")
+			t.equal(rawget(NraKitRemindersTracker.title, "text"), "|cffff9933Reminders|r & |cff66bfffTo-do|r (1)", "the list's name, in the two colours")
 			SlashCmdList.NRAKIT("todo in Ironforge: buy reagents")
 			wow.data.zone = "Ironforge"
 			wow.fire("ZONE_CHANGED_NEW_AREA")
@@ -585,7 +585,7 @@ return {
 			wow.fire("ZONE_CHANGED_NEW_AREA")
 			local todo = Mine("pick up the mats")
 			t.equal(todo.state, "due", "there: on the list")
-			t.ok(shown and shown.heading == "IRONFORGE" and shown.text == "1 to-do" and shown.detail == "pick up the mats",
+			t.ok(shown and shown.heading == "IRONFORGE" and shown.text == "|cff66bfff1 to-do|r" and shown.detail == "pick up the mats",
 				"and a message for arriving")
 			ns.toast.Show = show
 			reminders.MoveTo(todo.id, 1)
@@ -664,6 +664,7 @@ return {
 				end
 			end
 			t.ok(labels["For your other characters"] and labels["Waiting"] and labels["Done"], "sections")
+			t.ok(labels["|cffff9933Reminders|r & |cff66bfffTo-do|r"], "the tab's name in the two colours")
 			t.ok(labels["Bob Stone: next login"], "who and when")
 			t.ok(labels["In 2 h (" .. date("%H:%M", now + 7200) .. ")"], "when a timed one comes")
 			local row = wow.findAll(function(frame)

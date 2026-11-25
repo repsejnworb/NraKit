@@ -24,6 +24,9 @@ local _, ns = ...
 -- `seen` once they log in with Reminders on; reminders for one that hasn't yet are kept
 -- under the name you typed and picked up when they do.
 
+-- Reminders and to-dos each have a colour, used wherever they're named or listed.
+local REMINDER_COLOUR, TODO_COLOUR = { 1, 0.6, 0.2 }, { 0.4, 0.75, 1 }
+
 local module = {
 	key = "reminders",
 	section = "Trackers & Reminders",
@@ -34,6 +37,7 @@ local module = {
 		{
 			key = "remindersSound",
 			header = "Reminders",
+			headerColor = REMINDER_COLOUR,
 			name = "Play a sound",
 			description = "Play a sound when reminders come due.",
 			default = true,
@@ -49,6 +53,7 @@ local module = {
 		{
 			key = "remindersZoneLeave",
 			header = "Zone to-dos",
+			headerColor = TODO_COLOUR,
 			name = "Leave the list when you leave the zone",
 			description = "A to-do for a zone (/nra todo in Ironforge: ...) is on the list while you're there. When you leave, a countdown starts and then it goes back to waiting; it comes back (in its place) when you return. Right-click one to keep it on the list anyway.",
 			default = true,
@@ -223,6 +228,14 @@ local UNITS = { s = 1, m = 60, h = 3600, d = 86400 }
 local UI = ns.UI
 local reminders = {}
 ns.reminders = reminders
+
+reminders.COLOURS = { reminder = REMINDER_COLOUR, todo = TODO_COLOUR }
+
+-- Text in a reminder's or a to-do's colour: reminders.Coloured("todo", "2 to-dos").
+function reminders.Coloured(kind, text)
+	local colour = reminders.COLOURS[kind]
+	return string.format("|cff%02x%02x%02x%s|r", colour[1] * 255, colour[2] * 255, colour[3] * 255, text)
+end
 
 local eventFrame = CreateFrame("Frame")
 local ticker
@@ -828,7 +841,7 @@ local function AnnounceArrival(fresh)
 	if #names > 0 then
 		ns.arrival.Add({
 			zone = zone,
-			text = string.format("%d %s", #names, #names == 1 and "to-do" or "to-dos"),
+			text = reminders.Coloured("todo", string.format("%d %s", #names, #names == 1 and "to-do" or "to-dos")),
 			names = names,
 			order = 2,
 			onClick = function()
@@ -942,7 +955,7 @@ end
 
 local function OpenRowMenu(owner, reminder)
 	MenuUtil.CreateContextMenu(owner, function(_, root)
-		root:CreateTitle(reminder.quiet and "To-do" or "Reminder")
+		root:CreateTitle(reminder.quiet and reminders.Coloured("todo", "To-do") or reminders.Coloured("reminder", "Reminder"))
 		root:CreateButton(reminder.state == "done" and "Not done" or "Done", function()
 			reminders.SetDone(reminder.id, reminder.state ~= "done")
 		end)
@@ -1542,7 +1555,7 @@ local function CreateTracker()
 	for _, key in ipairs({ "loud", "quiet" }) do
 		local label = tracker:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
 		label:SetText(key == "loud" and "REMINDERS" or "TO DO")
-		label:SetTextColor(unpack(key == "loud" and UI.ACCENT or UI.TEXT_DIM))
+		label:SetTextColor(unpack(key == "loud" and REMINDER_COLOUR or TODO_COLOUR))
 		tracker.sections[key] = label
 	end
 	tracker.title:SetPoint("LEFT", 10, 0)
@@ -1753,7 +1766,8 @@ function RefreshTracker()
 			elsewhere = elsewhere + 1
 		end
 	end
-	tracker.title:SetText(string.format("Reminders & To-do (%d)%s", #due,
+	tracker.title:SetText(string.format("%s & %s (%d)%s", reminders.Coloured("reminder", "Reminders"),
+		reminders.Coloured("todo", "To-do"), #due,
 		elsewhere > 0 and string.format("  |cff888888· %d elsewhere|r", elsewhere) or ""))
 	for _, row in ipairs(tracker.rows) do
 		row:Hide()

@@ -216,7 +216,7 @@ local function AddOption(module, option, byKey, x, y, width)
 	if option.header then
 		local header = AcquireText("GameFontNormalSmall")
 		header:SetText(option.header:upper())
-		header:SetTextColor(unpack(ACCENT))
+		header:SetTextColor(unpack(option.headerColor or ACCENT))
 		header:SetPoint("TOPLEFT", content, "TOPLEFT", x - OptionDepth(option, byKey) * INDENT, y - 6)
 		y = y - 22
 	end

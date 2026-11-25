@@ -73,9 +73,16 @@ local function CreateKindSwitch(parent, onPick)
 		chip:SetScript("OnLeave", GameTooltip_Hide)
 		chips[index] = chip
 	end
+	-- The picked one in its colour (orange for reminders, blue for to-dos).
 	function chips:Select(quiet)
 		for _, chip in ipairs(self) do
-			chip:SetSelected(chip.quiet == quiet)
+			local picked = chip.quiet == quiet
+			chip:SetSelected(picked)
+			if picked then
+				local colour = chip.quiet and reminders.COLOURS.todo or reminders.COLOURS.reminder
+				chip.bg:SetColorTexture(colour[1], colour[2], colour[3], 0.25)
+				chip.text:SetTextColor(unpack(colour))
+			end
 		end
 	end
 	return chips
@@ -177,7 +184,6 @@ local function AcquireRow(content)
 	end)
 end
 
-local KIND_COLOURS = { reminder = { 1, 0.6, 0.2 }, todo = { 0.4, 0.75, 1 } }
 
 local function FillRow(row, reminder, when, index, showKind)
 	row.reminder, row.reminderID = reminder, reminder.id
@@ -191,7 +197,7 @@ local function FillRow(row, reminder, when, index, showKind)
 	row.when:SetText(when)
 	row.when:SetTextColor(unpack(reminder.state == "due" and UI.GOLD or UI.TEXT))
 	row.kind:SetText(showKind and (reminder.quiet and "To-do" or "Reminder") or "")
-	row.kind:SetTextColor(unpack(reminder.quiet and KIND_COLOURS.todo or KIND_COLOURS.reminder))
+	row.kind:SetTextColor(unpack(reminder.quiet and reminders.COLOURS.todo or reminders.COLOURS.reminder))
 	if editingID == reminder.id then
 		editBox:ClearAllPoints()
 		editBox:SetPoint("LEFT", row.check, "RIGHT", 14, 0)
@@ -203,7 +209,7 @@ local function FillRow(row, reminder, when, index, showKind)
 	end
 end
 
-local function AddHeader(content, label, count, y, width, onClick)
+local function AddHeader(content, label, count, y, width, onClick, colour)
 	local header = pool:Acquire("header", function()
 		local button = CreateFrame("Button", nil, content)
 		button:SetHeight(HEADER_HEIGHT)
@@ -219,7 +225,7 @@ local function AddHeader(content, label, count, y, width, onClick)
 		return button
 	end)
 	header.text:SetText(label)
-	header.text:SetTextColor(unpack(UI.ACCENT))
+	header.text:SetTextColor(unpack(colour or UI.ACCENT))
 	header.count:SetText(count)
 	header.text:ClearAllPoints()
 	if onClick then
@@ -293,8 +299,8 @@ local function Collect()
 		return (a.reminder.doneAt or 0) > (b.reminder.doneAt or 0)
 	end)
 	return {
-		{ label = "Reminders", rows = now },
-		{ label = "To do", rows = todo },
+		{ label = "Reminders", rows = now, colour = reminders.COLOURS.reminder },
+		{ label = "To do", rows = todo, colour = reminders.COLOURS.todo },
 		{ label = "Waiting", rows = waiting, mixed = true },
 		{ label = "For your other characters", rows = others, mixed = true },
 		{ label = "Done", rows = done, foldable = true, mixed = true },
@@ -326,7 +332,7 @@ function Render()
 				doneOpen = not doneOpen
 				Render()
 			end
-			AddHeader(content, section.label, #section.rows, y, width, onClick)
+			AddHeader(content, section.label, #section.rows, y, width, onClick, section.colour)
 			y = y - HEADER_HEIGHT - 2
 			if not section.foldable or doneOpen then
 				for index, entry in ipairs(section.rows) do
@@ -408,6 +414,7 @@ local function RefreshForm()
 	form.loginNote:SetText(quiet and not other and "On your to-do list right away."
 		or other and "The next time they log in." or "The next time you log in.")
 	form.title:SetText(quiet and "New to-do" or "New reminder")
+	form.title:SetTextColor(unpack(quiet and reminders.COLOURS.todo or reminders.COLOURS.reminder))
 	local stayShown = quiet and ns:GetOption("remindersZoneLeave") == true
 	form.stay:SetShown(stayShown)
 	form.stayLabel:SetShown(stayShown)
@@ -804,6 +811,7 @@ end
 
 UI.RegisterTab({
 	key = "reminders", label = "Reminders & To-do", menuLabel = "Reminders & To-do", order = 7, frameName = "NraKitRemindersFrame",
+	richLabel = reminders.Coloured("reminder", "Reminders") .. " & " .. reminders.Coloured("todo", "To-do"),
 	open = function()
 		if not frame then
 			CreateWindow()

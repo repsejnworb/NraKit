@@ -103,7 +103,8 @@ local tabs = {} -- { key, label, menuLabel, order, frameName, open, module }
 local tabWindows = {} -- tab key -> frame
 local RefreshTabStrip, ShowOffPage
 
--- tab = { key, label, menuLabel? (addon button menu), order, frameName,
+-- tab = { key, label, richLabel? (with colour codes, shown while its feature is on), menuLabel?
+--         (addon button menu), order, frameName,
 --         open = function() shows the window end, module = key of the feature it belongs to (optional) }
 function UI.RegisterTab(tab)
 	table.insert(tabs, tab)
@@ -200,7 +201,8 @@ function RefreshTabStrip(frame)
 			strip.buttons[index] = button
 		end
 		button.tabKey = tab.key
-		button.text:SetText(tab.label)
+		-- richLabel: the label with colours, while its feature is on.
+		button.text:SetText(tab.richLabel and UI.IsTabOn(tab) and tab.richLabel or tab.label)
 		button:SetWidth(button.text:GetStringWidth() + 22)
 		button:SetSelected(tab.key == frame.tabKey)
 		if not UI.IsTabOn(tab) and tab.key ~= frame.tabKey then
