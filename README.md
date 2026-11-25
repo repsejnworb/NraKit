@@ -298,7 +298,8 @@ pops up the next time you log in; `/nra todo respec` just goes on your **to-do l
   minutes, an hour or next login, edit or delete it.
 - The **Reminders & To-do tab** (`/nra remind`) lists them: reminders and to-dos due now, waiting (and
   when they'll come, and whether they pop up), the ones you left your other characters, and done.
-  Click one to edit it. **Show list** and **Settings** are at the bottom.
+  Click one to edit its text; the **gear** on the row (or right-click, **Edit...**) opens it in the form to
+  change everything else. **Show list** and **Settings** are at the bottom.
 - Write new ones in the tab's box in the same words as `/nra remind`, with the **Reminder | To-do**
   switch next to it, or click **Add** with the box empty for a **form**: reminder or to-do, the text,
   when (next login or now, after a time, a zone you pick from a list or type, a level), and which of

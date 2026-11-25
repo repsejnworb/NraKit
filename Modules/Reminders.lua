@@ -721,7 +721,7 @@ function reminders.Validate(spec)
 	if spec.character and NameKey(spec.character) == NameKey(me) then
 		spec.character, spec.known = nil, nil -- @yourself is just a reminder
 	end
-	if spec.kind == "level" and not spec.character and UnitLevel("player") >= spec.level then
+	if spec.kind == "level" and not spec.character and not spec.keepLevel and UnitLevel("player") >= spec.level then
 		return nil, string.format("You're level %d already.", UnitLevel("player"))
 	end
 	return spec
@@ -987,7 +987,7 @@ local function OpenRowMenu(owner, reminder)
 		root:CreateButton("Remind me again next login", function()
 			reminders.Snooze(reminder.id)
 		end)
-		root:CreateButton("Edit", function()
+		root:CreateButton("Edit...", function()
 			if ns.OpenReminders then
 				ns:OpenReminders(reminder.id)
 			end
@@ -1927,17 +1927,58 @@ local function Confirm(reminder, spec)
 	end
 end
 
+-- A zone written the way the game does ("ironforge" -> "Ironforge"), when it knows the zone.
+local function GameZoneName(zone)
+	local lower = zone:lower()
+	for _, name in ipairs(reminders.ZoneNames()) do
+		if name:lower() == lower then
+			zone = name
+		end
+	end
+	return ZoneHere(lower) or zone
+end
+
+-- Changes a reminder to a checked spec (from the form): its text, kind, trigger and whose it
+-- is. A new trigger (or another character) puts it back to waiting; otherwise it stays as it
+-- is (due, or done).
+function reminders.Update(id, spec)
+	local reminder, owner, index = reminders.Find(id)
+	if not reminder then
+		return
+	end
+	local me = ns:PlayerName() or "?"
+	local target = spec.character or me
+	if spec.kind == "zone" then
+		spec.zone = GameZoneName(spec.zone)
+	end
+	local moved = target ~= owner
+	local newTrigger = moved or spec.kind ~= reminder.kind or spec.at ~= reminder.at
+		or (spec.zone or ""):lower() ~= (reminder.zone or ""):lower() or spec.level ~= reminder.level
+	reminder.text, reminder.kind, reminder.at, reminder.zone, reminder.level = spec.text, spec.kind, spec.at, spec.zone, spec.level
+	reminder.quiet, reminder.stay = spec.quiet or nil, spec.stay or nil
+	if moved then
+		table.remove(reminders.List(owner), index)
+		table.insert(reminders.List(target), reminder)
+		reminder.from = target ~= me and me or nil
+		reminder.order = nil
+	end
+	if newTrigger and reminder.state ~= "done" then
+		reminder.state, reminder.dueAt, reminder.away, reminder.since = "waiting", nil, nil, time()
+		if reminder.quiet and reminder.kind == "login" and target == me then
+			MakeDue(reminder, reminders.List()) -- a plain to-do: on the list now
+		end
+	end
+	Changed()
+	if target == me then
+		reminders.Check() -- in that zone already, say: due now
+	end
+	return reminder
+end
+
 -- Adds a checked spec (reminders.Validate) and says so in chat.
 function reminders.Commit(spec)
 	if spec.kind == "zone" then
-		-- Written the way the game does ("ironforge" -> "Ironforge"), when it knows the zone.
-		local lower = spec.zone:lower()
-		for _, name in ipairs(reminders.ZoneNames()) do
-			if name:lower() == lower then
-				spec.zone = name
-			end
-		end
-		spec.zone = ZoneHere(lower) or spec.zone
+		spec.zone = GameZoneName(spec.zone)
 	end
 	local reminder = reminders.Add(spec, spec.character)
 	Confirm(reminder, spec)

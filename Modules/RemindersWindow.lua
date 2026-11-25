@@ -149,10 +149,28 @@ local function AcquireRow(content)
 			reminders.SetDone(box:GetParent().reminder.id, box:GetChecked())
 		end)
 		row.check:SetPoint("LEFT", 8, 0)
-		reminders.AddReorder(row)
+		-- A gear (while the mouse is on the row) opens the whole reminder in the form.
+		row.gear = CreateFrame("Button", nil, row)
+		row.gear:SetSize(16, 16)
+		row.gear:SetPoint("RIGHT", -22, 0)
+		row.gear:SetNormalTexture("Interface\\Buttons\\UI-OptionsButton")
+		row.gear:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
+		row.gear:Hide()
+		row.gear:SetScript("OnClick", function(self)
+			OpenForm(self:GetParent().reminder)
+		end)
+		row.gear:SetScript("OnEnter", function(self)
+			UI.ShowTooltip(self, "Edit", "Change everything about it: when, where, for whom, reminder or to-do.")
+		end)
+		row.gear:SetScript("OnLeave", function(self)
+			GameTooltip:Hide()
+			if not self:GetParent():IsMouseOver() then
+				self:Hide()
+			end
+		end)
 		-- What it is (in the sections that mix them): Reminder or To-do, in colour.
 		row.kind = MakeLabel(row, "", "GameFontNormalSmall")
-		row.kind:SetPoint("RIGHT", -30, 0)
+		row.kind:SetPoint("RIGHT", -44, 0)
 		row.kind:SetJustifyH("RIGHT")
 		row.when = MakeLabel(row, "", "GameFontHighlightSmall")
 		row.when:SetPoint("RIGHT", row.kind, "LEFT", -10, 0)
@@ -176,10 +194,18 @@ local function AcquireRow(content)
 		row:SetScript("OnEnter", function(self)
 			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 			GameTooltip:AddLine(self.reminder.text, 1, 1, 1, true)
-			GameTooltip:AddLine("Click to edit, right-click for more", 0.5, 0.5, 0.5)
+			GameTooltip:AddLine("Click to edit the text, the gear (or right-click, Edit) for the rest", 0.5, 0.5, 0.5)
 			GameTooltip:Show()
+			self.gear:Show()
 		end)
-		row:SetScript("OnLeave", GameTooltip_Hide)
+		row:SetScript("OnLeave", function(self)
+			GameTooltip:Hide()
+			if not self:IsMouseOver() then
+				self.gear:Hide()
+			end
+		end)
+		-- After the scripts above: setting a script drops the hooks made before it.
+		reminders.AddReorder(row)
 		return row
 	end)
 end
@@ -413,12 +439,12 @@ local function RefreshForm()
 	form.whenChips[1].text:SetText(quiet and not other and "Now" or "Next login")
 	form.loginNote:SetText(quiet and not other and "On your to-do list right away."
 		or other and "The next time they log in." or "The next time you log in.")
-	form.title:SetText(quiet and "New to-do" or "New reminder")
+	form.title:SetText((form.editing and "Edit " or "New ") .. (quiet and "to-do" or "reminder"))
 	form.title:SetTextColor(unpack(quiet and reminders.COLOURS.todo or reminders.COLOURS.reminder))
 	local stayShown = quiet and ns:GetOption("remindersZoneLeave") == true
 	form.stay:SetShown(stayShown)
 	form.stayLabel:SetShown(stayShown)
-	form.addButton.text:SetText(quiet and "Add to-do" or "Add reminder")
+	form.addButton.text:SetText(form.editing and "Save changes" or quiet and "Add to-do" or "Add reminder")
 
 	-- Zones: here, then the ones whose name has what you typed.
 	local zone, subzone = reminders.Here()
@@ -470,12 +496,24 @@ local function SubmitForm()
 		spec.character, spec.known = form.character, true
 	end
 	spec.quiet = form.quiet or nil
+	local editing = form.editing
+	if editing and spec.kind == "time" and form.amountBox:GetText() == form.startAmount and form.unit == form.startUnit then
+		spec.at = editing.at -- the time wasn't touched: it stays when it was
+		spec.duration = math.max(1, (spec.at or 0) - time())
+	end
+	if editing and spec.kind == "level" and spec.level == editing.level then
+		spec.keepLevel = true -- unchanged: fine even if you're past it (it came due)
+	end
 	local checked, problem = reminders.Validate(spec)
 	if not checked then
 		form.problem:SetText(problem)
 		return
 	end
-	reminders.Commit(checked)
+	if editing then
+		reminders.Update(editing.id, checked)
+	else
+		reminders.Commit(checked)
+	end
 	form:Hide()
 end
 
@@ -674,11 +712,14 @@ local function CreateForm()
 	end)
 end
 
--- Opens the form, empty: next login (or now, for a to-do), for you.
-function OpenForm()
+-- Opens the form: empty (next login, or now for a to-do, for you), or with a reminder in it to
+-- change.
+function OpenForm(reminder)
 	if not form then
 		CreateForm()
 	end
+	editingID = nil
+	form.editing = reminder
 	form.kind, form.unit, form.character = "login", "m", ns:PlayerName()
 	form.quiet = AddingQuiet() -- like the switch at the top
 	form.textBox:SetText("")
@@ -686,6 +727,31 @@ function OpenForm()
 	form.amountBox:SetText("30")
 	form.zoneBox:SetText("")
 	form.levelBox:SetText(math.min((UnitLevel("player") or 1) + 1, GetMaxPlayerLevel and GetMaxPlayerLevel() or 999))
+	if reminder then
+		local _, owner = reminders.Find(reminder.id)
+		form.kind, form.quiet, form.character = reminder.kind or "login", reminder.quiet == true, owner or ns:PlayerName()
+		form.textBox:SetText(reminder.text)
+		form.stay:SetChecked(reminder.stay == true)
+		form.zoneBox:SetText(reminder.zone or "")
+		if reminder.level then
+			form.levelBox:SetText(reminder.level)
+		end
+		if reminder.kind == "time" and reminder.at and reminder.at > time() then
+			-- The time left, in the largest unit that keeps it whole.
+			local left = reminder.at - time()
+			local minutes = math.max(1, math.ceil(left / 60))
+			if minutes % 1440 == 0 then
+				form.amountBox:SetText(minutes / 1440)
+				form.unit = "d"
+			elseif minutes % 60 == 0 then
+				form.amountBox:SetText(minutes / 60)
+				form.unit = "h"
+			else
+				form.amountBox:SetText(minutes)
+			end
+		end
+	end
+	form.startAmount, form.startUnit = form.amountBox:GetText(), form.unit
 	form.problem:SetText("")
 	form.zoneNames = reminders.ZoneNames()
 	form:Show()
@@ -796,14 +862,17 @@ local function CreateWindow()
 	reminders.onChanged = Render
 end
 
--- Toggles the window; with an id, shows it editing that reminder.
+-- Toggles the window; with an id, shows it with that reminder in the form, to change it.
 function ns:OpenReminders(editID)
 	if not frame then
 		CreateWindow()
 	end
 	if editID then
 		frame:Show()
-		EditText(editID)
+		local reminder = reminders.Find(editID)
+		if reminder then
+			OpenForm(reminder)
+		end
 	else
 		frame:SetShown(not frame:IsShown())
 	end

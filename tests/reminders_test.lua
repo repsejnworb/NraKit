@@ -820,6 +820,72 @@ return {
 			NraKitRemindersFrame:Hide()
 		end)
 
+		t.test("editing everything: right-click Edit or the gear opens the form with it filled in", function()
+			local menu
+			MenuUtil.CreateContextMenu = function(_, build)
+				menu = wow.newMenu()
+				build(nil, menu)
+			end
+			wow.data.zone = "Elwynn Forest"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+			SlashCmdList.NRAKIT("todo in Ironforge: polish the armour")
+			local todo = Mine("polish the armour")
+			reminders.OpenRowMenu(UIParent, todo)
+			wow.menuEntry(menu.entries, "Edit...").onClick()
+			local form = NraKitReminderForm
+			t.ok(form:IsShown(), "the form")
+			t.equal(rawget(rawget(form, "textBox"), "text"), "polish the armour", "its text")
+			t.equal(rawget(rawget(form, "zoneBox"), "text"), "Ironforge", "its zone")
+			wow.type(rawget(form, "textBox"), "polish the boots too")
+			wow.type(rawget(form, "zoneBox"), "Elwynn Forest")
+			t.ok(wow.click("Save changes"), "Save changes")
+			t.ok(not form:IsShown(), "back to the list")
+			t.equal(todo.text, "polish the boots too", "new text")
+			t.equal(todo.zone, "Elwynn Forest", "new zone")
+			t.equal(todo.state, "due", "you're there: due now")
+			t.equal(Mine("polish the armour"), nil, "changed, not added")
+
+			-- A timed one, its text changed: the time stays.
+			Remind("3h water the garden")
+			local timed = Mine("water the garden")
+			local at = timed.at
+			ns:OpenReminders(timed.id)
+			wow.type(rawget(form, "textBox"), "water the roses")
+			wow.click("Save changes")
+			t.ok(timed.text == "water the roses" and timed.at == at, "the time didn't move")
+
+			-- The gear on a row in the tab.
+			local row = wow.findAll(function(frame)
+				return rawget(frame, "reminder") == timed and rawget(frame, "gear") and wow.visible(frame)
+			end)[1]
+			row.scripts.OnEnter(row)
+			t.ok(row.gear:IsShown(), "a gear while the mouse is on the row")
+			row.gear.scripts.OnClick(row.gear)
+			t.ok(form:IsShown(), "the gear opens it")
+			-- To another character.
+			local select = rawget(form, "characterSelect")
+			select.scripts.OnClick(select)
+			wow.menuEntry(menu.entries, "Bob Stone").onClick("Bob Stone")
+			wow.click("Save changes")
+			t.equal(Mine("water the roses"), nil, "not yours any more")
+			local theirs
+			for _, each in ipairs(reminders.List("Bob Stone")) do
+				if each == timed then
+					theirs = each
+				end
+			end
+			t.ok(theirs and theirs.from == "Nra", "Bob's, from you")
+			-- The arrows show on the tab's rows too (they were dropped by the row's own hover script).
+			local todoRow = wow.findAll(function(frame)
+				return rawget(frame, "reminder") == todo and rawget(frame, "gear") and wow.visible(frame)
+			end)[1]
+			todoRow.scripts.OnEnter(todoRow)
+			t.ok(todoRow.up:IsShown() and todoRow.down:IsShown(), "arrows on a to-do row in the tab")
+			reminders.SetDone(todo.id, true)
+			NraKitRemindersFrame:Hide()
+			t.noErrors()
+		end)
+
 		t.test("logging in as the other character: theirs, from you", function()
 			wow.data.units.player = { name = "Bob", surname = "Stone" }
 			Login()
