@@ -2,7 +2,7 @@ local _, ns = ...
 
 -- Inventory Tracker: remembers what each of your characters has in their bags,
 -- bank, mailbox and equipped, and lists it in item tooltips ("Bob: 12 (Bags 5,
--- Bank 7)").
+-- Bank 7)"). Hovering your gold in the bags lists every character's gold (an option).
 --
 -- Bags and equipment are read whenever they change. The bank and the mailbox can
 -- only be read while they're open, so each character has to visit them once; after
@@ -45,6 +45,12 @@ local module = {
 			key = "inventoryTrackerTotal",
 			name = "Show a total",
 			description = "Add a total line when more than one character has the item.",
+			default = true,
+		},
+		{
+			key = "inventoryTrackerMoney",
+			name = "Gold on all characters",
+			description = "Hovering your gold at the bottom of your bags lists the gold of each of your characters, and the total.",
 			default = true,
 		},
 		{
@@ -326,6 +332,92 @@ local function OnItemTooltip(tooltip, data)
 end
 
 ---------------------------------------------------------------------------
+-- Your gold in the bags
+---------------------------------------------------------------------------
+
+local function MoneyText(copper)
+	if GetMoneyString then
+		return GetMoneyString(copper, true)
+	end
+	return string.format("%dg %ds %dc", math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100)
+end
+
+-- Each character whose gold is known (you with what you have now): { label, class, money, isMe }.
+local function MoneyLines()
+	local lines = {}
+	local function Add(realmName, characters)
+		for name, character in pairs(characters) do
+			local isMe = realmName == realm and name == playerName
+			local money = isMe and GetMoney() or character.money
+			if money then
+				local label = realmName == realm and name or (name .. " (" .. realmName .. ")")
+				table.insert(lines, { label = label, class = character.class, money = money, isMe = isMe })
+			end
+		end
+	end
+	if ns:GetOption("inventoryTrackerAllRealms") then
+		for realmName, characters in pairs(NraKitDB.inventory or {}) do
+			Add(realmName, characters)
+		end
+	else
+		Add(realm, GetRealmData(realm))
+	end
+	-- You first, then the richest.
+	table.sort(lines, function(a, b)
+		if a.isMe ~= b.isMe then
+			return a.isMe
+		end
+		if a.money ~= b.money then
+			return a.money > b.money
+		end
+		return a.label < b.label
+	end)
+	return lines
+end
+
+local moneyTooltipOwner
+local function OnMoneyEnter(button)
+	if not ns:IsModuleEnabled(module.key) or not ns:GetOption("inventoryTrackerMoney") or not realm then
+		return
+	end
+	local lines = MoneyLines()
+	GameTooltip:SetOwner(button, "ANCHOR_TOPRIGHT")
+	GameTooltip_SetTitle(GameTooltip, "Gold on your characters")
+	local sum = 0
+	for _, line in ipairs(lines) do
+		local r, g, b = ClassColor(line.class)
+		GameTooltip:AddDoubleLine(line.label, MoneyText(line.money), r, g, b, 1, 1, 1)
+		sum = sum + line.money
+	end
+	if #lines > 1 then
+		GameTooltip:AddDoubleLine("Total", MoneyText(sum), 1, 0.82, 0, 1, 1, 1)
+	end
+	GameTooltip:Show()
+	moneyTooltipOwner = button
+end
+
+local function OnMoneyLeave(button)
+	if moneyTooltipOwner == button then
+		moneyTooltipOwner = nil
+		GameTooltip:Hide()
+	end
+end
+
+-- The gold, silver and copper of the money at the bottom of the backpack and of the combined
+-- bags (only watched: Blizzard's own scripts stay as they are).
+local function HookBagMoney()
+	for _, moneyFrame in ipairs({ ContainerFrame1MoneyFrame, ContainerFrameCombinedBags and ContainerFrameCombinedBags.MoneyFrame }) do
+		for _, key in ipairs({ "GoldButton", "SilverButton", "CopperButton" }) do
+			local button = moneyFrame[key]
+			if button and button.HookScript then
+				button:HookScript("OnEnter", OnMoneyEnter)
+				button:HookScript("OnLeave", OnMoneyLeave)
+			end
+		end
+	end
+end
+
+---------------------------------------------------------------------------
 -- Slash commands
 ---------------------------------------------------------------------------
 
@@ -471,6 +563,7 @@ function module:OnInitialize()
 		end
 	end)
 	TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, OnItemTooltip)
+	HookBagMoney()
 	self:OnEnabledChanged(ns:IsModuleEnabled(self.key))
 end
 

@@ -96,6 +96,36 @@ return {
 			t.equal(characters.Bob.mail[LINEN], 6, "old entry Bob")
 		end)
 
+		t.test("hovering your gold in the bags lists every character's gold", function()
+			characters.Bob.money = 123456
+			wow.data.money = 5000
+			local lines, shown = {}, false
+			rawset(GameTooltip, "AddDoubleLine", function(_, left, right)
+				table.insert(lines, left .. ": " .. right)
+			end)
+			rawset(GameTooltip, "Show", function()
+				shown = true
+			end)
+			GetMoneyString = false -- (the game's formatting with coin icons; here the plain one)
+			local gold = ContainerFrame1MoneyFrame.GoldButton
+			gold.scripts.OnEnter(gold)
+			t.ok(shown, "a tooltip")
+			t.equal(lines[1], ns:PlayerName() .. ": 0g 50s 0c", "you first, with what you have now")
+			t.equal(lines[2], "Bob: 12g 34s 56c", "then the others")
+			t.equal(lines[#lines], "Total: 12g 84s 56c", "and the total")
+			-- The combined bags too; and the option turns it off.
+			lines, shown = {}, false
+			ns:SetSetting("inventoryTrackerMoney", false)
+			local combined = ContainerFrameCombinedBags.MoneyFrame.CopperButton
+			combined.scripts.OnEnter(combined)
+			t.ok(not shown, "off: nothing")
+			ns:SetSetting("inventoryTrackerMoney", true)
+			combined.scripts.OnEnter(combined)
+			t.ok(shown, "on the combined bags' gold too")
+			rawset(GameTooltip, "AddDoubleLine", nil)
+			rawset(GameTooltip, "Show", nil)
+		end)
+
 		t.test("forget takes the full name", function()
 			SlashCmdList.NRAKIT("inv forget nra smith")
 			t.equal(characters["Nra Smith"], nil, "forgotten")

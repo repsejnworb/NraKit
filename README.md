@@ -161,6 +161,8 @@ Item tooltips list **how many of the item each of your characters has, and where
 - Bags and equipment are tracked as they change. The bank and mailbox are read while open, so visit
   them once per character.
 - Items you mail to your own characters show up in their mail right away.
+- **Hover your gold** at the bottom of your bags to see the gold of each of your characters, and the
+  total (an option).
 - `/nra inv` (or a key binding) opens the **inventory browser**:
   - every character in a sidebar with level and gold;
   - their bags, bank, mail and equipped items, as a bag-style grid or a list;
