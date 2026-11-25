@@ -288,7 +288,7 @@ pops up the next time you log in; `/nra todo respec` just goes on your **to-do l
     top or bottom).
   - Ticked ones fade out after a moment (untick in time to keep one).
   - Its header: **click** to fold it, **shift-click** to hide it until your next login, **right-click**
-    for the Reminders & To-do tab, **shift-right-click** for the settings. `/nra todo`, a key (Key
+    for the Reminders & To-do tab, **shift-right-click** for the settings. `/nra todo show`, a key (Key
     Bindings > NraKit) or **Show list** in the tab brings it back.
   - Settings for it: size, background opacity (down to just the text; for the header and the items
     together or apart; and a stronger one while the mouse is over it), overall opacity (text too), most rows shown, which way it

@@ -1577,7 +1577,7 @@ local function CreateTracker()
 		elseif IsShiftKeyDown() then
 			trackerHidden = true
 			RefreshTracker()
-			ns:Print("The list is hidden until your next login. /nra todo brings it back.")
+			ns:Print("The list is hidden until your next login. /nra todo show brings it back.")
 		else
 			reminders.SetTrackerFolded(not NraKitDB.remindersTrackerFolded)
 		end
@@ -2002,13 +2002,17 @@ local function OnSlashCommand(rest)
 end
 reminders.OnSlashCommand = OnSlashCommand
 
--- /nra todo: the same words, as a to-do (on the list, no card). Alone, shows the list.
+-- /nra todo: the same words, as a to-do (on the list, no card). Alone, opens the tab (like
+-- /nra remind); /nra todo show shows the list on screen.
 local function OnTodoCommand(rest)
 	if not ns:IsModuleEnabled(module.key) then
 		ns:Print("Turn on Reminders & to-dos first (/nra).")
 		return
 	end
-	if rest == "" or rest:lower() == "show" then
+	if rest == "" then
+		ns:OpenReminders()
+		return
+	elseif rest:lower() == "show" then
 		reminders.ShowTracker()
 		return
 	end
@@ -2133,7 +2137,8 @@ function module:OnInitialize()
 		summary = "To-dos: like reminders, but they go straight on the list on screen (no card, no sound)",
 		usage = {
 			"/nra todo <text> - on your to-do list now",
-			"/nra todo - show the list (unfold it, or bring it back if you hid it)",
+			"/nra todo - your reminders and to-dos (the same as /nra remind)",
+			"/nra todo show - show the list on screen (unfold it, or bring it back if you hid it)",
 			"/nra todo in <zone>: / at <level>: / 30m / @<character>: <text> - on the list when that comes (like /nra remind)",
 			"/nra todos - the same as /nra todo",
 		},

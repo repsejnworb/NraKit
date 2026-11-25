@@ -349,6 +349,13 @@ return {
 			t.equal(#wow.played, 0, "no sound")
 			t.ok(NraKitRemindersTracker:IsShown() and #Rows(NraKitRemindersTracker) == 1, "on the list")
 			t.equal(rawget(NraKitRemindersTracker.title, "text"), "|cffff9933Reminders|r & |cff66bfffTo-do|r (1)", "the list's name, in the two colours")
+			NraKitRemindersFrame:Hide()
+			SlashCmdList.NRAKIT("todo")
+			t.ok(NraKitRemindersFrame:IsShown(), "/nra todo alone opens the tab, like /nra remind")
+			NraKitRemindersFrame:Hide()
+			NraKitRemindersTracker:Hide()
+			SlashCmdList.NRAKIT("todo show")
+			t.ok(NraKitRemindersTracker:IsShown(), "/nra todo show: the list on screen")
 			SlashCmdList.NRAKIT("todo in Ironforge: buy reagents")
 			wow.data.zone = "Ironforge"
 			wow.fire("ZONE_CHANGED_NEW_AREA")
