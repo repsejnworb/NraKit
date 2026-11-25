@@ -666,6 +666,24 @@ return {
 			wow.fire("ZONE_CHANGED_NEW_AREA")
 		end)
 
+		t.test("the list's width and row height are settings", function()
+			SlashCmdList.NRAKIT("todo measure the list")
+			local tracker = NraKitRemindersTracker
+			ns:SetSetting("remindersListWidth", 400)
+			ns:SetSetting("remindersListRowHeight", 32)
+			t.equal(tracker:GetWidth(), 400, "width")
+			local row
+			for _, each in ipairs(Rows(tracker)) do
+				if each.reminder.text == "measure the list" then
+					row = each
+				end
+			end
+			t.equal(row:GetHeight(), 32, "row height")
+			ns:SetSetting("remindersListWidth", 290)
+			ns:SetSetting("remindersListRowHeight", 24)
+			reminders.SetDone(Mine("measure the list").id, true)
+		end)
+
 		t.test("right-click turns a to-do into a reminder; the login card leaves to-dos out", function()
 			local menu
 			MenuUtil.CreateContextMenu = function(_, build)

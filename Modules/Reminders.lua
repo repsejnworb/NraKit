@@ -204,6 +204,26 @@ local module = {
 			step = 1,
 		},
 		{
+			key = "remindersListWidth",
+			type = "number",
+			name = "Width",
+			description = "How wide the list is (longer items are cut short with \"...\"; hover one to read it all).",
+			default = 290,
+			min = 200,
+			max = 600,
+			step = 10,
+		},
+		{
+			key = "remindersListRowHeight",
+			type = "number",
+			name = "Row height",
+			description = "The space each item takes: how far apart the items are (with Most rows shown, how tall the list gets).",
+			default = 24,
+			min = 18,
+			max = 40,
+			step = 1,
+		},
+		{
 			key = "remindersListGrow",
 			type = "choice",
 			name = "Grow",
@@ -1481,7 +1501,9 @@ reminders.ShowCard = CardShow
 
 local TRACKER_WIDTH = 290
 local TRACKER_SECTION = 18
-local TRACKER_ROW = 24
+local function RowHeight()
+	return ns:GetValue("remindersListRowHeight") or 24
+end
 local function MaxRows()
 	return ns:GetValue("remindersListRows") or 10
 end
@@ -1681,8 +1703,13 @@ local function CreateTracker()
 	-- Rows are made as the list needs them (up to the most rows shown).
 	function tracker:Row(index)
 		if not self.rows[index] then
-			local row = CreateRow(self, TRACKER_ROW, OnTick)
+			local row = CreateRow(self, RowHeight(), OnTick)
 			reminders.AddReorder(row)
+			-- Tick box and text in the middle of the row, whatever its height.
+			row.check:ClearAllPoints()
+			row.check:SetPoint("LEFT", 2, 0)
+			row.text:ClearAllPoints()
+			row.text:SetPoint("LEFT", row.check, "RIGHT", 8, 0)
 			row.text:SetPoint("RIGHT", -20, 0) -- room for the arrows
 			self.rows[index] = row
 		end
@@ -1737,6 +1764,7 @@ function RefreshTracker()
 	if not tracker then
 		CreateTracker()
 	end
+	tracker:SetWidth(ns:GetValue("remindersListWidth") or TRACKER_WIDTH)
 	local scale = ns:GetValue("remindersListScale") or 1
 	if scale ~= tracker:GetScale() then
 		tracker:SetScale(scale)
@@ -1863,8 +1891,9 @@ function RefreshTracker()
 				row:ClearAllPoints()
 				row:SetPoint("TOPLEFT", 8, y)
 				row:SetPoint("RIGHT", -6, 0)
+				row:SetHeight(RowHeight())
 				row:Show()
-				y = y - TRACKER_ROW
+				y = y - RowHeight()
 			end
 			y = y - 4
 		end

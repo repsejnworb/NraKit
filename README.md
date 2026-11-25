@@ -293,7 +293,7 @@ pops up the next time you log in; `/nra todo respec` just goes on your **to-do l
     for the Reminders & To-do tab, **shift-right-click** for the settings. `/nra todo show`, a key (Key
     Bindings > NraKit) or **Show list** in the tab brings it back.
   - Settings for it: size, background opacity (down to just the text; for the header and the items
-    together or apart; and a stronger one while the mouse is over it), overall opacity (text too), most rows shown, which way it
+    together or apart; and a stronger one while the mouse is over it), overall opacity (text too), most rows shown, width and row height, which way it
     grows (down, or up with the header at the bottom), hide the header (it shows while the mouse is
     over the list), tags on or off, lock in place, hide in combat.
 - Right-click an item to make a to-do a reminder (or the other way), move it, be reminded again in 15
