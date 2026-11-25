@@ -593,7 +593,8 @@ return {
 			local todo = Mine("pick up the mats")
 			t.equal(todo.state, "due", "there: on the list")
 			t.ok(shown and shown.heading == "|cff66bfff1 TO-DO|r" and shown.text == "Ironforge"
-				and shown.lines[1].text == "|cff66bfff•|r  pick up the mats", "and a message for arriving: 1 TO-DO, Ironforge, the to-do")
+				and shown.lines[1].text == "|cff66bfffTO-DO|r" and shown.lines[1].header
+				and shown.lines[2].text == "|cff999999•|r  pick up the mats", "and a message for arriving: 1 TO-DO, Ironforge, a TO-DO section")
 			ns.toast.Show = show
 			reminders.MoveTo(todo.id, 1)
 			local function RowText()
@@ -635,6 +636,31 @@ return {
 			wow.advance(11)
 			t.equal(todo.state, "due", "kept")
 			for _, text in ipairs({ "first", "pick up the mats", "last" }) do
+				reminders.SetDone(Mine(text).id, true)
+			end
+			wow.data.zone = "Elwynn Forest"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+		end)
+
+		t.test("arriving where you have a reminder and a to-do: both in the message, under REMINDERS & TO-DO", function()
+			local show, shown = ns.toast.Show, nil
+			ns.toast.Show = function(spec)
+				shown = spec
+			end
+			wow.data.zone = "Elwynn Forest"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+			Remind("in Darnassus: see the druid trainer")
+			SlashCmdList.NRAKIT("todo in Darnassus: buy a moonberry juice")
+			wow.data.zone = "Darnassus"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+			ns.toast.Show = show
+			t.ok(shown, "a message")
+			t.equal(shown.heading, "|cffff99331 REMINDER|r  ·  |cff66bfff1 TO-DO|r", "both counted")
+			t.equal(shown.lines[1].text, "|cffff9933REMINDERS|r & |cff66bfffTO-DO|r", "one section for both")
+			t.equal(shown.lines[2].text, "|cff999999•|r  see the druid trainer", "the reminder first")
+			t.equal(shown.lines[3].text, "|cff999999•|r  buy a moonberry juice", "then the to-do")
+			NraKitRemindersCard:Hide()
+			for _, text in ipairs({ "see the druid trainer", "buy a moonberry juice" }) do
 				reminders.SetDone(Mine(text).id, true)
 			end
 			wow.data.zone = "Elwynn Forest"

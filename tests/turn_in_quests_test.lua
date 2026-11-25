@@ -191,8 +191,8 @@ return {
 		t.test("entering a zone with turn-ins shows a toast (once); clicking it opens the list", function()
 			wow.data.zone = "Wetlands"
 			wow.fire("ZONE_CHANGED_NEW_AREA")
-			t.ok(Shown("|cffffd1001 QUEST TO TURN IN|r") and Shown("Wetlands") and Shown("|cffffd100•|r  The Doomed Fleet"),
-				"toast: how many, the zone, then the quest")
+			t.ok(Shown("|cffffd1001 QUEST TO TURN IN|r") and Shown("Wetlands") and Shown("|cffffd100QUESTS|r")
+				and Shown("|cff999999•|r  The Doomed Fleet"), "toast: how many, the zone, then a QUESTS section with the quest")
 			t.ok(not Printed("to turn in here in Wetlands"), "no chat line by default")
 			local holder = wow.findAll(function(frame)
 				return wow.visible(frame) and rawget(frame, "onClick") ~= nil

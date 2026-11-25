@@ -52,8 +52,7 @@ local module = {
 		},
 		{
 			key = "remindersZoneLeave",
-			header = "Zone to-dos",
-			headerColor = TODO_COLOUR,
+			header = "Zones",
 			name = "Leave the list when you leave the zone",
 			description = "A to-do for a zone (/nra todo in Ironforge: ...) is on the list while you're there. When you leave, a countdown starts and then it goes back to waiting; it comes back (in its place) when you return. Right-click one to keep it on the list anyway.",
 			default = true,
@@ -73,7 +72,7 @@ local module = {
 		{
 			key = "remindersArrivalToast",
 			name = "Say so when you get there",
-			description = "A small message (no sound) when you enter the zone of to-dos, together with Quests to turn in's.",
+			description = "A small message (no sound) listing the reminders and to-dos for a zone when you get there, together with Quests to turn in's.",
 			default = true,
 		},
 		{
@@ -826,31 +825,47 @@ function reminders.CheckLeaving()
 	end
 end
 
--- Zone to-dos that just came due join the message for entering the zone.
+-- Zone reminders and to-dos that just came due join the message for entering the zone: their
+-- counts, and a section headed REMINDERS & TO-DO (or just the one there is), reminders first.
 local function AnnounceArrival(fresh)
 	if not ns:GetOption("remindersArrivalToast") then
 		return
 	end
-	local names, zone = {}, nil
+	local loud, quiet, zone = {}, {}, nil
 	for _, reminder in ipairs(fresh) do
-		if reminder.quiet and reminder.kind == "zone" and reminder.zone then
+		if reminder.kind == "zone" and reminder.zone then
 			zone = zone or ZoneHere(reminder.zone:lower()) or reminder.zone
-			table.insert(names, reminder.text)
+			table.insert(reminder.quiet and quiet or loud, reminder.text)
 		end
 	end
-	if #names > 0 then
-		ns.arrival.Add({
-			zone = zone,
-			one = "to-do",
-			many = "to-dos",
-			color = TODO_COLOUR,
-			names = names,
-			order = 2,
-			onClick = function()
-				reminders.ShowTracker()
-			end,
-		})
+	if #loud + #quiet == 0 then
+		return
 	end
+	local counts, titles, names = {}, {}, {}
+	if #loud > 0 then
+		table.insert(counts, reminders.Coloured("reminder", #loud .. (#loud == 1 and " REMINDER" or " REMINDERS")))
+		table.insert(titles, reminders.Coloured("reminder", "REMINDERS"))
+	end
+	if #quiet > 0 then
+		table.insert(counts, reminders.Coloured("todo", #quiet .. (#quiet == 1 and " TO-DO" or " TO-DOS")))
+		table.insert(titles, reminders.Coloured("todo", "TO-DO"))
+	end
+	for _, list in ipairs({ loud, quiet }) do
+		for _, text in ipairs(list) do
+			table.insert(names, text)
+		end
+	end
+	ns.arrival.Add({
+		zone = zone,
+		counts = counts,
+		title = table.concat(titles, " & "),
+		icon = "Interface\\Icons\\INV_Misc_Note_01", -- the reminder card's
+		names = names,
+		order = 2,
+		onClick = function()
+			reminders.ShowTracker()
+		end,
+	})
 end
 
 -- Shows the card for reminders that just came due (after combat), with the sound. At login it

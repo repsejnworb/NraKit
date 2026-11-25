@@ -279,7 +279,9 @@ pops up the next time you log in; `/nra todo respec` just goes on your **to-do l
 - **Zone to-dos** are on the list while you're there. Leave and a little countdown starts (10 s, a
   setting); then they go back to waiting, and come back in their place when you return. The header
   says how many are elsewhere. Right-click one to keep it on the list anyway.
-- Arriving in a zone with to-dos says so in a small message (no sound), shared with Quests to turn in.
+- Arriving in a zone with reminders or to-dos says so in a small message (no sound), shared with
+  Quests to turn in: how many, the zone, then a section for each (**QUESTS**, **REMINDERS & TO-DO**)
+  listing them. Click a line to open what it's about.
 - **The list on screen** ("Reminders & To-do") holds both until you tick them (reminders after their
   card, an option), in two parts: **REMINDERS** first, then **TO DO**.
   - A coloured tag says where, when or who from (`Ironforge:`, `21:30:`, `Bankalt:`). Zone tags turn

@@ -75,25 +75,27 @@ return {
 				shown = spec
 			end
 			local opened = {}
-			ns.arrival.Add({ zone = "Ironforge", one = "to-do", many = "to-dos", color = { 0.4, 0.75, 1 }, order = 2,
+			ns.arrival.Add({ zone = "Ironforge", counts = { "7 TO-DOS" }, title = "TO-DO", icon = 1, order = 2,
 				names = { "one", "two", "three", "four", "five", "six", "seven" }, onClick = function() table.insert(opened, "list") end })
-			ns.arrival.Add({ zone = "Ironforge", one = "quest to turn in", many = "quests to turn in", order = 1,
+			ns.arrival.Add({ zone = "Ironforge", counts = { "1 QUEST TO TURN IN" }, title = "QUESTS", atlas = "quest", order = 1,
 				names = { "The Missing Diplomat" }, onClick = function() table.insert(opened, "quests") end })
 			ns.arrival.Flush()
 			toast.Show = show
-			t.equal(shown.heading, "|cffffd1001 QUEST TO TURN IN|r  ·  |cff66bfff7 TO-DOS|r", "the counts, in capitals and colours")
+			t.equal(shown.heading, "1 QUEST TO TURN IN  ·  7 TO-DOS", "the counts as its heading")
 			t.equal(shown.text, "Ironforge", "the zone as its line, like other toasts")
-			t.equal(shown.atlas, "UI-QuestIcon-TurnIn-Normal", "with the turn-in icon")
+			t.equal(shown.atlas, nil, "no icon on the zone line (the sections have them)")
 			local texts = {}
 			for _, line in ipairs(shown.lines) do
-				table.insert(texts, line.text)
+				table.insert(texts, (line.header and "# " or "") .. line.text)
 			end
-			local expected = { "|cffffd100•|r  The Missing Diplomat", "|cff66bfff•|r  one", "|cff66bfff•|r  two",
-				"|cff66bfff•|r  three", "|cff66bfff•|r  four", "|cff66bfff•|r  five", "|cff66bfff•|r  |cff999999and 2 more|r" }
-			t.equal(table.concat(texts, " | "), table.concat(expected, " | "), "quests first, then to-dos, at most five each")
-			shown.lines[1].onClick()
-			t.equal(table.concat(opened, ","), "quests", "a quest opens the quests")
+			local bullet = "|cff999999•|r  "
+			local expected = { "# QUESTS", bullet .. "The Missing Diplomat", "# TO-DO", bullet .. "one", bullet .. "two",
+				bullet .. "three", bullet .. "four", bullet .. "five", bullet .. "|cff999999and 2 more|r" }
+			t.equal(table.concat(texts, " | "), table.concat(expected, " | "), "a section per part, quests first, at most five each")
+			t.equal(shown.lines[1].atlas, "quest", "the section's icon")
 			shown.lines[2].onClick()
+			t.equal(table.concat(opened, ","), "quests", "a quest opens the quests")
+			shown.lines[4].onClick()
 			t.equal(table.concat(opened, ","), "quests,list", "a to-do the list")
 			opened = {}
 			shown.onClick()

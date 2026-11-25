@@ -7,10 +7,12 @@ local _, ns = ...
 --                             pop (Farm goals' "Goal complete"); small: quieter and lower (a
 --                             milestone, "3 quests to turn in here")
 --   heading, text, detail,    the lines (detail is optional; without text, the list follows the heading)
---   lines = { "..." or { text, onClick }, ... },
+--   lines = { "..." or { text, onClick, header, icon / atlas }, ... },
 --                             a list under it, one per line: a block as wide as its longest line
---                             (long ones wrap), centred. A line with onClick opens what it's about
---                             (clicking elsewhere does the message's onClick). The message grows.
+--                             (long ones wrap), centred, the lines left-aligned in it. A header line
+--                             (small capitals, an icon before it) starts a section. A line with
+--                             onClick opens what it's about (clicking elsewhere does the message's
+--                             onClick). The message grows to fit.
 --   icon = texture / atlas =, shown left of the text (optional)
 --   headingColor = { r, g, b },
 --   duration = seconds,       before it fades (default 6 big, 3 small); the mouse on it keeps it up
@@ -149,6 +151,9 @@ local function LineButton(frame, index)
 	local line = frame.lines[index]
 	if not line then
 		line = CreateFrame("Button", nil, frame.inner)
+		line.icon = line:CreateTexture(nil, "ARTWORK")
+		line.icon:SetSize(14, 14)
+		line.icon:SetPoint("LEFT")
 		line.text = line:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 		line.text:SetPoint("TOPLEFT")
 		line.text:SetJustifyH("LEFT")
@@ -176,30 +181,47 @@ function ShowLines(frame, lines, above)
 	if #lines == 0 then
 		return 0
 	end
+	-- Headers: small capitals with an icon; the items under them a little in.
 	local width = 0
 	for index, entry in ipairs(lines) do
 		local line = LineButton(frame, index)
+		entry = type(entry) == "table" and entry or { text = entry }
+		local header = entry.header == true
+		line.inset = header and 18 or 6
+		line.text:SetFontObject(header and "GameFontNormalSmall" or "GameFontHighlight")
+		line.text:ClearAllPoints()
+		line.text:SetPoint("TOPLEFT", line.inset, header and -1 or 0)
 		line.text:SetWidth(0)
-		line.text:SetText(type(entry) == "table" and entry.text or entry)
-		width = math.max(width, line.text:GetStringWidth())
+		line.text:SetText(entry.text)
+		if entry.atlas then
+			line.icon:SetAtlas(entry.atlas)
+			line.icon:SetTexCoord(0, 1, 0, 1)
+		elseif entry.icon then
+			line.icon:SetTexture(entry.icon)
+			line.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+		end
+		line.icon:SetShown(header and (entry.atlas or entry.icon) ~= nil)
+		width = math.max(width, line.text:GetStringWidth() + line.inset)
 	end
 	width = math.min(math.ceil(width) + 2, LIST_WIDTH)
 	local height, previous = 0, nil
 	for index, entry in ipairs(lines) do
 		local line = frame.lines[index]
-		line.text:SetWidth(width)
-		local lineHeight = line.text:GetStringHeight()
+		local header = type(entry) == "table" and entry.header == true
+		line.text:SetWidth(width - line.inset)
+		local lineHeight = math.max(line.text:GetStringHeight(), header and 14 or 0)
 		line:SetSize(width, lineHeight)
 		line:ClearAllPoints()
+		local gap = header and index > 1 and 8 or 3 -- a little room above each section
 		if previous then
-			line:SetPoint("TOPLEFT", previous, "BOTTOMLEFT", 0, -3)
+			line:SetPoint("TOPLEFT", previous, "BOTTOMLEFT", 0, -gap)
 		else
 			line:SetPoint("TOP", above, "BOTTOM", 0, -8)
 		end
 		line.onClick = type(entry) == "table" and entry.onClick or nil
 		line:EnableMouse(line.onClick ~= nil)
 		line:Show()
-		height = height + lineHeight + 3
+		height = height + lineHeight + gap
 		previous = line
 	end
 	return height + 10
@@ -282,16 +304,18 @@ end
 -- (quests to turn in, to-dos). Features add their part as they notice; parts within a moment
 -- of each other share one message. Dropped in combat (stale by the end of the fight).
 --
--- ns.arrival.Add{ zone = "Ironforge", one = "to-do", many = "to-dos", color = { r, g, b },
---   names = { ... }, onClick = function, order = number (lower first; quests 1, to-dos 2) }
--- Shown like other toasts: the counts as its heading ("1 QUEST TO TURN IN · 2 TO-DOS", each in
--- its colour), the zone as its line (with an icon), and the names under it, one per line,
--- with a bullet in their part's colour.
+-- ns.arrival.Add{ zone = "Ironforge", counts = { "|cff..1 QUEST TO TURN IN|r", ... }, title =
+--   "|cff..QUESTS|r", icon = file / atlas = name, names = { ... }, onClick = function,
+--   order = number (lower first; quests 1, reminders and to-dos 2) }
+-- Shown like other toasts: every part's counts as its heading ("1 QUEST TO TURN IN · 2 TO-DOS",
+-- in their colours), the zone as its line, then a section per part: its title in small
+-- capitals with its icon, and its names under it, one per line.
 ------------------------------------------------------------------------------
 
 local arrival = {}
 ns.arrival = arrival
 local MAX_ARRIVAL_NAMES = 5 -- per part; the rest are counted
+local BULLET = "|cff999999•|r"
 local pending = {}
 
 function arrival.Flush()
@@ -304,33 +328,29 @@ function arrival.Flush()
 		return (a.order or 9) < (b.order or 9)
 	end)
 	local zones, seen, counts, lines, clicks = {}, {}, {}, {}, {}
-	local hasQuests = false
 	for _, part in ipairs(parts) do
 		if part.zone and not seen[part.zone] then
 			seen[part.zone] = true
 			table.insert(zones, part.zone)
 		end
-		local color = part.color or UI.GOLD
-		local hex = string.format("|cff%02x%02x%02x", color[1] * 255, color[2] * 255, color[3] * 255)
+		for _, count in ipairs(part.counts or {}) do
+			table.insert(counts, count)
+		end
+		table.insert(lines, { text = part.title, header = true, icon = part.icon, atlas = part.atlas, onClick = part.onClick })
 		local names = part.names or {}
-		-- "1 QUEST TO TURN IN" in its colour, for the heading.
-		table.insert(counts, hex .. (#names .. " " .. (#names == 1 and part.one or part.many)):upper() .. "|r")
 		for index, name in ipairs(names) do
 			if index > MAX_ARRIVAL_NAMES then
-				table.insert(lines, { text = string.format("%s•|r  |cff999999and %d more|r", hex, #names - MAX_ARRIVAL_NAMES), onClick = part.onClick })
+				table.insert(lines, { text = string.format("%s  |cff999999and %d more|r", BULLET, #names - MAX_ARRIVAL_NAMES), onClick = part.onClick })
 				break
 			end
-			table.insert(lines, { text = hex .. "•|r  " .. name, onClick = part.onClick })
+			table.insert(lines, { text = BULLET .. "  " .. name, onClick = part.onClick })
 		end
 		table.insert(clicks, part.onClick)
-		hasQuests = hasQuests or part.order == 1
 	end
 	toast.Show({
 		style = "small",
 		heading = table.concat(counts, "  ·  "),
 		text = table.concat(zones, " · "),
-		atlas = hasQuests and "UI-QuestIcon-TurnIn-Normal" or nil,
-		icon = not hasQuests and "Interface\\Icons\\INV_Misc_Note_01" or nil,
 		lines = lines,
 		duration = 6 + math.min(4, #lines * 0.5), -- a longer list stays a little longer
 		-- Clicking the message opens all of it (a line opens just what it's about).
