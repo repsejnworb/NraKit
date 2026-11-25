@@ -308,6 +308,11 @@ pops up the next time you log in; `/nra todo respec` just goes on your **to-do l
   your characters it's for.
 - `/nra preview reminder` shows the card for one reminder, `/nra preview reminders` the one at login.
 
+<img width="774" height="549" alt="remindersUI" src=".github/screenshots/remindersUI.png" />
+<img width="319" height="291" alt="remindersTracker" src=".github/screenshots/remindersTracker.png" />
+<img width="441" height="209" alt="remindersLoginSummary" src=".github/screenshots/remindersLoginSummary.png" />
+<img width="682" height="204" alt="remindHelpText" src=".github/screenshots/remindHelpText.png" />
+
 #### Campfire timer
 
 A progress bar in the middle of the screen while you **rest at a Welcoming Campfire**, with the time

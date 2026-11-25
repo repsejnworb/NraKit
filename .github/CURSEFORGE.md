@@ -158,6 +158,11 @@ Notes to yourself that come back when they're due. **/nra remind Go to Darkshore
 - Set the list's size, background opacity (header and items together or apart, and on hover), overall opacity, width and height (it scrolls past that), which way it grows (down or up), hide its header, and lock it or hide it in combat.
 - The **Reminders & To-do tab** (**/nra remind**) lists them all, with the ones you left your other characters. Edit them there (the gear on a row changes everything: when, where, for whom), or right-click to be reminded again later. Click **Add** with the box empty for a **form** to pick when (a time, a zone from a list, a level), for which character, and whether it pops up.
 
+![remindersUI](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/remindersUI.png)
+![remindersTracker](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/remindersTracker.png)
+![remindersLoginSummary](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/remindersLoginSummary.png)
+![remindHelpText](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/remindHelpText.png)
+
 ### Campfire timer
 A **progress bar in the middle of the screen** while you rest at a Welcoming Campfire, with the time left. It turns green (with a sound) when Camp Benefits is ready.
 - **Sleeping bags too:** it counts your Well-Rested stacks up to 3, with the time left once it has seen how long a stack takes.
