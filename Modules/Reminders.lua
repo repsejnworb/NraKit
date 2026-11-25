@@ -101,7 +101,41 @@ local module = {
 			key = "remindersListBackground",
 			type = "number",
 			name = "Background",
-			description = "How dark the box behind the list is (0% for just the text).",
+			description = "How dark the box behind the list is (0% for just the text), unless the header and items are set separately below.",
+			default = 0.95,
+			min = 0,
+			max = 1,
+			step = 0.05,
+			format = function(value)
+				return math.floor(value * 100 + 0.5) .. "%"
+			end,
+		},
+		{
+			key = "remindersListBackgroundSplit",
+			name = "Header and items separately",
+			description = "Set the background behind the header and behind the items on their own, instead of Background for both.",
+			default = false,
+		},
+		{
+			key = "remindersListHeaderBackground",
+			parent = "remindersListBackgroundSplit",
+			type = "number",
+			name = "Header background",
+			description = "How dark the box behind the header is.",
+			default = 0.95,
+			min = 0,
+			max = 1,
+			step = 0.05,
+			format = function(value)
+				return math.floor(value * 100 + 0.5) .. "%"
+			end,
+		},
+		{
+			key = "remindersListItemsBackground",
+			parent = "remindersListBackgroundSplit",
+			type = "number",
+			name = "Items background",
+			description = "How dark the box behind the items is.",
 			default = 0.95,
 			min = 0,
 			max = 1,
@@ -1324,9 +1358,11 @@ local function CreateTracker()
 	tracker:Pin() -- older saved places (and the default) by that corner too
 	tracker:Hide()
 
-	tracker.bg = tracker:CreateTexture(nil, "BACKGROUND")
-	tracker.bg:SetAllPoints()
-	tracker.bg:SetColorTexture(unpack(UI.BG))
+	-- Two backgrounds, behind the header and behind the items (set together or apart).
+	tracker.headerBg = tracker:CreateTexture(nil, "BACKGROUND")
+	tracker.headerBg:SetColorTexture(unpack(UI.BG))
+	tracker.itemsBg = tracker:CreateTexture(nil, "BACKGROUND")
+	tracker.itemsBg:SetColorTexture(unpack(UI.BG))
 	tracker.border = CreateFrame("Frame", nil, tracker)
 	tracker.border:SetAllPoints()
 	UI.AddBorder(tracker.border)
@@ -1450,9 +1486,15 @@ function RefreshTracker()
 		tracker:Place() -- the same corner, at the new size
 	end
 	tracker:SetAlpha(ns:GetValue("remindersListAlpha") or 1)
-	local background = ns:GetValue("remindersListBackground") or 0.95
-	tracker.bg:SetAlpha(background / UI.BG[4])
-	tracker.border:SetAlpha(math.min(1, background * 2))
+	local headerAlpha = ns:GetValue("remindersListBackground") or 0.95
+	local itemsAlpha = headerAlpha
+	if ns:GetOption("remindersListBackgroundSplit") then
+		headerAlpha = ns:GetValue("remindersListHeaderBackground") or 0.95
+		itemsAlpha = ns:GetValue("remindersListItemsBackground") or 0.95
+	end
+	tracker.headerBg:SetAlpha(headerAlpha / UI.BG[4])
+	tracker.itemsBg:SetAlpha(itemsAlpha / UI.BG[4])
+	tracker.border:SetAlpha(math.min(1, math.max(headerAlpha, itemsAlpha) * 2))
 	-- In your order, with the ones you ticked here where they were.
 	local list = {}
 	for _, reminder in ipairs(due) do
@@ -1488,6 +1530,11 @@ function RefreshTracker()
 		tracker.header:ClearAllPoints()
 		tracker.header:SetPoint(up and "BOTTOMLEFT" or "TOPLEFT")
 		tracker.header:SetPoint(up and "BOTTOMRIGHT" or "TOPRIGHT")
+		tracker.headerBg:ClearAllPoints()
+		tracker.headerBg:SetAllPoints(tracker.header)
+		tracker.itemsBg:ClearAllPoints()
+		tracker.itemsBg:SetPoint("TOPLEFT", 0, up and 0 or -28)
+		tracker.itemsBg:SetPoint("BOTTOMRIGHT", 0, up and 28 or 0)
 		tracker:Pin()
 	end
 	if folded then

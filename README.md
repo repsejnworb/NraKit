@@ -283,7 +283,8 @@ pops up the next time you log in; `/nra todo respec` just goes on your **to-do l
   - Ticked ones fade out after a moment (untick in time to keep one).
   - Click its header to **fold** it; right-click it to hide it until your next login. `/nra todo`, a
     key (Key Bindings > NraKit) or **Show list** in the tab brings it back.
-  - Settings for it: size, opacity, background (down to just the text), most rows shown, which way it
+  - Settings for it: size, opacity, background (down to just the text; for the header and the items
+    together or apart), most rows shown, which way it
     grows (down, or up with the header at the bottom), tags on or off, lock in place, hide in combat.
 - Right-click an item to make a to-do a reminder (or the other way), move it, be reminded again in 15
   minutes, an hour or next login, edit or delete it.
