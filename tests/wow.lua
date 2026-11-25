@@ -242,8 +242,11 @@ Frame.__index = function(self, key)
 		return child
 	end
 	if key:match("^Create") then
-		return function()
-			return NewObject(key)
+		-- Textures and font strings belong to the frame that made them (wow.visible follows it).
+		return function(owner)
+			local object = NewObject(key)
+			object.parent = owner
+			return object
 		end
 	end
 	if key:match("Width$") or key:match("Height$") or key:match("Scroll") or key:match("^GetFrameLevel")

@@ -34,6 +34,24 @@ return {
 				return rawget(frame, "reminderID") and wow.visible(frame) and rawget(frame, "parent") == parent
 			end)
 		end
+		-- Whether the card shows this text (a button, a label).
+		local function Shown(text)
+			for _, frame in ipairs(wow.frames) do
+				local value = rawget(frame, "text")
+				if type(value) == "table" then
+					value = rawget(value, "text")
+				end
+				local inCard, parent = false, frame
+				while parent do
+					inCard = inCard or parent == NraKitRemindersCard
+					parent = rawget(parent, "parent")
+				end
+				if value == text and inCard and wow.visible(frame) then
+					return true
+				end
+			end
+			return false
+		end
 		local function Remind(text)
 			wow.printed = {}
 			SlashCmdList.NRAKIT("remind " .. text)
@@ -84,7 +102,9 @@ return {
 			t.ok(NraKitRemindersCard:IsShown(), "card")
 			t.equal(#Rows(NraKitRemindersCard), 1, "one row")
 			t.equal(wow.played[1], 12345, "sound")
-			t.ok(not (NraKitRemindersTracker and NraKitRemindersTracker:IsShown()), "no tracker while the card is up")
+			t.ok(NraKitRemindersTracker:IsShown(), "the tracker stays up with the card")
+			t.ok(Shown("Done") and Shown("Later"), "one reminder: Done and Later")
+			t.ok(Shown("From last time"), "why it's there")
 		end)
 
 		t.test("closing it with one not ticked: the tracker keeps it, and the card shows it at the next login", function()
@@ -167,6 +187,33 @@ return {
 				reminders.SetDone(reminder.id, true)
 			end
 			wow.click("Close")
+		end)
+
+		t.test("the card: what popped it up on top, what's still open under it", function()
+			Remind("old one")
+			Login()
+			wow.click("Later")
+			Remind("in Stormwind: buy a mount")
+			wow.data.zone = "Stormwind"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+			t.ok(NraKitRemindersCard:IsShown(), "card")
+			t.ok(Shown("You entered Stormwind") and Shown("buy a mount"), "the why and the reminder")
+			t.ok(not Shown("old one"), "the old one isn't listed mid-session")
+			t.ok(Shown("1 more still open (in your list on screen)"), "just counted")
+			wow.click("Done")
+			t.ok(not NraKitRemindersCard:IsShown() and Mine("buy a mount").state == "done", "Done ticks it and closes")
+			t.equal(Mine("old one").state, "due", "the old one stays")
+
+			Remind("new one")
+			Login()
+			t.ok(Shown("new one") and Shown("STILL OPEN") and Shown("old one"), "at login both, in two parts")
+			t.ok(not Shown("Done"), "tick boxes, not Done, with more than one")
+			for _, reminder in ipairs(reminders.Due()) do
+				reminders.SetDone(reminder.id, true)
+			end
+			t.ok(wow.click("Close"), "all done")
+			wow.data.zone = "Elwynn Forest"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
 		end)
 
 		t.test("a level reminder: when you reach it", function()

@@ -256,6 +256,7 @@ function reminders.Snooze(id, seconds)
 	end
 	reminder.state, reminder.dueAt, reminder.away, reminder.doneAt = "waiting", nil, nil, nil
 	reminder.zone, reminder.level = nil, nil
+	reminder.since = time()
 	if seconds then
 		reminder.kind, reminder.at = "time", time() + seconds
 	else
@@ -325,7 +326,8 @@ function reminders.Describe(reminder)
 	return "Next login"
 end
 
--- What came due, for the card: "From Main", "Came due while you were away", "You entered Darkshore".
+-- Why a reminder came due, for the card: "You entered Darkshore", "Time's up (after 30 min)",
+-- "From Bankalt, you reached level 20", "Came due while you were away", "From last time".
 function reminders.DueNote(reminder)
 	local parts = {}
 	if reminder.from then
@@ -338,7 +340,9 @@ function reminders.DueNote(reminder)
 	elseif reminder.kind == "level" then
 		table.insert(parts, "you reached level " .. (reminder.level or "?"))
 	elseif reminder.kind == "time" and reminder.at then
-		table.insert(parts, date("set for %H:%M", reminder.at))
+		table.insert(parts, "time's up (after " .. reminders.FormatDuration(reminder.at - (reminder.since or reminder.created or reminder.at)) .. ")")
+	elseif not reminder.from then
+		table.insert(parts, "from last time")
 	end
 	local text = table.concat(parts, ", ")
 	return (text:gsub("^%l", string.upper))
@@ -463,11 +467,11 @@ end
 
 -- Marks your waiting reminders that are due now. how: "login" (the session's first check:
 -- login reminders count, and timed ones that passed were while you were away), "zone" or
--- nil. Returns how many came due.
+-- nil. Returns the ones that came due.
 local function Evaluate(how)
 	local now, zones = time(), CurrentZones()
 	local level = UnitLevel("player") or 1
-	local count = 0
+	local fresh = {}
 	for _, reminder in ipairs(reminders.List()) do
 		if reminder.state == "waiting" then
 			local due = false
@@ -484,48 +488,63 @@ local function Evaluate(how)
 			end
 			if due then
 				reminder.state, reminder.dueAt = "due", now
-				count = count + 1
+				table.insert(fresh, reminder)
 			end
 		end
 	end
 	zonesBefore = zones
-	return count
+	return fresh
 end
 
--- Shows the card with what's due (after combat), with the sound.
-local function ShowDue()
-	showQueued = false
-	if #reminders.Due() == 0 then
-		return
+-- Shows the card for reminders that just came due (after combat), with the sound. At login it
+-- also lists the ones still open from before (and shows for those alone).
+local queued, queuedAtLogin = {}, false
+local function ShowDue(fresh, atLogin)
+	for _, reminder in ipairs(fresh or {}) do
+		table.insert(queued, reminder)
 	end
+	queuedAtLogin = queuedAtLogin or atLogin == true
 	if InCombatLockdown() then
 		showQueued = true
+		return
+	end
+	showQueued = false
+	fresh, atLogin = {}, queuedAtLogin
+	for _, reminder in ipairs(queued) do
+		if reminder.state == "due" then
+			table.insert(fresh, reminder)
+		end
+	end
+	queued, queuedAtLogin = {}, false
+	if #fresh == 0 and not (atLogin and #reminders.Due() > 0) then
 		return
 	end
 	if ns:GetOption("remindersSound") then
 		ns.sounds.PlayOption("remindersSoundChoice", "kit:UI_BNET_TOAST")
 	end
-	CardShow()
+	CardShow(fresh, atLogin)
 end
 
--- Checks for reminders that came due; shows them if any did.
+-- Checks for reminders that came due, and shows them (not at login: OnLogin does). Returns them.
 function reminders.Check(how)
 	if not ns:IsModuleEnabled(module.key) or not (ready or how == "login") then
-		return
+		return {}
 	end
-	if Evaluate(how) > 0 then
+	local fresh = Evaluate(how)
+	if #fresh > 0 then
 		Changed()
-		ShowDue()
+		if how ~= "login" then
+			ShowDue(fresh)
+		end
 	end
+	return fresh
 end
 
 local function OnLogin()
 	ClaimReminders()
-	reminders.Check("login")
+	local fresh = reminders.Check("login")
 	ready = true
-	if #reminders.Due() > 0 and not (card and card:IsShown()) then
-		ShowDue() -- older due reminders you didn't tick come back every login
-	end
+	ShowDue(fresh, true) -- with the ones you didn't tick before: they come back every login
 end
 
 ------------------------------------------------------------------------------
@@ -661,9 +680,49 @@ end
 -- The card: what came due, until you close it
 ------------------------------------------------------------------------------
 
-local CARD_WIDTH = 420
-local CARD_ROW = 40
-local CARD_MAX_ROWS = 8
+local CARD_WIDTH = 440
+local FRESH_ROW = 54
+local OLDER_ROW = 22
+local MAX_FRESH = 5
+local MAX_OLDER = 6
+
+-- One reminder that triggered the card: why (small, orange) over its text (large).
+local function AcquireFreshRow(onTick)
+	return card.pool:Acquire("fresh", function()
+		local row = CreateRow(card, FRESH_ROW, onTick)
+		row.text:SetFontObject("GameFontHighlightLarge")
+		row.text:SetWordWrap(true)
+		row.text:SetMaxLines(2)
+		row.note:SetFontObject("GameFontNormalSmall")
+		row.note:SetTextColor(unpack(UI.ACCENT))
+		-- The why goes first, the text under it.
+		row.note:ClearAllPoints()
+		row.note:SetPoint("TOPLEFT", row.check, "TOPRIGHT", 8, 2)
+		row.note:SetPoint("RIGHT", -4, 0)
+		row.text:ClearAllPoints()
+		row.text:SetPoint("TOPLEFT", row.note, "BOTTOMLEFT", 0, -4)
+		row.text:SetPoint("RIGHT", -4, 0)
+		return row
+	end)
+end
+
+local function AcquireOlderRow(onTick)
+	return card.pool:Acquire("older", function()
+		local row = CreateRow(card, OLDER_ROW, onTick)
+		row.text:SetFontObject("GameFontHighlightSmall")
+		row.check:SetSize(14, 14)
+		row.check.mark:SetSize(13, 13)
+		return row
+	end)
+end
+
+local function AcquireLabel(font)
+	return card.pool:Acquire("label" .. font, function()
+		local label = card:CreateFontString(nil, "OVERLAY", font)
+		label:SetJustifyH("LEFT")
+		return label
+	end)
+end
 
 local function CreateCard()
 	card = CreateFrame("Frame", "NraKitRemindersCard", UIParent)
@@ -679,6 +738,8 @@ local function CreateCard()
 	card:SetScript("OnDragStop", card.StopMovingOrSizing)
 	card:Hide()
 	-- Not in UISpecialFrames: Escape doesn't close it, you do.
+	card.pool = UI.CreatePool()
+	card.fresh, card.older = {}, {}
 
 	local bg = card:CreateTexture(nil, "BACKGROUND")
 	bg:SetAllPoints()
@@ -698,9 +759,30 @@ local function CreateCard()
 	card.title = card:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 	card.title:SetPoint("LEFT", card.icon, "RIGHT", 8, 0)
 	card.title:SetTextColor(unpack(UI.ACCENT))
-	card.title:SetText("Reminders")
 
-	card.rows = {}
+	-- Several reminders: Later (or Close once all are ticked). One: Done and Later.
+	card.close = UI.CreateFlatButton(card, "Later", 24)
+	card.close:SetWidth(90)
+	card.close:SetPoint("BOTTOMRIGHT", -UI.PAD, UI.PAD)
+	card.close:SetScript("OnClick", function()
+		card:Hide()
+	end)
+	card.done = UI.CreateFlatButton(card, "Done", 24)
+	card.done:SetWidth(90)
+	card.done:SetPoint("RIGHT", card.close, "LEFT", -6, 0)
+	card.done:SetScript("OnClick", function()
+		local reminder = card.fresh[1]
+		if reminder and not card.preview then
+			reminders.SetDone(reminder.id, true)
+		end
+		card:Hide()
+	end)
+	card.hint = card:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+	card.hint:SetPoint("LEFT", UI.PAD, 0)
+	card.hint:SetPoint("RIGHT", card.done, "LEFT", -10, 0)
+	card.hint:SetPoint("BOTTOM", 0, UI.PAD + 6)
+	card.hint:SetJustifyH("LEFT")
+
 	local function OnTick(row, checked)
 		if row.preview then
 			row.reminder.state = checked and "done" or "due" -- made up: nothing saved
@@ -709,89 +791,146 @@ local function CreateCard()
 		end
 		card:Refresh()
 	end
-	for index = 1, CARD_MAX_ROWS do
-		local row = CreateRow(card, CARD_ROW, OnTick)
-		row:SetPoint("TOPLEFT", UI.PAD, -46 - (index - 1) * CARD_ROW)
-		row:SetPoint("RIGHT", -UI.PAD, 0)
-		card.rows[index] = row
-	end
-	card.more = card:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 
-	card.close = UI.CreateFlatButton(card, "Close", 24)
-	card.close:SetWidth(90)
-	card.close:SetPoint("BOTTOMRIGHT", -UI.PAD, UI.PAD)
-	card.close:SetScript("OnClick", function()
-		card:Hide()
-	end)
-	card.hint = card:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	card.hint:SetPoint("LEFT", UI.PAD, 0)
-	card.hint:SetPoint("RIGHT", card.close, "LEFT", -10, 0)
-	card.hint:SetPoint("BOTTOM", 0, UI.PAD + 6)
-	card.hint:SetJustifyH("LEFT")
-
+	-- Top: the reminders it popped up for. Below: the others still open, listed at login (it's
+	-- the session's summary), otherwise one line (they're in the list on screen).
 	function card:Refresh()
-		local list = self.list
-		local open = 0
-		for index, row in ipairs(self.rows) do
-			local reminder = list[index]
-			row:SetShown(reminder ~= nil)
-			if reminder then
-				row.preview = self.preview
-				FillRow(row, reminder, true)
+		self.pool:ReleaseAll()
+		local fresh, older = self.fresh, self.older
+		local listOlder = self.atLogin or #fresh == 0
+		local single = #fresh == 1 and (#older == 0 or not listOlder)
+		self.title:SetText(#fresh == 1 and "Reminder" or "Reminders")
+		local y = -44
+		for index, reminder in ipairs(fresh) do
+			if index > MAX_FRESH then
+				break
+			end
+			local row = AcquireFreshRow(OnTick)
+			row.preview = self.preview
+			FillRow(row, reminder, true)
+			row.check:SetShown(not single)
+			row.note:SetPoint("TOPLEFT", row.check, single and "TOPLEFT" or "TOPRIGHT", single and 0 or 8, 2)
+			row:SetPoint("TOPLEFT", UI.PAD, y)
+			row:SetPoint("RIGHT", -UI.PAD, 0)
+			y = y - FRESH_ROW
+		end
+		if #fresh > MAX_FRESH then
+			local more = AcquireLabel("GameFontDisableSmall")
+			more:SetText(string.format("and %d more (/nra remind)", #fresh - MAX_FRESH))
+			more:SetPoint("TOPLEFT", UI.PAD + 28, y)
+			y = y - 18
+		end
+		local openOlder = 0
+		for _, reminder in ipairs(older) do
+			if reminder.state ~= "done" then
+				openOlder = openOlder + 1
 			end
 		end
-		for _, reminder in ipairs(list) do
+		if #older > 0 and listOlder then
+			if #fresh > 0 then
+				local line = self.pool:Acquire("line", function()
+					local texture = card:CreateTexture(nil, "BORDER")
+					texture:SetColorTexture(unpack(UI.EDGE))
+					texture:SetHeight(1)
+					return texture
+				end)
+				line:SetPoint("TOPLEFT", UI.PAD, y - 2)
+				line:SetPoint("RIGHT", -UI.PAD, 0)
+				y = y - 10
+			end
+			local label = AcquireLabel("GameFontNormalSmall")
+			label:SetText(#fresh > 0 and "STILL OPEN" or "STILL OPEN FROM BEFORE")
+			label:SetTextColor(unpack(UI.TEXT_DIM))
+			label:SetPoint("TOPLEFT", UI.PAD, y)
+			y = y - 18
+			for index, reminder in ipairs(older) do
+				if index > MAX_OLDER then
+					break
+				end
+				local row = AcquireOlderRow(OnTick)
+				row.preview = self.preview
+				FillRow(row, reminder, false)
+				row.text:SetAlpha(reminder.state == "done" and 0.4 or 0.75)
+				row:SetPoint("TOPLEFT", UI.PAD + 4, y)
+				row:SetPoint("RIGHT", -UI.PAD, 0)
+				y = y - OLDER_ROW
+			end
+			if #older > MAX_OLDER then
+				local more = AcquireLabel("GameFontDisableSmall")
+				more:SetText(string.format("and %d more (/nra remind)", #older - MAX_OLDER))
+				more:SetPoint("TOPLEFT", UI.PAD + 24, y)
+				y = y - 18
+			end
+		elseif openOlder > 0 then
+			local more = AcquireLabel("GameFontDisableSmall")
+			more:SetText(string.format("%d more still open (%s)", openOlder,
+				ns:GetOption("remindersTracker") and "in your list on screen" or "/nra remind"))
+			more:SetPoint("TOPLEFT", UI.PAD + (single and 0 or 26), y - 2)
+			y = y - 20
+		end
+
+		local open = 0
+		for _, reminder in ipairs(fresh) do
 			if reminder.state ~= "done" then
 				open = open + 1
 			end
 		end
-		local shownRows = math.min(#list, CARD_MAX_ROWS)
-		self.more:ClearAllPoints()
-		self.more:SetPoint("TOPLEFT", UI.PAD + 28, -46 - shownRows * CARD_ROW)
-		self.more:SetText(#list > CARD_MAX_ROWS and string.format("and %d more (/nra remind)", #list - CARD_MAX_ROWS) or "")
-		local extra = #list > CARD_MAX_ROWS and 18 or 0
-		self:SetHeight(46 + shownRows * CARD_ROW + extra + 48)
-		if open == 0 then
+		if listOlder then
+			open = open + openOlder
+		end
+		self.done:SetShown(single)
+		self.hint:ClearAllPoints()
+		self.hint:SetPoint("LEFT", UI.PAD, 0)
+		self.hint:SetPoint("RIGHT", single and self.done or self.close, "LEFT", -10, 0)
+		self.hint:SetPoint("BOTTOM", 0, UI.PAD + 6)
+		if single then
+			self.hint:SetText("")
+			self.close.text:SetText("Later")
+		elseif open == 0 then
 			self.hint:SetText("All done!")
 			self.close.text:SetText("Close")
-		elseif ns:GetOption("remindersTracker") then
-			self.hint:SetText("Tick what you've done. The rest stay on screen and come back at your next login.")
-			self.close.text:SetText("Later")
 		else
-			self.hint:SetText("Tick what you've done. The rest come back at your next login.")
+			self.hint:SetText(ns:GetOption("remindersTracker") and "Tick what you've done. The rest stay in your list and come back at your next login."
+				or "Tick what you've done. The rest come back at your next login.")
 			self.close.text:SetText("Later")
 		end
+		self:SetHeight(-y + 52)
 	end
 
-	card:HookScript("OnShow", function()
-		RefreshTracker()
-	end)
 	card:HookScript("OnHide", function(self)
 		self.preview = nil
-		RefreshTracker()
 	end)
 end
 
--- Shows the card with your due reminders (adding any that came due while it's up), or
--- `list` made-up ones for the preview.
-function CardShow(list)
+-- Shows the card for `fresh`, the reminders that just came due, with your other due ones as
+-- still open (listed at login). While it's up, new ones join the top. preview: made-up ones.
+function CardShow(fresh, atLogin, older)
 	if not card then
 		CreateCard()
 	end
-	if list then
-		card.preview, card.list = true, list
+	fresh = fresh or {}
+	if older then
+		card.preview, card.fresh, card.older, card.atLogin = true, fresh, older, atLogin
 	else
 		if not card:IsShown() or card.preview then
-			card.list = {}
+			card.fresh, card.atLogin = {}, atLogin
 		end
 		card.preview = nil
+		card.atLogin = card.atLogin or atLogin
 		local listed = {}
-		for _, reminder in ipairs(card.list) do
+		for _, reminder in ipairs(card.fresh) do
 			listed[reminder] = true
 		end
+		for _, reminder in ipairs(fresh) do
+			if not listed[reminder] then
+				table.insert(card.fresh, reminder)
+				listed[reminder] = true
+			end
+		end
+		card.older = {}
 		for _, reminder in ipairs(reminders.Due()) do
 			if not listed[reminder] then
-				table.insert(card.list, reminder)
+				table.insert(card.older, reminder)
 			end
 		end
 	end
@@ -802,7 +941,7 @@ end
 reminders.ShowCard = CardShow
 
 ------------------------------------------------------------------------------
--- The tracker: what's due, after you closed the card
+-- The tracker: what's due, on screen until you tick it
 ------------------------------------------------------------------------------
 
 local TRACKER_WIDTH = 260
@@ -890,6 +1029,7 @@ local function CreateTracker()
 
 	tracker.rows = {}
 	local function OnTick(row, checked)
+		tracker.ticked[row.reminder] = checked or nil
 		reminders.SetDone(row.reminderID, checked)
 	end
 	for index = 1, TRACKER_MAX_ROWS do
@@ -900,18 +1040,18 @@ local function CreateTracker()
 	end
 	tracker.more = tracker:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	tracker.list = {}
+	tracker.ticked = {} -- ticked here: they stay, dimmed, so a slip can be undone
 end
 
--- The tracker lists due reminders while the card is closed (ticked ones stay, dimmed, so a
--- slip can be undone, until all are done).
+-- The tracker lists your due reminders, whether the card is up or not. Ones you tick in it
+-- stay, dimmed, so a slip can be undone, until all are done; ones done elsewhere go.
 function RefreshTracker()
 	local due = ns:IsModuleEnabled(module.key) and reminders.Due() or {}
 	local wanted = #due > 0 and ns:GetOption("remindersTracker") and not trackerHidden
-		and not (card and card:IsShown())
 	if not wanted then
 		if tracker then
 			tracker:Hide()
-			tracker.list = {}
+			tracker.list, tracker.ticked = {}, {}
 		end
 		return
 	end
@@ -929,8 +1069,9 @@ function RefreshTracker()
 	end
 	-- Reminders deleted or snoozed meanwhile go.
 	for index = #tracker.list, 1, -1 do
-		local state = tracker.list[index].state
-		if state == "waiting" or not reminders.Find(tracker.list[index].id) then
+		local reminder = tracker.list[index]
+		if reminder.state == "waiting" or (reminder.state == "done" and not tracker.ticked[reminder])
+			or not reminders.Find(reminder.id) then
 			table.remove(tracker.list, index)
 		end
 	end
@@ -980,10 +1121,10 @@ function reminders.ShowTracker()
 	end
 	trackerHidden = false
 	NraKitDB.remindersTrackerFolded = nil
-	if ns:GetOption("remindersTracker") and not (card and card:IsShown()) then
+	if ns:GetOption("remindersTracker") then
 		RefreshTracker()
 	else
-		CardShow()
+		CardShow({}, true)
 	end
 end
 
@@ -1140,12 +1281,23 @@ ns:RegisterMenuAction({
 	onClick = reminders.ShowTracker,
 })
 
-ns:RegisterPreview("reminders", "Reminders: the card with reminders that came due", function()
+ns:RegisterPreview("reminder", "Reminders: the card when one comes due", function()
+	local now = time()
+	CardShow({
+		{ id = -1, text = "Hand in the turtle quests at Auberdine", kind = "zone", zone = "Darkshore", state = "due", dueAt = now },
+	}, false, {
+		{ id = -2, text = "Mail the bags to your main", kind = "login", from = "Bankalt", state = "due", dueAt = now },
+	})
+end)
+
+ns:RegisterPreview("reminders", "Reminders: the card at login, with what came due and what's still open", function()
 	local now = time()
 	CardShow({
 		{ id = -1, text = "Go to Darkshore and hand in the turtle quests", kind = "login", state = "due", dueAt = now },
-		{ id = -2, text = "Check the auction house for |cff1eff00[Coarse Thread]|r", kind = "time", at = now - 3600, away = true, state = "due", dueAt = now },
+		{ id = -2, text = "Check the auction house for |cff1eff00[Coarse Thread]|r", kind = "time", at = now - 3600, created = now - 7200, away = true, state = "due", dueAt = now },
+	}, true, {
 		{ id = -3, text = "Mail the bags to your main", kind = "login", from = "Bankalt", state = "due", dueAt = now },
+		{ id = -4, text = "Train first aid", kind = "level", level = 20, state = "due", dueAt = now },
 	})
 end)
 

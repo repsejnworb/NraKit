@@ -152,7 +152,7 @@ After a respec, abilities you don't know anymore stay on your bars, only greyed 
 Notes to yourself that come back when they're due. **/nra remind Go to Darkshore and hand in quests** shows up the next time you log in.
 - **Later instead:** a time (**/nra remind 30m check the AH**; s, m, h, d), a zone (**in Darkshore: ...**), a level (**at 30: ...**), or **another character's next login** (**@Bankalt: mail the bags**, also with a trigger).
 - Shift-clicked items and quests work in the text.
-- Due reminders show on a **card that stays until you close it**. Tick what you've done; the rest stay in a small list on screen (click its header to fold it) and **come back at your next login**. **/nra remind show** or a key brings the list back if you hid it.
+- Due reminders show on a **card that stays until you close it**, led by **why** each came due (you entered Darkshore, time's up, from Bankalt); at login it also lists what's still open from before. Tick what you've done; the rest stay in a small list on screen (click its header to fold it) and **come back at your next login**. **/nra remind show** or a key brings the list back if you hid it.
 - They wait for combat to end, and play a sound you can pick.
 - The **Reminders tab** (**/nra remind**) lists them all, with the ones you left your other characters. Edit them there, or right-click to be reminded again later. Click **Add** with the box empty for a **form** to pick when (a time, a zone from a list, a level) and for which character.
 
