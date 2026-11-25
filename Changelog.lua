@@ -16,7 +16,7 @@ local _, ns = ...
 --           "new" entry with its module (tests/changelog_test.lua checks).
 
 ns.changelog = {
-	{ version = "Unreleased", entries = {
+	{ version = "0.27.1", date = "2026-11-25", entries = {
 		{ "fixed", "Reminders & to-dos: the list on screen shows its scroll marker only when there's something to scroll, and with a see-through background only while the mouse is on it." },
 	} },
 	{ version = "0.27.0", date = "2026-11-25", entries = {
