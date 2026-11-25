@@ -164,6 +164,19 @@ local module = {
 			end,
 		},
 		{
+			key = "remindersListHoverBackground",
+			type = "number",
+			name = "On hover: background opacity",
+			description = "While the mouse is over the list, its backgrounds (header and items) come up to at least this, so see-through items get a box while you work with them. Off: they stay as they are.",
+			default = 0.6,
+			min = 0,
+			max = 1,
+			step = 0.05,
+			format = function(value)
+				return value == 0 and "Off" or (math.floor(value * 100 + 0.5) .. "%")
+			end,
+		},
+		{
 			key = "remindersListAlpha",
 			type = "number",
 			name = "Overall opacity",
@@ -1591,8 +1604,17 @@ local function CreateTracker()
 			reminders.CheckLeaving()
 			RefreshTracker()
 		end
+		local over = self:IsMouseOver() or self.header:IsMouseOver()
 		if self.headerHidden then -- shown while the mouse is over the list (or on it)
-			self.header:SetShown(self:IsMouseOver() or self.header:IsMouseOver())
+			self.header:SetShown(over)
+		end
+		-- The hover background comes in and goes out quickly.
+		local mix = self.hoverMix or 0
+		local target = over and 1 or 0
+		if mix ~= target then
+			local step = (elapsed or 0) / 0.15
+			self.hoverMix = target > mix and math.min(1, mix + step) or math.max(0, mix - step)
+			self:ApplyBackgrounds()
 		end
 		local now = GetTime()
 		for _, row in ipairs(self.rows) do
@@ -1600,6 +1622,34 @@ local function CreateTracker()
 			row:SetAlpha(fadeAt and math.max(0, math.min(1, 1 - (now - fadeAt) / TICKED_FADE)) or 1)
 		end
 	end)
+	-- The backgrounds of the header and the items (together or apart), brought up to the hover
+	-- opacity while the mouse is over the list; each border fades with its background, and the
+	-- edge where they meet is drawn once, by the more solid one.
+	function tracker:ApplyBackgrounds()
+		local headerAlpha = ns:GetValue("remindersListBackground") or 0.95
+		local itemsAlpha = headerAlpha
+		if ns:GetOption("remindersListBackgroundSplit") then
+			headerAlpha = ns:GetValue("remindersListHeaderBackground") or 0.95
+			itemsAlpha = ns:GetValue("remindersListItemsBackground") or 0.95
+		end
+		local hover, mix = ns:GetValue("remindersListHoverBackground") or 0, self.hoverMix or 0
+		if hover > 0 and mix > 0 then
+			headerAlpha = headerAlpha + (math.max(headerAlpha, hover) - headerAlpha) * mix
+			itemsAlpha = itemsAlpha + (math.max(itemsAlpha, hover) - itemsAlpha) * mix
+		end
+		self.headerBg:SetAlpha(headerAlpha / UI.BG[4])
+		self.itemsBg:SetAlpha(itemsAlpha / UI.BG[4])
+		self.headerBorder:SetAlpha(math.min(1, headerAlpha * 2))
+		self.itemsBorder:SetAlpha(math.min(1, itemsAlpha * 2))
+		local up = ns:GetValue("remindersListGrow") == "up"
+		local headerSeam, itemsSeam = up and "TOP" or "BOTTOM", up and "BOTTOM" or "TOP"
+		local headerDraws = self.folded or headerAlpha >= itemsAlpha
+		for _, side in ipairs({ "TOP", "BOTTOM" }) do
+			self.headerBorder.sides[side]:SetShown(side ~= headerSeam or headerDraws or self.headerHidden)
+			self.itemsBorder.sides[side]:SetShown(side ~= itemsSeam or not headerDraws or self.headerHidden)
+		end
+	end
+
 	-- Rows are made as the list needs them (up to the most rows shown).
 	function tracker:Row(index)
 		if not self.rows[index] then
@@ -1668,27 +1718,12 @@ function RefreshTracker()
 	if not UI.IsFading(tracker) then
 		tracker:SetAlpha(overall)
 	end
-	local headerAlpha = ns:GetValue("remindersListBackground") or 0.95
-	local itemsAlpha = headerAlpha
-	if ns:GetOption("remindersListBackgroundSplit") then
-		headerAlpha = ns:GetValue("remindersListHeaderBackground") or 0.95
-		itemsAlpha = ns:GetValue("remindersListItemsBackground") or 0.95
-	end
-	tracker.headerBg:SetAlpha(headerAlpha / UI.BG[4])
-	tracker.itemsBg:SetAlpha(itemsAlpha / UI.BG[4])
-	tracker.headerBorder:SetAlpha(math.min(1, headerAlpha * 2))
-	tracker.itemsBorder:SetAlpha(math.min(1, itemsAlpha * 2))
 	local folded = NraKitDB.remindersTrackerFolded == true
 	-- Hiding the header: just the items (a folded list keeps its header: it's all there is).
 	local headerHidden = ns:GetOption("remindersListHideHeader") and not folded
+	tracker.folded, tracker.headerHidden = folded, headerHidden
 	tracker.itemsBorder:SetShown(not folded)
-	local up = ns:GetValue("remindersListGrow") == "up"
-	local headerSeam, itemsSeam = up and "TOP" or "BOTTOM", up and "BOTTOM" or "TOP"
-	local headerDraws = folded or headerAlpha >= itemsAlpha
-	for _, side in ipairs({ "TOP", "BOTTOM" }) do
-		tracker.headerBorder.sides[side]:SetShown(side ~= headerSeam or headerDraws or headerHidden)
-		tracker.itemsBorder.sides[side]:SetShown(side ~= itemsSeam or not headerDraws or headerHidden)
-	end
+	tracker:ApplyBackgrounds()
 	-- In your order, with the ones fading off it (ticked here, or left behind) where they were.
 	local list = {}
 	for _, reminder in ipairs(due) do

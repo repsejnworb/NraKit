@@ -466,6 +466,21 @@ return {
 			ns:SetSetting("remindersListItemsBackground", 0)
 			t.ok(rawget(tracker, "headerBg"):GetAlpha() == 1 and rawget(tracker, "itemsBg"):GetAlpha() == 0, "header and items apart")
 			t.equal(rawget(tracker, "itemsBorder"):GetAlpha(), 0, "no border around see-through items")
+			-- Hovering brings see-through items up to the hover opacity (60% by default), quickly.
+			local over = true
+			rawset(tracker, "IsMouseOver", function()
+				return over
+			end)
+			tracker.scripts.OnUpdate(tracker, 0.05)
+			local partway = rawget(tracker, "itemsBg"):GetAlpha()
+			t.ok(partway > 0 and partway < 0.6 / 0.95, "coming in")
+			tracker.scripts.OnUpdate(tracker, 0.2)
+			t.equal(rawget(tracker, "itemsBg"):GetAlpha(), 0.6 / 0.95, "items at the hover opacity")
+			t.equal(rawget(tracker, "headerBg"):GetAlpha(), 1, "the header (more solid) as it was")
+			over = false
+			tracker.scripts.OnUpdate(tracker, 0.2)
+			t.equal(rawget(tracker, "itemsBg"):GetAlpha(), 0, "see-through again")
+			rawset(tracker, "IsMouseOver", nil)
 			t.equal(rawget(tracker, "headerBorder"):GetAlpha(), 1, "the header keeps its border")
 			-- Background opacity greys out in the NraKit window while they're set apart.
 			ns:OpenSettings("Reminders & to-dos", "reminders")
