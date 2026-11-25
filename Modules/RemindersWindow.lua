@@ -6,6 +6,9 @@ local _, ns = ...
 --
 -- Tick a box to mark one done (untick to bring it back), click the text to edit it,
 -- right-click for more (remind me again later, delete).
+--
+-- Add with the box empty opens a form instead: the text, when (next login, after a time,
+-- in a zone picked from a list or typed, at a level) and which of your characters it's for.
 
 local UI = ns.UI
 local reminders = ns.reminders
@@ -16,7 +19,7 @@ local HEADER_HEIGHT = 26
 local TOP_HEIGHT = 48
 local FOOTER_HEIGHT = 28
 
-local HELP = "Write one in the box above (the same words as in chat), or in chat with /nra remind:\n"
+local HELP = "Write one in the box above (the same words as in chat; click Add with it empty for a form), or in chat with /nra remind:\n"
 	.. "  |cffffd100/nra remind <text>|r - for your next login\n"
 	.. "  |cffffd100/nra remind 30m <text>|r - in 30 minutes (s, m, h, d: 2d, 1h30m)\n"
 	.. "  |cffffd100/nra remind in Darkshore: <text>|r - when you enter a zone or subzone\n"
@@ -24,7 +27,20 @@ local HELP = "Write one in the box above (the same words as in chat), or in chat
 	.. "  |cffffd100/nra remind @Alt: <text>|r - on another character's next login (@Alt at 20: works too)\n\n"
 	.. "Shift-clicked items and quests work in chat."
 
-local frame, addBox, scroll, footerLeft, editBox, helpButton, showButton
+local WHEN = {
+	{ key = "login", label = "Next login" },
+	{ key = "time", label = "After a time" },
+	{ key = "zone", label = "In a zone" },
+	{ key = "level", label = "At a level" },
+}
+local UNITS = {
+	{ key = "m", label = "minutes", seconds = 60 },
+	{ key = "h", label = "hours", seconds = 3600 },
+	{ key = "d", label = "days", seconds = 86400 },
+}
+local MAX_ZONE_MATCHES = 6
+
+local frame, addBox, scroll, footerLeft, editBox, helpButton, showButton, form
 local pool = UI.CreatePool()
 local editingID
 local doneOpen = false -- the Done section, folded until you open it
@@ -38,9 +54,12 @@ local function MakeLabel(parent, text, font)
 	return label
 end
 
+local OpenForm
+
 local function AddFromBox()
 	local text = strtrim(addBox:GetText() or "")
 	if text == "" then
+		OpenForm()
 		return
 	end
 	if reminders.OnSlashCommand(text) then
@@ -267,6 +286,303 @@ function Render()
 end
 
 ------------------------------------------------------------------------------
+-- The form: a reminder without the command words
+------------------------------------------------------------------------------
+
+local function FormLabel(text, y)
+	local label = MakeLabel(form, text, "GameFontNormal")
+	label:SetPoint("TOPLEFT", PAD + 8, y)
+	label:SetTextColor(unpack(UI.TEXT))
+	return label
+end
+
+local function FormBox(width, numeric)
+	local box = CreateFrame("EditBox", nil, form, "InputBoxTemplate")
+	box:SetSize(width, 22)
+	box:SetAutoFocus(false)
+	box:SetNumeric(numeric == true)
+	box:SetMaxLetters(numeric and 4 or 255)
+	box:SetScript("OnEscapePressed", box.ClearFocus)
+	return box
+end
+
+-- Selects one chip of a row: chips[i].value.
+local function SelectChip(chips, value)
+	for _, chip in ipairs(chips) do
+		chip:SetSelected(chip.value == value)
+	end
+end
+
+local function CharacterChoices()
+	local me = ns:PlayerName()
+	local choices = { { me, "Me (" .. me .. ")" } }
+	for _, name in ipairs(reminders.KnownCharacters()) do
+		if name ~= me then
+			table.insert(choices, { name, name })
+		end
+	end
+	return choices
+end
+
+local function RefreshForm()
+	local kind = form.kind
+	SelectChip(form.whenChips, kind)
+	SelectChip(form.unitChips, form.unit)
+	for _, each in ipairs(WHEN) do
+		form.details[each.key]:SetShown(each.key == kind)
+	end
+	local other = form.character ~= ns:PlayerName()
+	form.loginNote:SetText(other and "The next time they log in." or "The next time you log in.")
+
+	-- Zones: here, then the ones whose name has what you typed.
+	local zone, subzone = reminders.Here()
+	form.hereZone.value, form.hereSubzone.value = zone, subzone
+	form.hereZone.text:SetText(zone and ("Here: " .. zone) or "")
+	form.hereZone:SetWidth(form.hereZone.text:GetStringWidth() + 20)
+	form.hereZone:SetShown(zone ~= nil)
+	form.hereSubzone.text:SetText(subzone and ("Here: " .. subzone) or "")
+	form.hereSubzone:SetWidth(form.hereSubzone.text:GetStringWidth() + 20)
+	form.hereSubzone:SetShown(subzone ~= nil)
+	local typed = strtrim(form.zoneBox:GetText() or ""):lower()
+	local matches = {}
+	if typed ~= "" then
+		for _, name in ipairs(form.zoneNames) do
+			if #matches < MAX_ZONE_MATCHES and name:lower():find(typed, 1, true) and name:lower() ~= typed then
+				table.insert(matches, name)
+			end
+		end
+	end
+	for index, button in ipairs(form.zoneMatches) do
+		local name = matches[index]
+		button:SetShown(name ~= nil)
+		if name then
+			button.value = name
+			button.text:SetText(name)
+			button:SetWidth(button.text:GetStringWidth() + 20)
+		end
+	end
+	form.characterSelect:Refresh()
+end
+
+local function SubmitForm()
+	local spec = { text = strtrim(form.textBox:GetText() or ""), kind = form.kind }
+	if spec.kind == "time" then
+		local amount = tonumber(form.amountBox:GetText())
+		for _, unit in ipairs(UNITS) do
+			if unit.key == form.unit and amount then
+				spec.duration = amount * unit.seconds
+				spec.at = time() + spec.duration
+			end
+		end
+	elseif spec.kind == "zone" then
+		spec.zone = strtrim(form.zoneBox:GetText() or "")
+	elseif spec.kind == "level" then
+		spec.level = tonumber(form.levelBox:GetText())
+	end
+	if form.character ~= ns:PlayerName() then
+		spec.character, spec.known = form.character, true
+	end
+	local checked, problem = reminders.Validate(spec)
+	if not checked then
+		form.problem:SetText(problem)
+		return
+	end
+	reminders.Commit(checked)
+	form:Hide()
+end
+
+local function CreateForm()
+	local body = frame.body
+	form = CreateFrame("Frame", "NraKitReminderForm", body)
+	form:SetPoint("TOPLEFT", 0, -TOP_HEIGHT - 1)
+	form:SetPoint("BOTTOMRIGHT", 0, FOOTER_HEIGHT + 1)
+	form:EnableMouse(true)
+	form:SetFrameLevel(scroll:GetFrameLevel() + 10)
+	local bg = form:CreateTexture(nil, "BACKGROUND")
+	bg:SetAllPoints()
+	bg:SetColorTexture(unpack(UI.BG))
+	form:Hide()
+
+	local title = MakeLabel(form, "New reminder", "GameFontNormalLarge")
+	title:SetPoint("TOPLEFT", PAD + 8, -PAD - 4)
+	title:SetTextColor(unpack(UI.ACCENT))
+	local LEFT = 130
+
+	FormLabel("Reminder", -56)
+	form.textBox = FormBox(560)
+	form.textBox:SetPoint("TOPLEFT", LEFT + 6, -52)
+	form.textBox:SetScript("OnEnterPressed", SubmitForm)
+
+	FormLabel("When", -96)
+	form.whenChips = {}
+	local anchor
+	for _, each in ipairs(WHEN) do
+		local chip = UI.CreateFlatButton(form, each.label, 22)
+		chip.value = each.key
+		if anchor then
+			chip:SetPoint("LEFT", anchor, "RIGHT", 4, 0)
+		else
+			chip:SetPoint("TOPLEFT", LEFT, -92)
+		end
+		chip:SetScript("OnClick", function(self)
+			form.kind = self.value
+			form.problem:SetText("")
+			PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+			RefreshForm()
+		end)
+		table.insert(form.whenChips, chip)
+		anchor = chip
+	end
+
+	-- What goes with each choice, under the chips.
+	form.details = {}
+	local function Details()
+		local details = CreateFrame("Frame", nil, form)
+		details:SetPoint("TOPLEFT", LEFT, -124)
+		details:SetPoint("RIGHT", -PAD, 0)
+		details:SetHeight(110)
+		return details
+	end
+
+	local login = Details()
+	form.loginNote = MakeLabel(login, "", "GameFontDisable")
+	form.loginNote:SetPoint("TOPLEFT", 2, -4)
+	form.details.login = login
+
+	local timed = Details()
+	form.amountBox = FormBox(50, true)
+	form.amountBox:SetParent(timed)
+	form.amountBox:SetPoint("TOPLEFT", 6, 0)
+	form.amountBox:SetScript("OnEnterPressed", SubmitForm)
+	form.unitChips = {}
+	anchor = form.amountBox
+	for _, unit in ipairs(UNITS) do
+		local chip = UI.CreateFlatButton(timed, unit.label, 22)
+		chip.value = unit.key
+		chip:SetPoint("LEFT", anchor, "RIGHT", anchor == form.amountBox and 10 or 4, 0)
+		chip:SetScript("OnClick", function(self)
+			form.unit = self.value
+			RefreshForm()
+		end)
+		table.insert(form.unitChips, chip)
+		anchor = chip
+	end
+	local quick = MakeLabel(timed, "Or:", "GameFontDisableSmall")
+	quick:SetPoint("TOPLEFT", 2, -34)
+	anchor = quick
+	for _, each in ipairs({ { "15 min", 15, "m" }, { "1 hour", 1, "h" }, { "3 hours", 3, "h" }, { "1 day", 1, "d" } }) do
+		local chip = UI.CreateFlatButton(timed, each[1], 20)
+		chip:SetPoint("LEFT", anchor, "RIGHT", anchor == quick and 8 or 4, 0)
+		chip:SetScript("OnClick", function()
+			form.amountBox:SetText(each[2])
+			form.unit = each[3]
+			RefreshForm()
+		end)
+		anchor = chip
+	end
+	form.details.time = timed
+
+	local zoned = Details()
+	form.zoneBox = FormBox(260)
+	form.zoneBox:SetParent(zoned)
+	form.zoneBox:SetPoint("TOPLEFT", 6, 0)
+	form.zoneBox:SetScript("OnEnterPressed", SubmitForm)
+	form.zoneBox:HookScript("OnTextChanged", function()
+		RefreshForm()
+	end)
+	local function PickZone(self)
+		form.zoneBox:SetText(self.value)
+		form.zoneBox:ClearFocus()
+		RefreshForm()
+	end
+	form.hereZone = UI.CreateFlatButton(zoned, "", 22)
+	form.hereZone:SetPoint("LEFT", form.zoneBox, "RIGHT", 10, 0)
+	form.hereZone:SetScript("OnClick", PickZone)
+	form.hereSubzone = UI.CreateFlatButton(zoned, "", 22)
+	form.hereSubzone:SetPoint("LEFT", form.hereZone, "RIGHT", 4, 0)
+	form.hereSubzone:SetScript("OnClick", PickZone)
+	local zoneHint = MakeLabel(zoned, "Type a zone or subzone (any you like), or pick one.", "GameFontDisableSmall")
+	zoneHint:SetPoint("TOPLEFT", 2, -30)
+	form.zoneMatches = {}
+	anchor = nil
+	for index = 1, MAX_ZONE_MATCHES do
+		local button = UI.CreateFlatButton(zoned, "", 20)
+		if index == 1 then
+			button:SetPoint("TOPLEFT", 0, -50)
+		elseif index == 4 then
+			button:SetPoint("TOPLEFT", 0, -74)
+		else
+			button:SetPoint("LEFT", anchor, "RIGHT", 4, 0)
+		end
+		button:SetScript("OnClick", PickZone)
+		form.zoneMatches[index] = button
+		anchor = button
+	end
+	form.details.zone = zoned
+
+	local leveled = Details()
+	form.levelBox = FormBox(50, true)
+	form.levelBox:SetParent(leveled)
+	form.levelBox:SetPoint("TOPLEFT", 6, 0)
+	form.levelBox:SetScript("OnEnterPressed", SubmitForm)
+	local levelHint = MakeLabel(leveled, "When you reach this level.", "GameFontDisable")
+	levelHint:SetPoint("LEFT", form.levelBox, "RIGHT", 12, 0)
+	form.details.level = leveled
+
+	FormLabel("For", -246)
+	form.characterSelect = UI.CreateChoiceSelect(form, {
+		width = 260,
+		get = function()
+			return form.character
+		end,
+		set = function(value)
+			form.character = value
+			RefreshForm()
+		end,
+		choices = CharacterChoices,
+	})
+	form.characterSelect:SetPoint("TOPLEFT", LEFT, -242)
+
+	local add = UI.CreateFlatButton(form, "Add reminder", 26)
+	add:SetWidth(120)
+	add:SetPoint("TOPLEFT", LEFT, -292)
+	add:SetScript("OnClick", SubmitForm)
+	local cancel = UI.CreateFlatButton(form, "Cancel", 26)
+	cancel:SetWidth(80)
+	cancel:SetPoint("LEFT", add, "RIGHT", 8, 0)
+	cancel:SetScript("OnClick", function()
+		form:Hide()
+	end)
+	form.problem = MakeLabel(form, "", "GameFontNormal")
+	form.problem:SetPoint("LEFT", cancel, "RIGHT", 16, 0)
+	form.problem:SetTextColor(1, 0.35, 0.3)
+
+	form:HookScript("OnShow", function()
+		scroll:Hide()
+	end)
+	form:HookScript("OnHide", function()
+		scroll:Show()
+		Render()
+	end)
+end
+
+-- Opens the form, empty: next login, for you.
+function OpenForm()
+	if not form then
+		CreateForm()
+	end
+	form.kind, form.unit, form.character = "login", "m", ns:PlayerName()
+	form.textBox:SetText("")
+	form.amountBox:SetText("30")
+	form.zoneBox:SetText("")
+	form.levelBox:SetText(math.min((UnitLevel("player") or 1) + 1, GetMaxPlayerLevel and GetMaxPlayerLevel() or 999))
+	form.problem:SetText("")
+	form.zoneNames = reminders.ZoneNames()
+	form:Show()
+	RefreshForm()
+end
+
+------------------------------------------------------------------------------
 -- Window
 ------------------------------------------------------------------------------
 
@@ -282,7 +598,7 @@ local function CreateWindow()
 	addBox:SetMaxLetters(255)
 	addBox:SetScript("OnEnterPressed", AddFromBox)
 	addBox:SetScript("OnEscapePressed", addBox.ClearFocus)
-	addBox.placeholder = MakeLabel(addBox, "New reminder: text, or 30m / in <zone>: / at <level>: / @<character>: first", "GameFontDisable")
+	addBox.placeholder = MakeLabel(addBox, "New reminder (like /nra remind), or click Add for a form", "GameFontDisable")
 	addBox.placeholder:SetPoint("LEFT", 2, 0)
 	addBox:HookScript("OnTextChanged", function(self)
 		self.placeholder:SetShown(self:GetText() == "")
@@ -291,6 +607,10 @@ local function CreateWindow()
 	add:SetWidth(56)
 	add:SetPoint("LEFT", addBox, "RIGHT", 8, 0)
 	add:SetScript("OnClick", AddFromBox)
+	add:SetScript("OnEnter", function(self)
+		UI.ShowTooltip(self, "Add", "Adds what you typed (the same words as /nra remind). With nothing typed, opens a form to pick when it comes due.")
+	end)
+	add:SetScript("OnLeave", GameTooltip_Hide)
 	helpButton = UI.CreateHelpButton(body, "How to write reminders", Render)
 	helpButton:SetPoint("TOPRIGHT", -PAD, -PAD)
 
@@ -344,6 +664,9 @@ local function CreateWindow()
 	frame:HookScript("OnHide", function()
 		editingID = nil
 		helpButton:SetOpen(false)
+		if form then
+			form:Hide()
+		end
 	end)
 	reminders.onChanged = Render
 end

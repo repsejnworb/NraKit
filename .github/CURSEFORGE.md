@@ -154,7 +154,7 @@ Notes to yourself that come back when they're due. **/nra remind Go to Darkshore
 - Shift-clicked items and quests work in the text.
 - Due reminders show on a **card that stays until you close it**. Tick what you've done; the rest stay in a small list on screen (click its header to fold it) and **come back at your next login**. **/nra remind show** or a key brings the list back if you hid it.
 - They wait for combat to end, and play a sound you can pick.
-- The **Reminders tab** (**/nra remind**) lists them all, with the ones you left your other characters. Edit them there, or right-click to be reminded again later.
+- The **Reminders tab** (**/nra remind**) lists them all, with the ones you left your other characters. Edit them there, or right-click to be reminded again later. Click **Add** with the box empty for a **form** to pick when (a time, a zone from a list, a level) and for which character.
 
 ### Campfire timer
 A **progress bar in the middle of the screen** while you rest at a Welcoming Campfire, with the time left. It turns green (with a sound) when Camp Benefits is ready.

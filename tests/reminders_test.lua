@@ -290,6 +290,77 @@ return {
 			NraKitRemindersFrame:Hide()
 		end)
 
+		t.test("Add with the box empty: a form to pick when, without the command words", function()
+			C_Map.GetBestMapForUnit = function()
+				return 10
+			end
+			C_Map.GetMapInfo = function(mapID)
+				return ({ [10] = { parentMapID = 2 }, [2] = { parentMapID = 0 } })[mapID]
+			end
+			C_Map.GetMapChildrenInfo = function(mapID)
+				return mapID == 2 and { { name = "Darkshore" }, { name = "Darnassus" }, { name = "Ashenvale" } } or {}
+			end
+			ns:OpenReminders()
+			t.ok(wow.click("Add"), "Add")
+			local form = NraKitReminderForm
+			t.ok(form:IsShown(), "the form")
+			local textBox = rawget(form, "textBox")
+
+			t.ok(wow.click("Add reminder"), "submit empty")
+			t.ok(form:IsShown() and rawget(rawget(form, "problem"), "text"):find("say", 1, true), "asks what it should say")
+
+			wow.type(textBox, "sell the greens")
+			wow.click("After a time")
+			wow.click("1 hour")
+			wow.click("Add reminder")
+			t.ok(not form:IsShown(), "closed")
+			local reminder = Mine("sell the greens")
+			t.ok(reminder and reminder.kind == "time" and reminder.at == now + 3600, "in an hour")
+
+			wow.click("Add")
+			wow.type(textBox, "fish quest")
+			wow.click("In a zone")
+			local zoneBox = rawget(form, "zoneBox")
+			wow.type(zoneBox, "dar")
+			t.ok(wow.click("Ashenvale") == false and wow.click("Darnassus"), "matching zones to pick")
+			wow.click("Add reminder")
+			t.equal(Mine("fish quest").zone, "Darnassus", "picked zone")
+
+			wow.click("Add")
+			wow.type(textBox, "visit the trainer")
+			wow.click("At a level")
+			wow.type(rawget(form, "levelBox"), "20")
+			wow.click("Add reminder")
+			t.ok(rawget(rawget(form, "problem"), "text"):find("already", 1, true), "a level you have")
+			wow.type(rawget(form, "levelBox"), "35")
+			wow.click("Add reminder")
+			t.equal(Mine("visit the trainer").level, 35, "level")
+
+			wow.click("Add")
+			wow.type(textBox, "mail the mats")
+			wow.click("At a level")
+			local menu
+			MenuUtil.CreateContextMenu = function(_, build)
+				menu = wow.newMenu()
+				build(nil, menu)
+			end
+			local select = rawget(form, "characterSelect")
+			select.scripts.OnClick(select)
+			t.ok(wow.menuEntry(menu.entries, "Me (Nra)"), "you first")
+			wow.menuEntry(menu.entries, "Bob Stone").onClick("Bob Stone")
+			wow.type(rawget(form, "levelBox"), "20")
+			wow.click("Add reminder")
+			local theirs
+			for _, each in ipairs(reminders.List("Bob Stone")) do
+				if each.text == "mail the mats" then
+					theirs = each
+				end
+			end
+			t.ok(theirs and theirs.kind == "level" and theirs.level == 20 and theirs.from == "Nra", "for Bob, at 20 (his level isn't yours)")
+			t.noErrors()
+			NraKitRemindersFrame:Hide()
+		end)
+
 		t.test("logging in as the other character: theirs, from you", function()
 			wow.data.units.player = { name = "Bob", surname = "Stone" }
 			Login()

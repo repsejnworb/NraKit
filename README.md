@@ -275,8 +275,11 @@ shows up the next time you log in.
   `/nra remind show`, a key (Key Bindings > NraKit) or **Show on screen** in the tab brings it back.
 - They wait for combat to end, and play a sound (pick it in the settings).
 - The **Reminders tab** (`/nra remind`) lists them: due now, waiting (and when they'll come), the ones
-  you left your other characters, and done. Write new ones there, click one to edit it, right-click
-  to be reminded again in 15 minutes, an hour or next login.
+  you left your other characters, and done. Click one to edit it, right-click to be reminded again in
+  15 minutes, an hour or next login.
+- Write new ones in the tab's box in the same words as `/nra remind`, or click **Add** with the box
+  empty for a **form**: the text, when (next login, after a time, a zone you pick from a list or type,
+  a level) and which of your characters it's for.
 - `/nra preview reminders` shows the card.
 
 #### Campfire timer

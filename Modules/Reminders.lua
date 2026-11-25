@@ -415,6 +415,24 @@ function reminders.Parse(input)
 	if spec.text == "" then
 		return nil, "What should the reminder say? Type it after the trigger, e.g. /nra remind 30m check the auction house."
 	end
+	return reminders.Validate(spec)
+end
+
+-- Checks a reminder before it's added (from /nra remind or the form). Returns the spec, or
+-- nil and what's wrong.
+function reminders.Validate(spec)
+	if strtrim(spec.text or "") == "" then
+		return nil, "What should the reminder say?"
+	end
+	if spec.kind == "time" and not (spec.duration and spec.duration > 0) then
+		return nil, "How long until it comes due?"
+	end
+	if spec.kind == "zone" and strtrim(spec.zone or "") == "" then
+		return nil, "Which zone?"
+	end
+	if spec.kind == "level" and not spec.level then
+		return nil, "Which level?"
+	end
 	if spec.kind == "level" and (spec.level < 2 or spec.level > (GetMaxPlayerLevel and GetMaxPlayerLevel() or 999)) then
 		return nil, "That's not a level you can reach."
 	end
@@ -996,6 +1014,48 @@ local function Confirm(reminder, spec)
 	end
 end
 
+-- Adds a checked spec (reminders.Validate) and says so in chat.
+function reminders.Commit(spec)
+	local reminder = reminders.Add(spec, spec.character)
+	if spec.kind == "zone" and not spec.character then
+		zonesBefore = CurrentZones() -- where you are now doesn't count as entering
+	end
+	Confirm(reminder, spec)
+	return reminder
+end
+
+-- Every zone name the map knows (for picking one in the form), sorted.
+function reminders.ZoneNames()
+	local names, seen = {}, {}
+	local mapID = C_Map.GetBestMapForUnit("player")
+	local top = mapID
+	while mapID do
+		local info = C_Map.GetMapInfo(mapID)
+		if not info then
+			break
+		end
+		top = mapID
+		mapID = info.parentMapID ~= 0 and info.parentMapID or nil
+	end
+	for _, info in ipairs(top and C_Map.GetMapChildrenInfo(top, Enum.UIMapType.Zone, true) or {}) do
+		if info.name and info.name ~= "" and not seen[info.name] then
+			seen[info.name] = true
+			table.insert(names, info.name)
+		end
+	end
+	table.sort(names)
+	return names
+end
+
+-- The zone and subzone you're in now (either can be nil).
+function reminders.Here()
+	local zone = GetRealZoneText and GetRealZoneText()
+	local subzone = GetSubZoneText and GetSubZoneText()
+	zone = zone ~= "" and zone or nil
+	subzone = subzone ~= "" and subzone ~= zone and subzone or nil
+	return zone, subzone
+end
+
 local function OnSlashCommand(rest)
 	if not ns:IsModuleEnabled(module.key) then
 		ns:Print("Turn on Reminders first (/nra).")
@@ -1013,12 +1073,7 @@ local function OnSlashCommand(rest)
 		ns:Print(problem)
 		return
 	end
-	local reminder = reminders.Add(spec, spec.character)
-	if spec.kind == "zone" and not spec.character then
-		zonesBefore = CurrentZones() -- where you are now doesn't count as entering
-	end
-	Confirm(reminder, spec)
-	return reminder
+	return reminders.Commit(spec)
 end
 reminders.OnSlashCommand = OnSlashCommand
 
