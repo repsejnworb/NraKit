@@ -60,7 +60,7 @@ Running around with finished quests you forgot about? **/nra done** (or a key un
 - **Click** a quest to open the map on it (its turn-in shows there, and the list stays open).
 - **Right-click** it, or click its **round quest icon** (as in the objective tracker), to make it your **waypoint**.
 - **Shift+click** to link it.
-- Entering a zone where you have quests to turn in **pops a small message**, headed by the zone and shared with your to-dos there (click it to open the list; a chat line is optional), and can open the list itself (off by default).
+- Entering a zone where you have quests to turn in **pops a small message** with the zone's name and your quests to turn in there, one per line, together with your reminders and to-dos for that zone (click a quest to open the list; a chat line is optional). It can also open the list itself (off by default).
 
 ![questsDoneList](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/questsDoneList.png)
 ![questTurninReminderToast](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/questTurninReminderToast.png)
