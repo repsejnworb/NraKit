@@ -665,10 +665,11 @@ return {
 			end
 			t.ok(labels["For your other characters"] and labels["Waiting"] and labels["Done"], "sections")
 			t.ok(labels["Bob Stone: next login"], "who and when")
-			t.ok(labels["In 2 h (" .. date("%H:%M", now + 7200) .. ") · pops up"], "when a timed one comes, and that it pops up")
+			t.ok(labels["In 2 h (" .. date("%H:%M", now + 7200) .. ")"], "when a timed one comes")
 			local row = wow.findAll(function(frame)
 				return rawget(frame, "reminder") == Mine("stable the pet") and wow.visible(frame)
 			end)[1]
+			t.equal(rawget(row.kind, "text"), "Reminder", "what it is, under Waiting")
 			row.scripts.OnClick(row, "LeftButton")
 			local editBox
 			for _, frame in ipairs(wow.frames) do

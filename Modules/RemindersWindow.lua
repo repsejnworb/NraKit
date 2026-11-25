@@ -143,8 +143,12 @@ local function AcquireRow(content)
 		end)
 		row.check:SetPoint("LEFT", 8, 0)
 		reminders.AddReorder(row)
+		-- What it is (in the sections that mix them): Reminder or To-do, in colour.
+		row.kind = MakeLabel(row, "", "GameFontNormalSmall")
+		row.kind:SetPoint("RIGHT", -30, 0)
+		row.kind:SetJustifyH("RIGHT")
 		row.when = MakeLabel(row, "", "GameFontHighlightSmall")
-		row.when:SetPoint("RIGHT", -44, 0)
+		row.when:SetPoint("RIGHT", row.kind, "LEFT", -10, 0)
 		row.when:SetJustifyH("RIGHT")
 		row.text = MakeLabel(row, "")
 		row.text:SetPoint("LEFT", row.check, "RIGHT", 10, 0)
@@ -173,7 +177,9 @@ local function AcquireRow(content)
 	end)
 end
 
-local function FillRow(row, reminder, when, index)
+local KIND_COLOURS = { reminder = { 1, 0.6, 0.2 }, todo = { 0.4, 0.75, 1 } }
+
+local function FillRow(row, reminder, when, index, showKind)
 	row.reminder, row.reminderID = reminder, reminder.id
 	row.canMove = reminder.state == "due"
 	local done = reminder.state == "done"
@@ -183,7 +189,9 @@ local function FillRow(row, reminder, when, index)
 	row.text:SetAlpha(done and 0.5 or 1)
 	row.text:SetShown(editingID ~= reminder.id)
 	row.when:SetText(when)
-	row.when:SetTextColor(unpack(reminder.state == "due" and UI.GOLD or UI.TEXT_DIM))
+	row.when:SetTextColor(unpack(reminder.state == "due" and UI.GOLD or UI.TEXT))
+	row.kind:SetText(showKind and (reminder.quiet and "To-do" or "Reminder") or "")
+	row.kind:SetTextColor(unpack(reminder.quiet and KIND_COLOURS.todo or KIND_COLOURS.reminder))
 	if editingID == reminder.id then
 		editBox:ClearAllPoints()
 		editBox:SetPoint("LEFT", row.check, "RIGHT", 14, 0)
@@ -252,7 +260,7 @@ local function Collect()
 			table.insert(reminder.quiet and todo or now, { reminder = reminder, when = reminders.DueNote(reminder) })
 		elseif reminder.state == "waiting" then
 			local when = reminders.Describe(reminder)
-			table.insert(waiting, { reminder = reminder, when = reminder.quiet and (when .. " · to-do") or (when .. " · pops up") })
+			table.insert(waiting, { reminder = reminder, when = when })
 		else
 			table.insert(done, { reminder = reminder, when = reminder.doneAt and date("Done %b %d", reminder.doneAt) or "Done" })
 		end
@@ -287,9 +295,9 @@ local function Collect()
 	return {
 		{ label = "Reminders", rows = now },
 		{ label = "To do", rows = todo },
-		{ label = "Waiting", rows = waiting },
-		{ label = "For your other characters", rows = others },
-		{ label = "Done", rows = done, foldable = true },
+		{ label = "Waiting", rows = waiting, mixed = true },
+		{ label = "For your other characters", rows = others, mixed = true },
+		{ label = "Done", rows = done, foldable = true, mixed = true },
 	}
 end
 
@@ -325,7 +333,7 @@ function Render()
 					local row = AcquireRow(content)
 					row:SetWidth(width)
 					row:SetPoint("TOPLEFT", content, "TOPLEFT", PAD, y)
-					FillRow(row, entry.reminder, entry.when, index)
+					FillRow(row, entry.reminder, entry.when, index, section.mixed)
 					y = y - ROW_HEIGHT
 				end
 			end
