@@ -20,7 +20,7 @@ Type **/nrakit** (or **/nra**) to open NraKit's own window.
 - **/nra who** lists who in your guild and group runs NraKit, and how many NraKit users you've come across.
 - Both of these can be switched off.
 
-Alert **sounds are yours to choose** (Campfire timer, Unit Scanner, Farm goals, Player notes, Reminders): a short list of good ones (hover to hear them), or **More sounds...** to search every game sound and any sounds other addons share through LibSharedMedia.
+Alert **sounds are yours to choose** (Campfire timer, Unit Scanner, Farm goals, Player notes, Reminders & to-dos): a short list of good ones (hover to hear them), or **More sounds...** to search every game sound and any sounds other addons share through LibSharedMedia.
 
 ## Units & Nameplates
 
@@ -148,13 +148,14 @@ After a respec, abilities you don't know anymore stay on your bars, only greyed 
 - It also lists **new abilities** that aren't on your bars yet.
 - **/nra unlearned** lists them, **/nra unlearned remove** takes them off.
 
-### Reminders
-Notes to yourself that come back when they're due. **/nra remind Go to Darkshore and hand in quests** shows up the next time you log in.
-- **Later instead:** a time (**/nra remind 30m check the AH**; s, m, h, d), a zone (**in Darkshore: ...**), a level (**at 30: ...**), or **another character's next login** (**@Bankalt: mail the bags**, also with a trigger).
+### Reminders & to-dos
+Notes to yourself that come back when they're due. **/nra remind Go to Darkshore and hand in quests** pops up the next time you log in; **/nra todo respec** just goes on your **to-do list** on screen.
+- **Later instead:** a time (**/nra remind 30m check the AH**; s, m, h, d), a zone (**in Darkshore: ...**), a level (**at 30: ...**), or **another character's next login** (**@Bankalt: mail the bags**, also with a trigger). The same works for to-dos.
 - Shift-clicked items and quests work in the text.
-- Due reminders show on a **card that stays until you close it**, led by **why** each came due (you entered Darkshore, time's up, from Bankalt); at login it also lists what's still open from before. Tick what you've done; the rest stay in a small list on screen (click its header to fold it) and **come back at your next login**. **/nra remind show** or a key brings the list back if you hid it.
-- They wait for combat to end, and play a sound you can pick.
-- The **Reminders tab** (**/nra remind**) lists them all, with the ones you left your other characters. Edit them there, or right-click to be reminded again later. Click **Add** with the box empty for a **form** to pick when (a time, a zone from a list, a level) and for which character.
+- **Reminders** show on a **card that stays until you close it**, led by **why** each came due (you entered Darkshore, time's up, from Bankalt); at login it also lists the reminders still open from before. They wait for combat to end, and play a sound you can pick.
+- **To-dos** skip the card: they go straight on the list.
+- **The to-do list** on screen holds both until you tick them, **in your order** (drag a row, or use its arrows). Ticked ones fade out. Fold it with a click on its header; **/nra todo** or a key brings it back if you hid it.
+- The **Reminders tab** (**/nra remind**) lists them all, with the ones you left your other characters. Edit them there, or right-click to be reminded again later. Click **Add** with the box empty for a **form** to pick when (a time, a zone from a list, a level), for which character, and whether it pops up.
 
 ### Campfire timer
 A **progress bar in the middle of the screen** while you rest at a Welcoming Campfire, with the time left. It turns green (with a sound) when Camp Benefits is ready.

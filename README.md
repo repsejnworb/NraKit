@@ -47,7 +47,7 @@ Type `/nrakit` (or `/nra`) to open NraKit's window.
 
 ### Sounds
 
-Alert sounds (Campfire timer, Unit Scanner, Farm goals, Player notes, Reminders) can be changed:
+Alert sounds (Campfire timer, Unit Scanner, Farm goals, Player notes, Reminders & to-dos) can be changed:
 
 - Pick from a short list of good ones (hover to hear them).
 - Or use **More sounds...** to search every game sound, plus any sounds other addons share through
@@ -256,33 +256,37 @@ you can't use right now. This makes them stand out.
 - It also lists new abilities that aren't on your bars yet.
 - `/nra unlearned` lists them, `/nra unlearned remove` takes them off.
 
-#### Reminders
+#### Reminders & to-dos
 
 Notes to yourself that come back when they're due. `/nra remind Go to Darkshore and hand in quests`
-shows up the next time you log in.
+pops up the next time you log in; `/nra todo respec` just goes on your **to-do list** on screen.
 
-- **Later instead:** put a trigger in front.
+- **Later instead:** put a trigger in front (the same for to-dos).
   - A time: `/nra remind 30m check the auction house` (s, m, h, d: `2d`, `1h30m`).
   - A zone or subzone: `/nra remind in Darkshore: turtle quest`.
   - A level: `/nra remind at 30: train`.
   - **Another character's next login:** `/nra remind @Bankalt: mail the bags`. This also goes with the
     others (`@Bankalt at 20: ...`).
 - Shift-clicked items and quests work in the text.
-- Due reminders show on a **card that stays until you close it**, led by **why** each came due ("You
+- **Reminders** show on a **card that stays until you close it**, led by **why** each came due ("You
   entered Darkshore", "Time's up", "From Bankalt"). One reminder gets **Done** and **Later**; at login the
-  card also lists what's still open from before, under a line.
-- Tick what you've done; the rest stay
-  in a small list on screen (an option) and **come back at your next login**. Nothing goes away until
-  you tick it.
-- Click the list's header to **fold** it; right-click it to hide it until your next login.
-  `/nra remind show`, a key (Key Bindings > NraKit) or **Show on screen** in the tab brings it back.
-- They wait for combat to end, and play a sound (pick it in the settings).
-- The **Reminders tab** (`/nra remind`) lists them: due now, waiting (and when they'll come), the ones
-  you left your other characters, and done. Click one to edit it, right-click to be reminded again in
-  15 minutes, an hour or next login.
-- Write new ones in the tab's box in the same words as `/nra remind`, or click **Add** with the box
-  empty for a **form**: the text, when (next login, after a time, a zone you pick from a list or type,
-  a level) and which of your characters it's for.
+  card also lists the reminders still open from before, under a line. They wait for combat to end, and
+  play a sound (pick it in the settings).
+- **To-dos** skip the card and the sound: they go straight on the list when they come due.
+- **The to-do list** on screen holds both until you tick them (reminders after their card, an option).
+  - **In your order:** drag a row, or use the arrows on the row under the mouse (shift-click: to the
+    top or bottom).
+  - Ticked ones fade out after a moment (untick in time to keep one).
+  - Click its header to **fold** it; right-click it to hide it until your next login. `/nra todo`, a
+    key (Key Bindings > NraKit) or **Show on screen** in the tab brings it back.
+- Right-click an item to make a to-do a reminder (or the other way), move it, be reminded again in 15
+  minutes, an hour or next login, edit or delete it.
+- The **Reminders tab** (`/nra remind`) lists them: to do now, waiting (and when they'll come, and
+  whether they pop up), the ones you left your other characters, and done. Click one to edit it.
+- Write new ones in the tab's box in the same words as `/nra remind` (**Pop up** next to it picks a
+  reminder or a to-do), or click **Add** with the box empty for a **form**: the text, when (next login or
+  now, after a time, a zone you pick from a list or type, a level), which of your characters it's for,
+  and whether it pops up.
 - `/nra preview reminder` shows the card for one reminder, `/nra preview reminders` the one at login.
 
 #### Campfire timer

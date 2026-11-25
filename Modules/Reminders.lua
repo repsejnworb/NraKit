@@ -1,7 +1,7 @@
 local _, ns = ...
 
--- Reminders: notes to yourself that come back when they're due. /nra remind <text> is for
--- your next login; a trigger in front makes it come back later instead:
+-- Reminders & to-dos: notes to yourself that come back when they're due. /nra remind <text>
+-- is for your next login; a trigger in front makes it come back later instead:
 --   /nra remind 30m <text>                  in 30 minutes (s, m, h, d; 1h30m works too)
 --   /nra remind in <zone>: <text>           when you enter that zone (or subzone)
 --   /nra remind at <level>: <text>          when you reach that level
@@ -13,24 +13,29 @@ local _, ns = ...
 -- card shows them again at your next login. A reminder never goes away unless you tick it.
 -- Due reminders wait for combat to end before they show.
 --
+-- A to-do (/nra todo, same triggers) is a reminder without the card and sound: it goes
+-- straight on the list (now, or when its trigger comes). The list on screen holds both, in
+-- your order: drag a row, or use the arrows on the row under the mouse.
+--
 -- Saved account-wide in NraKitDB.remindersData = { nextID, characters = { [name] = { seen?,
 -- list = { { id, text, kind = "login"|"time"|"zone"|"level", at?, zone?, level?, from?,
--- created, state = "waiting"|"due"|"done", dueAt?, away?, doneAt? } } } } }. A character is
+-- created, state = "waiting"|"due"|"done", quiet? (a to-do), order? (place in the list while
+-- due), dueAt?, away?, doneAt?, since? } } } } }. A character is
 -- `seen` once they log in with Reminders on; reminders for one that hasn't yet are kept
 -- under the name you typed and picked up when they do.
 
 local module = {
 	key = "reminders",
 	section = "Trackers & Reminders",
-	name = "Reminders",
-	description = "Notes to yourself that come back when they're due: /nra remind <text> for your next login, or after a time (30m), when you enter a zone, reach a level or log in on another character. Due reminders show on a card you close yourself, with a box to tick each one off, so you don't miss them.",
+	name = "Reminders & to-dos",
+	description = "Notes to yourself that come back when they're due: /nra remind <text> for your next login, or after a time (30m), when you enter a zone, reach a level or log in on another character. Due reminders show on a card you close yourself, so you don't miss them. To-dos (/nra todo) go straight on a list on screen instead, in your order.",
 	default = false,
 	options = {
 		{
 			key = "remindersTracker",
 			header = "General",
-			name = "Keep them on screen",
-			description = "When you close the card with reminders not ticked off, they stay in a small list on screen until you tick them.",
+			name = "Keep reminders on the list",
+			description = "When you close the card with reminders not ticked off, they stay on the to-do list on screen until you tick them. (To-dos always go there.)",
 			default = true,
 		},
 		{
@@ -53,6 +58,8 @@ local module = {
 local LOGIN_DELAY = 5 -- seconds after logging in before the card shows (after the loading screen)
 local CHECK_INTERVAL = 5 -- seconds between checks for timed reminders
 local KEEP_DONE = 30 -- done reminders kept per character, newest first
+local TICKED_STAY = 2 -- seconds a ticked row stays in the list (to untick a slip) before it fades
+local TICKED_FADE = 1 -- seconds it takes to fade out
 local UNITS = { s = 1, m = 60, h = 3600, d = 86400 }
 
 local UI = ns.UI
@@ -179,6 +186,7 @@ function reminders.Add(spec, character)
 		at = spec.at,
 		zone = spec.zone,
 		level = spec.level,
+		quiet = spec.quiet or nil,
 		created = time(),
 		state = "waiting",
 	}
@@ -216,6 +224,23 @@ local function PruneDone(list)
 	end
 end
 
+-- The place at the bottom of a character's list of due ones.
+local function NextOrder(list)
+	local last = 0
+	for _, reminder in ipairs(list) do
+		if reminder.state == "due" and reminder.order then
+			last = math.max(last, reminder.order)
+		end
+	end
+	return last + 1
+end
+
+-- Makes a reminder due now, at the bottom of the list.
+local function MakeDue(reminder, list)
+	reminder.order = NextOrder(list)
+	reminder.state, reminder.dueAt = "due", time()
+end
+
 function reminders.SetDone(id, done)
 	local reminder, owner = reminders.Find(id)
 	if not reminder then
@@ -227,8 +252,49 @@ function reminders.SetDone(id, done)
 	else
 		reminder.state, reminder.doneAt = "due", nil
 		reminder.dueAt = reminder.dueAt or time()
+		reminder.order = reminder.order or NextOrder(reminders.List(owner))
 	end
 	Changed()
+end
+
+-- A to-do (no card, no sound) or a reminder.
+function reminders.SetQuiet(id, quiet)
+	local reminder = reminders.Find(id)
+	if reminder then
+		reminder.quiet = quiet or nil
+		Changed()
+	end
+end
+
+-- Moves one of your due reminders to `index` in the list (1 is the top).
+function reminders.MoveTo(id, index)
+	local due = reminders.Due()
+	local from
+	for position, reminder in ipairs(due) do
+		if reminder.id == id then
+			from = position
+		end
+	end
+	if not from then
+		return
+	end
+	local reminder = table.remove(due, from)
+	table.insert(due, math.max(1, math.min(index, #due + 1)), reminder)
+	for position, each in ipairs(due) do
+		each.order = position
+	end
+	Changed()
+end
+
+-- Moves it up (-1) or down (1); to the top or bottom with `all`.
+function reminders.Move(id, delta, all)
+	local due = reminders.Due()
+	for position, reminder in ipairs(due) do
+		if reminder.id == id then
+			reminders.MoveTo(id, all and (delta < 0 and 1 or #due) or position + delta)
+			return
+		end
+	end
 end
 
 function reminders.SetText(id, text)
@@ -265,15 +331,18 @@ function reminders.Snooze(id, seconds)
 	Changed()
 end
 
--- Your due reminders (not ticked off), oldest first.
-function reminders.Due()
+-- Your due reminders and to-dos (not ticked off), in your order; only reminders with `loud`.
+function reminders.Due(loud)
 	local due = {}
 	for _, reminder in ipairs(reminders.List()) do
-		if reminder.state == "due" then
+		if reminder.state == "due" and not (loud and reminder.quiet) then
 			table.insert(due, reminder)
 		end
 	end
 	table.sort(due, function(a, b)
+		if (a.order or math.huge) ~= (b.order or math.huge) then
+			return (a.order or math.huge) < (b.order or math.huge)
+		end
 		if (a.dueAt or 0) ~= (b.dueAt or 0) then
 			return (a.dueAt or 0) < (b.dueAt or 0)
 		end
@@ -341,7 +410,7 @@ function reminders.DueNote(reminder)
 		table.insert(parts, "you reached level " .. (reminder.level or "?"))
 	elseif reminder.kind == "time" and reminder.at then
 		table.insert(parts, "time's up (after " .. reminders.FormatDuration(reminder.at - (reminder.since or reminder.created or reminder.at)) .. ")")
-	elseif not reminder.from then
+	elseif not reminder.from and not reminder.quiet then
 		table.insert(parts, "from last time")
 	end
 	local text = table.concat(parts, ", ")
@@ -487,7 +556,7 @@ local function Evaluate(how)
 				due = level >= (reminder.level or 0)
 			end
 			if due then
-				reminder.state, reminder.dueAt = "due", now
+				MakeDue(reminder, reminders.List())
 				table.insert(fresh, reminder)
 			end
 		end
@@ -511,12 +580,12 @@ local function ShowDue(fresh, atLogin)
 	showQueued = false
 	fresh, atLogin = {}, queuedAtLogin
 	for _, reminder in ipairs(queued) do
-		if reminder.state == "due" then
+		if reminder.state == "due" and not reminder.quiet then -- to-dos just go on the list
 			table.insert(fresh, reminder)
 		end
 	end
 	queued, queuedAtLogin = {}, false
-	if #fresh == 0 and not (atLogin and #reminders.Due() > 0) then
+	if #fresh == 0 and not (atLogin and #reminders.Due(true) > 0) then
 		return
 	end
 	if ns:GetOption("remindersSound") then
@@ -598,9 +667,20 @@ end
 
 local function OpenRowMenu(owner, reminder)
 	MenuUtil.CreateContextMenu(owner, function(_, root)
-		root:CreateTitle("Reminder")
+		root:CreateTitle(reminder.quiet and "To-do" or "Reminder")
 		root:CreateButton(reminder.state == "done" and "Not done" or "Done", function()
 			reminders.SetDone(reminder.id, reminder.state ~= "done")
+		end)
+		if reminder.state == "due" then
+			root:CreateButton("Move to top", function()
+				reminders.Move(reminder.id, -1, true)
+			end)
+			root:CreateButton("Move to bottom", function()
+				reminders.Move(reminder.id, 1, true)
+			end)
+		end
+		root:CreateButton(reminder.quiet and "Make it a reminder (pops up)" or "Make it a to-do (no pop-up)", function()
+			reminders.SetQuiet(reminder.id, not reminder.quiet)
 		end)
 		root:CreateButton("Remind me again in 15 minutes", function()
 			reminders.Snooze(reminder.id, 15 * 60)
@@ -660,9 +740,112 @@ local function CreateRow(parent, height, onTick)
 	return row
 end
 
+-- Reordering the list: up and down arrows on the row under the mouse (shift-click for the top
+-- or bottom), and dragging a row onto another's place (a line shows where it lands).
+local reorderRows = {}
+local dropLine, dragged
+
+local function DropTarget()
+	for _, row in ipairs(reorderRows) do
+		if row ~= dragged and row.canMove and row:IsVisible() and row:GetParent() == dragged:GetParent()
+			and row:IsMouseOver() then
+			return row
+		end
+	end
+end
+
+local function IndexOf(reminder)
+	for index, each in ipairs(reminders.Due()) do
+		if each == reminder then
+			return index
+		end
+	end
+end
+
+function reminders.AddReorder(row)
+	table.insert(reorderRows, row)
+	local function Arrow(texture, delta)
+		local arrow = CreateFrame("Button", nil, row)
+		arrow:SetSize(16, 16)
+		arrow:SetNormalTexture(texture)
+		arrow:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
+		arrow:SetFrameLevel(row:GetFrameLevel() + 3)
+		arrow:Hide()
+		arrow:SetScript("OnClick", function()
+			reminders.Move(row.reminder.id, delta, IsShiftKeyDown())
+		end)
+		arrow:SetScript("OnEnter", function(self)
+			UI.ShowTooltip(self, delta < 0 and "Move up" or "Move down",
+				delta < 0 and "Shift-click: to the top. Or drag the row." or "Shift-click: to the bottom. Or drag the row.")
+		end)
+		arrow:SetScript("OnLeave", function()
+			GameTooltip:Hide()
+			if not row:IsMouseOver() then
+				row.up:Hide()
+				row.down:Hide()
+			end
+		end)
+		return arrow
+	end
+	row.down = Arrow("Interface\\Buttons\\Arrow-Down-Up", 1)
+	row.down:SetPoint("RIGHT", -2, 0)
+	row.up = Arrow("Interface\\Buttons\\Arrow-Up-Up", -1)
+	row.up:SetPoint("RIGHT", row.down, "LEFT", 0, 0)
+	row:HookScript("OnEnter", function(self)
+		self.up:SetShown(self.canMove == true)
+		self.down:SetShown(self.canMove == true)
+	end)
+	row:HookScript("OnLeave", function(self)
+		if not self:IsMouseOver() then
+			self.up:Hide()
+			self.down:Hide()
+		end
+	end)
+
+	row:RegisterForDrag("LeftButton")
+	row:SetScript("OnDragStart", function(self)
+		if not self.canMove then
+			return
+		end
+		dragged, self.justDragged = self, true
+		self:SetAlpha(0.5)
+		if not dropLine then
+			dropLine = CreateFrame("Frame", nil, UIParent)
+			dropLine:SetFrameStrata("TOOLTIP")
+			dropLine:SetHeight(2)
+			local texture = dropLine:CreateTexture(nil, "OVERLAY")
+			texture:SetAllPoints()
+			texture:SetColorTexture(unpack(UI.ACCENT))
+		end
+		self:SetScript("OnUpdate", function()
+			local target = DropTarget()
+			dropLine:SetShown(target ~= nil)
+			if target then
+				local up = IndexOf(target.reminder) < IndexOf(dragged.reminder)
+				dropLine:ClearAllPoints()
+				dropLine:SetPoint(up and "BOTTOMLEFT" or "TOPLEFT", target, up and "TOPLEFT" or "BOTTOMLEFT", 0, 0)
+				dropLine:SetPoint(up and "BOTTOMRIGHT" or "TOPRIGHT", target, up and "TOPRIGHT" or "BOTTOMRIGHT", 0, 0)
+			end
+		end)
+	end)
+	row:SetScript("OnDragStop", function(self)
+		self:SetScript("OnUpdate", nil)
+		self:SetAlpha(1)
+		if dropLine then
+			dropLine:Hide()
+		end
+		local target = dragged == self and DropTarget()
+		dragged = nil
+		if target then
+			reminders.MoveTo(self.reminder.id, IndexOf(target.reminder))
+		end
+	end)
+end
+
 local function FillRow(row, reminder, withNote)
 	row.reminder = reminder
 	row.reminderID = reminder.id
+	row.canMove = reminder.state == "due"
 	local done = reminder.state == "done"
 	row.check:SetChecked(done)
 	row.text:SetText(reminder.text)
@@ -928,7 +1111,7 @@ function CardShow(fresh, atLogin, older)
 			end
 		end
 		card.older = {}
-		for _, reminder in ipairs(reminders.Due()) do
+		for _, reminder in ipairs(reminders.Due(true)) do
 			if not listed[reminder] then
 				table.insert(card.older, reminder)
 			end
@@ -1029,25 +1212,48 @@ local function CreateTracker()
 
 	tracker.rows = {}
 	local function OnTick(row, checked)
-		tracker.ticked[row.reminder] = checked or nil
+		tracker.ticked[row.reminder] = checked and GetTime() or nil
 		reminders.SetDone(row.reminderID, checked)
+		if checked then
+			C_Timer.After(TICKED_STAY + TICKED_FADE, RefreshTracker)
+		end
 	end
+	-- Ticked rows fade out, then the list closes up.
+	tracker:SetScript("OnUpdate", function(self)
+		local now = GetTime()
+		for _, row in ipairs(self.rows) do
+			local tickedAt = row:IsShown() and row.reminder and self.ticked[row.reminder]
+			row:SetAlpha(tickedAt and math.max(0, 1 - (now - tickedAt - TICKED_STAY) / TICKED_FADE) or 1)
+		end
+	end)
 	for index = 1, TRACKER_MAX_ROWS do
 		local row = CreateRow(tracker, TRACKER_ROW, OnTick)
+		reminders.AddReorder(row)
 		row:SetPoint("TOPLEFT", 8, -30 - (index - 1) * TRACKER_ROW)
 		row:SetPoint("RIGHT", -8, 0)
 		tracker.rows[index] = row
 	end
 	tracker.more = tracker:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	tracker.list = {}
-	tracker.ticked = {} -- ticked here: they stay, dimmed, so a slip can be undone
+	tracker.ticked = {} -- reminder -> GetTime() it was ticked here: it stays a moment, dimmed, then fades
 end
 
--- The tracker lists your due reminders, whether the card is up or not. Ones you tick in it
--- stay, dimmed, so a slip can be undone, until all are done; ones done elsewhere go.
+-- The tracker lists your due reminders and to-dos, whether the card is up or not. One you tick
+-- in it stays a moment, dimmed (to untick a slip), then fades out; ones done elsewhere go.
 function RefreshTracker()
-	local due = ns:IsModuleEnabled(module.key) and reminders.Due() or {}
-	local wanted = #due > 0 and ns:GetOption("remindersTracker") and not trackerHidden
+	local due = {}
+	for _, reminder in ipairs(ns:IsModuleEnabled(module.key) and reminders.Due() or {}) do
+		if reminder.quiet or ns:GetOption("remindersTracker") then
+			table.insert(due, reminder)
+		end
+	end
+	local fading = false
+	if tracker then
+		for reminder, tickedAt in pairs(tracker.ticked) do
+			fading = fading or (reminder.state == "done" and GetTime() - tickedAt < TICKED_STAY + TICKED_FADE)
+		end
+	end
+	local wanted = (#due > 0 or fading) and not trackerHidden
 	if not wanted then
 		if tracker then
 			tracker:Hide()
@@ -1058,27 +1264,29 @@ function RefreshTracker()
 	if not tracker then
 		CreateTracker()
 	end
-	local listed = {}
-	for _, reminder in ipairs(tracker.list) do
-		listed[reminder] = true
-	end
+	-- In your order, with the ones you ticked here where they were.
+	local list = {}
 	for _, reminder in ipairs(due) do
-		if not listed[reminder] then
-			table.insert(tracker.list, reminder)
+		table.insert(list, reminder)
+	end
+	local now = GetTime()
+	for reminder, tickedAt in pairs(tracker.ticked) do
+		if reminder.state == "done" and now - tickedAt < TICKED_STAY + TICKED_FADE and reminders.Find(reminder.id) then
+			table.insert(list, reminder)
+		else
+			tracker.ticked[reminder] = nil
 		end
 	end
-	-- Reminders deleted or snoozed meanwhile go.
-	for index = #tracker.list, 1, -1 do
-		local reminder = tracker.list[index]
-		if reminder.state == "waiting" or (reminder.state == "done" and not tracker.ticked[reminder])
-			or not reminders.Find(reminder.id) then
-			table.remove(tracker.list, index)
+	table.sort(list, function(a, b)
+		if (a.order or math.huge) ~= (b.order or math.huge) then
+			return (a.order or math.huge) < (b.order or math.huge)
 		end
-	end
-	local list = tracker.list
+		return a.id < b.id
+	end)
+	tracker.list = list
 	local folded = NraKitDB.remindersTrackerFolded == true
 	tracker.arrow:SetRotation(folded and 0 or -math.pi / 2)
-	tracker.title:SetText(string.format("Reminders (%d)", #due))
+	tracker.title:SetText(string.format("To do (%d)", #due))
 	if folded then
 		for _, row in ipairs(tracker.rows) do
 			row:Hide()
@@ -1102,6 +1310,10 @@ function RefreshTracker()
 	tracker:Show()
 end
 
+reminders.RefreshTracker = function()
+	RefreshTracker()
+end
+
 function reminders.SetTrackerFolded(folded)
 	NraKitDB.remindersTrackerFolded = folded or nil
 	PlaySound(folded and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_OFF or SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
@@ -1116,15 +1328,14 @@ function reminders.ShowTracker()
 		return
 	end
 	if #reminders.Due() == 0 then
-		ns:Print("No reminders are due. /nra remind lists the ones waiting.")
+		ns:Print("Your to-do list is empty. /nra remind lists what's waiting to come due.")
 		return
 	end
 	trackerHidden = false
 	NraKitDB.remindersTrackerFolded = nil
-	if ns:GetOption("remindersTracker") then
-		RefreshTracker()
-	else
-		CardShow({}, true)
+	RefreshTracker()
+	if not ns:GetOption("remindersTracker") and #reminders.Due(true) > 0 then
+		CardShow({}, true) -- reminders aren't on the list then
 	end
 end
 
@@ -1135,7 +1346,20 @@ end
 local function Confirm(reminder, spec)
 	local text = reminder.text
 	local whose = spec.character and (spec.character .. "'s") or "your"
-	if spec.kind == "time" then
+	if spec.quiet then
+		local list = whose .. " to-do list"
+		if spec.kind == "time" then
+			ns:Print(string.format("On %s in %s (at %s): %s", list, reminders.FormatDuration(spec.duration), date("%H:%M", reminder.at), text))
+		elseif spec.kind == "zone" then
+			ns:Print(string.format("On %s when %s %s: %s", list, spec.character and "they enter" or "you enter", spec.zone, text))
+		elseif spec.kind == "level" then
+			ns:Print(string.format("On %s at level %d: %s", list, spec.level, text))
+		elseif spec.character then
+			ns:Print(string.format("On %s at their next login: %s", list, text))
+		else
+			ns:Print(string.format("On your to-do list: %s", text))
+		end
+	elseif spec.kind == "time" then
 		ns:Print(string.format("I'll remind %s in %s (at %s): %s", spec.character or "you",
 			reminders.FormatDuration(spec.duration), date("%H:%M", reminder.at), text))
 	elseif spec.kind == "zone" then
@@ -1160,6 +1384,10 @@ function reminders.Commit(spec)
 	local reminder = reminders.Add(spec, spec.character)
 	if spec.kind == "zone" and not spec.character then
 		zonesBefore = CurrentZones() -- where you are now doesn't count as entering
+	end
+	if spec.quiet and spec.kind == "login" and not spec.character then
+		MakeDue(reminder, reminders.List()) -- a plain to-do: on the list now
+		Changed()
 	end
 	Confirm(reminder, spec)
 	return reminder
@@ -1199,7 +1427,7 @@ end
 
 local function OnSlashCommand(rest)
 	if not ns:IsModuleEnabled(module.key) then
-		ns:Print("Turn on Reminders first (/nra).")
+		ns:Print("Turn on Reminders & to-dos first (/nra).")
 		return
 	end
 	if rest == "" then
@@ -1217,6 +1445,26 @@ local function OnSlashCommand(rest)
 	return reminders.Commit(spec)
 end
 reminders.OnSlashCommand = OnSlashCommand
+
+-- /nra todo: the same words, as a to-do (on the list, no card). Alone, shows the list.
+local function OnTodoCommand(rest)
+	if not ns:IsModuleEnabled(module.key) then
+		ns:Print("Turn on Reminders & to-dos first (/nra).")
+		return
+	end
+	if rest == "" or rest:lower() == "show" then
+		reminders.ShowTracker()
+		return
+	end
+	local spec, problem = reminders.Parse(rest)
+	if not spec then
+		ns:Print((problem:gsub("/nra remind", "/nra todo")))
+		return
+	end
+	spec.quiet = true
+	return reminders.Commit(spec)
+end
+reminders.OnTodoCommand = OnTodoCommand
 
 ------------------------------------------------------------------------------
 -- Lifecycle
@@ -1254,7 +1502,7 @@ local EVENTS = { "PLAYER_ENTERING_WORLD", "PLAYER_REGEN_ENABLED", "PLAYER_LEVEL_
 	"ZONE_CHANGED_NEW_AREA" }
 
 -- Key binding (Bindings.xml).
-_G["BINDING_NAME_NRAKIT_SHOW_REMINDERS"] = "Show due reminders"
+_G["BINDING_NAME_NRAKIT_SHOW_REMINDERS"] = "Show the to-do list"
 function NraKit_ShowReminders()
 	reminders.ShowTracker()
 end
@@ -1267,7 +1515,7 @@ ns:RegisterBadge({
 		return #reminders.Due()
 	end,
 	text = function(count)
-		return string.format("%d %s due", count, count == 1 and "reminder" or "reminders")
+		return string.format("%d open on your to-do list", count)
 	end,
 	open = reminders.ShowTracker,
 })
@@ -1276,7 +1524,7 @@ ns:RegisterMenuAction({
 	module = module.key,
 	label = function()
 		local count = #reminders.Due()
-		return count > 0 and string.format("Show due reminders |cffff9933(%d)|r", count) or nil
+		return count > 0 and string.format("To-do list |cffff9933(%d)|r", count) or nil
 	end,
 	onClick = reminders.ShowTracker,
 })
@@ -1303,7 +1551,7 @@ end)
 
 function module:OnInitialize()
 	local help = {
-		summary = "Reminders: notes to yourself that come back at your next login, after a time, in a zone or at a level",
+		summary = "Reminders: notes to yourself that pop up at your next login, after a time, in a zone or at a level",
 		usage = {
 			"/nra remind - your reminders",
 			"/nra remind show - show the due ones on screen again (after hiding or folding the list)",
@@ -1318,6 +1566,17 @@ function module:OnInitialize()
 	ns:RegisterSlashCommand("remind", OnSlashCommand, help)
 	ns:RegisterSlashCommand("reminder", OnSlashCommand, help)
 	ns:RegisterSlashCommand("reminders", OnSlashCommand, help)
+	local todoHelp = {
+		summary = "To-dos: like reminders, but they go straight on the list on screen (no card, no sound)",
+		usage = {
+			"/nra todo <text> - on your to-do list now",
+			"/nra todo - show the list (unfold it, or bring it back if you hid it)",
+			"/nra todo in <zone>: / at <level>: / 30m / @<character>: <text> - on the list when that comes (like /nra remind)",
+			"/nra todos - the same as /nra todo",
+		},
+	}
+	ns:RegisterSlashCommand("todo", OnTodoCommand, todoHelp)
+	ns:RegisterSlashCommand("todos", OnTodoCommand, todoHelp)
 	self:OnEnabledChanged(ns:IsModuleEnabled(self.key))
 	initialized = true
 end

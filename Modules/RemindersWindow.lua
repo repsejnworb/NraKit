@@ -1,8 +1,9 @@
 local _, ns = ...
 
--- The Reminders window (/nra remind): a box to write a new one (same words as the command),
--- then your reminders in sections: Now (due, not ticked off), Waiting (with when they come
--- due), For your other characters (ones you left them) and Done (folded; the last few).
+-- The Reminders window (/nra remind): a box to write a new one (same words as the command;
+-- "Pop up" makes it a reminder, else a to-do), then your reminders and to-dos in sections:
+-- To do (due, not ticked off, in your order: drag or use the arrows), Waiting (with when they
+-- come due), For your other characters (ones you left them) and Done (folded; the last few).
 --
 -- Tick a box to mark one done (untick to bring it back), click the text to edit it,
 -- right-click for more (remind me again later, delete).
@@ -40,7 +41,7 @@ local UNITS = {
 }
 local MAX_ZONE_MATCHES = 6
 
-local frame, addBox, scroll, footerLeft, editBox, helpButton, showButton, form
+local frame, addBox, scroll, footerLeft, editBox, helpButton, showButton, form, popUp
 local pool = UI.CreatePool()
 local editingID
 local doneOpen = false -- the Done section, folded until you open it
@@ -62,7 +63,8 @@ local function AddFromBox()
 		OpenForm()
 		return
 	end
-	if reminders.OnSlashCommand(text) then
+	local add = popUp:GetChecked() and reminders.OnSlashCommand or reminders.OnTodoCommand
+	if add(text) then
 		addBox:SetText("") -- kept when it couldn't be read, to fix it
 	end
 	addBox:ClearFocus()
@@ -102,15 +104,21 @@ local function AcquireRow(content)
 			reminders.SetDone(box:GetParent().reminder.id, box:GetChecked())
 		end)
 		row.check:SetPoint("LEFT", 8, 0)
+		reminders.AddReorder(row)
 		row.when = MakeLabel(row, "", "GameFontHighlightSmall")
-		row.when:SetPoint("RIGHT", -12, 0)
+		row.when:SetPoint("RIGHT", -44, 0)
 		row.when:SetJustifyH("RIGHT")
 		row.text = MakeLabel(row, "")
 		row.text:SetPoint("LEFT", row.check, "RIGHT", 10, 0)
 		row.text:SetPoint("RIGHT", row.when, "LEFT", -16, 0)
 		row.text:SetWordWrap(false)
+		row:SetScript("OnMouseDown", function(self)
+			self.justDragged = nil
+		end)
 		row:SetScript("OnClick", function(self, button)
-			if button == "RightButton" then
+			if self.justDragged then
+				self.justDragged = nil -- a drag, not a click
+			elseif button == "RightButton" then
 				reminders.OpenRowMenu(self, self.reminder)
 			else
 				EditText(self.reminder.id)
@@ -129,6 +137,7 @@ end
 
 local function FillRow(row, reminder, when, index)
 	row.reminder, row.reminderID = reminder, reminder.id
+	row.canMove = reminder.state == "due"
 	local done = reminder.state == "done"
 	row.bg:SetColorTexture(1, 1, 1, index % 2 == 0 and 0.03 or 0)
 	row.check:SetChecked(done)
@@ -202,9 +211,11 @@ local function Collect()
 	local now, waiting, others, done = {}, {}, {}, {}
 	for _, reminder in ipairs(reminders.List()) do
 		if reminder.state == "due" then
-			table.insert(now, { reminder = reminder, when = reminders.DueNote(reminder) })
+			local note = reminders.DueNote(reminder)
+			table.insert(now, { reminder = reminder, when = reminder.quiet and (note ~= "" and note .. " · to-do" or "To-do") or note })
 		elseif reminder.state == "waiting" then
-			table.insert(waiting, { reminder = reminder, when = reminders.Describe(reminder) })
+			local when = reminders.Describe(reminder)
+			table.insert(waiting, { reminder = reminder, when = reminder.quiet and (when .. " · to-do") or (when .. " · pops up") })
 		else
 			table.insert(done, { reminder = reminder, when = reminder.doneAt and date("Done %b %d", reminder.doneAt) or "Done" })
 		end
@@ -223,14 +234,19 @@ local function Collect()
 	local function ByID(a, b)
 		return a.reminder.id < b.reminder.id
 	end
-	table.sort(now, ByID)
+	table.sort(now, function(a, b)
+		if (a.reminder.order or math.huge) ~= (b.reminder.order or math.huge) then
+			return (a.reminder.order or math.huge) < (b.reminder.order or math.huge)
+		end
+		return a.reminder.id < b.reminder.id
+	end)
 	table.sort(waiting, ByID)
 	table.sort(others, ByID)
 	table.sort(done, function(a, b)
 		return (a.reminder.doneAt or 0) > (b.reminder.doneAt or 0)
 	end)
 	return {
-		{ label = "Now", rows = now },
+		{ label = "To do", rows = now },
 		{ label = "Waiting", rows = waiting },
 		{ label = "For your other characters", rows = others },
 		{ label = "Done", rows = done, foldable = true },
@@ -332,7 +348,13 @@ local function RefreshForm()
 		form.details[each.key]:SetShown(each.key == kind)
 	end
 	local other = form.character ~= ns:PlayerName()
-	form.loginNote:SetText(other and "The next time they log in." or "The next time you log in.")
+	local quiet = not form.popUp:GetChecked()
+	-- A to-do for you with no trigger goes on the list now.
+	form.whenChips[1].text:SetText(quiet and not other and "Now" or "Next login")
+	form.loginNote:SetText(quiet and not other and "On your to-do list right away."
+		or other and "The next time they log in." or "The next time you log in.")
+	form.title:SetText(quiet and "New to-do" or "New reminder")
+	form.addButton.text:SetText(quiet and "Add to-do" or "Add reminder")
 
 	-- Zones: here, then the ones whose name has what you typed.
 	local zone, subzone = reminders.Here()
@@ -382,6 +404,7 @@ local function SubmitForm()
 	if form.character ~= ns:PlayerName() then
 		spec.character, spec.known = form.character, true
 	end
+	spec.quiet = not form.popUp:GetChecked() or nil
 	local checked, problem = reminders.Validate(spec)
 	if not checked then
 		form.problem:SetText(problem)
@@ -403,9 +426,9 @@ local function CreateForm()
 	bg:SetColorTexture(unpack(UI.BG))
 	form:Hide()
 
-	local title = MakeLabel(form, "New reminder", "GameFontNormalLarge")
-	title:SetPoint("TOPLEFT", PAD + 8, -PAD - 4)
-	title:SetTextColor(unpack(UI.ACCENT))
+	form.title = MakeLabel(form, "New reminder", "GameFontNormalLarge")
+	form.title:SetPoint("TOPLEFT", PAD + 8, -PAD - 4)
+	form.title:SetTextColor(unpack(UI.ACCENT))
 	local LEFT = 130
 
 	FormLabel("Reminder", -56)
@@ -543,9 +566,17 @@ local function CreateForm()
 	})
 	form.characterSelect:SetPoint("TOPLEFT", LEFT, -242)
 
+	form.popUp = reminders.CreateCheck(form, function()
+		RefreshForm()
+	end)
+	form.popUp:SetPoint("TOPLEFT", LEFT + 2, -280)
+	local popUpLabel = MakeLabel(form, "Pop up with a sound when it comes due (off: a to-do, it just goes on the list)", "GameFontHighlight")
+	popUpLabel:SetPoint("LEFT", form.popUp, "RIGHT", 8, 0)
+
 	local add = UI.CreateFlatButton(form, "Add reminder", 26)
 	add:SetWidth(120)
-	add:SetPoint("TOPLEFT", LEFT, -292)
+	add:SetPoint("TOPLEFT", LEFT, -320)
+	form.addButton = add
 	add:SetScript("OnClick", SubmitForm)
 	local cancel = UI.CreateFlatButton(form, "Cancel", 26)
 	cancel:SetWidth(80)
@@ -566,12 +597,13 @@ local function CreateForm()
 	end)
 end
 
--- Opens the form, empty: next login, for you.
+-- Opens the form, empty: next login (or now, for a to-do), for you.
 function OpenForm()
 	if not form then
 		CreateForm()
 	end
 	form.kind, form.unit, form.character = "login", "m", ns:PlayerName()
+	form.popUp:SetChecked(popUp:GetChecked()) -- like the box at the top
 	form.textBox:SetText("")
 	form.amountBox:SetText("30")
 	form.zoneBox:SetText("")
@@ -593,7 +625,7 @@ local function CreateWindow()
 	addBox = CreateFrame("EditBox", nil, body, "InputBoxTemplate")
 	addBox:SetHeight(22)
 	addBox:SetPoint("TOPLEFT", PAD + 8, -PAD - 1)
-	addBox:SetPoint("RIGHT", -PAD - 100, 0)
+	addBox:SetPoint("RIGHT", -PAD - 180, 0)
 	addBox:SetAutoFocus(false)
 	addBox:SetMaxLetters(255)
 	addBox:SetScript("OnEnterPressed", AddFromBox)
@@ -605,7 +637,18 @@ local function CreateWindow()
 	end)
 	local add = UI.CreateFlatButton(body, "Add", 22)
 	add:SetWidth(56)
-	add:SetPoint("LEFT", addBox, "RIGHT", 8, 0)
+	popUp = reminders.CreateCheck(body, function(box)
+		NraKitDB.remindersAddQuiet = not box:GetChecked() or nil
+	end)
+	popUp:SetPoint("LEFT", addBox, "RIGHT", 10, 0)
+	popUp:SetChecked(not NraKitDB.remindersAddQuiet)
+	local popUpLabel = MakeLabel(body, "Pop up", "GameFontHighlightSmall")
+	popUpLabel:SetPoint("LEFT", popUp, "RIGHT", 5, 0)
+	popUp:SetScript("OnEnter", function(self)
+		UI.ShowTooltip(self, "Pop up", "On: a reminder (a card in the middle of the screen with a sound when it comes due). Off: a to-do (it just goes on the list).")
+	end)
+	popUp:SetScript("OnLeave", GameTooltip_Hide)
+	add:SetPoint("LEFT", popUpLabel, "RIGHT", 10, 0)
 	add:SetScript("OnClick", AddFromBox)
 	add:SetScript("OnEnter", function(self)
 		UI.ShowTooltip(self, "Add", "Adds what you typed (the same words as /nra remind). With nothing typed, opens a form to pick when it comes due.")

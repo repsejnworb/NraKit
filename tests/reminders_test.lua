@@ -278,13 +278,109 @@ return {
 			t.equal(Mine("show"), nil, "show isn't a reminder")
 			local entries = wow.newMenu()
 			ns:FillMenu(entries)
-			t.ok(wow.menuEntry(entries.entries, "Show due reminders"), "in NraKit's menu")
+			t.ok(wow.menuEntry(entries.entries, "To-do list"), "in NraKit's menu")
 			reminders.SetDone(Mine("water the plants").id, true)
 			t.ok(not tracker:IsShown(), "gone when done")
-			t.ok(Remind("show"):find("No reminders are due", 1, true), "nothing to show")
+			t.ok(Remind("show"):find("to-do list is empty", 1, true), "nothing to show")
 			entries = wow.newMenu()
 			ns:FillMenu(entries)
-			t.ok(not wow.menuEntry(entries.entries, "Show due reminders"), "not in the menu then")
+			t.ok(not wow.menuEntry(entries.entries, "To-do list"), "not in the menu then")
+		end)
+
+		t.test("/nra todo: straight on the list, no card, no sound", function()
+			wow.played = {}
+			SlashCmdList.NRAKIT("todo respec")
+			local todo = Mine("respec")
+			t.ok(todo and todo.quiet and todo.state == "due", "due now, a to-do")
+			t.ok(not NraKitRemindersCard:IsShown(), "no card")
+			t.equal(#wow.played, 0, "no sound")
+			t.ok(NraKitRemindersTracker:IsShown() and #Rows(NraKitRemindersTracker) == 1, "on the list")
+			t.equal(rawget(NraKitRemindersTracker.title, "text"), "To do (1)", "the list's name")
+			SlashCmdList.NRAKIT("todo in Ironforge: buy reagents")
+			wow.data.zone = "Ironforge"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+			t.ok(Mine("buy reagents").state == "due" and not NraKitRemindersCard:IsShown(), "came due quietly")
+			wow.data.zone = "Elwynn Forest"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+		end)
+
+		t.test("the list in your order: arrows on the row, shift for the top, dragging", function()
+			SlashCmdList.NRAKIT("todo third")
+			local function Order()
+				local texts = {}
+				for _, reminder in ipairs(reminders.Due()) do
+					table.insert(texts, reminder.text)
+				end
+				return table.concat(texts, ", ")
+			end
+			t.equal(Order(), "respec, buy reagents, third", "in the order they came")
+			local function TrackerRow(text)
+				for _, row in ipairs(Rows(NraKitRemindersTracker)) do
+					if row.reminder.text == text then
+						return row
+					end
+				end
+			end
+			local row = TrackerRow("third")
+			row.up.scripts.OnClick(row.up)
+			t.equal(Order(), "respec, third, buy reagents", "up one")
+			IsShiftKeyDown = function()
+				return true
+			end
+			row = TrackerRow("buy reagents")
+			row.up.scripts.OnClick(row.up)
+			IsShiftKeyDown = function()
+				return false
+			end
+			t.equal(Order(), "buy reagents, respec, third", "shift: to the top")
+			-- Drag "third" onto the top row's place.
+			local dragging, target = TrackerRow("third"), TrackerRow("buy reagents")
+			rawset(target, "IsMouseOver", function()
+				return true
+			end)
+			dragging.scripts.OnDragStart(dragging)
+			dragging.scripts.OnDragStop(dragging)
+			rawset(target, "IsMouseOver", nil)
+			t.equal(Order(), "third, buy reagents, respec", "dragged to the top")
+			Login()
+			t.equal(Order(), "third, buy reagents, respec", "kept")
+			t.ok(not NraKitRemindersCard:IsShown(), "to-dos don't make a card at login")
+		end)
+
+		t.test("ticked in the list: stays a moment, fades, then goes", function()
+			local tracker = NraKitRemindersTracker
+			local row
+			for _, each in ipairs(Rows(tracker)) do
+				if each.reminder.text == "third" then
+					row = each
+				end
+			end
+			row.check.scripts.OnClick(row.check)
+			t.equal(Mine("third").state, "done", "done")
+			t.equal(#Rows(tracker), 3, "still there")
+			wow.advance(2.5)
+			tracker.scripts.OnUpdate(tracker)
+			t.ok(row:GetAlpha() > 0.4 and row:GetAlpha() < 0.6, "fading")
+			wow.advance(1)
+			reminders.RefreshTracker()
+			t.equal(#Rows(tracker), 2, "gone")
+		end)
+
+		t.test("right-click turns a to-do into a reminder; the login card leaves to-dos out", function()
+			local menu
+			MenuUtil.CreateContextMenu = function(_, build)
+				menu = wow.newMenu()
+				build(nil, menu)
+			end
+			reminders.OpenRowMenu(UIParent, Mine("respec"))
+			wow.menuEntry(menu.entries, "Make it a reminder").onClick()
+			t.ok(not Mine("respec").quiet, "a reminder now")
+			Login()
+			t.ok(NraKitRemindersCard:IsShown() and Shown("respec") and not Shown("buy reagents"), "the card has the reminder, not the to-do")
+			wow.click("Later")
+			for _, reminder in ipairs(reminders.Due()) do
+				reminders.SetDone(reminder.id, true)
+			end
 		end)
 
 		t.test("the window: sections, writing one, editing, and ones for other characters", function()
@@ -301,7 +397,7 @@ return {
 			end
 			t.ok(labels["For your other characters"] and labels["Waiting"] and labels["Done"], "sections")
 			t.ok(labels["Bob Stone: next login"], "who and when")
-			t.ok(labels["In 2 h (" .. date("%H:%M", now + 7200) .. ")"], "when a timed one comes")
+			t.ok(labels["In 2 h (" .. date("%H:%M", now + 7200) .. ") · pops up"], "when a timed one comes, and that it pops up")
 			local row = wow.findAll(function(frame)
 				return rawget(frame, "reminder") == Mine("stable the pet") and wow.visible(frame)
 			end)[1]
@@ -316,6 +412,32 @@ return {
 			editBox.scripts.OnEnterPressed(editBox)
 			t.ok(Mine("stable the cat"), "edited")
 			t.noErrors()
+		end)
+
+		t.test("the window's box: Pop up off adds a to-do (and the form follows it)", function()
+			t.ok(NraKitRemindersFrame:IsShown(), "open")
+			local popUp
+			for _, frame in ipairs(wow.frames) do
+				if rawget(frame, "checked") ~= nil and rawget(frame, "parent") == NraKitRemindersFrame.body then
+					popUp = frame
+				end
+			end
+			popUp.scripts.OnClick(popUp)
+			t.ok(NraKitDB.remindersAddQuiet, "remembered")
+			local box
+			for _, frame in ipairs(wow.frames) do
+				if frame.kind == "EditBox" and rawget(frame, "parent") == NraKitRemindersFrame.body then
+					box = frame
+				end
+			end
+			wow.type(box, "polish the boots")
+			box.scripts.OnEnterPressed(box)
+			t.ok(Mine("polish the boots").quiet and Mine("polish the boots").state == "due", "a to-do, on the list")
+			wow.click("Add")
+			t.ok(wow.click("Add to-do"), "the form is for a to-do")
+			NraKitReminderForm:Hide()
+			popUp.scripts.OnClick(popUp)
+			reminders.SetDone(Mine("polish the boots").id, true)
 		end)
 
 		t.test("the ? button shows how to write them once there are some", function()

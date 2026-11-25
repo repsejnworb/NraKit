@@ -19,7 +19,7 @@ local function Actions()
 			ns:OpenSettings()
 		end },
 		{ key = "menu", label = "NraKit's menu" },
-		{ key = "reminders", label = "Due reminders (else the Reminders tab)", run = function()
+		{ key = "reminders", label = "To-do list (else the Reminders tab)", run = function()
 			if ns:IsModuleEnabled("reminders") and #ns.reminders.Due() > 0 then
 				ns.reminders.ShowTracker()
 			else
