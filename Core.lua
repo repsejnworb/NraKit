@@ -15,6 +15,9 @@ ns.moduleOrder = {}
 --               { key, name, description, default }                 checkbox
 --               { key, name, description, default = "kit:READY_CHECK",
 --                 type = "sound" }                                  sound picker (Sounds.lua)
+--               { key, name, description, default = "a",
+--                 type = "choice", choices = { { "a", "A" }, ... } }  dropdown (choices can be a
+--                                                                   function returning the list)
 --               { key, name, description, default, type = "number",
 --                 min, max, step, format? }                         slider (format: a
 --                                                                   string.format pattern, or
@@ -77,7 +80,7 @@ local function SetDefault(key, default, optionType)
 		if type(NraKitDB[key]) ~= "number" then
 			NraKitDB[key] = default
 		end
-	elseif optionType == "sound" then
+	elseif optionType == "sound" or optionType == "choice" then
 		if type(NraKitDB[key]) ~= "string" then
 			NraKitDB[key] = default
 		end
@@ -207,35 +210,80 @@ SlashCmdList.NRAKIT = function(input)
 	end
 end
 
--- Addon compartment (the addon button by the minimap); wired up in the TOC.
--- Left-click: the NraKit window. Right-click: a menu of NraKit's windows (the ones whose
--- feature is on), What's new and Settings.
+-- Things waiting for you, counted on the NraKit button's badge (Modules/NraKitButton.lua):
+-- badge = { key, label, option = <NraKit button option that turns it on>, module = <feature
+-- that must be on>?, count = function() -> number, text = function(count) -> tooltip line,
+-- open = function() shows it }. Call ns:BadgeChanged() when a count changes.
+ns.badges = {}
+
+function ns:RegisterBadge(badge)
+	table.insert(self.badges, badge)
+end
+
+function ns:BadgeChanged()
+	if self.onBadgeChanged then
+		self.onBadgeChanged()
+	end
+end
+
+-- Actions in NraKit's menus (the addon button's and the NraKit button's), after the windows:
+-- action = { label = text or function() -> text (nil leaves it out), module = <feature that
+-- must be on>?, onClick }.
+ns.menuActions = {}
+
+function ns:RegisterMenuAction(action)
+	table.insert(self.menuActions, action)
+end
+
 local function UnseenCount()
 	return ns.whatsNew and ns.whatsNew.UnseenCount() or 0
 end
 
+-- NraKit's menu: the windows of features that are on, their actions, What's new and Settings.
+function ns:FillMenu(root)
+	root:CreateTitle(addonName)
+	local windows = 0
+	for _, tab in ipairs(ns.UI.GetTabs(true)) do
+		if tab.key ~= "settings" then
+			windows = windows + 1
+			root:CreateButton(tab.menuLabel or tab.label, function()
+				ns.UI.ShowTab(tab.key)
+			end)
+		end
+	end
+	local actions = {}
+	for _, action in ipairs(ns.menuActions) do
+		local label = action.label
+		if type(label) == "function" then
+			label = label()
+		end
+		if label and (not action.module or ns:IsModuleEnabled(action.module)) then
+			table.insert(actions, { label = label, onClick = action.onClick })
+		end
+	end
+	if windows > 0 and #actions > 0 then
+		root:CreateDivider()
+	end
+	for _, action in ipairs(actions) do
+		root:CreateButton(action.label, action.onClick)
+	end
+	if windows + #actions > 0 then
+		root:CreateDivider()
+	end
+	local unseen = UnseenCount()
+	root:CreateButton(unseen > 0 and string.format("What's new |cffff9933(%d)|r", unseen) or "What's new", function()
+		ns:OpenWhatsNew()
+	end)
+	root:CreateButton("Settings", function()
+		ns.UI.ShowTab("settings")
+	end)
+end
+
+-- Addon compartment (the addon button by the minimap); wired up in the TOC.
+-- Left-click: the NraKit window. Right-click: NraKit's menu.
 local function OpenCompartmentMenu()
 	MenuUtil.CreateContextMenu(UIParent, function(_, root)
-		root:CreateTitle(addonName)
-		local windows = 0
-		for _, tab in ipairs(ns.UI.GetTabs(true)) do
-			if tab.key ~= "settings" then
-				windows = windows + 1
-				root:CreateButton(tab.menuLabel or tab.label, function()
-					ns.UI.ShowTab(tab.key)
-				end)
-			end
-		end
-		if windows > 0 then
-			root:CreateDivider()
-		end
-		local unseen = UnseenCount()
-		root:CreateButton(unseen > 0 and string.format("What's new |cffff9933(%d)|r", unseen) or "What's new", function()
-			ns:OpenWhatsNew()
-		end)
-		root:CreateButton("Settings", function()
-			ns.UI.ShowTab("settings")
-		end)
+		ns:FillMenu(root)
 	end)
 end
 

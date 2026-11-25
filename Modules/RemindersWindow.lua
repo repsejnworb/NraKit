@@ -24,7 +24,7 @@ local HELP = "Write one in the box above (the same words as in chat), or in chat
 	.. "  |cffffd100/nra remind @Alt: <text>|r - on another character's next login (@Alt at 20: works too)\n\n"
 	.. "Shift-clicked items and quests work in chat."
 
-local frame, addBox, scroll, footerLeft, editBox, helpButton
+local frame, addBox, scroll, footerLeft, editBox, helpButton, showButton
 local pool = UI.CreatePool()
 local editingID
 local doneOpen = false -- the Done section, folded until you open it
@@ -263,6 +263,7 @@ function Render()
 	content:SetHeight(-y + PAD)
 	scroll:SetScroll(scroll:GetVerticalScroll())
 	footerLeft:SetText(string.format("%d open", open))
+	showButton:SetShown(#reminders.Due() > 0)
 end
 
 ------------------------------------------------------------------------------
@@ -327,6 +328,15 @@ local function CreateWindow()
 	UI.AddLine(footer, "TOP")
 	footerLeft = MakeLabel(footer, "", "GameFontHighlightSmall")
 	footerLeft:SetPoint("LEFT", PAD, 0)
+	showButton = UI.CreateFlatButton(footer, "Show on screen", 20)
+	showButton:SetPoint("LEFT", footerLeft, "RIGHT", 12, 0)
+	showButton:SetScript("OnClick", function()
+		reminders.ShowTracker()
+	end)
+	showButton:SetScript("OnEnter", function(self)
+		UI.ShowTooltip(self, "Show on screen", "Shows the due reminders on screen again, after you hid or folded the list (also /nra remind show, or a key under Key Bindings > NraKit).")
+	end)
+	showButton:SetScript("OnLeave", GameTooltip_Hide)
 	local hint = MakeLabel(footer, "Tick when done. Click to edit, right-click for more", "GameFontDisableSmall")
 	hint:SetPoint("RIGHT", -PAD, 0)
 

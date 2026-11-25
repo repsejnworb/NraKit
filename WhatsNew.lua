@@ -39,6 +39,7 @@ end
 
 function whatsNew.MarkSeen()
 	NraKitDB.changelogSeen = #whatsNew.Entries()
+	ns:BadgeChanged()
 end
 
 function whatsNew.ChatEnabled()

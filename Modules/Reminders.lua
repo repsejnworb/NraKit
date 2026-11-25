@@ -64,7 +64,7 @@ local ticker
 local zonesBefore = {} -- the zone names you were in at the last check (lower case)
 local showQueued = false -- due reminders wait for combat to end
 local card, tracker
-local trackerHidden = false -- folded away for this session
+local trackerHidden = false -- hidden until the next login (folded is NraKitDB.remindersTrackerFolded)
 local ready = false -- after the login check (timed reminders that passed while you were away count as such)
 local initialized = false
 local CardShow, RefreshTracker
@@ -101,6 +101,7 @@ local function Changed()
 	if reminders.onChanged then
 		reminders.onChanged()
 	end
+	ns:BadgeChanged()
 	if card and card:IsShown() and not card.preview then
 		card:Refresh()
 	end
@@ -819,20 +820,55 @@ local function CreateTracker()
 	bg:SetColorTexture(unpack(UI.BG))
 	UI.AddBorder(tracker)
 
-	tracker.title = tracker:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-	tracker.title:SetPoint("TOPLEFT", 10, -8)
+	-- The header: click to fold or unfold, right-click for more, drag to move.
+	local header = CreateFrame("Button", nil, tracker)
+	header:SetPoint("TOPLEFT")
+	header:SetPoint("TOPRIGHT")
+	header:SetHeight(28)
+	header:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	header:RegisterForDrag("LeftButton")
+	header:SetScript("OnDragStart", function()
+		tracker:GetScript("OnDragStart")(tracker)
+	end)
+	header:SetScript("OnDragStop", function()
+		tracker:GetScript("OnDragStop")(tracker)
+	end)
+	local highlight = header:CreateTexture(nil, "HIGHLIGHT")
+	highlight:SetAllPoints()
+	highlight:SetColorTexture(1, 1, 1, 0.04)
+	tracker.title = header:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+	tracker.title:SetPoint("LEFT", 10, 0)
 	tracker.title:SetTextColor(unpack(UI.ACCENT))
-	local fold = CreateFrame("Button", nil, tracker, "UIPanelCloseButtonNoScripts")
-	fold:SetSize(22, 22)
-	fold:SetPoint("TOPRIGHT", -2, -2)
-	fold:SetScript("OnClick", function()
-		trackerHidden = true
-		tracker:Hide()
+	tracker.arrow = header:CreateTexture(nil, "ARTWORK")
+	tracker.arrow:SetSize(12, 12)
+	tracker.arrow:SetPoint("RIGHT", -10, 0)
+	tracker.arrow:SetAtlas("common-icon-forwardarrow")
+	header:SetScript("OnClick", function(self, button)
+		if button == "RightButton" then
+			MenuUtil.CreateContextMenu(self, function(_, root)
+				root:CreateTitle("Reminders")
+				root:CreateButton(NraKitDB.remindersTrackerFolded and "Unfold" or "Fold", function()
+					reminders.SetTrackerFolded(not NraKitDB.remindersTrackerFolded)
+				end)
+				root:CreateButton("Hide until next login", function()
+					trackerHidden = true
+					RefreshTracker()
+					ns:Print("Reminders hidden until your next login. /nra remind show brings them back.")
+				end)
+				root:CreateButton("Open reminders", function()
+					ns:OpenReminders()
+				end)
+			end)
+		else
+			reminders.SetTrackerFolded(not NraKitDB.remindersTrackerFolded)
+		end
 	end)
-	fold:SetScript("OnEnter", function(self)
-		UI.ShowTooltip(self, "Hide for now", "Hides the list until you log in again. The reminders stay; /nra remind lists them.")
+	header:SetScript("OnEnter", function(self)
+		UI.ShowTooltip(self, "Reminders", (NraKitDB.remindersTrackerFolded and "Click to unfold." or "Click to fold.")
+			.. " Right-click to hide it until your next login. Drag to move.")
 	end)
-	fold:SetScript("OnLeave", GameTooltip_Hide)
+	header:SetScript("OnLeave", GameTooltip_Hide)
+	tracker.header = header
 
 	tracker.rows = {}
 	local function OnTick(row, checked)
@@ -881,6 +917,18 @@ function RefreshTracker()
 		end
 	end
 	local list = tracker.list
+	local folded = NraKitDB.remindersTrackerFolded == true
+	tracker.arrow:SetRotation(folded and 0 or -math.pi / 2)
+	tracker.title:SetText(string.format("Reminders (%d)", #due))
+	if folded then
+		for _, row in ipairs(tracker.rows) do
+			row:Hide()
+		end
+		tracker.more:SetText("")
+		tracker:SetHeight(28)
+		tracker:Show()
+		return
+	end
 	for index, row in ipairs(tracker.rows) do
 		row:SetShown(list[index] ~= nil)
 		if list[index] then
@@ -891,9 +939,34 @@ function RefreshTracker()
 	tracker.more:ClearAllPoints()
 	tracker.more:SetPoint("TOPLEFT", 34, -30 - shownRows * TRACKER_ROW)
 	tracker.more:SetText(#list > TRACKER_MAX_ROWS and string.format("and %d more (/nra remind)", #list - TRACKER_MAX_ROWS) or "")
-	tracker.title:SetText(string.format("Reminders (%d)", #due))
 	tracker:SetHeight(36 + shownRows * TRACKER_ROW + (#list > TRACKER_MAX_ROWS and 16 or 0))
 	tracker:Show()
+end
+
+function reminders.SetTrackerFolded(folded)
+	NraKitDB.remindersTrackerFolded = folded or nil
+	PlaySound(folded and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_OFF or SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+	RefreshTracker()
+end
+
+-- Brings your due reminders back on screen: the tracker, unfolded (or the card, without the
+-- tracker option). With nothing due, says so.
+function reminders.ShowTracker()
+	if not ns:IsModuleEnabled(module.key) then
+		ns:Print("Turn on Reminders first (/nra).")
+		return
+	end
+	if #reminders.Due() == 0 then
+		ns:Print("No reminders are due. /nra remind lists the ones waiting.")
+		return
+	end
+	trackerHidden = false
+	NraKitDB.remindersTrackerFolded = nil
+	if ns:GetOption("remindersTracker") and not (card and card:IsShown()) then
+		RefreshTracker()
+	else
+		CardShow()
+	end
 end
 
 ------------------------------------------------------------------------------
@@ -930,6 +1003,9 @@ local function OnSlashCommand(rest)
 	end
 	if rest == "" then
 		ns:OpenReminders()
+		return
+	elseif rest:lower() == "show" then
+		reminders.ShowTracker()
 		return
 	end
 	local spec, problem = reminders.Parse(rest)
@@ -981,6 +1057,34 @@ end)
 local EVENTS = { "PLAYER_ENTERING_WORLD", "PLAYER_REGEN_ENABLED", "PLAYER_LEVEL_UP", "ZONE_CHANGED", "ZONE_CHANGED_INDOORS",
 	"ZONE_CHANGED_NEW_AREA" }
 
+-- Key binding (Bindings.xml).
+_G["BINDING_NAME_NRAKIT_SHOW_REMINDERS"] = "Show due reminders"
+function NraKit_ShowReminders()
+	reminders.ShowTracker()
+end
+
+ns:RegisterBadge({
+	key = "reminders",
+	option = "nraButtonBadgeReminders",
+	module = module.key,
+	count = function()
+		return #reminders.Due()
+	end,
+	text = function(count)
+		return string.format("%d %s due", count, count == 1 and "reminder" or "reminders")
+	end,
+	open = reminders.ShowTracker,
+})
+
+ns:RegisterMenuAction({
+	module = module.key,
+	label = function()
+		local count = #reminders.Due()
+		return count > 0 and string.format("Show due reminders |cffff9933(%d)|r", count) or nil
+	end,
+	onClick = reminders.ShowTracker,
+})
+
 ns:RegisterPreview("reminders", "Reminders: the card with reminders that came due", function()
 	local now = time()
 	CardShow({
@@ -995,6 +1099,7 @@ function module:OnInitialize()
 		summary = "Reminders: notes to yourself that come back at your next login, after a time, in a zone or at a level",
 		usage = {
 			"/nra remind - your reminders",
+			"/nra remind show - show the due ones on screen again (after hiding or folding the list)",
 			"/nra remind <text> - a reminder for your next login",
 			"/nra remind 30m <text> - in 30 minutes (s, m, h, d: 2d is two days, 1h30m works too)",
 			"/nra remind in <zone>: <text> - when you enter that zone or subzone",

@@ -271,6 +271,8 @@ shows up the next time you log in.
 - Due reminders show on a **card that stays until you close it**. Tick what you've done; the rest stay
   in a small list on screen (an option) and **come back at your next login**. Nothing goes away until
   you tick it.
+- Click the list's header to **fold** it; right-click it to hide it until your next login.
+  `/nra remind show`, a key (Key Bindings > NraKit) or **Show on screen** in the tab brings it back.
 - They wait for combat to end, and play a sound (pick it in the settings).
 - The **Reminders tab** (`/nra remind`) lists them: due now, waiting (and when they'll come), the ones
   you left your other characters, and done. Write new ones there, click one to edit it, right-click

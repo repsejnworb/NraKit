@@ -14,4 +14,6 @@
 	<Binding name="NRAKIT_INSPECT_ANYTHING" category="NraKit">NraKit_InspectAnything()</Binding>
 	<!-- Shows finished quests by turn-in zone (Modules/TurnInQuests.lua). -->
 	<Binding name="NRAKIT_TURN_IN_QUESTS" category="NraKit">NraKit_ToggleTurnInQuests()</Binding>
+	<!-- Shows due reminders on screen again (Modules/Reminders.lua). -->
+	<Binding name="NRAKIT_SHOW_REMINDERS" category="NraKit">NraKit_ShowReminders()</Binding>
 </Bindings>
