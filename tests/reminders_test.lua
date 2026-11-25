@@ -592,8 +592,8 @@ return {
 			wow.fire("ZONE_CHANGED_NEW_AREA")
 			local todo = Mine("pick up the mats")
 			t.equal(todo.state, "due", "there: on the list")
-			t.ok(shown and shown.heading == "IRONFORGE" and shown.lines[1] == "|cff66bfffTo do|r" and shown.lines[2] == "•  pick up the mats",
-				"and a message for arriving: the zone, then To do (in blue) with the to-do under it")
+			t.ok(shown and shown.heading == "|cff66bfff1 TO-DO|r" and shown.text == "Ironforge"
+				and shown.lines[1].text == "|cff66bfff•|r  pick up the mats", "and a message for arriving: 1 TO-DO, Ironforge, the to-do")
 			ns.toast.Show = show
 			reminders.MoveTo(todo.id, 1)
 			local function RowText()

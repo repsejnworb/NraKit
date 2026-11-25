@@ -841,7 +841,8 @@ local function AnnounceArrival(fresh)
 	if #names > 0 then
 		ns.arrival.Add({
 			zone = zone,
-			title = "To do",
+			one = "to-do",
+			many = "to-dos",
 			color = TODO_COLOUR,
 			names = names,
 			order = 2,

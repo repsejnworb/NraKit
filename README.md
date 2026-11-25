@@ -129,8 +129,8 @@ Fleet, ...").
 A button next to the bag sort button (separate or combined bags) **highlights your least valuable bag
 slots** (vendor price × stack size).
 
-  The message is headed by the zone and lists them one per line, together with your **to-dos** there
-  (Reminders & to-dos).
+  The message lists them one per line (click one to open the list), together with your **to-dos**
+  there (Reminders & to-dos).
 - Ranked from red to yellow, with rank numbers and sell values.
 - Everything else is dimmed; the bags work as normal underneath.
 - **Alt+click** an item to leave it out of the ranking; the ignore list is editable in the options.

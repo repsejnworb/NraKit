@@ -67,16 +67,30 @@ return {
 			toast.Show = function(spec)
 				shown = spec
 			end
-			ns.arrival.Add({ zone = "Ironforge", title = "To do", color = { 0.4, 0.75, 1 }, order = 2,
-				names = { "one", "two", "three", "four", "five", "six", "seven" } })
-			ns.arrival.Add({ zone = "Ironforge", title = "Quests to turn in", order = 1, names = { "The Missing Diplomat" } })
+			local opened = {}
+			ns.arrival.Add({ zone = "Ironforge", one = "to-do", many = "to-dos", color = { 0.4, 0.75, 1 }, order = 2,
+				names = { "one", "two", "three", "four", "five", "six", "seven" }, onClick = function() table.insert(opened, "list") end })
+			ns.arrival.Add({ zone = "Ironforge", one = "quest to turn in", many = "quests to turn in", order = 1,
+				names = { "The Missing Diplomat" }, onClick = function() table.insert(opened, "quests") end })
 			ns.arrival.Flush()
 			toast.Show = show
-			t.equal(shown.heading, "IRONFORGE", "the zone, once")
-			t.equal(shown.text, nil, "no summary line")
-			local expected = { "|cffffd100Quests to turn in|r", "•  The Missing Diplomat", "|cff66bfffTo do|r",
-				"•  one", "•  two", "•  three", "•  four", "•  five", "|cff999999•  and 2 more|r" }
-			t.equal(table.concat(shown.lines, " | "), table.concat(expected, " | "), "quests first, then to-dos, at most five each")
+			t.equal(shown.heading, "|cffffd1001 QUEST TO TURN IN|r  ·  |cff66bfff7 TO-DOS|r", "the counts, in capitals and colours")
+			t.equal(shown.text, "Ironforge", "the zone as its line, like other toasts")
+			t.equal(shown.atlas, "UI-QuestIcon-TurnIn-Normal", "with the turn-in icon")
+			local texts = {}
+			for _, line in ipairs(shown.lines) do
+				table.insert(texts, line.text)
+			end
+			local expected = { "|cffffd100•|r  The Missing Diplomat", "|cff66bfff•|r  one", "|cff66bfff•|r  two",
+				"|cff66bfff•|r  three", "|cff66bfff•|r  four", "|cff66bfff•|r  five", "|cff66bfff•|r  |cff999999and 2 more|r" }
+			t.equal(table.concat(texts, " | "), table.concat(expected, " | "), "quests first, then to-dos, at most five each")
+			shown.lines[1].onClick()
+			t.equal(table.concat(opened, ","), "quests", "a quest opens the quests")
+			shown.lines[2].onClick()
+			t.equal(table.concat(opened, ","), "quests,list", "a to-do the list")
+			opened = {}
+			shown.onClick()
+			t.equal(table.concat(opened, ","), "quests,list", "the message itself both")
 		end)
 	end,
 }

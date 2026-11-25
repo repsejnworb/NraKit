@@ -7,8 +7,10 @@ local _, ns = ...
 --                             pop (Farm goals' "Goal complete"); small: quieter and lower (a
 --                             milestone, "3 quests to turn in here")
 --   heading, text, detail,    the lines (detail is optional; without text, the list follows the heading)
---   lines = { "...", ... },   a list under it, one per line, left-aligned (long ones wrap); the
---                             message grows to fit
+--   lines = { "..." or { text, onClick }, ... },
+--                             a list under it, one per line: a block as wide as its longest line
+--                             (long ones wrap), centred. A line with onClick opens what it's about
+--                             (clicking elsewhere does the message's onClick). The message grows.
 --   icon = texture / atlas =, shown left of the text (optional)
 --   headingColor = { r, g, b },
 --   duration = seconds,       before it fades (default 6 big, 3 small); the mouse on it keeps it up
@@ -24,6 +26,8 @@ local toast = {}
 ns.toast = toast
 
 local FADE = 1
+local HOVER_GRACE = 2 -- seconds a toast stays after the mouse leaves it
+local LIST_WIDTH = 420 -- the widest a list gets before its lines wrap
 local MAX_SHOWN = 3 -- at once; more wait their turn
 local MAX_QUEUE = 5 -- waiting; more are dropped
 local BOTTOM = 168 -- the lowest toast's bottom edge, above the middle of the screen
@@ -34,7 +38,7 @@ local DEFAULTS = { big = { duration = 6 }, small = { duration = 3 } }
 local free = { big = {}, small = {} } -- toast frames not in use
 local shown = {} -- on screen, oldest (lowest) first
 local queue = {}
-local ShowNext
+local ShowNext, ShowLines
 
 -- Big: overshoots and settles; small: a gentle pop.
 local function PopScale(style, age)
@@ -76,7 +80,7 @@ local function OnUpdate(self, elapsed)
 	end
 	local now = GetTime()
 	if self:IsMouseOver() and now - self.shownAt > 0.35 then
-		self.holdUntil = math.max(self.holdUntil, now + 1) -- the mouse on it keeps it up
+		self.holdUntil = math.max(self.holdUntil, now + HOVER_GRACE) -- the mouse on it keeps it up
 	end
 	self.inner:SetScale(PopScale(self.style, now - self.shownAt) * self.size)
 	if now > self.holdUntil + FADE then
@@ -110,12 +114,7 @@ local function CreateToastFrame(style)
 	frame.detail:SetTextColor(unpack(UI.TEXT))
 	frame.detail:SetWidth(width - 40)
 	frame.detail:SetWordWrap(false)
-	frame.list = inner:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-	frame.list:SetJustifyH("LEFT")
-	frame.list:SetJustifyV("TOP")
-	frame.list:SetWidth(big and 460 or 400)
-	frame.list:SetWordWrap(true)
-	frame.list:SetSpacing(3)
+	frame.lines = {} -- the list's lines (buttons, made as needed)
 	frame.icon = inner:CreateTexture(nil, "ARTWORK")
 	local iconSize = big and 44 or 20
 	frame.icon:SetSize(iconSize, iconSize)
@@ -142,6 +141,66 @@ local function CreateToastFrame(style)
 		ShowNext()
 	end)
 	return frame
+end
+
+local function LineButton(frame, index)
+	local line = frame.lines[index]
+	if not line then
+		line = CreateFrame("Button", nil, frame.inner)
+		line.text = line:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+		line.text:SetPoint("TOPLEFT")
+		line.text:SetJustifyH("LEFT")
+		line.text:SetWordWrap(true)
+		line.highlight = line:CreateTexture(nil, "HIGHLIGHT")
+		line.highlight:SetAllPoints()
+		line.highlight:SetColorTexture(1, 1, 1, 0.08)
+		line:SetScript("OnClick", function(self)
+			local onClick = self.onClick
+			frame:Hide()
+			if onClick then
+				onClick()
+			end
+		end)
+		frame.lines[index] = line
+	end
+	return line
+end
+
+-- Lays out the list under `above`: a centred block as wide as its longest line. Returns its height.
+function ShowLines(frame, lines, above)
+	for _, line in ipairs(frame.lines) do
+		line:Hide()
+	end
+	if #lines == 0 then
+		return 0
+	end
+	local width = 0
+	for index, entry in ipairs(lines) do
+		local line = LineButton(frame, index)
+		line.text:SetWidth(0)
+		line.text:SetText(type(entry) == "table" and entry.text or entry)
+		width = math.max(width, line.text:GetStringWidth())
+	end
+	width = math.min(math.ceil(width) + 2, LIST_WIDTH)
+	local height, previous = 0, nil
+	for index, entry in ipairs(lines) do
+		local line = frame.lines[index]
+		line.text:SetWidth(width)
+		local lineHeight = line.text:GetStringHeight()
+		line:SetSize(width, lineHeight)
+		line:ClearAllPoints()
+		if previous then
+			line:SetPoint("TOPLEFT", previous, "BOTTOMLEFT", 0, -3)
+		else
+			line:SetPoint("TOP", above, "BOTTOM", 0, -8)
+		end
+		line.onClick = type(entry) == "table" and entry.onClick or nil
+		line:EnableMouse(line.onClick ~= nil)
+		line:Show()
+		height = height + lineHeight + 3
+		previous = line
+	end
+	return height + 10
 end
 
 local function Display(spec)
@@ -175,15 +234,8 @@ local function Display(spec)
 	local hasText = spec.text ~= nil and spec.text ~= ""
 	frame.text:SetShown(hasText)
 	frame.icon:SetShown(hasIcon and hasText)
-	frame.list:SetText(spec.lines and table.concat(spec.lines, "\n") or "")
-	frame.list:SetShown(spec.lines ~= nil)
-	frame.list:ClearAllPoints()
 	local above = spec.detail and frame.detail or hasText and frame.text or frame.heading
-	frame.list:SetPoint("TOP", above, "BOTTOM", hasText and spec.detail == nil and -shift or 0, -6)
-	local height = hasText and frame.baseHeight or 24
-	if spec.lines then
-		height = height + frame.list:GetStringHeight() + 8
-	end
+	local height = (hasText and frame.baseHeight or 24) + ShowLines(frame, spec.lines or {}, above)
 	frame:SetHeight(height)
 	frame.inner:SetHeight(height)
 
@@ -228,9 +280,11 @@ end
 -- (quests to turn in, to-dos). Features add their part as they notice; parts within a moment
 -- of each other share one message. Dropped in combat (stale by the end of the fight).
 --
--- ns.arrival.Add{ zone = "Ironforge", title = "To do", color = { r, g, b }, names = { ... },
---   onClick = function?, order = number (lower first; quests 1, to-dos 2) }
--- Shown as the zone, then each part's title in its colour with its names under it, one per line.
+-- ns.arrival.Add{ zone = "Ironforge", one = "to-do", many = "to-dos", color = { r, g, b },
+--   names = { ... }, onClick = function, order = number (lower first; quests 1, to-dos 2) }
+-- Shown like other toasts: the counts as its heading ("1 QUEST TO TURN IN · 2 TO-DOS", each in
+-- its colour), the zone as its line (with an icon), and the names under it, one per line,
+-- with a bullet in their part's colour.
 ------------------------------------------------------------------------------
 
 local arrival = {}
@@ -247,30 +301,42 @@ function arrival.Flush()
 	table.sort(parts, function(a, b)
 		return (a.order or 9) < (b.order or 9)
 	end)
-	local zones, seen, lines, onClick = {}, {}, {}, nil
+	local zones, seen, counts, lines, clicks = {}, {}, {}, {}, {}
+	local hasQuests = false
 	for _, part in ipairs(parts) do
 		if part.zone and not seen[part.zone] then
 			seen[part.zone] = true
 			table.insert(zones, part.zone)
 		end
 		local color = part.color or UI.GOLD
-		table.insert(lines, string.format("|cff%02x%02x%02x%s|r", color[1] * 255, color[2] * 255, color[3] * 255, part.title))
+		local hex = string.format("|cff%02x%02x%02x", color[1] * 255, color[2] * 255, color[3] * 255)
 		local names = part.names or {}
+		-- "1 QUEST TO TURN IN" in its colour, for the heading.
+		table.insert(counts, hex .. (#names .. " " .. (#names == 1 and part.one or part.many)):upper() .. "|r")
 		for index, name in ipairs(names) do
 			if index > MAX_ARRIVAL_NAMES then
-				table.insert(lines, string.format("|cff999999•  and %d more|r", #names - MAX_ARRIVAL_NAMES))
+				table.insert(lines, { text = string.format("%s•|r  |cff999999and %d more|r", hex, #names - MAX_ARRIVAL_NAMES), onClick = part.onClick })
 				break
 			end
-			table.insert(lines, "•  " .. name)
+			table.insert(lines, { text = hex .. "•|r  " .. name, onClick = part.onClick })
 		end
-		onClick = onClick or part.onClick
+		table.insert(clicks, part.onClick)
+		hasQuests = hasQuests or part.order == 1
 	end
 	toast.Show({
 		style = "small",
-		heading = table.concat(zones, " · "):upper(),
+		heading = table.concat(counts, "  ·  "),
+		text = table.concat(zones, " · "),
+		atlas = hasQuests and "UI-QuestIcon-TurnIn-Normal" or nil,
+		icon = not hasQuests and "Interface\\Icons\\INV_Misc_Note_01" or nil,
 		lines = lines,
 		duration = 6 + math.min(4, #lines * 0.5), -- a longer list stays a little longer
-		onClick = onClick,
+		-- Clicking the message opens all of it (a line opens just what it's about).
+		onClick = function()
+			for _, onClick in ipairs(clicks) do
+				onClick()
+			end
+		end,
 	})
 end
 

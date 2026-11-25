@@ -396,7 +396,8 @@ end
 local function ShowReminderToast(zoneName, titles)
 	ns.arrival.Add({
 		zone = zoneName,
-		title = #titles == 1 and "Quest to turn in" or "Quests to turn in",
+		one = "quest to turn in",
+		many = "quests to turn in",
 		color = UI.GOLD,
 		names = titles,
 		order = 1,
