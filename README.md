@@ -251,8 +251,9 @@ After a respec, abilities you don't know anymore stay on your bars, only greyed 
 you can't use right now. This makes them stand out.
 
 - A **red cross** in the corner of their button, and a tooltip line saying it's not learned.
-- When your spells change, a message lists the abilities on your bars you lost. **Click it to take
-  them off** (after combat, if you're fighting).
+- When your spells change, a message lists the abilities on your bars you lost (after you close the
+  talents window). **Click it to take them off**: it asks first, naming them, and waits for combat to
+  end if you're fighting.
 - It also lists new abilities that aren't on your bars yet.
 - `/nra unlearned` lists them, `/nra unlearned remove` takes them off.
 
@@ -386,7 +387,8 @@ Helpers for the mailbox. Each one is an option, and all are on once you turn Mai
 
 NraKit's icon on screen, wherever you drag it, looking like a minimap button.
 
-- A **badge counts what's waiting** for you: due reminders and, if you want, what's new. The tooltip
+- A **badge counts what you may have missed**: reminders you haven't ticked off (not to-dos) and, if
+  you want, what's new. The tooltip
   says what.
 - **Pick what clicking and shift-clicking it do:** what's waiting (else the NraKit window), the NraKit
   window, a tab, your reminders, quests to turn in, What's new, the menu, or nothing.

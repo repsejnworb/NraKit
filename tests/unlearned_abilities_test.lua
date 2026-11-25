@@ -73,6 +73,13 @@ PickupAction = function(slot)
 	actions[slot] = nil
 end
 
+-- Confirmations: the one shown, and its dialog.
+StaticPopupDialogs = {}
+local popup
+StaticPopup_Show = function(name, text)
+	popup = { dialog = StaticPopupDialogs[name], text = text }
+end
+
 -- Two bar buttons.
 for index = 1, 2 do
 	local button = CreateFrame("Button")
@@ -131,8 +138,13 @@ return {
 		end)
 
 		t.test("after a respec: lost abilities on your bars are marked and listed, new ones too", function()
+			-- You respec in the talents window: the messages wait until it's closed (they'd sit on
+			-- top of it and take a click meant for it).
+			PlayerSpellsFrame:Show()
 			book = { SLAM, BLOODTHIRST }
 			wow.fire("SPELLS_CHANGED")
+			t.equal(#toasts, 0, "no message while the talents window is open")
+			PlayerSpellsFrame:Hide()
 			t.ok(Marked(1), "Concussion Blow marked")
 			t.ok(not Marked(2), "Slam isn't")
 			t.ok(TooltipLine(1), "tooltip line")
@@ -141,9 +153,12 @@ return {
 			t.ok(toasts[2].text:find("Bloodthirst", 1, true), "new, not on your bars: " .. toasts[2].text)
 		end)
 
-		t.test("clicking the message takes them off your bars, after combat if you're fighting", function()
-			wow.data.inCombat = true
+		t.test("clicking the message asks first, then takes them off your bars, after combat if you're fighting", function()
 			toasts[1].onClick()
+			t.ok(popup and popup.text:find("Concussion Blow", 1, true), "asks, naming them")
+			t.equal(#picked, 0, "nothing taken off yet")
+			wow.data.inCombat = true
+			popup.dialog.OnAccept()
 			t.equal(#picked, 0, "not in combat")
 			wow.data.inCombat = false
 			wow.fire("PLAYER_REGEN_ENABLED")

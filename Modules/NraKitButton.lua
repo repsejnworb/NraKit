@@ -117,8 +117,8 @@ local module = {
 			key = "nraButtonBadgeReminders",
 			parent = "nraButtonBadge",
 			requires = "reminders",
-			name = "Due reminders",
-			description = "Reminders that came due and aren't ticked off.",
+			name = "Reminders",
+			description = "Reminders that came due and aren't ticked off. (Not to-dos: they're meant to stay on the list.)",
 			default = true,
 		},
 		{

@@ -144,7 +144,7 @@ A **reminder in the middle of the screen** while you have talent points to spend
 ### Unlearned abilities
 After a respec, abilities you don't know anymore stay on your bars, only greyed out. This makes them stand out.
 - A **red cross** on their button, and a tooltip line saying it's not learned.
-- When your spells change, a message lists the abilities on your bars you lost. **Click it to take them off** (after combat, if you're fighting).
+- When your spells change, a message lists the abilities on your bars you lost (once you close the talents window). **Click it to take them off**: it asks first, and waits for combat to end if you're fighting.
 - It also lists **new abilities** that aren't on your bars yet.
 - **/nra unlearned** lists them, **/nra unlearned remove** takes them off.
 
@@ -222,7 +222,7 @@ Gold works even with full bags; C.O.D. and GM mail are never touched.
 
 ### NraKit button
 NraKit's icon on screen, **wherever you drag it**.
-- A **badge counts what's waiting** for you: due reminders and, if you want, what's new.
+- A **badge counts what you may have missed**: reminders you haven't ticked off and, if you want, what's new.
 - **Pick what clicking and shift-clicking it do** (what's waiting, a window, your reminders...); right-click is NraKit's menu.
 - Lock it, size it, or hide it in combat.
 

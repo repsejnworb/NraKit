@@ -1691,11 +1691,12 @@ ns:RegisterBadge({
 	key = "reminders",
 	option = "nraButtonBadgeReminders",
 	module = module.key,
+	-- Only reminders: a badge is for what you may have missed, and a to-do list is rarely empty.
 	count = function()
-		return #reminders.Due()
+		return #reminders.Due(true)
 	end,
 	text = function(count)
-		return string.format("%d open on your to-do list", count)
+		return string.format("%d %s not ticked off", count, count == 1 and "reminder" or "reminders")
 	end,
 	open = reminders.ShowTracker,
 })

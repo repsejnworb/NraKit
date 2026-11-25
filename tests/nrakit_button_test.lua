@@ -40,6 +40,12 @@ return {
 			t.ok(not badge:IsShown(), "gone when done")
 		end)
 
+		t.test("to-dos don't count on the badge (a to-do list is rarely empty)", function()
+			SlashCmdList.NRAKIT("todo respec")
+			t.ok(#ns.reminders.Due() == 1 and not badge:IsShown(), "no badge for a to-do")
+			ns.reminders.SetDone(ns.reminders.Due()[1].id, true)
+		end)
+
 		t.test("nothing waiting: a click opens the NraKit window", function()
 			Click()
 			t.ok(NraKitOptionsFrame:IsShown(), "NraKit window")

@@ -201,6 +201,32 @@ function unlearned.RemoveAll()
 	return count
 end
 
+-- Asks before taking them off: your bars are yours. "Take them off" does it.
+function unlearned.ConfirmRemove()
+	local spells = {}
+	for _, spellID in pairs(unlearned.Slots()) do
+		table.insert(spells, spellID)
+	end
+	if #spells == 0 then
+		ns:Print("Nothing to take off: you know everything on your bars.")
+		return
+	end
+	table.sort(spells)
+	StaticPopupDialogs.NRAKIT_REMOVE_UNLEARNED = StaticPopupDialogs.NRAKIT_REMOVE_UNLEARNED or {
+		text = "Take these abilities you don't know anymore off your action bars?\n\n%s",
+		button1 = "Take them off",
+		button2 = CANCEL or "Cancel",
+		OnAccept = function()
+			unlearned.RemoveAll()
+		end,
+		timeout = 0,
+		whileDead = true,
+		hideOnEscape = true,
+		preferredIndex = 3,
+	}
+	StaticPopup_Show("NRAKIT_REMOVE_UNLEARNED", NameList(spells))
+end
+
 ------------------------------------------------------------------------------
 -- When your spells change
 ------------------------------------------------------------------------------
@@ -234,10 +260,10 @@ local function ShowLost(lost)
 		style = "big",
 		heading = "Not learned anymore",
 		text = string.format("%d on your bars: %s", #lost, NameList(lost)),
-		detail = "Click to take them off your bars",
+		detail = "Click to take them off your bars (you'll be asked first)",
 		icon = CROSS,
 		duration = TOAST_SECONDS,
-		onClick = unlearned.RemoveAll,
+		onClick = unlearned.ConfirmRemove,
 	})
 end
 
@@ -249,6 +275,43 @@ local function ShowNew(new)
 		detail = "Find them in your spellbook",
 		duration = TOAST_SECONDS,
 	})
+end
+
+-- The talents window is where you respec: the messages wait until it's closed, so they never
+-- sit on top of it (and take a click meant for it).
+local waiting -- { lost = {}, new = {} } while the talents window is open
+local function TalentsOpen()
+	return PlayerSpellsFrame ~= nil and type(PlayerSpellsFrame) == "table" and PlayerSpellsFrame:IsShown()
+end
+
+local function ShowWaiting()
+	if not waiting or TalentsOpen() then
+		return
+	end
+	local lost, new = {}, waiting.new
+	for _, spellID in ipairs(waiting.lost) do
+		if OnBars(spellID) then -- you may have taken it off yourself meanwhile
+			table.insert(lost, spellID)
+		end
+	end
+	waiting = nil
+	if #lost > 0 then
+		ShowLost(lost)
+	end
+	if #new > 0 then
+		ShowNew(new)
+	end
+end
+
+local hookedTalents = false
+local function HookTalentsWindow()
+	if hookedTalents or not (PlayerSpellsFrame and type(PlayerSpellsFrame) == "table") then
+		return
+	end
+	hookedTalents = true
+	PlayerSpellsFrame:HookScript("OnHide", function()
+		C_Timer.After(0.3, ShowWaiting)
+	end)
 end
 
 -- Compares your spells with the last look: abilities lost that are still on your bars, and
@@ -276,14 +339,25 @@ function unlearned.CheckChanges()
 	end
 	table.sort(lost)
 	table.sort(new)
+	if #new > MAX_NEW then
+		new = {} -- (many at once is the spellbook finishing loading, not learning)
+	end
 	if #lost > 0 then
-		ShowLost(lost)
 		ns:Print(string.format("Not learned anymore, still on your bars: %s. Click the message, or |cffffd100/nra unlearned remove|r, to take them off.",
 			NameList(lost)))
 	end
-	if #new > 0 and #new <= MAX_NEW then
-		ShowNew(new) -- (many at once is the spellbook finishing loading, not learning)
+	if #lost + #new == 0 then
+		return
 	end
+	HookTalentsWindow()
+	waiting = waiting or { lost = {}, new = {} }
+	for _, spellID in ipairs(lost) do
+		table.insert(waiting.lost, spellID)
+	end
+	for _, spellID in ipairs(new) do
+		table.insert(waiting.new, spellID)
+	end
+	ShowWaiting()
 end
 
 ns:RegisterPreview("unlearned", "Unlearned abilities: the message after a respec", function()
