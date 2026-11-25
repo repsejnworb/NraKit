@@ -299,6 +299,26 @@ return {
 			t.ok(menu == nil, "no menu for other links")
 		end)
 
+		t.test("the ? button shows how to add items once the list has some", function()
+			local function HelpShown()
+				for _, frame in ipairs(wow.frames) do
+					local text = rawget(frame, "text")
+					if type(text) == "string" and text:find("right-click an item link in chat", 1, true) and wow.visible(frame) then
+						return true
+					end
+				end
+				return false
+			end
+			ns:OpenWishlist(true)
+			t.ok(wishlist.Count() > 0 and not HelpShown(), "not while there are items")
+			t.ok(wow.click("?"), "the button")
+			t.ok(HelpShown(), "shown")
+			NraKitWishlistFrame:Hide()
+			ns:OpenWishlist(true)
+			t.ok(not HelpShown(), "closed again next time")
+			NraKitWishlistFrame:Hide()
+		end)
+
 		t.test("option: take items off once you have them", function()
 			ns:SetSetting("wishlistRemoveGot", true)
 			have[SHOULDER] = 0

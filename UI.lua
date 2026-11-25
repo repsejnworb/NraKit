@@ -451,6 +451,29 @@ function UI.CreateFlatButton(parent, label, height)
 	return button
 end
 
+-- A "?" toggle for a window's how-to (what an empty list says), so it can be read again once
+-- the list has something in it. onToggle(open) redraws; button.open is the state.
+function UI.CreateHelpButton(parent, title, onToggle)
+	local button = UI.CreateFlatButton(parent, "?", 22)
+	button:SetWidth(22)
+	button.open = false
+	button:SetScript("OnClick", function(self)
+		self.open = not self.open
+		self:SetSelected(self.open)
+		PlaySound(self.open and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON or SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_OFF)
+		onToggle(self.open)
+	end)
+	button:SetScript("OnEnter", function(self)
+		UI.ShowTooltip(self, title, self.open and "Click to hide it." or "Click to show how, with examples.")
+	end)
+	button:SetScript("OnLeave", GameTooltip_Hide)
+	function button:SetOpen(open)
+		self.open = open
+		self:SetSelected(open)
+	end
+	return button
+end
+
 -- Thin dark notches at 25%, 50% and 75% of a progress bar (kept in place as it resizes).
 function UI.AddMilestoneTicks(bar)
 	local ticks = {}

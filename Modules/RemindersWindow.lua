@@ -16,7 +16,15 @@ local HEADER_HEIGHT = 26
 local TOP_HEIGHT = 48
 local FOOTER_HEIGHT = 28
 
-local frame, addBox, scroll, footerLeft, editBox
+local HELP = "Write one in the box above (the same words as in chat), or in chat with /nra remind:\n"
+	.. "  |cffffd100/nra remind <text>|r - for your next login\n"
+	.. "  |cffffd100/nra remind 30m <text>|r - in 30 minutes (s, m, h, d: 2d, 1h30m)\n"
+	.. "  |cffffd100/nra remind in Darkshore: <text>|r - when you enter a zone or subzone\n"
+	.. "  |cffffd100/nra remind at 30: <text>|r - when you reach a level\n"
+	.. "  |cffffd100/nra remind @Alt: <text>|r - on another character's next login (@Alt at 20: works too)\n\n"
+	.. "Shift-clicked items and quests work in chat."
+
+local frame, addBox, scroll, footerLeft, editBox, helpButton
 local pool = UI.CreatePool()
 local editingID
 local doneOpen = false -- the Done section, folded until you open it
@@ -162,6 +170,8 @@ local function Message(content, text, y)
 	message:SetText(text)
 	message:SetPoint("TOPLEFT", content, "TOPLEFT", PAD + 2, y)
 	message:SetPoint("RIGHT", content, "RIGHT", -PAD, 0)
+	local _, lines = text:gsub("\n", "")
+	return (lines + 1) * 17 + 12 -- its height, roughly
 end
 
 ------------------------------------------------------------------------------
@@ -219,8 +229,16 @@ function Render()
 	local sections = Collect()
 	local y, open, total = -PAD, 0, 0
 	for _, section in ipairs(sections) do
+		total = total + #section.rows
+	end
+	if total == 0 then
+		y = y - Message(content, "No reminders yet.\n\n" .. HELP, y - 4)
+	elseif helpButton.open then
+		y = y - Message(content, HELP, y - 4) - 4
+	end
+	helpButton:SetShown(total > 0)
+	for _, section in ipairs(sections) do
 		if #section.rows > 0 then
-			total = total + #section.rows
 			local onClick = section.foldable and function()
 				doneOpen = not doneOpen
 				Render()
@@ -242,16 +260,6 @@ function Render()
 			end
 		end
 	end
-	if total == 0 then
-		Message(content, "No reminders yet.\n\nWrite one in the box above, or in chat:\n"
-			.. "  |cffffd100/nra remind <text>|r - for your next login\n"
-			.. "  |cffffd100/nra remind 30m <text>|r - in 30 minutes (s, m, h, d)\n"
-			.. "  |cffffd100/nra remind in Darkshore: <text>|r - when you enter a zone\n"
-			.. "  |cffffd100/nra remind at 30: <text>|r - when you reach a level\n"
-			.. "  |cffffd100/nra remind @Alt: <text>|r - on another character's next login\n\n"
-			.. "Shift-clicked items and quests work in chat.", y - 4)
-		y = y - 170
-	end
 	content:SetHeight(-y + PAD)
 	scroll:SetScroll(scroll:GetVerticalScroll())
 	footerLeft:SetText(string.format("%d open", open))
@@ -268,7 +276,7 @@ local function CreateWindow()
 	addBox = CreateFrame("EditBox", nil, body, "InputBoxTemplate")
 	addBox:SetHeight(22)
 	addBox:SetPoint("TOPLEFT", PAD + 8, -PAD - 1)
-	addBox:SetPoint("RIGHT", -PAD - 70, 0)
+	addBox:SetPoint("RIGHT", -PAD - 100, 0)
 	addBox:SetAutoFocus(false)
 	addBox:SetMaxLetters(255)
 	addBox:SetScript("OnEnterPressed", AddFromBox)
@@ -282,6 +290,8 @@ local function CreateWindow()
 	add:SetWidth(56)
 	add:SetPoint("LEFT", addBox, "RIGHT", 8, 0)
 	add:SetScript("OnClick", AddFromBox)
+	helpButton = UI.CreateHelpButton(body, "How to write reminders", Render)
+	helpButton:SetPoint("TOPRIGHT", -PAD, -PAD)
 
 	local topLine = body:CreateTexture(nil, "BORDER")
 	topLine:SetColorTexture(unpack(UI.EDGE))
@@ -323,6 +333,7 @@ local function CreateWindow()
 	frame:HookScript("OnShow", Render)
 	frame:HookScript("OnHide", function()
 		editingID = nil
+		helpButton:SetOpen(false)
 	end)
 	reminders.onChanged = Render
 end

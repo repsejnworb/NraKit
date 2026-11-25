@@ -236,6 +236,25 @@ return {
 			t.noErrors()
 		end)
 
+		t.test("the ? button shows how to write them once there are some", function()
+			local function HelpShown()
+				for _, frame in ipairs(wow.frames) do
+					local text = rawget(frame, "text")
+					if type(text) == "string" and text:find("/nra remind 30m", 1, true) and wow.visible(frame) then
+						return true
+					end
+				end
+				return false
+			end
+			t.ok(not HelpShown(), "not while there are reminders")
+			t.ok(wow.click("?"), "the button")
+			t.ok(HelpShown(), "shown")
+			NraKitRemindersFrame:Hide()
+			ns:OpenReminders()
+			t.ok(not HelpShown(), "closed again next time")
+			NraKitRemindersFrame:Hide()
+		end)
+
 		t.test("logging in as the other character: theirs, from you", function()
 			wow.data.units.player = { name = "Bob", surname = "Stone" }
 			Login()

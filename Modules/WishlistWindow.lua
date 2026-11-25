@@ -54,7 +54,13 @@ local FILTERS = {
 	{ key = "got", label = "Got", tip = "Items you have." },
 }
 
-local frame, searchBox, scroll, footerLeft, foldAll, noteBox, filterChips
+local HELP = "Add gear you want:\n"
+	.. "  - shift-click an item into |cffffd100/nra wishlist|r (anything after it becomes its note; several items at once work too)\n"
+	.. "  - right-click an item link in chat\n"
+	.. "  - drop an item from your bags here\n"
+	.. "  - right-click an item in Item lookup (|cffffd100/nra item <name>|r)"
+
+local frame, searchBox, scroll, footerLeft, foldAll, noteBox, filterChips, helpButton
 local pool = UI.CreatePool()
 local query, filter = "", "all"
 local editingID -- the item whose note is being edited
@@ -321,6 +327,8 @@ local function Message(content, text, y)
 	message:SetText(text)
 	message:SetPoint("TOPLEFT", content, "TOPLEFT", PAD + 2, y)
 	message:SetPoint("RIGHT", content, "RIGHT", -PAD, 0)
+	local _, lines = text:gsub("\n", "")
+	return (lines + 1) * 17 + 12 -- its height, roughly
 end
 
 ------------------------------------------------------------------------------
@@ -341,12 +349,9 @@ function Render()
 	local width = content:GetWidth() - 2 * PAD
 	local total = wishlist.Count()
 
+	helpButton:SetShown(total > 0)
 	if total == 0 then
-		Message(content, "Your wishlist is empty.\n\nAdd gear you want:\n"
-			.. "  - shift-click an item into |cffffd100/nra wishlist|r (anything after it becomes its note)\n"
-			.. "  - drop an item from your bags here\n"
-			.. "  - right-click an item in Item lookup (|cffffd100/nra item <name>|r)", -PAD - 4)
-		content:SetHeight(140)
+		content:SetHeight(Message(content, "Your wishlist is empty.\n\n" .. HELP, -PAD - 4) + PAD)
 		footerLeft:SetText("")
 		foldAll:Hide()
 		return
@@ -354,6 +359,9 @@ function Render()
 
 	local byGroup = Collect()
 	local y, shown, groupKeys = -PAD, 0, {}
+	if helpButton.open then
+		y = y - Message(content, HELP, y - 4) - 4
+	end
 	for _, group in ipairs(GROUPS) do
 		local items = byGroup[group]
 		if items then
@@ -450,7 +458,9 @@ local function CreateWindow()
 
 	foldAll = CreateFrame("Button", nil, body)
 	foldAll:SetSize(80, 22)
-	foldAll:SetPoint("TOPRIGHT", -PAD, -PAD)
+	foldAll:SetPoint("TOPRIGHT", -PAD - 30, -PAD)
+	helpButton = UI.CreateHelpButton(body, "How to add items", Render)
+	helpButton:SetPoint("TOPRIGHT", -PAD, -PAD)
 	foldAll.text = MakeLabel(foldAll, "", "GameFontDisableSmall")
 	foldAll.text:SetPoint("RIGHT")
 	foldAll.text:SetJustifyH("RIGHT")
@@ -507,6 +517,7 @@ local function CreateWindow()
 	frame:HookScript("OnHide", function()
 		filter = "all" -- a forgotten filter would make the list look broken next time
 		editingID = nil
+		helpButton:SetOpen(false)
 	end)
 	wishlist.onChanged = Render
 	wishlist.onItemLoaded = RequestRender
