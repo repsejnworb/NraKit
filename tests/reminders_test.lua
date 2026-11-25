@@ -514,6 +514,36 @@ return {
 			t.equal(tracker:GetHeight(), 100, "no taller than its height")
 			t.equal(#Rows(tracker), #reminders.Due(), "every item is in it (to scroll to)")
 			t.ok(rawget(tracker, "scroll").content:GetHeight() > 100, "more than fits: they scroll")
+			-- The scroll marker: only with something to scroll, and over see-through items only
+			-- while the mouse is on the list.
+			local scroll = rawget(tracker, "scroll")
+			rawset(scroll, "GetVerticalScrollRange", function()
+				return 0.4
+			end)
+			scroll:UpdateThumb()
+			t.ok(not scroll.thumb:IsShown(), "no marker for a rounding error")
+			rawset(scroll, "GetVerticalScrollRange", function()
+				return 60
+			end)
+			ns:SetSetting("remindersListBackgroundSplit", true)
+			ns:SetSetting("remindersListItemsBackground", 0)
+			tracker.scroll:UpdateThumb()
+			t.ok(not scroll.thumb:IsShown(), "see-through items: no marker")
+			local over = true
+			rawset(tracker, "IsMouseOver", function()
+				return over
+			end)
+			tracker.scripts.OnUpdate(tracker, 0.05)
+			t.ok(scroll.thumb:IsShown(), "the mouse on the list: the marker")
+			over = false
+			tracker.scripts.OnUpdate(tracker, 0.5)
+			t.ok(not scroll.thumb:IsShown(), "gone again")
+			rawset(tracker, "IsMouseOver", nil)
+			ns:SetSetting("remindersListItemsBackground", 0.95)
+			tracker.scroll:UpdateThumb()
+			t.ok(scroll.thumb:IsShown(), "a solid background: always, when there's something to scroll")
+			rawset(scroll, "GetVerticalScrollRange", nil)
+			ns:SetSetting("remindersListBackgroundSplit", false)
 			ns:SetSetting("remindersListHeight", 800)
 			t.ok(tracker:GetHeight() < 800, "with room to spare, just as tall as its items")
 			ns:SetSetting("remindersListHeight", 300)

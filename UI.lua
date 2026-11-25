@@ -623,8 +623,10 @@ function UI.CreateSearchBox(parent, width, onChange)
 	return box
 end
 
--- A mouse-wheel scroll area with a thin position marker on the right.
--- Returns the ScrollFrame; scroll.content is the child to fill, scroll:SetScroll(y) scrolls.
+-- A mouse-wheel scroll area with a thin position marker on the right (only when there's
+-- something to scroll; scroll.ShowMarker = function() -> bool can hide it more, then call
+-- scroll:UpdateThumb()). Returns the ScrollFrame; scroll.content is the child to fill,
+-- scroll:SetScroll(y) scrolls.
 function UI.CreateScrollArea(parent)
 	local scroll = CreateFrame("ScrollFrame", nil, parent)
 	local content = CreateFrame("Frame", nil, scroll)
@@ -635,11 +637,13 @@ function UI.CreateScrollArea(parent)
 	local thumb = parent:CreateTexture(nil, "OVERLAY")
 	thumb:SetColorTexture(1, 1, 1, 0.2)
 	thumb:SetWidth(3)
+	scroll.thumb = thumb
 
 	function scroll:UpdateThumb()
 		local range = self:GetVerticalScrollRange()
 		local visible = self:GetHeight()
-		if range <= 0 then
+		-- Less than a pixel is rounding, not something to scroll.
+		if range < 1 or (self.ShowMarker and not self:ShowMarker()) then
 			thumb:Hide()
 			return
 		end

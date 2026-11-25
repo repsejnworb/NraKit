@@ -1576,6 +1576,10 @@ local function CreateTracker()
 	tracker.title = header:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 	-- The items scroll (mouse wheel) when there are more than the list's height holds.
 	tracker.scroll = UI.CreateScrollArea(tracker)
+	-- Its marker: with see-through items, only while the mouse is over the list.
+	function tracker.scroll:ShowMarker()
+		return (tracker.itemsAlphaNow or 1) > 0.05 or (tracker.hoverMix or 0) > 0
+	end
 	tracker.sections = {}
 	for _, key in ipairs({ "loud", "quiet" }) do
 		local label = tracker.scroll.content:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -1677,6 +1681,8 @@ local function CreateTracker()
 		end
 		self.headerBg:SetAlpha(headerAlpha / UI.BG[4])
 		self.itemsBg:SetAlpha(itemsAlpha / UI.BG[4])
+		self.itemsAlphaNow = itemsAlpha
+		self.scroll:UpdateThumb()
 		self.headerBorder:SetAlpha(math.min(1, headerAlpha * 2))
 		self.itemsBorder:SetAlpha(math.min(1, itemsAlpha * 2))
 		local up = ns:GetValue("remindersListGrow") == "up"
