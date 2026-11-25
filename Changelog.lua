@@ -16,7 +16,7 @@ local _, ns = ...
 --           "new" entry with its module (tests/changelog_test.lua checks).
 
 ns.changelog = {
-	{ version = "Unreleased", entries = {
+	{ version = "0.28.0", date = "2026-11-25", entries = {
 		{ "improved", "Inventory Tracker: hover your gold at the bottom of your bags to see the gold of each of your characters, and the total (an option, on by default)." },
 	} },
 	{ version = "0.27.1", date = "2026-11-25", entries = {

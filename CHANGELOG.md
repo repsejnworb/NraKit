@@ -1,6 +1,6 @@
-# NraKit 0.27.1
+# NraKit 0.28.0
 
-### Fixed
-- Reminders & to-dos: the list on screen shows its scroll marker only when there's something to scroll, and with a see-through background only while the mouse is on it.
+### Improved
+- Inventory Tracker: hover your gold at the bottom of your bags to see the gold of each of your characters, and the total (an option, on by default).
 
 Type /nra new in game to see what's new in every version.
