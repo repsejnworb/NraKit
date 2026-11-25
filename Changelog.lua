@@ -17,7 +17,7 @@ local _, ns = ...
 
 ns.changelog = {
 	{ version = "Unreleased", entries = {
-		{ "improved", "Reminders & to-dos: set the width and height of the list on screen in the settings (List on screen). With more items than its height holds, scroll it with the mouse wheel (this replaces Most rows shown and "and N more")." },
+		{ "improved", "Reminders & to-dos: set the width and height of the list on screen in the settings (List on screen). With more items than its height holds, scroll it with the mouse wheel (this replaces Most rows shown and \"and N more\")." },
 	} },
 	{ version = "0.26.0", date = "2026-11-25", entries = {
 		{ "new", "Reminders & to-dos: notes to yourself that come back when you need them. /nra remind go to Darkshore pops up at your next login; /nra todo respec just goes on your to-do list. Put a trigger in front for later: a time (30m, 2h, 1d), a zone (in Ironforge: ..., straight away if you're there), a level (at 30: ...) or another of your characters (@Bankalt: ...). Reminders pop up on a card that stays until you close it and says why it came up, with a sound you can pick. The list on screen holds your reminders and to-dos until you tick them, in your order (drag or use the arrows), with tags for where, when and who from. Zone to-dos are there while you're in their zone: leave and a short countdown takes them off, return and they're back (with a small message for arriving); fold it, and pick its size, background (also a stronger one while the mouse is over it), which way it grows, whether it shows its header and whether it hides in combat. The Reminders & To-do tab lists everything, with a form for new ones and for changing any of them (right-click, Edit). /nra preview reminder shows the card.", module = "reminders" },
