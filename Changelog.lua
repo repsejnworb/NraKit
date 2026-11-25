@@ -16,7 +16,7 @@ local _, ns = ...
 --           "new" entry with its module (tests/changelog_test.lua checks).
 
 ns.changelog = {
-	{ version = "Unreleased", entries = {
+	{ version = "0.25.0", date = "2026-11-25", entries = {
 		{ "improved", "Wishlist: add several items at once by shift-clicking them all into /nra wishlist. Text after an item becomes that item's note." },
 	} },
 	{ version = "0.24.0", date = "2026-11-25", entries = {
