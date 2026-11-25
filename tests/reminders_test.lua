@@ -289,6 +289,12 @@ return {
 			t.equal(headerPoints[1], "BOTTOMLEFT", "header at the bottom")
 			ns:SetSetting("remindersListGrow", "down")
 			t.equal(point[1], "TOPLEFT", "and back")
+			-- A new size keeps the corner in the same place on screen: 1200, 700 at 200% is 600, 350
+			-- in the list's own (doubled) units.
+			ns:SetSetting("remindersListScale", 2)
+			t.ok(point[4] == 600 and point[5] == 350, "same place at double size: " .. point[4] .. ", " .. point[5])
+			ns:SetSetting("remindersListScale", 1)
+			t.ok(point[4] == 1200 and point[5] == 700, "and back")
 			header.scripts.OnClick(header, "LeftButton")
 			t.ok(NraKitDB.remindersTrackerFolded and tracker:IsShown(), "folded, still there")
 			t.equal(#Rows(tracker), 0, "just the header")

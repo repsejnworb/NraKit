@@ -6,7 +6,8 @@ local _, ns = ...
 -- window; and your reminders). Right-click is NraKit's menu, the same as the addon button's.
 --
 -- What counts on the badge comes from features (ns:RegisterBadge in Core.lua); each has an
--- option here. Saved: NraKitDB.nraButtonPosition.
+-- option here. Saved: NraKitDB.nraButtonPosition, its centre in screen units (so a new size
+-- keeps it in place).
 
 local UI = ns.UI
 local button
@@ -245,12 +246,19 @@ local function CreateButton()
 	button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 	button:RegisterForDrag("LeftButton")
 	button:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
-	local position = NraKitDB.nraButtonPosition
-	if position then
-		button:SetPoint(position[1], UIParent, position[2], position[3], position[4])
-	else
-		button:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -240, -40)
+	function button:Place()
+		local position = NraKitDB.nraButtonPosition
+		self:ClearAllPoints()
+		if position and position.screen then
+			local scale = self:GetScale()
+			self:SetPoint("CENTER", UIParent, "BOTTOMLEFT", position[3] / scale, position[4] / scale)
+		elseif position then
+			self:SetPoint(position[1], UIParent, position[2], position[3], position[4])
+		else
+			self:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -240, -40)
+		end
 	end
+	button:Place()
 
 	local background = button:CreateTexture(nil, "BACKGROUND")
 	background:SetTexture("Interface\\Minimap\\UI-Minimap-Background")
@@ -305,9 +313,11 @@ local function CreateButton()
 	end)
 	button:SetScript("OnDragStop", function(self)
 		self:StopMovingOrSizing()
-		local point, _, relativePoint, x, y = self:GetPoint()
-		if point then
-			NraKitDB.nraButtonPosition = { point, relativePoint, x, y }
+		local x, y = self:GetCenter()
+		if x and y then
+			local scale = self:GetScale()
+			NraKitDB.nraButtonPosition = { "CENTER", "BOTTOMLEFT", x * scale, y * scale, screen = true }
+			self:Place()
 		end
 	end)
 	button:SetScript("OnEnter", OnEnter)
@@ -329,7 +339,18 @@ local function Apply()
 	if not button then
 		CreateButton()
 	end
-	button:SetScale(ns:GetValue("nraButtonScale") or 1)
+	local scale = ns:GetValue("nraButtonScale") or 1
+	if scale ~= button:GetScale() then
+		if not (NraKitDB.nraButtonPosition and NraKitDB.nraButtonPosition.screen) then
+			local x, y = button:GetCenter() -- an older saved place, or the first one: keep it
+			if x and y then
+				local old = button:GetScale()
+				NraKitDB.nraButtonPosition = { "CENTER", "BOTTOMLEFT", x * old, y * old, screen = true }
+			end
+		end
+		button:SetScale(scale)
+		button:Place() -- the same centre, at the new size
+	end
 	if ns:GetOption("nraButtonHideInCombat") then
 		button:RegisterEvent("PLAYER_REGEN_DISABLED")
 		button:RegisterEvent("PLAYER_REGEN_ENABLED")

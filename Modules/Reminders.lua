@@ -1291,15 +1291,25 @@ local function CreateTracker()
 	-- Held by the corner on the header's side (top-left, or bottom-left when it grows up), so
 	-- folding it (or a shorter list) leaves the header where it is and only the other edge
 	-- moves. Dragging can leave it held by another point: put it back.
+	-- The place is saved in screen units (not the list's own, which change with its size), so a
+	-- new size keeps that corner where it is.
 	function tracker:Pin()
 		local up = ns:GetValue("remindersListGrow") == "up"
 		local left, edge = self:GetLeft(), up and self:GetBottom() or self:GetTop()
 		if left and edge then
-			local point = up and "BOTTOMLEFT" or "TOPLEFT"
-			self:ClearAllPoints()
-			self:SetPoint(point, UIParent, "BOTTOMLEFT", left, edge)
-			NraKitDB.remindersTrackerPosition = { point, "BOTTOMLEFT", left, edge }
+			local scale = self:GetScale()
+			NraKitDB.remindersTrackerPosition = { up and "BOTTOMLEFT" or "TOPLEFT", "BOTTOMLEFT", left * scale, edge * scale, screen = true }
+			self:Place()
 		end
+	end
+	function tracker:Place()
+		local position = NraKitDB.remindersTrackerPosition
+		if not position then
+			return
+		end
+		local scale = position.screen and self:GetScale() or 1
+		self:ClearAllPoints()
+		self:SetPoint(position[1], UIParent, position[2], position[3] / scale, position[4] / scale)
 	end
 	tracker:SetScript("OnDragStop", function(self)
 		self:StopMovingOrSizing()
@@ -1434,7 +1444,11 @@ function RefreshTracker()
 	if not tracker then
 		CreateTracker()
 	end
-	tracker:SetScale(ns:GetValue("remindersListScale") or 1)
+	local scale = ns:GetValue("remindersListScale") or 1
+	if scale ~= tracker:GetScale() then
+		tracker:SetScale(scale)
+		tracker:Place() -- the same corner, at the new size
+	end
 	tracker:SetAlpha(ns:GetValue("remindersListAlpha") or 1)
 	local background = ns:GetValue("remindersListBackground") or 0.95
 	tracker.bg:SetAlpha(background / UI.BG[4])

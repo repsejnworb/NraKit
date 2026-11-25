@@ -117,6 +117,22 @@ return {
 			NraKitOptionsFrame:Hide()
 		end)
 
+		t.test("a new size keeps the button's centre where it is", function()
+			local point
+			rawset(button, "GetCenter", function()
+				return 500, 400
+			end)
+			rawset(button, "SetPoint", function(_, ...)
+				point = { ... }
+			end)
+			button.scripts.OnDragStop(button)
+			t.ok(point[1] == "CENTER" and point[4] == 500 and point[5] == 400, "dragged: its centre")
+			ns:SetSetting("nraButtonScale", 2)
+			t.ok(point[4] == 250 and point[5] == 200, "the same centre on screen at double size")
+			ns:SetSetting("nraButtonScale", 1)
+			t.ok(point[4] == 500 and point[5] == 400, "and back")
+		end)
+
 		t.test("hide in combat; off hides it", function()
 			ns:SetSetting("nraButtonHideInCombat", true)
 			wow.fire("PLAYER_REGEN_DISABLED")
