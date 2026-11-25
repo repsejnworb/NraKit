@@ -14,20 +14,25 @@ local _, ns = ...
 --   duration = seconds,       before it fades (default 6 big, 3 small); the mouse on it keeps it up
 --   size = scale,             (default 1)
 --   onClick = function,       makes it clickable (it closes when clicked); otherwise clicks go through
---   skipIfBusy = true,        drop it instead of waiting while another toast is up
+--   skipIfBusy = true,        drop it instead of waiting when the screen is full of toasts
 -- }
--- A big toast replaces whatever is showing; a small one waits for the toast in front of it
--- (a few at most), so nothing is talked over.
+-- Toasts stack, up to MAX_SHOWN at once: each new one above the others, which stay put. More
+-- wait their turn (a big one first in line); when one goes, those above it slide down.
 
 local UI = ns.UI
 local toast = {}
 ns.toast = toast
 
 local FADE = 1
-local MAX_QUEUE = 3
-local DEFAULTS = { big = { duration = 6, y = 260 }, small = { duration = 3, y = 200 } }
+local MAX_SHOWN = 3 -- at once; more wait their turn
+local MAX_QUEUE = 5 -- waiting; more are dropped
+local BOTTOM = 168 -- the lowest toast's bottom edge, above the middle of the screen
+local GAP = 8
+local SLIDE = 12 -- how quickly toasts slide down into a gap
+local DEFAULTS = { big = { duration = 6 }, small = { duration = 3 } }
 
-local frames = {}
+local free = { big = {}, small = {} } -- toast frames not in use
+local shown = {} -- on screen, oldest (lowest) first
 local queue = {}
 local ShowNext
 
@@ -44,7 +49,31 @@ local function PopScale(style, age)
 	return 1
 end
 
-local function OnUpdate(self)
+local function Place(frame)
+	frame:ClearAllPoints()
+	frame:SetPoint("BOTTOM", UIParent, "CENTER", 0, frame.y)
+end
+
+-- Where each toast belongs: stacked upwards from the bottom, oldest lowest. A new one goes
+-- straight to its place; the others slide (OnUpdate).
+local function Restack()
+	local y = BOTTOM
+	for _, frame in ipairs(shown) do
+		frame.targetY = y
+		if not frame.y then
+			frame.y = y
+			Place(frame)
+		end
+		y = y + frame:GetHeight() + GAP
+	end
+end
+
+local function OnUpdate(self, elapsed)
+	if self.y and self.targetY and self.y ~= self.targetY then
+		local step = (self.targetY - self.y) * math.min(1, (elapsed or 0) * SLIDE)
+		self.y = math.abs(self.targetY - self.y) < 0.5 and self.targetY or self.y + step
+		Place(self)
+	end
 	local now = GetTime()
 	if self:IsMouseOver() and now - self.shownAt > 0.35 then
 		self.holdUntil = math.max(self.holdUntil, now + 1) -- the mouse on it keeps it up
@@ -65,9 +94,7 @@ local function CreateToastFrame(style)
 	-- The holder stays put; the inner frame is scaled around its centre for the pop.
 	local frame = CreateFrame("Frame", nil, UIParent)
 	frame:SetSize(width, height)
-	-- Held by its top, so a message with a list grows downwards.
-	frame:SetPoint("TOP", UIParent, "CENTER", 0, DEFAULTS[style].y + height / 2)
-	frame.baseHeight = height
+	frame.baseHeight = height -- placed in the stack by Restack
 	frame:SetFrameStrata("HIGH")
 	frame:Hide()
 	frame.style = style
@@ -103,16 +130,23 @@ local function CreateToastFrame(style)
 			onClick()
 		end
 	end)
-	frame:HookScript("OnHide", function()
+	frame:HookScript("OnHide", function(self)
+		for index, each in ipairs(shown) do
+			if each == self then
+				table.remove(shown, index)
+			end
+		end
+		self.y, self.targetY = nil, nil
+		table.insert(free[self.style], self)
+		Restack()
 		ShowNext()
 	end)
-	frames[style] = frame
 	return frame
 end
 
 local function Display(spec)
 	local style = spec.style == "big" and "big" or "small"
-	local frame = frames[style] or CreateToastFrame(style)
+	local frame = table.remove(free[style]) or CreateToastFrame(style)
 	frame.heading:SetText(spec.heading or "")
 	frame.heading:SetTextColor(unpack(spec.headingColor or UI.ACCENT))
 	frame.text:SetText(spec.text or "")
@@ -159,37 +193,34 @@ local function Display(spec)
 	frame.shownAt = GetTime()
 	frame.holdUntil = frame.shownAt + (spec.duration or DEFAULTS[style].duration)
 	frame:SetAlpha(1)
+	table.insert(shown, frame)
+	Restack()
 	frame:Show()
 end
 
-local function Busy()
-	return (frames.big and frames.big:IsShown()) or (frames.small and frames.small:IsShown())
-end
-
 function ShowNext()
-	if not Busy() and #queue > 0 then
+	while #shown < MAX_SHOWN and #queue > 0 do
 		Display(table.remove(queue, 1))
 	end
 end
 
 function toast.Show(spec)
-	if spec.style == "big" then
-		Display(spec) -- first, so a waiting small toast doesn't take the small one's place
-		if frames.small and frames.small:IsShown() then
-			frames.small:Hide() -- a big one goes in front; the small one doesn't come back
-		end
-		return
-	end
-	if not Busy() then
+	if #shown < MAX_SHOWN then
 		Display(spec)
 	elseif not spec.skipIfBusy and #queue < MAX_QUEUE then
-		table.insert(queue, spec)
+		-- A big one (a goal done) is first in line.
+		table.insert(queue, spec.style == "big" and 1 or #queue + 1, spec)
 	end
 end
 
--- Whether a toast is showing now (tests, and features that want to know).
+-- Whether a toast (of this style, or any) is showing now (tests, and features that want to know).
 function toast.IsShowing(style)
-	return frames[style] ~= nil and frames[style]:IsShown()
+	for _, frame in ipairs(shown) do
+		if not style or frame.style == style then
+			return true
+		end
+	end
+	return false
 end
 
 ------------------------------------------------------------------------------

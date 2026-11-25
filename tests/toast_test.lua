@@ -17,29 +17,47 @@ return {
 			end
 		end
 
-		t.test("a small toast waits for the one in front of it", function()
-			toast.Show({ style = "small", heading = "A", text = "first", duration = 1 })
-			toast.Show({ style = "small", heading = "B", text = "second", duration = 1 })
-			t.ok(Shown("first"), "the first")
-			t.ok(not Shown("second"), "the second waits")
+		-- The toast frame showing this text.
+		local function Toast(text)
+			for _, frame in ipairs(wow.frames) do
+				if frame.text == text and wow.visible(frame) then
+					local holder = rawget(frame, "parent")
+					return holder and rawget(holder, "parent")
+				end
+			end
+		end
+
+		t.test("up to three at once, each new one above the others; the fourth waits", function()
+			toast.Show({ style = "small", text = "first", duration = 1 })
+			toast.Show({ style = "small", text = "second", duration = 5 })
+			toast.Show({ style = "big", heading = "GOAL COMPLETE", text = "third", duration = 5 })
+			toast.Show({ style = "small", text = "fourth", duration = 5 })
+			t.ok(Shown("first") and Shown("second") and Shown("third"), "three at once (big ones too)")
+			t.ok(not Shown("fourth"), "the fourth waits")
+			local first, second, third = Toast("first"), Toast("second"), Toast("third")
+			t.ok(rawget(first, "y") < rawget(second, "y") and rawget(second, "y") < rawget(third, "y"), "newest on top")
+			local secondWas = rawget(second, "y")
 			Wait(2.5)
-			t.ok(Shown("second"), "then the second")
-			Wait(2.5)
-			t.ok(not toast.IsShowing("small"), "then gone")
+			t.ok(not Shown("first") and Shown("fourth"), "the first went, the fourth came")
+			t.ok(rawget(Toast("fourth"), "targetY") > rawget(third, "targetY"), "on top")
+			t.ok(rawget(second, "y") < secondWas, "the ones above the gap slid down")
+			t.equal(rawget(second, "y"), 168, "into the first one's place, at the bottom")
+			Wait(8)
+			t.ok(not toast.IsShowing(), "then all gone")
 		end)
 
-		t.test("a big toast goes in front; skipIfBusy drops instead of waiting", function()
-			toast.Show({ style = "small", text = "small one", duration = 5 })
+		t.test("skipIfBusy drops it only when the screen is full; a big one is first in line", function()
+			toast.Show({ style = "small", text = "one", duration = 1 })
+			toast.Show({ style = "small", text = "milestone", skipIfBusy = true, duration = 1 })
+			t.ok(Shown("milestone"), "room: shown")
+			toast.Show({ style = "small", text = "two", duration = 1 })
+			toast.Show({ style = "small", text = "dropped", skipIfBusy = true })
 			toast.Show({ style = "small", text = "waiting", duration = 1 })
-			toast.Show({ style = "big", heading = "GOAL COMPLETE", text = "big one", duration = 1 })
-			t.ok(Shown("big one"), "big shown")
-			t.ok(not toast.IsShowing("small"), "the small one made way")
-			t.ok(not Shown("waiting"), "and the waiting one doesn't jump over the big one")
-			toast.Show({ style = "small", text = "milestone", skipIfBusy = true })
+			toast.Show({ style = "big", heading = "GOAL COMPLETE", text = "big", duration = 1 })
 			Wait(2.5)
-			t.ok(Shown("waiting"), "after the big one: the one that waited")
-			Wait(2.5)
-			t.ok(not Shown("milestone"), "the skipIfBusy one was dropped")
+			t.ok(Shown("big") and Shown("waiting"), "then the waiting ones, the big one first")
+			t.ok(not Shown("dropped"), "the skipIfBusy one was dropped")
+			Wait(3)
 			t.noErrors()
 		end)
 

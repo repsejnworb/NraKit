@@ -55,8 +55,9 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   entry in the addon button's right-click menu. Tabs always show; while `module` is off the tab is dimmed and opens a
   shared "feature is off" page (name, description, turn-on button) instead of the window. Add window OnShow/OnHide handlers with `HookScript`, not `SetScript`.
 - `Toast.lua` – NraKit's messages in the middle of the screen (`ns.toast.Show{ style = "big"|"small", heading, text,
-  icon/atlas, detail, duration, onClick, skipIfBusy }`); small ones wait their turn, big ones go in front. Use it for
-  any feature's on-screen message.
+  icon/atlas, detail, lines, duration, onClick, skipIfBusy }`); they stack, up to three at once (newest on top), and more
+  wait their turn (a big one first in line). `ns.arrival.Add{...}` adds a feature's part to the one message for
+  entering a zone. Use it for any feature's on-screen message.
 - `Preview.lua` – `/nra preview <name>` (also `/nra test`): shows a feature's on-screen message or bar with made-up
   content. Anything a feature pops up on screen gets one: `ns:RegisterPreview(name, description, show)`.
 - `Changelog.lua` – what's new per version, for players (see the changelog rule above). `WhatsNew.lua` tracks what

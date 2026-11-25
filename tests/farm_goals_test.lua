@@ -364,8 +364,19 @@ return {
 			t.ok(Goals(ns)[1].completed, "still finished")
 		end)
 
+		-- Lets every message on screen (and waiting) run out: up to three show at once.
+		local function ClearToasts()
+			for _ = 1, 20 do
+				if not ns.toast.IsShowing() then
+					return
+				end
+				wow.advance(30)
+			end
+		end
+
 		t.test("a goal finished in combat is shown again after the fight", function()
 			ClearGoals(ns)
+			ClearToasts()
 			wow.data.inCombat = true
 			ns.goals.AddGoal({ type = "item", itemID = SILK, target = 1 })
 			wow.fire("CHAT_MSG_LOOT", "You receive loot: " .. SILK_LINK .. ".")
@@ -409,7 +420,7 @@ return {
 
 		t.test("the milestone message shows when turned on", function()
 			ClearGoals(ns)
-			wow.advance(30) -- let earlier finish messages fade
+			ClearToasts() -- let earlier finish messages fade
 			ns:SetSetting("farmGoalsMilestoneMessage", true)
 			local goal = ns.goals.AddGoal({ type = "item", itemID = SILK, target = 100 })
 			wow.fire("CHAT_MSG_LOOT", "You receive loot: " .. SILK_LINK .. "x55.")
