@@ -109,6 +109,7 @@ local function CreateToastFrame(style)
 	local frame = CreateFrame("Frame", nil, UIParent)
 	frame:SetSize(width, height)
 	frame.baseHeight = height -- placed in the stack by Restack
+	frame.maxWidth = width -- it's as wide as what it shows, up to this
 	frame:SetFrameStrata("HIGH")
 	frame:Hide()
 	frame.style = style
@@ -185,7 +186,7 @@ function ShowLines(frame, lines, above)
 		line:Hide()
 	end
 	if #lines == 0 then
-		return 0
+		return 0, 0
 	end
 	-- Headers: small capitals after their icon; the lines under them line up with the title.
 	local width = 0
@@ -233,7 +234,7 @@ function ShowLines(frame, lines, above)
 		height = height + lineHeight + gap
 		previous = line
 	end
-	return height + 10
+	return height + 10, width
 end
 
 local function Display(spec)
@@ -273,9 +274,22 @@ local function Display(spec)
 	frame.text:SetShown(hasText)
 	frame.icon:SetShown(hasIcon and hasText)
 	local above = spec.detail and frame.detail or hasText and frame.text or frame.heading
-	local height = (hasText and frame.baseHeight or 24) + ShowLines(frame, spec.lines or {}, above)
+	local listHeight, listWidth = ShowLines(frame, spec.lines or {}, above)
+	local height = (hasText and frame.baseHeight or 24) + listHeight
 	frame:SetHeight(height)
 	frame.inner:SetHeight(height)
+
+	-- As wide as its widest line, and a little more (the mouse area: hover and clicks).
+	local widest = math.max(frame.heading:GetStringWidth(), listWidth)
+	if hasText then
+		widest = math.max(widest, frame.text:GetStringWidth() + (hasIcon and frame.iconSize + 8 or 0))
+	end
+	if spec.detail then
+		widest = math.max(widest, frame.detail:GetStringWidth())
+	end
+	local width = math.min(math.ceil(widest) + 32, frame.maxWidth)
+	frame:SetWidth(width)
+	frame.inner:SetWidth(width)
 
 	frame.key = spec.key
 	frame.onClick = spec.onClick

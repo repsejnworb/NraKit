@@ -53,6 +53,15 @@ return {
 			t.ok(not toast.IsShowing(), "then all gone")
 		end)
 
+		t.test("a toast is as wide as what it shows (a little more), not the whole width", function()
+			toast.Show({ style = "small", heading = "HI", text = "short", duration = 1 })
+			local frame = Toast("short")
+			t.equal(frame:GetWidth(), #"short" * 6 + 32, "as wide as its widest line, and a margin")
+			toast.Show({ style = "small", text = string.rep("long ", 200), duration = 1 })
+			t.equal(Toast(string.rep("long ", 200)):GetWidth(), 520, "never wider than before")
+			Wait(5)
+		end)
+
 		t.test("skipIfBusy drops it only when the screen is full; a big one is first in line", function()
 			toast.Show({ style = "small", text = "one", duration = 1 })
 			toast.Show({ style = "small", text = "milestone", skipIfBusy = true, duration = 1 })
