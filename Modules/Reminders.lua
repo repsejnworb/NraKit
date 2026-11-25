@@ -108,7 +108,7 @@ local module = {
 			key = "remindersListBackgroundSplit",
 			name = "Header and items separately",
 			description = "Set the background opacity of the header and of the items on their own, instead of one for both.",
-			default = false,
+			default = true,
 		},
 		{
 			key = "remindersListHeaderBackground",
@@ -130,7 +130,7 @@ local module = {
 			type = "number",
 			name = "Items background opacity",
 			description = "Only the box behind the items (and its border).",
-			default = 0.95,
+			default = 0,
 			min = 0,
 			max = 1,
 			step = 0.05,

@@ -430,6 +430,10 @@ return {
 			wow.data.zone = "Ironforge"
 			wow.fire("ZONE_CHANGED_NEW_AREA")
 			local tracker = NraKitRemindersTracker
+			t.ok(ns:GetOption("remindersListBackgroundSplit") and ns:GetValue("remindersListItemsBackground") == 0,
+				"by default: a header box, the items on their own")
+			t.ok(rawget(tracker, "itemsBg"):GetAlpha() == 0 and rawget(tracker, "headerBg"):GetAlpha() == 1, "so it looks that way")
+			ns:SetSetting("remindersListBackgroundSplit", false)
 			ns:SetSetting("remindersListScale", 1.2)
 			ns:SetSetting("remindersListAlpha", 0.6)
 			ns:SetSetting("remindersListBackground", 0)
