@@ -120,6 +120,17 @@ local module = {
 			max = 20,
 			step = 1,
 		},
+		{
+			key = "remindersListGrow",
+			type = "choice",
+			name = "Grow",
+			description = "Which way the list grows as it gets longer. The header stays where it is (also when you fold it).",
+			default = "down",
+			choices = {
+				{ "down", "Down (header on top)" },
+				{ "up", "Up (header at the bottom)" },
+			},
+		},
 	},
 }
 
@@ -1277,19 +1288,22 @@ local function CreateTracker()
 			self:StartMoving()
 		end
 	end)
-	-- Held by its top-left corner, so folding it (or a shorter list) leaves the header where it
-	-- is and only the bottom moves. Dragging can leave it held by another point: put it back.
-	function tracker:PinTop()
-		local left, top = self:GetLeft(), self:GetTop()
-		if left and top then
+	-- Held by the corner on the header's side (top-left, or bottom-left when it grows up), so
+	-- folding it (or a shorter list) leaves the header where it is and only the other edge
+	-- moves. Dragging can leave it held by another point: put it back.
+	function tracker:Pin()
+		local up = ns:GetValue("remindersListGrow") == "up"
+		local left, edge = self:GetLeft(), up and self:GetBottom() or self:GetTop()
+		if left and edge then
+			local point = up and "BOTTOMLEFT" or "TOPLEFT"
 			self:ClearAllPoints()
-			self:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, top)
-			NraKitDB.remindersTrackerPosition = { "TOPLEFT", "BOTTOMLEFT", left, top }
+			self:SetPoint(point, UIParent, "BOTTOMLEFT", left, edge)
+			NraKitDB.remindersTrackerPosition = { point, "BOTTOMLEFT", left, edge }
 		end
 	end
 	tracker:SetScript("OnDragStop", function(self)
 		self:StopMovingOrSizing()
-		self:PinTop()
+		self:Pin()
 	end)
 	local position = NraKitDB.remindersTrackerPosition
 	if position then
@@ -1297,7 +1311,7 @@ local function CreateTracker()
 	else
 		tracker:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -260, -420)
 	end
-	tracker:PinTop() -- older saved places (and the default) by their top-left too
+	tracker:Pin() -- older saved places (and the default) by that corner too
 	tracker:Hide()
 
 	tracker.bg = tracker:CreateTexture(nil, "BACKGROUND")
@@ -1309,9 +1323,7 @@ local function CreateTracker()
 
 	-- The header: click to fold or unfold, right-click for more, drag to move.
 	local header = CreateFrame("Button", nil, tracker)
-	header:SetPoint("TOPLEFT")
-	header:SetPoint("TOPRIGHT")
-	header:SetHeight(28)
+	header:SetHeight(28) -- placed by RefreshTracker (top, or bottom when it grows up)
 	header:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 	header:RegisterForDrag("LeftButton")
 	header:SetScript("OnDragStart", function()
@@ -1456,6 +1468,14 @@ function RefreshTracker()
 	for _, label in pairs(tracker.sections) do
 		label:Hide()
 	end
+	local up = ns:GetValue("remindersListGrow") == "up"
+	if up ~= tracker.up then
+		tracker.up = up
+		tracker.header:ClearAllPoints()
+		tracker.header:SetPoint(up and "BOTTOMLEFT" or "TOPLEFT")
+		tracker.header:SetPoint(up and "BOTTOMRIGHT" or "TOPRIGHT")
+		tracker:Pin()
+	end
 	if folded then
 		tracker.more:SetText("")
 		tracker:SetHeight(28)
@@ -1463,7 +1483,8 @@ function RefreshTracker()
 		return
 	end
 	-- Reminders first (with when, where or who from), then to-dos, each under its own label.
-	local y, used = -30, 0
+	-- Read top to bottom either way; growing up, the header is under them.
+	local y, used = up and -6 or -30, 0
 	for _, key in ipairs({ "loud", "quiet" }) do
 		local section = {}
 		for _, reminder in ipairs(list) do
@@ -1496,7 +1517,7 @@ function RefreshTracker()
 	tracker.more:ClearAllPoints()
 	tracker.more:SetPoint("TOPLEFT", 34, y)
 	tracker.more:SetText(#list > used and string.format("and %d more (/nra remind)", #list - used) or "")
-	tracker:SetHeight(-y + 6 + (#list > used and 16 or 0))
+	tracker:SetHeight(-y + (up and 28 or 6) + (#list > used and 16 or 0))
 	tracker:Show()
 end
 
@@ -1795,7 +1816,7 @@ function module:OnEnabledChanged(enabled)
 end
 
 function module:OnOptionChanged()
-	RefreshTracker()
+	RefreshTracker() -- (a new grow direction re-pins it by that corner)
 	if card and card:IsShown() then
 		card:Refresh()
 	end

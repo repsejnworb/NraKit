@@ -276,6 +276,19 @@ return {
 			t.ok(point and point[1] == "TOPLEFT" and point[3] == "BOTTOMLEFT" and point[4] == 1200 and point[5] == 700,
 				"pinned by its top-left")
 			t.equal(NraKitDB.remindersTrackerPosition[1], "TOPLEFT", "saved that way")
+			-- Growing up: held by its bottom-left, the header at the bottom.
+			rawset(tracker, "GetBottom", function()
+				return 300
+			end)
+			local headerPoints = {}
+			rawset(header, "SetPoint", function(_, where)
+				table.insert(headerPoints, where)
+			end)
+			ns:SetSetting("remindersListGrow", "up")
+			t.ok(point[1] == "BOTTOMLEFT" and point[5] == 300, "pinned by its bottom-left")
+			t.equal(headerPoints[1], "BOTTOMLEFT", "header at the bottom")
+			ns:SetSetting("remindersListGrow", "down")
+			t.equal(point[1], "TOPLEFT", "and back")
 			header.scripts.OnClick(header, "LeftButton")
 			t.ok(NraKitDB.remindersTrackerFolded and tracker:IsShown(), "folded, still there")
 			t.equal(#Rows(tracker), 0, "just the header")
