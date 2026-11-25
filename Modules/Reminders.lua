@@ -194,16 +194,6 @@ local module = {
 			end,
 		},
 		{
-			key = "remindersListRows",
-			type = "number",
-			name = "Most rows shown",
-			description = "How many items the list shows before \"and N more\".",
-			default = 10,
-			min = 3,
-			max = 20,
-			step = 1,
-		},
-		{
 			key = "remindersListWidth",
 			type = "number",
 			name = "Width",
@@ -214,14 +204,14 @@ local module = {
 			step = 10,
 		},
 		{
-			key = "remindersListRowHeight",
+			key = "remindersListHeight",
 			type = "number",
-			name = "Row height",
-			description = "The space each item takes: how far apart the items are (with Most rows shown, how tall the list gets).",
-			default = 24,
-			min = 18,
-			max = 40,
-			step = 1,
+			name = "Height",
+			description = "The most the list grows to. With fewer items it's smaller; with more, scroll it with the mouse wheel.",
+			default = 300,
+			min = 80,
+			max = 800,
+			step = 10,
 		},
 		{
 			key = "remindersListGrow",
@@ -1501,12 +1491,8 @@ reminders.ShowCard = CardShow
 
 local TRACKER_WIDTH = 290
 local TRACKER_SECTION = 18
-local function RowHeight()
-	return ns:GetValue("remindersListRowHeight") or 24
-end
-local function MaxRows()
-	return ns:GetValue("remindersListRows") or 10
-end
+local TRACKER_ROW = 24
+local TRACKER_HEADER = 28
 
 local function CreateTracker()
 	tracker = CreateFrame("Frame", "NraKitRemindersTracker", UIParent)
@@ -1588,9 +1574,11 @@ local function CreateTracker()
 	highlight:SetAllPoints()
 	highlight:SetColorTexture(1, 1, 1, 0.04)
 	tracker.title = header:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+	-- The items scroll (mouse wheel) when there are more than the list's height holds.
+	tracker.scroll = UI.CreateScrollArea(tracker)
 	tracker.sections = {}
 	for _, key in ipairs({ "loud", "quiet" }) do
-		local label = tracker:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+		local label = tracker.scroll.content:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
 		label:SetText(key == "loud" and "REMINDERS" or "TO DO")
 		label:SetTextColor(unpack(key == "loud" and REMINDER_COLOUR or TODO_COLOUR))
 		tracker.sections[key] = label
@@ -1700,10 +1688,10 @@ local function CreateTracker()
 		end
 	end
 
-	-- Rows are made as the list needs them (up to the most rows shown).
+	-- Rows are made as the list needs them.
 	function tracker:Row(index)
 		if not self.rows[index] then
-			local row = CreateRow(self, RowHeight(), OnTick)
+			local row = CreateRow(self.scroll.content, TRACKER_ROW, OnTick)
 			reminders.AddReorder(row)
 			-- Tick box and text in the middle of the row, whatever its height.
 			row.check:ClearAllPoints()
@@ -1715,7 +1703,6 @@ local function CreateTracker()
 		end
 		return self.rows[index]
 	end
-	tracker.more = tracker:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	tracker.list = {}
 	-- reminder -> GetTime() it starts fading off the list: ticked here (after a moment, to untick
 	-- a slip) or a zone to-do you left.
@@ -1851,6 +1838,9 @@ function RefreshTracker()
 		tracker.headerBorder:SetAllPoints(tracker.header)
 		tracker.itemsBorder:ClearAllPoints()
 		tracker.itemsBorder:SetAllPoints(tracker.itemsBg)
+		tracker.scroll:ClearAllPoints()
+		tracker.scroll:SetPoint("TOPLEFT", tracker.itemsBg, "TOPLEFT", 0, -2)
+		tracker.scroll:SetPoint("BOTTOMRIGHT", tracker.itemsBg, "BOTTOMRIGHT", -9, 2)
 		if growChanged then
 			tracker:Pin() -- by the corner on the header's side
 		end
@@ -1859,15 +1849,17 @@ function RefreshTracker()
 	if not headerHidden then
 		tracker.header:Show()
 	end
+	tracker.scroll:SetShown(not folded)
 	if folded then
-		tracker.more:SetText("")
-		tracker:SetHeight(28)
+		tracker:SetHeight(TRACKER_HEADER)
 		tracker:ShowFaded(overall)
 		return
 	end
 	-- Reminders first (with when, where or who from), then to-dos, each under its own label.
 	-- Read top to bottom either way; growing up, the header is under them.
-	local y, used = (up or headerHidden) and -6 or -30, 0
+	local content = tracker.scroll.content
+	content:SetWidth((ns:GetValue("remindersListWidth") or TRACKER_WIDTH) - 12)
+	local y, used = -4, 0
 	for _, key in ipairs({ "loud", "quiet" }) do
 		local section = {}
 		for _, reminder in ipairs(list) do
@@ -1875,33 +1867,32 @@ function RefreshTracker()
 				table.insert(section, reminder)
 			end
 		end
-		if #section > 0 and used < MaxRows() then
+		if #section > 0 then
 			local label = tracker.sections[key]
 			label:ClearAllPoints()
-			label:SetPoint("TOPLEFT", 10, y - 2)
+			label:SetPoint("TOPLEFT", content, "TOPLEFT", 10, y - 2)
 			label:Show()
 			y = y - TRACKER_SECTION
 			for _, reminder in ipairs(section) do
-				if used >= MaxRows() then
-					break
-				end
 				used = used + 1
 				local row = tracker:Row(used)
 				FillRow(row, reminder, false, ns:GetOption("remindersListTags"))
 				row:ClearAllPoints()
-				row:SetPoint("TOPLEFT", 8, y)
-				row:SetPoint("RIGHT", -6, 0)
-				row:SetHeight(RowHeight())
+				row:SetPoint("TOPLEFT", content, "TOPLEFT", 8, y)
+				row:SetPoint("RIGHT", content, "RIGHT", -2, 0)
 				row:Show()
-				y = y - RowHeight()
+				y = y - TRACKER_ROW
 			end
 			y = y - 4
 		end
 	end
-	tracker.more:ClearAllPoints()
-	tracker.more:SetPoint("TOPLEFT", 34, y)
-	tracker.more:SetText(#list > used and string.format("and %d more (/nra remind)", #list - used) or "")
-	tracker:SetHeight(-y + ((up and not headerHidden) and 28 or 6) + (#list > used and 16 or 0))
+	-- As tall as the items, up to the list's height; past that they scroll.
+	local itemsHeight = -y + 2
+	content:SetHeight(itemsHeight)
+	local header = headerHidden and 0 or TRACKER_HEADER
+	local maxHeight = math.max(ns:GetValue("remindersListHeight") or 300, header + TRACKER_ROW + TRACKER_SECTION)
+	tracker:SetHeight(math.min(header + itemsHeight + 4, maxHeight))
+	tracker.scroll:SetScroll(tracker.scroll:GetVerticalScroll())
 	tracker:ShowFaded(overall)
 end
 

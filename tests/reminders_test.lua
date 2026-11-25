@@ -30,9 +30,13 @@ return {
 				end
 			end
 		end
+		-- The rows shown in a frame (the card, or the list on screen: in its scroll area).
 		local function Rows(parent)
+			local scroll = rawget(parent, "scroll")
+			local content = scroll and rawget(scroll, "content")
 			return wow.findAll(function(frame)
-				return rawget(frame, "reminderID") and wow.visible(frame) and rawget(frame, "parent") == parent
+				local owner = rawget(frame, "parent")
+				return rawget(frame, "reminderID") and wow.visible(frame) and (owner == parent or (content and owner == content))
 			end)
 		end
 		-- Whether the card shows this text (a button, a label).
@@ -505,10 +509,14 @@ return {
 			ns:OpenSettings("Reminders & to-dos", "reminders")
 			t.ok(BackgroundSlider().enabled ~= false, "and back")
 			NraKitOptionsFrame:Hide()
-			ns:SetSetting("remindersListRows", 2)
-			t.equal(#Rows(tracker), 2, "two rows")
-			t.equal(rawget(rawget(tracker, "more"), "text"), string.format("and %d more (/nra remind)", #reminders.Due() - 2), "the rest counted")
-			ns:SetSetting("remindersListRows", 10)
+			-- Height: the most it grows to; past that the items scroll.
+			ns:SetSetting("remindersListHeight", 100)
+			t.equal(tracker:GetHeight(), 100, "no taller than its height")
+			t.equal(#Rows(tracker), #reminders.Due(), "every item is in it (to scroll to)")
+			t.ok(rawget(tracker, "scroll").content:GetHeight() > 100, "more than fits: they scroll")
+			ns:SetSetting("remindersListHeight", 800)
+			t.ok(tracker:GetHeight() < 800, "with room to spare, just as tall as its items")
+			ns:SetSetting("remindersListHeight", 300)
 			ns:SetSetting("remindersListTags", false)
 			for _, row in ipairs(Rows(tracker)) do
 				t.ok(not rawget(row.text, "text"):find("Ironforge", 1, true), "no tags")
@@ -666,21 +674,12 @@ return {
 			wow.fire("ZONE_CHANGED_NEW_AREA")
 		end)
 
-		t.test("the list's width and row height are settings", function()
+		t.test("the list's width is a setting", function()
 			SlashCmdList.NRAKIT("todo measure the list")
 			local tracker = NraKitRemindersTracker
 			ns:SetSetting("remindersListWidth", 400)
-			ns:SetSetting("remindersListRowHeight", 32)
 			t.equal(tracker:GetWidth(), 400, "width")
-			local row
-			for _, each in ipairs(Rows(tracker)) do
-				if each.reminder.text == "measure the list" then
-					row = each
-				end
-			end
-			t.equal(row:GetHeight(), 32, "row height")
 			ns:SetSetting("remindersListWidth", 290)
-			ns:SetSetting("remindersListRowHeight", 24)
 			reminders.SetDone(Mine("measure the list").id, true)
 		end)
 
