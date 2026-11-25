@@ -21,12 +21,20 @@ local HEADER_HEIGHT = 26
 local TOP_HEIGHT = 48
 local FOOTER_HEIGHT = 28
 
-local HELP = "Write one in the box above (the same words as in chat; click Add with it empty for a form), or in chat with /nra remind:\n"
-	.. "  |cffffd100/nra remind <text>|r - for your next login\n"
-	.. "  |cffffd100/nra remind 30m <text>|r - in 30 minutes (s, m, h, d: 2d, 1h30m)\n"
-	.. "  |cffffd100/nra remind in Darkshore: <text>|r - when you enter a zone or subzone\n"
-	.. "  |cffffd100/nra remind at 30: <text>|r - when you reach a level\n"
-	.. "  |cffffd100/nra remind @Alt: <text>|r - on another character's next login (@Alt at 20: works too)\n\n"
+-- How to write them (when the list is empty, or with ?): reminders and to-dos, in their colours.
+local function Gold(text)
+	return "|cffffd100" .. text .. "|r"
+end
+local HELP = reminders.Coloured("reminder", "Reminders") .. " pop up on a card with a sound when they come due; "
+	.. reminders.Coloured("todo", "to-dos") .. " just go on your list on screen.\n"
+	.. "Write one in the box above (pick Reminder or To-do next to it; click Add with it empty for a form), or in chat:\n"
+	.. "  " .. Gold("/nra remind <text>") .. " - a reminder, for your next login\n"
+	.. "  " .. Gold("/nra todo <text>") .. " - a to-do, on your list now\n\n"
+	.. "Put when in front (the same for both):\n"
+	.. "  " .. Gold("/nra remind 30m <text>") .. " - after a time (s, m, h, d: 2d, 1h30m)\n"
+	.. "  " .. Gold("/nra todo in Darkshore: <text>") .. " - when you're in a zone or subzone\n"
+	.. "  " .. Gold("/nra remind at 30: <text>") .. " - when you reach a level\n"
+	.. "  " .. Gold("/nra todo @Alt: <text>") .. " - for another of your characters (@Alt at 20: works too)\n\n"
 	.. "Shift-clicked items and quests work in chat."
 
 local WHEN = {
@@ -347,7 +355,7 @@ function Render()
 		total = total + #section.rows
 	end
 	if total == 0 then
-		y = y - Message(content, "No reminders yet.\n\n" .. HELP, y - 4)
+		y = y - Message(content, "Nothing here yet.\n\n" .. HELP, y - 4)
 	elseif helpButton.open then
 		y = y - Message(content, HELP, y - 4) - 4
 	end

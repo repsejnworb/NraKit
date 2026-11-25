@@ -769,7 +769,7 @@ return {
 			local function HelpShown()
 				for _, frame in ipairs(wow.frames) do
 					local text = rawget(frame, "text")
-					if type(text) == "string" and text:find("/nra remind 30m", 1, true) and wow.visible(frame) then
+					if type(text) == "string" and text:find("/nra remind 30m", 1, true) and text:find("/nra todo <text>", 1, true) and wow.visible(frame) then
 						return true
 					end
 				end

@@ -17,6 +17,7 @@ local _, ns = ...
 
 ns.changelog = {
 	{ version = "Unreleased", entries = {
+		{ "fixed", "Reminders & to-dos: the how-to in the Reminders & To-do tab (the ? button, and an empty list) explains to-dos too, not only /nra remind." },
 		{ "improved", "Reminders & to-dos: set the width and height of the list on screen in the settings (List on screen). With more items than its height holds, scroll it with the mouse wheel (this replaces Most rows shown and \"and N more\")." },
 	} },
 	{ version = "0.26.0", date = "2026-11-25", entries = {
