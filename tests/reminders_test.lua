@@ -440,6 +440,8 @@ return {
 			ns:SetSetting("remindersListHeaderBackground", 0.95)
 			ns:SetSetting("remindersListItemsBackground", 0)
 			t.ok(rawget(tracker, "headerBg"):GetAlpha() == 1 and rawget(tracker, "itemsBg"):GetAlpha() == 0, "header and items apart")
+			t.equal(rawget(tracker, "itemsBorder"):GetAlpha(), 0, "no border around see-through items")
+			t.equal(rawget(tracker, "headerBorder"):GetAlpha(), 1, "the header keeps its border")
 			ns:SetSetting("remindersListBackgroundSplit", false)
 			t.equal(rawget(tracker, "headerBg"):GetAlpha(), 0, "together again: Background for both")
 			ns:SetSetting("remindersListRows", 2)

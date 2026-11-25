@@ -85,23 +85,10 @@ local module = {
 			end,
 		},
 		{
-			key = "remindersListAlpha",
-			type = "number",
-			name = "Opacity",
-			description = "How see-through the whole list is.",
-			default = 1,
-			min = 0.2,
-			max = 1,
-			step = 0.05,
-			format = function(value)
-				return math.floor(value * 100 + 0.5) .. "%"
-			end,
-		},
-		{
 			key = "remindersListBackground",
 			type = "number",
-			name = "Background",
-			description = "How dark the box behind the list is (0% for just the text), unless the header and items are set separately below.",
+			name = "Background opacity",
+			description = "Only the box behind the list (and its border); the text stays clear. 0% leaves just the text. Unless the header and items are set separately below.",
 			default = 0.95,
 			min = 0,
 			max = 1,
@@ -113,15 +100,15 @@ local module = {
 		{
 			key = "remindersListBackgroundSplit",
 			name = "Header and items separately",
-			description = "Set the background behind the header and behind the items on their own, instead of Background for both.",
+			description = "Set the background opacity of the header and of the items on their own, instead of one for both.",
 			default = false,
 		},
 		{
 			key = "remindersListHeaderBackground",
 			parent = "remindersListBackgroundSplit",
 			type = "number",
-			name = "Header background",
-			description = "How dark the box behind the header is.",
+			name = "Header background opacity",
+			description = "Only the box behind the header (and its border).",
 			default = 0.95,
 			min = 0,
 			max = 1,
@@ -134,10 +121,23 @@ local module = {
 			key = "remindersListItemsBackground",
 			parent = "remindersListBackgroundSplit",
 			type = "number",
-			name = "Items background",
-			description = "How dark the box behind the items is.",
+			name = "Items background opacity",
+			description = "Only the box behind the items (and its border).",
 			default = 0.95,
 			min = 0,
+			max = 1,
+			step = 0.05,
+			format = function(value)
+				return math.floor(value * 100 + 0.5) .. "%"
+			end,
+		},
+		{
+			key = "remindersListAlpha",
+			type = "number",
+			name = "Overall opacity",
+			description = "Fades the whole list: text, tick boxes and background together.",
+			default = 1,
+			min = 0.2,
 			max = 1,
 			step = 0.05,
 			format = function(value)
@@ -1363,9 +1363,16 @@ local function CreateTracker()
 	tracker.headerBg:SetColorTexture(unpack(UI.BG))
 	tracker.itemsBg = tracker:CreateTexture(nil, "BACKGROUND")
 	tracker.itemsBg:SetColorTexture(unpack(UI.BG))
-	tracker.border = CreateFrame("Frame", nil, tracker)
-	tracker.border:SetAllPoints()
-	UI.AddBorder(tracker.border)
+	-- A border around each, fading with its background (no border around see-through items).
+	-- The edge where they meet is drawn once, by the more solid one.
+	for _, key in ipairs({ "headerBorder", "itemsBorder" }) do
+		local border = CreateFrame("Frame", nil, tracker)
+		border.sides = {}
+		for _, side in ipairs({ "LEFT", "RIGHT", "TOP", "BOTTOM" }) do
+			border.sides[side] = UI.AddLine(border, side)
+		end
+		tracker[key] = border
+	end
 
 	-- The header: click to fold or unfold, right-click for more, drag to move.
 	local header = CreateFrame("Button", nil, tracker)
@@ -1494,7 +1501,17 @@ function RefreshTracker()
 	end
 	tracker.headerBg:SetAlpha(headerAlpha / UI.BG[4])
 	tracker.itemsBg:SetAlpha(itemsAlpha / UI.BG[4])
-	tracker.border:SetAlpha(math.min(1, math.max(headerAlpha, itemsAlpha) * 2))
+	tracker.headerBorder:SetAlpha(math.min(1, headerAlpha * 2))
+	tracker.itemsBorder:SetAlpha(math.min(1, itemsAlpha * 2))
+	local folded = NraKitDB.remindersTrackerFolded == true
+	tracker.itemsBorder:SetShown(not folded)
+	local up = ns:GetValue("remindersListGrow") == "up"
+	local headerSeam, itemsSeam = up and "TOP" or "BOTTOM", up and "BOTTOM" or "TOP"
+	local headerDraws = folded or headerAlpha >= itemsAlpha
+	for _, side in ipairs({ "TOP", "BOTTOM" }) do
+		tracker.headerBorder.sides[side]:SetShown(side ~= headerSeam or headerDraws)
+		tracker.itemsBorder.sides[side]:SetShown(side ~= itemsSeam or not headerDraws)
+	end
 	-- In your order, with the ones you ticked here where they were.
 	local list = {}
 	for _, reminder in ipairs(due) do
@@ -1535,6 +1552,10 @@ function RefreshTracker()
 		tracker.itemsBg:ClearAllPoints()
 		tracker.itemsBg:SetPoint("TOPLEFT", 0, up and 0 or -28)
 		tracker.itemsBg:SetPoint("BOTTOMRIGHT", 0, up and 28 or 0)
+		tracker.headerBorder:ClearAllPoints()
+		tracker.headerBorder:SetAllPoints(tracker.header)
+		tracker.itemsBorder:ClearAllPoints()
+		tracker.itemsBorder:SetAllPoints(tracker.itemsBg)
 		tracker:Pin()
 	end
 	if folded then
