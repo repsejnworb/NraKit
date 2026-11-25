@@ -95,6 +95,16 @@ end)
 local function Open()
 	ns:OpenWhatsNew()
 end
+
+ns:RegisterBadge({
+	key = "whatsNew",
+	option = "nraButtonBadgeWhatsNew",
+	count = whatsNew.UnseenCount,
+	text = function(count)
+		return string.format("%d %s in NraKit (/nra new)", count, count == 1 and "change" or "changes")
+	end,
+	open = Open,
+})
 ns:RegisterSlashCommand("new", Open, HELP)
 ns:RegisterSlashCommand("whatsnew", Open, HELP)
 ns:RegisterSlashCommand("changelog", Open, HELP)

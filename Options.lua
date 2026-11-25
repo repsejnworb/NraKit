@@ -220,6 +220,43 @@ local function AddOption(module, option, byKey, x, y, width)
 		y = y - 22
 	end
 
+	if option.type == "choice" then
+		local label = AcquireText("GameFontHighlight")
+		label:SetText(option.name)
+		label:SetWidth(200)
+		label:SetWordWrap(false)
+		label:SetTextColor(unpack(active and TEXT or TEXT_DIM))
+		label:SetPoint("TOPLEFT", content, "TOPLEFT", x + 4, y - 7)
+
+		local select = Acquire("choice", function()
+			local widget
+			widget = UI.CreateChoiceSelect(content, {
+				width = 238,
+				get = function()
+					return widget and widget.option and NraKitDB[widget.option.key]
+				end,
+				set = function(value)
+					ns:SetSetting(widget.option.key, value)
+				end,
+				choices = function()
+					local choices = widget and widget.option and widget.option.choices or {}
+					return type(choices) == "function" and choices() or choices
+				end,
+			})
+			widget:SetFrameLevel(content:GetFrameLevel() + 3)
+			widget:SetScript("OnEnter", function(self)
+				ShowTooltip(self, self.option and self.option.name, self.option and self.option.description)
+			end)
+			widget:SetScript("OnLeave", GameTooltip_Hide)
+			return widget
+		end)
+		select.option = option
+		select:Refresh()
+		select:SetEnabled(active)
+		select:SetPoint("TOPLEFT", content, "TOPLEFT", math.min(x + 210, x + width - 300), y - 2)
+		return y - 30
+	end
+
 	if option.type == "sound" then
 		local label = AcquireText("GameFontHighlight")
 		label:SetText(option.name)

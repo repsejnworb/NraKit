@@ -62,3 +62,4 @@ Modules\Wishlist.lua
 Modules\WishlistWindow.lua
 Modules\Reminders.lua
 Modules\RemindersWindow.lua
+Modules\NraKitButton.lua

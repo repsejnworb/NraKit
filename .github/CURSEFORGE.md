@@ -218,6 +218,12 @@ Gold works even with full bags; C.O.D. and GM mail are never touched.
 
 ## Utilities
 
+### NraKit button
+NraKit's icon on screen, **wherever you drag it**.
+- A **badge counts what's waiting** for you: due reminders and, if you want, what's new.
+- **Pick what clicking and shift-clicking it do** (what's waiting, a window, your reminders...); right-click is NraKit's menu.
+- Lock it, size it, or hide it in combat.
+
 ### /leave leaves your group
 Type **/leave** (with nothing after it) or **/leavegroup** to leave your party, raid or instance group. **/leave &lt;channel&gt;** still leaves a chat channel.
 

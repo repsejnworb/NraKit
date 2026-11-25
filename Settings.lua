@@ -90,7 +90,23 @@ local function SoundOptions(key)
 	end
 end
 
+-- Dropdown choices for a choice option (its list, or what its function returns now).
+local function ChoiceOptions(entry)
+	return function()
+		local container = Settings.CreateControlTextContainer()
+		local choices = type(entry.choices) == "function" and entry.choices() or entry.choices
+		for _, choice in ipairs(choices) do
+			container:Add(choice[1], choice[2])
+		end
+		return container:GetData()
+	end
+end
+
 local function CreateControl(category, entry, onChanged)
+	if entry.type == "choice" then
+		local setting = RegisterSetting(category, entry.key, entry.name, Settings.VarType.String, entry.default, onChanged)
+		return setting, Settings.CreateDropdown(category, setting, ChoiceOptions(entry), entry.description)
+	end
 	if entry.type == "sound" then
 		local setting = RegisterSetting(category, entry.key, entry.name, Settings.VarType.String, entry.default, function(value)
 			ns.sounds.Play(value)

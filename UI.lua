@@ -451,6 +451,61 @@ function UI.CreateFlatButton(parent, label, height)
 	return button
 end
 
+-- A dropdown: a flat button showing the choice, opening a menu of them.
+-- options = { get = fn() -> value, set = fn(value), choices = { { value, label }, ... } or a
+-- function returning them, width = number }.
+function UI.CreateChoiceSelect(parent, options)
+	local button = UI.CreateFlatButton(parent, "", 22)
+	button:SetWidth(options.width or 200)
+	button.text:ClearAllPoints()
+	button.text:SetPoint("LEFT", 8, 0)
+	button.text:SetPoint("RIGHT", -20, 0)
+	button.text:SetJustifyH("LEFT")
+	button.text:SetWordWrap(false)
+	local arrow = button:CreateTexture(nil, "OVERLAY")
+	arrow:SetTexture("Interface\\Buttons\\Arrow-Down-Up")
+	arrow:SetSize(14, 14)
+	arrow:SetPoint("RIGHT", -4, -3)
+
+	local function Choices()
+		return type(options.choices) == "function" and options.choices() or options.choices
+	end
+	local function Set(value)
+		options.set(value)
+		button:Refresh()
+	end
+	button:SetScript("OnClick", function(self)
+		local current = options.get()
+		MenuUtil.CreateContextMenu(self, function(_, root)
+			for _, choice in ipairs(Choices()) do
+				root:CreateRadio(choice[2], function(value)
+					return value == current
+				end, Set, choice[1])
+			end
+		end)
+	end)
+
+	function button:Refresh()
+		local value = options.get()
+		local label = value
+		for _, choice in ipairs(Choices()) do
+			if choice[1] == value then
+				label = choice[2]
+			end
+		end
+		self.text:SetText(label or "")
+	end
+
+	local SetButtonEnabled = button.SetEnabled
+	function button:SetEnabled(enabled)
+		SetButtonEnabled(self, enabled)
+		self.text:SetTextColor(unpack(enabled and UI.TEXT or UI.TEXT_DIM))
+	end
+
+	button:Refresh()
+	return button
+end
+
 -- A "?" toggle for a window's how-to (what an empty list says), so it can be read again once
 -- the list has something in it. onToggle(open) redraws; button.open is the state.
 function UI.CreateHelpButton(parent, title, onToggle)
