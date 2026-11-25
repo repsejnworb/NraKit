@@ -7,7 +7,7 @@
 Type **/nrakit** (or **/nra**) to open NraKit's own window.
 - Features are grouped in a sidebar, with **search**, an on/off switch per feature and its options right underneath.
 - The same settings are also under **Options → AddOns → NraKit**.
-- NraKit's windows (Settings, Inventory, Goals, Notes, Items, Wishlist) work as **tabs of one window**. Tabs of features that are off are dimmed: they say what the feature does and **turn it on with one click**.
+- NraKit's windows (Settings, Inventory, Goals, Notes, Items, Wishlist, Reminders) work as **tabs of one window**. Tabs of features that are off are dimmed: they say what the feature does and **turn it on with one click**.
 - NraKit is also in the **addon button by the minimap** (no extra minimap button): left-click for settings, right-click for a menu of its windows.
 - **/nra help** lists the chat commands.
 - **/nra preview** shows any of NraKit's on-screen messages (goal complete, quest reminders, alerts...) with made-up content, to see how they look.
@@ -20,7 +20,7 @@ Type **/nrakit** (or **/nra**) to open NraKit's own window.
 - **/nra who** lists who in your guild and group runs NraKit, and how many NraKit users you've come across.
 - Both of these can be switched off.
 
-Alert **sounds are yours to choose** (Campfire timer, Unit Scanner, Farm goals, Player notes): a short list of good ones (hover to hear them), or **More sounds...** to search every game sound and any sounds other addons share through LibSharedMedia.
+Alert **sounds are yours to choose** (Campfire timer, Unit Scanner, Farm goals, Player notes, Reminders): a short list of good ones (hover to hear them), or **More sounds...** to search every game sound and any sounds other addons share through LibSharedMedia.
 
 ## Units & Nameplates
 
@@ -147,6 +147,14 @@ After a respec, abilities you don't know anymore stay on your bars, only greyed 
 - When your spells change, a message lists the abilities on your bars you lost. **Click it to take them off** (after combat, if you're fighting).
 - It also lists **new abilities** that aren't on your bars yet.
 - **/nra unlearned** lists them, **/nra unlearned remove** takes them off.
+
+### Reminders
+Notes to yourself that come back when they're due. **/nra remind Go to Darkshore and hand in quests** shows up the next time you log in.
+- **Later instead:** a time (**/nra remind 30m check the AH**; s, m, h, d), a zone (**in Darkshore: ...**), a level (**at 30: ...**), or **another character's next login** (**@Bankalt: mail the bags**, also with a trigger).
+- Shift-clicked items and quests work in the text.
+- Due reminders show on a **card that stays until you close it**. Tick what you've done; the rest stay in a small list on screen and **come back at your next login**.
+- They wait for combat to end, and play a sound you can pick.
+- The **Reminders tab** (**/nra remind**) lists them all, with the ones you left your other characters. Edit them there, or right-click to be reminded again later.
 
 ### Campfire timer
 A **progress bar in the middle of the screen** while you rest at a Welcoming Campfire, with the time left. It turns green (with a sound) when Camp Benefits is ready.

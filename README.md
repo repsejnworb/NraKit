@@ -22,7 +22,7 @@ Type `/nrakit` (or `/nra`) to open NraKit's window.
 - Features are grouped in a sidebar, with a search box, an on/off switch per feature and its options
   right underneath.
 - The same settings are also in the game's Settings panel under **AddOns → NraKit**.
-- NraKit's windows (Settings, Inventory, Goals, Notes, Items, Wishlist) work as **tabs of one window**. Tabs of
+- NraKit's windows (Settings, Inventory, Goals, Notes, Items, Wishlist, Reminders) work as **tabs of one window**. Tabs of
   features that are off are dimmed: they say what the feature does and turn it on with one click.
 - NraKit is also in the **addon button by the minimap**: left-click for settings, right-click for a
   menu of its windows.
@@ -47,7 +47,7 @@ Type `/nrakit` (or `/nra`) to open NraKit's window.
 
 ### Sounds
 
-Alert sounds (Campfire timer, Unit Scanner, Farm goals, Player notes) can be changed:
+Alert sounds (Campfire timer, Unit Scanner, Farm goals, Player notes, Reminders) can be changed:
 
 - Pick from a short list of good ones (hover to hear them).
 - Or use **More sounds...** to search every game sound, plus any sounds other addons share through
@@ -255,6 +255,27 @@ you can't use right now. This makes them stand out.
   them off** (after combat, if you're fighting).
 - It also lists new abilities that aren't on your bars yet.
 - `/nra unlearned` lists them, `/nra unlearned remove` takes them off.
+
+#### Reminders
+
+Notes to yourself that come back when they're due. `/nra remind Go to Darkshore and hand in quests`
+shows up the next time you log in.
+
+- **Later instead:** put a trigger in front.
+  - A time: `/nra remind 30m check the auction house` (s, m, h, d: `2d`, `1h30m`).
+  - A zone or subzone: `/nra remind in Darkshore: turtle quest`.
+  - A level: `/nra remind at 30: train`.
+  - **Another character's next login:** `/nra remind @Bankalt: mail the bags`. This also goes with the
+    others (`@Bankalt at 20: ...`).
+- Shift-clicked items and quests work in the text.
+- Due reminders show on a **card that stays until you close it**. Tick what you've done; the rest stay
+  in a small list on screen (an option) and **come back at your next login**. Nothing goes away until
+  you tick it.
+- They wait for combat to end, and play a sound (pick it in the settings).
+- The **Reminders tab** (`/nra remind`) lists them: due now, waiting (and when they'll come), the ones
+  you left your other characters, and done. Write new ones there, click one to edit it, right-click
+  to be reminded again in 15 minutes, an hour or next login.
+- `/nra preview reminders` shows the card.
 
 #### Campfire timer
 

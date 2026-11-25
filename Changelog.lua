@@ -16,6 +16,9 @@ local _, ns = ...
 --           "new" entry with its module (tests/changelog_test.lua checks).
 
 ns.changelog = {
+	{ version = "Unreleased", entries = {
+		{ "new", "Reminders: notes to yourself that come back when they're due. /nra remind <text> is for your next login; put a trigger in front for later: a time (30m, 2h, 1d, or 1h30m), a zone (in Darkshore: ...), a level (at 30: ...) or another character (@Bankalt: ..., also with a trigger). Shift-clicked items work. Due reminders show on a card that stays until you close it: tick what you've done, and the rest stay in a small list on screen and come back at your next login. A sound plays (pick it in the settings). The new Reminders tab lists them all, with ones you left your other characters, and lets you edit them or be reminded again later. /nra preview reminders shows the card.", module = "reminders" },
+	} },
 	{ version = "0.25.0", date = "2026-11-25", entries = {
 		{ "improved", "Wishlist: add several items at once by shift-clicking them all into /nra wishlist. Text after an item becomes that item's note." },
 	} },
