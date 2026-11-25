@@ -44,7 +44,7 @@ local module = {
 			type = "sound",
 			name = "Sound",
 			description = "Which sound plays when reminders come due.",
-			default = "kit:UI_BNET_TOAST",
+			default = "kit:ALARM_CLOCK_WARNING_3",
 		},
 		{
 			key = "remindersTracker",
@@ -69,7 +69,7 @@ local module = {
 			key = "remindersListHideInCombat",
 			name = "Hide in combat",
 			description = "Hide the list while you're fighting.",
-			default = false,
+			default = true,
 		},
 		{
 			key = "remindersListScale",
@@ -683,7 +683,7 @@ local function ShowDue(fresh, atLogin)
 		return
 	end
 	if ns:GetOption("remindersSound") then
-		ns.sounds.PlayOption("remindersSoundChoice", "kit:UI_BNET_TOAST")
+		ns.sounds.PlayOption("remindersSoundChoice", "kit:ALARM_CLOCK_WARNING_3")
 	end
 	CardShow(fresh, atLogin)
 end

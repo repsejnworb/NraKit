@@ -17,7 +17,7 @@ return {
 	enable = { "reminders" },
 	db = { remindersData = { nextID = 1, characters = { ["Bob Stone"] = { seen = true, list = {} } } } },
 	run = function(t, ns, wow)
-		SOUNDKIT.UI_BNET_TOAST = 12345
+		SOUNDKIT.ALARM_CLOCK_WARNING_3 = 12345
 		local reminders = ns.reminders
 		local function Login()
 			wow.fire("PLAYER_ENTERING_WORLD", true, false)
@@ -419,7 +419,7 @@ return {
 			tracker.scripts.OnDragStart(tracker)
 			t.ok(not moved, "locked")
 			ns:SetSetting("remindersListLock", false)
-			ns:SetSetting("remindersListHideInCombat", true)
+			t.ok(ns:GetOption("remindersListHideInCombat"), "hide in combat is on by default")
 			wow.fire("PLAYER_REGEN_DISABLED")
 			t.ok(not tracker:IsShown(), "hidden in combat")
 			wow.fire("PLAYER_REGEN_ENABLED")
