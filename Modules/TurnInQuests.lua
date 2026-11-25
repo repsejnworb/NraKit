@@ -392,13 +392,13 @@ end
 ------------------------------------------------------------------------------
 
 -- Its part of the message when you enter a zone (shared with other features, see Toast.lua):
--- "WETLANDS / 3 quests to turn in", the names under it. Click to open the list.
+-- "WETLANDS", then "Quests to turn in" with the quests under it. Click to open the list.
 local function ShowReminderToast(zoneName, titles)
 	ns.arrival.Add({
 		zone = zoneName,
-		text = string.format("%d %s to turn in", #titles, #titles == 1 and "quest" or "quests"),
+		title = #titles == 1 and "Quest to turn in" or "Quests to turn in",
+		color = UI.GOLD,
 		names = titles,
-		atlas = "UI-QuestIcon-TurnIn-Normal",
 		order = 1,
 		onClick = function()
 			turnIn.Toggle(true)

@@ -42,5 +42,23 @@ return {
 			t.ok(not Shown("milestone"), "the skipIfBusy one was dropped")
 			t.noErrors()
 		end)
+
+		t.test("arriving in a zone: one message, each part a title with its things under it", function()
+			local shown
+			local show = toast.Show
+			toast.Show = function(spec)
+				shown = spec
+			end
+			ns.arrival.Add({ zone = "Ironforge", title = "To do", color = { 0.4, 0.75, 1 }, order = 2,
+				names = { "one", "two", "three", "four", "five", "six", "seven" } })
+			ns.arrival.Add({ zone = "Ironforge", title = "Quests to turn in", order = 1, names = { "The Missing Diplomat" } })
+			ns.arrival.Flush()
+			toast.Show = show
+			t.equal(shown.heading, "IRONFORGE", "the zone, once")
+			t.equal(shown.text, nil, "no summary line")
+			local expected = { "|cffffd100Quests to turn in|r", "•  The Missing Diplomat", "|cff66bfffTo do|r",
+				"•  one", "•  two", "•  three", "•  four", "•  five", "|cff999999•  and 2 more|r" }
+			t.equal(table.concat(shown.lines, " | "), table.concat(expected, " | "), "quests first, then to-dos, at most five each")
+		end)
 	end,
 }

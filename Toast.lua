@@ -6,7 +6,9 @@ local _, ns = ...
 --   style = "big" | "small",  big: a heading, a large line with an icon and a detail line, with a
 --                             pop (Farm goals' "Goal complete"); small: quieter and lower (a
 --                             milestone, "3 quests to turn in here")
---   heading, text, detail,    the lines (detail is optional)
+--   heading, text, detail,    the lines (detail is optional; without text, the list follows the heading)
+--   lines = { "...", ... },   a list under it, one per line, left-aligned (long ones wrap); the
+--                             message grows to fit
 --   icon = texture / atlas =, shown left of the text (optional)
 --   headingColor = { r, g, b },
 --   duration = seconds,       before it fades (default 6 big, 3 small); the mouse on it keeps it up
@@ -63,7 +65,9 @@ local function CreateToastFrame(style)
 	-- The holder stays put; the inner frame is scaled around its centre for the pop.
 	local frame = CreateFrame("Frame", nil, UIParent)
 	frame:SetSize(width, height)
-	frame:SetPoint("CENTER", 0, DEFAULTS[style].y)
+	-- Held by its top, so a message with a list grows downwards.
+	frame:SetPoint("TOP", UIParent, "CENTER", 0, DEFAULTS[style].y + height / 2)
+	frame.baseHeight = height
 	frame:SetFrameStrata("HIGH")
 	frame:Hide()
 	frame.style = style
@@ -79,6 +83,12 @@ local function CreateToastFrame(style)
 	frame.detail:SetTextColor(unpack(UI.TEXT))
 	frame.detail:SetWidth(width - 40)
 	frame.detail:SetWordWrap(false)
+	frame.list = inner:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	frame.list:SetJustifyH("LEFT")
+	frame.list:SetJustifyV("TOP")
+	frame.list:SetWidth(big and 460 or 400)
+	frame.list:SetWordWrap(true)
+	frame.list:SetSpacing(3)
 	frame.icon = inner:CreateTexture(nil, "ARTWORK")
 	local iconSize = big and 44 or 20
 	frame.icon:SetSize(iconSize, iconSize)
@@ -127,6 +137,22 @@ local function Display(spec)
 	frame.detail:ClearAllPoints()
 	frame.detail:SetPoint("TOP", frame.text, "BOTTOM", -shift, style == "big" and -8 or -4)
 
+	-- The list, under the detail, the text or (with neither) the heading.
+	local hasText = spec.text ~= nil and spec.text ~= ""
+	frame.text:SetShown(hasText)
+	frame.icon:SetShown(hasIcon and hasText)
+	frame.list:SetText(spec.lines and table.concat(spec.lines, "\n") or "")
+	frame.list:SetShown(spec.lines ~= nil)
+	frame.list:ClearAllPoints()
+	local above = spec.detail and frame.detail or hasText and frame.text or frame.heading
+	frame.list:SetPoint("TOP", above, "BOTTOM", hasText and spec.detail == nil and -shift or 0, -6)
+	local height = hasText and frame.baseHeight or 24
+	if spec.lines then
+		height = height + frame.list:GetStringHeight() + 8
+	end
+	frame:SetHeight(height)
+	frame.inner:SetHeight(height)
+
 	frame.onClick = spec.onClick
 	frame:EnableMouse(spec.onClick ~= nil)
 	frame.size = spec.size or 1
@@ -171,12 +197,14 @@ end
 -- (quests to turn in, to-dos). Features add their part as they notice; parts within a moment
 -- of each other share one message. Dropped in combat (stale by the end of the fight).
 --
--- ns.arrival.Add{ zone = "Ironforge", text = "2 to-dos", names = { ... }, onClick = function?,
---   atlas = icon?, order = number (lower first; quests 1, to-dos 2) }
+-- ns.arrival.Add{ zone = "Ironforge", title = "To do", color = { r, g, b }, names = { ... },
+--   onClick = function?, order = number (lower first; quests 1, to-dos 2) }
+-- Shown as the zone, then each part's title in its colour with its names under it, one per line.
 ------------------------------------------------------------------------------
 
 local arrival = {}
 ns.arrival = arrival
+local MAX_ARRIVAL_NAMES = 5 -- per part; the rest are counted
 local pending = {}
 
 function arrival.Flush()
@@ -188,26 +216,29 @@ function arrival.Flush()
 	table.sort(parts, function(a, b)
 		return (a.order or 9) < (b.order or 9)
 	end)
-	local zones, seen, texts, names, onClick, atlas = {}, {}, {}, {}, nil, nil
+	local zones, seen, lines, onClick = {}, {}, {}, nil
 	for _, part in ipairs(parts) do
 		if part.zone and not seen[part.zone] then
 			seen[part.zone] = true
 			table.insert(zones, part.zone)
 		end
-		table.insert(texts, part.text)
-		for _, name in ipairs(part.names or {}) do
-			table.insert(names, name)
+		local color = part.color or UI.GOLD
+		table.insert(lines, string.format("|cff%02x%02x%02x%s|r", color[1] * 255, color[2] * 255, color[3] * 255, part.title))
+		local names = part.names or {}
+		for index, name in ipairs(names) do
+			if index > MAX_ARRIVAL_NAMES then
+				table.insert(lines, string.format("|cff999999•  and %d more|r", #names - MAX_ARRIVAL_NAMES))
+				break
+			end
+			table.insert(lines, "•  " .. name)
 		end
 		onClick = onClick or part.onClick
-		atlas = atlas or part.atlas
 	end
 	toast.Show({
 		style = "small",
 		heading = table.concat(zones, " · "):upper(),
-		text = table.concat(texts, "  ·  "),
-		atlas = atlas,
-		detail = #names > 0 and table.concat(names, ", ") or nil,
-		duration = 6,
+		lines = lines,
+		duration = 6 + math.min(4, #lines * 0.5), -- a longer list stays a little longer
 		onClick = onClick,
 	})
 end

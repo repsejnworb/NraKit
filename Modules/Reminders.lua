@@ -841,7 +841,8 @@ local function AnnounceArrival(fresh)
 	if #names > 0 then
 		ns.arrival.Add({
 			zone = zone,
-			text = reminders.Coloured("todo", string.format("%d %s", #names, #names == 1 and "to-do" or "to-dos")),
+			title = "To do",
+			color = TODO_COLOUR,
 			names = names,
 			order = 2,
 			onClick = function()
