@@ -46,7 +46,8 @@ end
 -- Whether an option can be changed: its module is on, every parent option is on, and
 -- the module it needs (option.requires) is on.
 local function IsOptionActive(module, option, byKey)
-	if not IsOn(module.key) or (option.requires and not IsOn(option.requires)) then
+	if not IsOn(module.key) or (option.requires and not IsOn(option.requires))
+		or (option.disabledBy and IsOn(option.disabledBy)) then
 		return false
 	end
 	local parent = option.parent and byKey[option.parent]

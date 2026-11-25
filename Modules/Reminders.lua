@@ -60,6 +60,12 @@ local module = {
 			default = true,
 		},
 		{
+			key = "remindersListHideHeader",
+			name = "Hide the header",
+			description = "Just the items. The header shows while the mouse is over the list, to move, fold or right-click it. A folded list keeps its header.",
+			default = false,
+		},
+		{
 			key = "remindersListLock",
 			name = "Lock in place",
 			description = "Stop the list being dragged by accident.",
@@ -88,6 +94,7 @@ local module = {
 			key = "remindersListBackground",
 			type = "number",
 			name = "Background opacity",
+			disabledBy = "remindersListBackgroundSplit",
 			description = "Only the box behind the list (and its border); the text stays clear. 0% leaves just the text. Unless the header and items are set separately below.",
 			default = 0.95,
 			min = 0,
@@ -1428,6 +1435,9 @@ local function CreateTracker()
 	end)
 	header:SetScript("OnLeave", GameTooltip_Hide)
 	tracker.header = header
+	-- The header's background and border go with it (hidden with it).
+	tracker.headerBg:SetParent(header)
+	tracker.headerBorder:SetParent(header)
 
 	tracker.rows = {}
 	local function OnTick(row, checked)
@@ -1439,6 +1449,9 @@ local function CreateTracker()
 	end
 	-- Ticked rows fade out, then the list closes up.
 	tracker:SetScript("OnUpdate", function(self)
+		if self.headerHidden then -- shown while the mouse is over the list (or on it)
+			self.header:SetShown(self:IsMouseOver() or self.header:IsMouseOver())
+		end
 		local now = GetTime()
 		for _, row in ipairs(self.rows) do
 			local tickedAt = row:IsShown() and row.reminder and self.ticked[row.reminder]
@@ -1522,13 +1535,15 @@ function RefreshTracker()
 	tracker.headerBorder:SetAlpha(math.min(1, headerAlpha * 2))
 	tracker.itemsBorder:SetAlpha(math.min(1, itemsAlpha * 2))
 	local folded = NraKitDB.remindersTrackerFolded == true
+	-- Hiding the header: just the items (a folded list keeps its header: it's all there is).
+	local headerHidden = ns:GetOption("remindersListHideHeader") and not folded
 	tracker.itemsBorder:SetShown(not folded)
 	local up = ns:GetValue("remindersListGrow") == "up"
 	local headerSeam, itemsSeam = up and "TOP" or "BOTTOM", up and "BOTTOM" or "TOP"
 	local headerDraws = folded or headerAlpha >= itemsAlpha
 	for _, side in ipairs({ "TOP", "BOTTOM" }) do
-		tracker.headerBorder.sides[side]:SetShown(side ~= headerSeam or headerDraws)
-		tracker.itemsBorder.sides[side]:SetShown(side ~= itemsSeam or not headerDraws)
+		tracker.headerBorder.sides[side]:SetShown(side ~= headerSeam or headerDraws or headerHidden)
+		tracker.itemsBorder.sides[side]:SetShown(side ~= itemsSeam or not headerDraws or headerHidden)
 	end
 	-- In your order, with the ones you ticked here where they were.
 	local list = {}
@@ -1560,21 +1575,36 @@ function RefreshTracker()
 		label:Hide()
 	end
 	local up = ns:GetValue("remindersListGrow") == "up"
-	if up ~= tracker.up then
-		tracker.up = up
+	local layout = (up and "up" or "down") .. (headerHidden and " hidden" or "")
+	if layout ~= tracker.layout then
+		local growChanged = tracker.layout == nil or (tracker.layout:find("^up") ~= nil) ~= up
+		tracker.layout = layout
 		tracker.header:ClearAllPoints()
-		tracker.header:SetPoint(up and "BOTTOMLEFT" or "TOPLEFT")
-		tracker.header:SetPoint(up and "BOTTOMRIGHT" or "TOPRIGHT")
+		if headerHidden then
+			-- Just outside the list, on its side, while the mouse is over the list.
+			tracker.header:SetPoint(up and "TOPLEFT" or "BOTTOMLEFT", tracker, up and "BOTTOMLEFT" or "TOPLEFT")
+			tracker.header:SetPoint(up and "TOPRIGHT" or "BOTTOMRIGHT", tracker, up and "BOTTOMRIGHT" or "TOPRIGHT")
+		else
+			tracker.header:SetPoint(up and "BOTTOMLEFT" or "TOPLEFT")
+			tracker.header:SetPoint(up and "BOTTOMRIGHT" or "TOPRIGHT")
+		end
 		tracker.headerBg:ClearAllPoints()
 		tracker.headerBg:SetAllPoints(tracker.header)
 		tracker.itemsBg:ClearAllPoints()
-		tracker.itemsBg:SetPoint("TOPLEFT", 0, up and 0 or -28)
-		tracker.itemsBg:SetPoint("BOTTOMRIGHT", 0, up and 28 or 0)
+		local inset = headerHidden and 0 or 28
+		tracker.itemsBg:SetPoint("TOPLEFT", 0, up and 0 or -inset)
+		tracker.itemsBg:SetPoint("BOTTOMRIGHT", 0, up and inset or 0)
 		tracker.headerBorder:ClearAllPoints()
 		tracker.headerBorder:SetAllPoints(tracker.header)
 		tracker.itemsBorder:ClearAllPoints()
 		tracker.itemsBorder:SetAllPoints(tracker.itemsBg)
-		tracker:Pin()
+		if growChanged then
+			tracker:Pin() -- by the corner on the header's side
+		end
+	end
+	tracker.headerHidden = headerHidden
+	if not headerHidden then
+		tracker.header:Show()
 	end
 	if folded then
 		tracker.more:SetText("")
@@ -1584,7 +1614,7 @@ function RefreshTracker()
 	end
 	-- Reminders first (with when, where or who from), then to-dos, each under its own label.
 	-- Read top to bottom either way; growing up, the header is under them.
-	local y, used = up and -6 or -30, 0
+	local y, used = (up or headerHidden) and -6 or -30, 0
 	for _, key in ipairs({ "loud", "quiet" }) do
 		local section = {}
 		for _, reminder in ipairs(list) do
@@ -1617,7 +1647,7 @@ function RefreshTracker()
 	tracker.more:ClearAllPoints()
 	tracker.more:SetPoint("TOPLEFT", 34, y)
 	tracker.more:SetText(#list > used and string.format("and %d more (/nra remind)", #list - used) or "")
-	tracker:SetHeight(-y + (up and 28 or 6) + (#list > used and 16 or 0))
+	tracker:SetHeight(-y + ((up and not headerHidden) and 28 or 6) + (#list > used and 16 or 0))
 	tracker:ShowFaded(overall)
 end
 

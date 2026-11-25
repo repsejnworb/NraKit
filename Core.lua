@@ -24,7 +24,9 @@ ns.moduleOrder = {}
 --                                                                   a function(value) -> label)
 --               An option with `parent = <option key>` is nested under that checkbox,
 --               `header = "..."` starts a new sub-section before the option, and
---               `requires = <module key>` greys it out while that other module is off.
+--               `requires = <module key>` greys it out while that other module is off, and
+--               `disabledBy = <option key>` greys it out while that other option is on (it
+--               takes this one's place).
 --   Migrate(self, db)                    optional; called on load before defaults are filled
 --                                        in, to carry over settings that moved (see Mail.lua)
 --   OnInitialize(self)                   called once on PLAYER_LOGIN

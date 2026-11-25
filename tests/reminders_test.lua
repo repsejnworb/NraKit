@@ -442,8 +442,22 @@ return {
 			t.ok(rawget(tracker, "headerBg"):GetAlpha() == 1 and rawget(tracker, "itemsBg"):GetAlpha() == 0, "header and items apart")
 			t.equal(rawget(tracker, "itemsBorder"):GetAlpha(), 0, "no border around see-through items")
 			t.equal(rawget(tracker, "headerBorder"):GetAlpha(), 1, "the header keeps its border")
-			ns:SetSetting("remindersListBackgroundSplit", false)
+			-- Background opacity greys out in the NraKit window while they're set apart.
+			ns:OpenSettings("Reminders & to-dos", "reminders")
+			local function BackgroundSlider()
+				for _, frame in ipairs(wow.frames) do
+					local option = rawget(frame, "option")
+					if type(option) == "table" and option.key == "remindersListBackground" and wow.visible(frame) then
+						return frame
+					end
+				end
+			end
+			t.equal(BackgroundSlider().enabled, false, "Background opacity greyed out")
+						ns:SetSetting("remindersListBackgroundSplit", false)
 			t.equal(rawget(tracker, "headerBg"):GetAlpha(), 0, "together again: Background for both")
+			ns:OpenSettings("Reminders & to-dos", "reminders")
+			t.ok(BackgroundSlider().enabled ~= false, "and back")
+			NraKitOptionsFrame:Hide()
 			ns:SetSetting("remindersListRows", 2)
 			t.equal(#Rows(tracker), 2, "two rows")
 			t.equal(rawget(rawget(tracker, "more"), "text"), string.format("and %d more (/nra remind)", #reminders.Due() - 2), "the rest counted")
@@ -473,6 +487,27 @@ return {
 			wow.advance(0.3)
 			t.equal(tracker:GetAlpha(), ns:GetValue("remindersListAlpha"), "faded in, to the overall opacity")
 			ns:SetSetting("remindersListHideInCombat", false)
+			-- Hiding the header: it shows while the mouse is over the list.
+			ns:SetSetting("remindersListHideHeader", true)
+			local header = rawget(tracker, "header")
+			local over = false
+			rawset(tracker, "IsMouseOver", function()
+				return over
+			end)
+			tracker.scripts.OnUpdate(tracker)
+			t.ok(not header:IsShown(), "header hidden")
+			over = true
+			tracker.scripts.OnUpdate(tracker)
+			t.ok(header:IsShown(), "shown with the mouse on the list")
+			over = false
+			NraKitDB.remindersTrackerFolded = true
+			reminders.RefreshTracker()
+			tracker.scripts.OnUpdate(tracker)
+			t.ok(header:IsShown(), "a folded list keeps its header")
+			NraKitDB.remindersTrackerFolded = nil
+			ns:SetSetting("remindersListHideHeader", false)
+			rawset(tracker, "IsMouseOver", nil)
+			t.ok(header:IsShown(), "header back")
 			for _, setting in ipairs({ "remindersListScale", "remindersListAlpha" }) do
 				ns:SetSetting(setting, 1)
 			end

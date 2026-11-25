@@ -42,7 +42,8 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
 - `Settings.lua` – Blizzard Settings API page (Options > AddOns > NraKit): section headers with an on/off switch per
   module. Modules with `options` get a subpage named after the module; options support `type = "number"` sliders
   (`min/max/step/format`), `header = "..."` subsections, `parent = <option key>` nesting (greyed out unless the
-  parent is on) and `requires = <module key>` (greyed out while that other module is off). `ns.sectionOrder` lists the sidebar groups; put new modules in one of them. Change values with
+  parent is on) and `requires = <module key>` (greyed out while that other module is off) and `disabledBy = <option key>` (greyed out while
+  that other option is on, e.g. a shared setting replaced by separate ones). `ns.sectionOrder` lists the sidebar groups; put new modules in one of them. Change values with
   `ns:SetSetting(key, value)` (both UIs and the module callbacks stay in step).
 - `Sounds.lua` – sound choices (`ns.sounds`): values are `"kit:NAME"`, `"lsm:Name"`, `"none"` (or `"default"` per goal).
   Options with `type = "sound"` get a dropdown + Play in both UIs; play them with `ns.sounds.PlayOption(key, default)`.

@@ -157,9 +157,15 @@ local function RegisterModuleOptions(category, module, moduleSetting, moduleInit
 		end)
 		controls[option.key] = { setting = setting, initializer = initializer }
 
-		-- An option that needs another module (option.requires) greys out while it's off.
+		-- An option that needs another module (option.requires) greys out while it's off, and
+		-- one another option takes the place of (option.disabledBy) while that one is on.
 		local function RequiredOn()
-			return not option.requires or NraKitDB[option.requires] == true
+			return (not option.requires or NraKitDB[option.requires] == true)
+				and not (option.disabledBy and NraKitDB[option.disabledBy] == true)
+		end
+		-- Re-check (grey out or not) when the option that takes its place changes.
+		if option.disabledBy and initializer.AddEvaluateStateCVar then
+			initializer:AddEvaluateStateCVar(addonName .. "_" .. option.disabledBy)
 		end
 		local parent = option.parent and controls[option.parent]
 		if parent then
