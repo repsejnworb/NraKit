@@ -859,7 +859,8 @@ local function AnnounceArrival(fresh)
 		zone = zone,
 		counts = counts,
 		title = table.concat(titles, " & "),
-		icon = "Interface\\Icons\\INV_Misc_Note_01", -- the reminder card's
+		atlas = "checkmark-minimal", -- flat, like the quests' "?"
+		iconColor = #quiet > 0 and TODO_COLOUR or REMINDER_COLOUR,
 		names = names,
 		order = 2,
 		onClick = function()

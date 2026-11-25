@@ -192,7 +192,7 @@ return {
 			wow.data.zone = "Wetlands"
 			wow.fire("ZONE_CHANGED_NEW_AREA")
 			t.ok(Shown("|cffffd1001 QUEST TO TURN IN|r") and Shown("Wetlands") and Shown("|cffffd100QUESTS|r")
-				and Shown("|cff999999•|r  The Doomed Fleet"), "toast: how many, the zone, then a QUESTS section with the quest")
+				and Shown("The Doomed Fleet"), "toast: how many, the zone, then a QUESTS section with the quest")
 			t.ok(not Printed("to turn in here in Wetlands"), "no chat line by default")
 			local holder = wow.findAll(function(frame)
 				return wow.visible(frame) and rawget(frame, "onClick") ~= nil

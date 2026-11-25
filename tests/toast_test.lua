@@ -100,15 +100,23 @@ return {
 			for _, line in ipairs(shown.lines) do
 				table.insert(texts, (line.header and "# " or "") .. line.text)
 			end
-			local bullet = "|cff999999•|r  "
-			local expected = { "# QUESTS", bullet .. "The Missing Diplomat", "# TO-DO", bullet .. "one", bullet .. "two",
-				bullet .. "three", bullet .. "four", bullet .. "five", bullet .. "|cff999999and 2 more|r" }
+			local expected = { "# QUESTS", "The Missing Diplomat", "# TO-DO", "one", "two", "three", "four", "five",
+				"|cff999999and 2 more|r" }
 			t.equal(table.concat(texts, " | "), table.concat(expected, " | "), "a section per part, quests first, at most five each")
 			t.equal(shown.lines[1].atlas, "quest", "the section's icon")
 			shown.lines[2].onClick()
 			t.equal(table.concat(opened, ","), "quests", "a quest opens the quests")
 			shown.lines[4].onClick()
 			t.equal(table.concat(opened, ","), "quests,list", "a to-do the list")
+			-- Shown: one group under the zone, never wider than it (long lines wrap).
+			toast.Show(shown)
+			local widest = 0
+			for _, frame in ipairs(wow.frames) do
+				if rawget(frame, "inset") and wow.visible(frame) then
+					widest = math.max(widest, rawget(frame, "width") or frame:GetWidth())
+				end
+			end
+			t.ok(widest > 0 and widest <= math.max(#"Ironforge" * 6 + 20, 220), "as wide as the zone line at most: " .. widest)
 			opened = {}
 			shown.onClick()
 			t.equal(table.concat(opened, ","), "quests,list", "the message itself both")

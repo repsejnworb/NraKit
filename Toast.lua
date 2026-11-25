@@ -7,12 +7,13 @@ local _, ns = ...
 --                             pop (Farm goals' "Goal complete"); small: quieter and lower (a
 --                             milestone, "3 quests to turn in here")
 --   heading, text, detail,    the lines (detail is optional; without text, the list follows the heading)
---   lines = { "..." or { text, onClick, header, icon / atlas }, ... },
---                             a list under it, one per line: a block as wide as its longest line
---                             (long ones wrap), centred, the lines left-aligned in it. A header line
---                             (small capitals, an icon before it) starts a section. A line with
---                             onClick opens what it's about (clicking elsewhere does the message's
---                             onClick). The message grows to fit.
+--   lines = { "..." or { text, onClick, header, icon / atlas, iconColor }, ... },
+--                             a list under it: one group, centred under the text, as wide as its
+--                             longest line but no wider than the text above it (long lines wrap),
+--                             the lines left-aligned in it. A header line (small capitals, an icon
+--                             before it) starts a section; the lines under it line up with its
+--                             title. A line with onClick opens what it's about (clicking elsewhere
+--                             does the message's onClick). The message grows to fit.
 --   icon = texture / atlas =, shown left of the text (optional)
 --   headingColor = { r, g, b },
 --   duration = seconds,       before it fades (default 6 big, 3 small); the mouse on it keeps it up
@@ -32,7 +33,8 @@ ns.toast = toast
 
 local FADE = 1
 local HOVER_GRACE = 2 -- seconds a toast stays after the mouse leaves it
-local LIST_WIDTH = 420 -- the widest a list gets before its lines wrap
+local LIST_MIN_WIDTH = 220 -- a list may be this wide even under a short title
+local LIST_INSET = 20 -- where a section's title and its lines start, after the icon
 local MAX_SHOWN = 3 -- at once; more wait their turn
 local MAX_QUEUE = 5 -- waiting; more are dropped
 local TOP = 260 -- the newest toast's top edge, above the middle of the screen
@@ -155,7 +157,7 @@ local function LineButton(frame, index)
 		line = CreateFrame("Button", nil, frame.inner)
 		line.icon = line:CreateTexture(nil, "ARTWORK")
 		line.icon:SetSize(14, 14)
-		line.icon:SetPoint("LEFT")
+		line.icon:SetPoint("TOPLEFT", 0, 0)
 		line.text = line:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 		line.text:SetPoint("TOPLEFT")
 		line.text:SetJustifyH("LEFT")
@@ -183,14 +185,14 @@ function ShowLines(frame, lines, above)
 	if #lines == 0 then
 		return 0
 	end
-	-- Headers: small capitals with an icon; the items under them a little in.
+	-- Headers: small capitals after their icon; the lines under them line up with the title.
 	local width = 0
 	for index, entry in ipairs(lines) do
 		local line = LineButton(frame, index)
 		entry = type(entry) == "table" and entry or { text = entry }
 		local header = entry.header == true
-		line.inset = header and 18 or 6
-		line.text:SetFontObject(header and "GameFontNormalSmall" or "GameFontHighlight")
+		line.inset = LIST_INSET
+		line.text:SetFontObject(header and "GameFontNormalSmall" or "GameFontHighlightSmall")
 		line.text:ClearAllPoints()
 		line.text:SetPoint("TOPLEFT", line.inset, header and -1 or 0)
 		line.text:SetWidth(0)
@@ -202,10 +204,13 @@ function ShowLines(frame, lines, above)
 			line.icon:SetTexture(entry.icon)
 			line.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 		end
+		line.icon:SetVertexColor(unpack(entry.iconColor or { 1, 1, 1 }))
 		line.icon:SetShown(header and (entry.atlas or entry.icon) ~= nil)
 		width = math.max(width, line.text:GetStringWidth() + line.inset)
 	end
-	width = math.min(math.ceil(width) + 2, LIST_WIDTH)
+	-- No wider than the line above it: the group sits under the title, long lines wrap.
+	local limit = math.max(above:GetStringWidth() + LIST_INSET, LIST_MIN_WIDTH)
+	width = math.min(math.ceil(width) + 2, limit)
 	local height, previous = 0, nil
 	for index, entry in ipairs(lines) do
 		local line = frame.lines[index]
@@ -214,7 +219,7 @@ function ShowLines(frame, lines, above)
 		local lineHeight = math.max(line.text:GetStringHeight(), header and 14 or 0)
 		line:SetSize(width, lineHeight)
 		line:ClearAllPoints()
-		local gap = header and index > 1 and 8 or 3 -- a little room above each section
+		local gap = header and index > 1 and 8 or 2 -- a little room above each section
 		if previous then
 			line:SetPoint("TOPLEFT", previous, "BOTTOMLEFT", 0, -gap)
 		else
@@ -322,17 +327,16 @@ end
 -- of each other share one message. Dropped in combat (stale by the end of the fight).
 --
 -- ns.arrival.Add{ zone = "Ironforge", counts = { "|cff..1 QUEST TO TURN IN|r", ... }, title =
---   "|cff..QUESTS|r", icon = file / atlas = name, names = { ... }, onClick = function,
+--   "|cff..QUESTS|r", icon = file / atlas = name, iconColor = { r, g, b }?, names = { ... }, onClick = function,
 --   order = number (lower first; quests 1, reminders and to-dos 2) }
 -- Shown like other toasts: every part's counts as its heading ("1 QUEST TO TURN IN · 2 TO-DOS",
--- in their colours), the zone as its line, then a section per part: its title in small
--- capitals with its icon, and its names under it, one per line.
+-- in their colours), the zone as its line, then the sections as one group centred under it:
+-- each its title in small capitals after its icon, and its names under the title, one per line.
 ------------------------------------------------------------------------------
 
 local arrival = {}
 ns.arrival = arrival
 local MAX_ARRIVAL_NAMES = 5 -- per part; the rest are counted
-local BULLET = "|cff999999•|r"
 local pending = {}
 
 function arrival.Flush()
@@ -353,14 +357,15 @@ function arrival.Flush()
 		for _, count in ipairs(part.counts or {}) do
 			table.insert(counts, count)
 		end
-		table.insert(lines, { text = part.title, header = true, icon = part.icon, atlas = part.atlas, onClick = part.onClick })
+		table.insert(lines, { text = part.title, header = true, icon = part.icon, atlas = part.atlas, iconColor = part.iconColor,
+			onClick = part.onClick })
 		local names = part.names or {}
 		for index, name in ipairs(names) do
 			if index > MAX_ARRIVAL_NAMES then
-				table.insert(lines, { text = string.format("%s  |cff999999and %d more|r", BULLET, #names - MAX_ARRIVAL_NAMES), onClick = part.onClick })
+				table.insert(lines, { text = string.format("|cff999999and %d more|r", #names - MAX_ARRIVAL_NAMES), onClick = part.onClick })
 				break
 			end
-			table.insert(lines, { text = BULLET .. "  " .. name, onClick = part.onClick })
+			table.insert(lines, { text = name, onClick = part.onClick })
 		end
 		table.insert(clicks, part.onClick)
 	end
