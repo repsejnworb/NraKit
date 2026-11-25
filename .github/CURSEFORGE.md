@@ -150,11 +150,11 @@ After a respec, abilities you don't know anymore stay on your bars, only greyed 
 
 ### Reminders & to-dos
 Notes to yourself that come back when they're due. **/nra remind Go to Darkshore and hand in quests** pops up the next time you log in; **/nra todo respec** just goes on your **to-do list** on screen.
-- **Later instead:** a time (**/nra remind 30m check the AH**; s, m, h, d), a zone (**in Darkshore: ...**), a level (**at 30: ...**), or **another character's next login** (**@Bankalt: mail the bags**, also with a trigger). The same works for to-dos.
+- **Later instead:** a time (**/nra remind 30m check the AH**; s, m, h, d), a zone (**in Darkshore: ...**, straight away if you're there), a level (**at 30: ...**), or **another character's next login** (**@Bankalt: mail the bags**, also with a trigger). The same works for to-dos.
 - Shift-clicked items and quests work in the text.
 - **Reminders** show on a **card that stays until you close it**, led by **why** each came due (you entered Darkshore, time's up, from Bankalt); at login it also lists the reminders still open from before. They wait for combat to end, and play a sound you can pick.
 - **To-dos** skip the card: they go straight on the list.
-- **The to-do list** on screen holds both until you tick them, **in your order** (drag a row, or use its arrows). Ticked ones fade out. Fold it with a click on its header; **/nra todo** or a key brings it back if you hid it.
+- **The list on screen** holds both until you tick them, reminders and to-dos in their own parts, **in your order** (drag a row, or use its arrows). Tags say where, when or who from, and zone tags turn green while you're there. Ticked ones fade out. Fold it with a click on its header; **/nra todo** or a key brings it back if you hid it.
 - The **Reminders tab** (**/nra remind**) lists them all, with the ones you left your other characters. Edit them there, or right-click to be reminded again later. Click **Add** with the box empty for a **form** to pick when (a time, a zone from a list, a level), for which character, and whether it pops up.
 
 ### Campfire timer

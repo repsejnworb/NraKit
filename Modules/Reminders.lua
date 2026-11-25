@@ -3,7 +3,7 @@ local _, ns = ...
 -- Reminders & to-dos: notes to yourself that come back when they're due. /nra remind <text>
 -- is for your next login; a trigger in front makes it come back later instead:
 --   /nra remind 30m <text>                  in 30 minutes (s, m, h, d; 1h30m works too)
---   /nra remind in <zone>: <text>           when you enter that zone (or subzone)
+--   /nra remind in <zone>: <text>           when you're in that zone (or subzone)
 --   /nra remind at <level>: <text>          when you reach that level
 --   /nra remind @<character>: <text>        on that character's next login
 -- @<character> goes with any trigger ("@Bankalt at 20: ..."). Shift-clicked links work.
@@ -68,7 +68,6 @@ ns.reminders = reminders
 
 local eventFrame = CreateFrame("Frame")
 local ticker
-local zonesBefore = {} -- the zone names you were in at the last check (lower case)
 local showQueued = false -- due reminders wait for combat to end
 local card, tracker
 local trackerHidden = false -- hidden until the next login (folded is NraKitDB.remindersTrackerFolded)
@@ -266,34 +265,61 @@ function reminders.SetQuiet(id, quiet)
 	end
 end
 
--- Moves one of your due reminders to `index` in the list (1 is the top).
-function reminders.MoveTo(id, index)
-	local due = reminders.Due()
-	local from
-	for position, reminder in ipairs(due) do
-		if reminder.id == id then
-			from = position
+-- The due ones in the same section of the list as this one (reminders, or to-dos), in order.
+function reminders.Section(reminder)
+	local section = {}
+	for _, each in ipairs(reminders.Due()) do
+		if (each.quiet == true) == (reminder.quiet == true) then
+			table.insert(section, each)
 		end
 	end
-	if not from then
+	return section
+end
+
+-- Moves one of your due reminders to `index` in its section (1 is the top). The other section
+-- keeps its places.
+function reminders.MoveTo(id, index)
+	local reminder = reminders.Find(id)
+	if not reminder or reminder.state ~= "due" then
 		return
 	end
-	local reminder = table.remove(due, from)
-	table.insert(due, math.max(1, math.min(index, #due + 1)), reminder)
-	for position, each in ipairs(due) do
+	for position, each in ipairs(reminders.Due()) do
 		each.order = position
+	end
+	local section = reminders.Section(reminder)
+	local places = {}
+	for position, each in ipairs(section) do
+		places[position] = each.order
+		if each == reminder then
+			table.remove(section, position)
+		end
+	end
+	table.insert(section, math.max(1, math.min(index, #section + 1)), reminder)
+	for position, each in ipairs(section) do
+		each.order = places[position]
 	end
 	Changed()
 end
 
--- Moves it up (-1) or down (1); to the top or bottom with `all`.
-function reminders.Move(id, delta, all)
-	local due = reminders.Due()
-	for position, reminder in ipairs(due) do
-		if reminder.id == id then
-			reminders.MoveTo(id, all and (delta < 0 and 1 or #due) or position + delta)
-			return
+-- Its place in its section, and how many are in it.
+function reminders.Position(reminder)
+	local section = reminders.Section(reminder)
+	for position, each in ipairs(section) do
+		if each == reminder then
+			return position, #section
 		end
+	end
+end
+
+-- Moves it up (-1) or down (1) in its section; to the top or bottom with `all`.
+function reminders.Move(id, delta, all)
+	local reminder = reminders.Find(id)
+	if not reminder then
+		return
+	end
+	local position, count = reminders.Position(reminder)
+	if position then
+		reminders.MoveTo(id, all and (delta < 0 and 1 or count) or position + delta)
 	end
 end
 
@@ -551,7 +577,7 @@ local function Evaluate(how)
 				reminder.away = due and how == "login" or nil
 			elseif reminder.kind == "zone" then
 				local zone = (reminder.zone or ""):lower()
-				due = zones[zone] == true and not zonesBefore[zone]
+				due = zones[zone] == true -- while you're there, also when you write it there
 			elseif reminder.kind == "level" then
 				due = level >= (reminder.level or 0)
 			end
@@ -561,7 +587,6 @@ local function Evaluate(how)
 			end
 		end
 	end
-	zonesBefore = zones
 	return fresh
 end
 
@@ -748,31 +773,34 @@ local dropLine, dragged
 local function DropTarget()
 	for _, row in ipairs(reorderRows) do
 		if row ~= dragged and row.canMove and row:IsVisible() and row:GetParent() == dragged:GetParent()
-			and row:IsMouseOver() then
+			and (row.reminder.quiet == true) == (dragged.reminder.quiet == true) and row:IsMouseOver() then
 			return row
 		end
 	end
 end
 
 local function IndexOf(reminder)
-	for index, each in ipairs(reminders.Due()) do
-		if each == reminder then
-			return index
-		end
-	end
+	return (reminders.Position(reminder))
 end
 
 function reminders.AddReorder(row)
 	table.insert(reorderRows, row)
-	local function Arrow(texture, delta)
+	local function Arrow(delta)
 		local arrow = CreateFrame("Button", nil, row)
-		arrow:SetSize(16, 16)
-		arrow:SetNormalTexture(texture)
+		arrow:SetSize(16, 11)
+		-- One arrow texture, flipped for down, so both look the same.
+		arrow.icon = arrow:CreateTexture(nil, "ARTWORK")
+		arrow.icon:SetAllPoints()
+		arrow.icon:SetTexture("Interface\\Buttons\\Arrow-Up-Up")
+		if delta > 0 then
+			arrow.icon:SetTexCoord(0, 1, 1, 0)
+		end
 		arrow:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
 		arrow:SetFrameLevel(row:GetFrameLevel() + 3)
 		arrow:Hide()
 		arrow:SetScript("OnClick", function()
 			reminders.Move(row.reminder.id, delta, IsShiftKeyDown())
+			row:ShowArrows() -- it may be at an end now
 		end)
 		arrow:SetScript("OnEnter", function(self)
 			UI.ShowTooltip(self, delta < 0 and "Move up" or "Move down",
@@ -787,13 +815,28 @@ function reminders.AddReorder(row)
 		end)
 		return arrow
 	end
-	row.down = Arrow("Interface\\Buttons\\Arrow-Down-Up", 1)
-	row.down:SetPoint("RIGHT", -2, 0)
-	row.up = Arrow("Interface\\Buttons\\Arrow-Up-Up", -1)
-	row.up:SetPoint("RIGHT", row.down, "LEFT", 0, 0)
+	-- Stacked, up over down, at the row's right end (side by side they looked like scrolling).
+	row.up = Arrow(-1)
+	row.up:SetPoint("BOTTOMRIGHT", row, "RIGHT", -2, 0)
+	row.down = Arrow(1)
+	row.down:SetPoint("TOPRIGHT", row, "RIGHT", -2, 0)
+	-- Both arrows while the mouse is on the row; one that can't move it further is dimmed.
+	function row:ShowArrows()
+		local position, count
+		if self.canMove then
+			position, count = reminders.Position(self.reminder)
+		end
+		self.up:SetShown(position ~= nil)
+		self.down:SetShown(position ~= nil)
+		if position then
+			self.up:SetEnabled(position > 1)
+			self.up:SetAlpha(position > 1 and 1 or 0.3)
+			self.down:SetEnabled(position < count)
+			self.down:SetAlpha(position < count and 1 or 0.3)
+		end
+	end
 	row:HookScript("OnEnter", function(self)
-		self.up:SetShown(self.canMove == true)
-		self.down:SetShown(self.canMove == true)
+		self:ShowArrows()
 	end)
 	row:HookScript("OnLeave", function(self)
 		if not self:IsMouseOver() then
@@ -842,13 +885,31 @@ function reminders.AddReorder(row)
 	end)
 end
 
-local function FillRow(row, reminder, withNote)
+-- A short coloured tag for a reminder in the list: where (green while you're there), when or
+-- who from. "" for none. To-dos only say where and who from.
+function reminders.Tag(reminder)
+	local parts = {}
+	if reminder.from then
+		table.insert(parts, "|cffbbbbbb" .. reminder.from:match("^(%S+)") .. "|r")
+	end
+	if reminder.kind == "zone" and reminder.zone then
+		local here = CurrentZones()[reminder.zone:lower()]
+		table.insert(parts, (here and "|cff4cd94c" or "|cffffd100") .. reminder.zone .. "|r")
+	elseif not reminder.quiet and reminder.kind == "time" and reminder.at then
+		table.insert(parts, "|cffffd100" .. date("%H:%M", reminder.at) .. "|r")
+	elseif not reminder.quiet and reminder.kind == "level" and reminder.level then
+		table.insert(parts, "|cffffd100Lvl " .. reminder.level .. "|r")
+	end
+	return #parts > 0 and (table.concat(parts, " |cff888888·|r ") .. "|cff888888:|r ") or ""
+end
+
+local function FillRow(row, reminder, withNote, withTag)
 	row.reminder = reminder
 	row.reminderID = reminder.id
 	row.canMove = reminder.state == "due"
 	local done = reminder.state == "done"
 	row.check:SetChecked(done)
-	row.text:SetText(reminder.text)
+	row.text:SetText((withTag and reminders.Tag(reminder) or "") .. reminder.text)
 	row.text:SetAlpha(done and 0.45 or 1)
 	if withNote then
 		local note = reminders.DueNote(reminder)
@@ -1127,7 +1188,8 @@ reminders.ShowCard = CardShow
 -- The tracker: what's due, on screen until you tick it
 ------------------------------------------------------------------------------
 
-local TRACKER_WIDTH = 260
+local TRACKER_WIDTH = 290
+local TRACKER_SECTION = 18
 local TRACKER_ROW = 24
 local TRACKER_MAX_ROWS = 10
 
@@ -1177,6 +1239,13 @@ local function CreateTracker()
 	highlight:SetAllPoints()
 	highlight:SetColorTexture(1, 1, 1, 0.04)
 	tracker.title = header:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+	tracker.sections = {}
+	for _, key in ipairs({ "loud", "quiet" }) do
+		local label = tracker:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+		label:SetText(key == "loud" and "REMINDERS" or "TO DO")
+		label:SetTextColor(unpack(key == "loud" and UI.ACCENT or UI.TEXT_DIM))
+		tracker.sections[key] = label
+	end
 	tracker.title:SetPoint("LEFT", 10, 0)
 	tracker.title:SetTextColor(unpack(UI.ACCENT))
 	tracker.arrow = header:CreateTexture(nil, "ARTWORK")
@@ -1204,7 +1273,7 @@ local function CreateTracker()
 		end
 	end)
 	header:SetScript("OnEnter", function(self)
-		UI.ShowTooltip(self, "Reminders", (NraKitDB.remindersTrackerFolded and "Click to unfold." or "Click to fold.")
+		UI.ShowTooltip(self, "Reminders & To-do", (NraKitDB.remindersTrackerFolded and "Click to unfold." or "Click to fold.")
 			.. " Right-click to hide it until your next login. Drag to move.")
 	end)
 	header:SetScript("OnLeave", GameTooltip_Hide)
@@ -1229,8 +1298,7 @@ local function CreateTracker()
 	for index = 1, TRACKER_MAX_ROWS do
 		local row = CreateRow(tracker, TRACKER_ROW, OnTick)
 		reminders.AddReorder(row)
-		row:SetPoint("TOPLEFT", 8, -30 - (index - 1) * TRACKER_ROW)
-		row:SetPoint("RIGHT", -8, 0)
+		row.text:SetPoint("RIGHT", -20, 0) -- room for the arrows
 		tracker.rows[index] = row
 	end
 	tracker.more = tracker:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
@@ -1286,27 +1354,54 @@ function RefreshTracker()
 	tracker.list = list
 	local folded = NraKitDB.remindersTrackerFolded == true
 	tracker.arrow:SetRotation(folded and 0 or -math.pi / 2)
-	tracker.title:SetText(string.format("To do (%d)", #due))
+	tracker.title:SetText(string.format("Reminders & To-do (%d)", #due))
+	for _, row in ipairs(tracker.rows) do
+		row:Hide()
+	end
+	for _, label in pairs(tracker.sections) do
+		label:Hide()
+	end
 	if folded then
-		for _, row in ipairs(tracker.rows) do
-			row:Hide()
-		end
 		tracker.more:SetText("")
 		tracker:SetHeight(28)
 		tracker:Show()
 		return
 	end
-	for index, row in ipairs(tracker.rows) do
-		row:SetShown(list[index] ~= nil)
-		if list[index] then
-			FillRow(row, list[index], false)
+	-- Reminders first (with when, where or who from), then to-dos, each under its own label.
+	local y, used = -30, 0
+	for _, key in ipairs({ "loud", "quiet" }) do
+		local section = {}
+		for _, reminder in ipairs(list) do
+			if (reminder.quiet == true) == (key == "quiet") then
+				table.insert(section, reminder)
+			end
+		end
+		if #section > 0 and used < TRACKER_MAX_ROWS then
+			local label = tracker.sections[key]
+			label:ClearAllPoints()
+			label:SetPoint("TOPLEFT", 10, y - 2)
+			label:Show()
+			y = y - TRACKER_SECTION
+			for _, reminder in ipairs(section) do
+				if used >= TRACKER_MAX_ROWS then
+					break
+				end
+				used = used + 1
+				local row = tracker.rows[used]
+				FillRow(row, reminder, false, true)
+				row:ClearAllPoints()
+				row:SetPoint("TOPLEFT", 8, y)
+				row:SetPoint("RIGHT", -6, 0)
+				row:Show()
+				y = y - TRACKER_ROW
+			end
+			y = y - 4
 		end
 	end
-	local shownRows = math.min(#list, TRACKER_MAX_ROWS)
 	tracker.more:ClearAllPoints()
-	tracker.more:SetPoint("TOPLEFT", 34, -30 - shownRows * TRACKER_ROW)
-	tracker.more:SetText(#list > TRACKER_MAX_ROWS and string.format("and %d more (/nra remind)", #list - TRACKER_MAX_ROWS) or "")
-	tracker:SetHeight(36 + shownRows * TRACKER_ROW + (#list > TRACKER_MAX_ROWS and 16 or 0))
+	tracker.more:SetPoint("TOPLEFT", 34, y)
+	tracker.more:SetText(#list > used and string.format("and %d more (/nra remind)", #list - used) or "")
+	tracker:SetHeight(-y + 6 + (#list > used and 16 or 0))
 	tracker:Show()
 end
 
@@ -1351,7 +1446,7 @@ local function Confirm(reminder, spec)
 		if spec.kind == "time" then
 			ns:Print(string.format("On %s in %s (at %s): %s", list, reminders.FormatDuration(spec.duration), date("%H:%M", reminder.at), text))
 		elseif spec.kind == "zone" then
-			ns:Print(string.format("On %s when %s %s: %s", list, spec.character and "they enter" or "you enter", spec.zone, text))
+			ns:Print(string.format("On %s when %s in %s: %s", list, spec.character and "they're" or "you're", spec.zone, text))
 		elseif spec.kind == "level" then
 			ns:Print(string.format("On %s at level %d: %s", list, spec.level, text))
 		elseif spec.character then
@@ -1363,12 +1458,8 @@ local function Confirm(reminder, spec)
 		ns:Print(string.format("I'll remind %s in %s (at %s): %s", spec.character or "you",
 			reminders.FormatDuration(spec.duration), date("%H:%M", reminder.at), text))
 	elseif spec.kind == "zone" then
-		local note = ""
-		if not spec.character and CurrentZones()[spec.zone:lower()] then
-			note = " You're there now, so it's the next time you come back."
-		end
-		ns:Print(string.format("I'll remind %s when %s %s: %s.%s", spec.character or "you",
-			spec.character and "they enter" or "you enter", spec.zone, text, note))
+		ns:Print(string.format("I'll remind %s when %s in %s: %s", spec.character or "you",
+			spec.character and "they're" or "you're", spec.zone, text))
 	elseif spec.kind == "level" then
 		ns:Print(string.format("I'll remind %s at level %d: %s", spec.character or "you", spec.level, text))
 	else
@@ -1382,14 +1473,13 @@ end
 -- Adds a checked spec (reminders.Validate) and says so in chat.
 function reminders.Commit(spec)
 	local reminder = reminders.Add(spec, spec.character)
-	if spec.kind == "zone" and not spec.character then
-		zonesBefore = CurrentZones() -- where you are now doesn't count as entering
-	end
+	Confirm(reminder, spec)
 	if spec.quiet and spec.kind == "login" and not spec.character then
 		MakeDue(reminder, reminders.List()) -- a plain to-do: on the list now
 		Changed()
+	elseif not spec.character then
+		reminders.Check() -- in that zone already: due now
 	end
-	Confirm(reminder, spec)
 	return reminder
 end
 
@@ -1474,13 +1564,10 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 	if event == "PLAYER_ENTERING_WORLD" then
 		local isLogin = ...
 		if isLogin then
-			zonesBefore = {}
 			C_Timer.After(LOGIN_DELAY, OnLogin)
 		else
-			-- A reload, or a loading screen: no login reminders; where you are now isn't
-			-- entering it after a reload.
-			if not next(zonesBefore) then
-				zonesBefore = CurrentZones()
+			-- A reload, or a loading screen: no login reminders.
+			if not ready then
 				ClaimReminders()
 				RefreshTracker()
 			end
@@ -1495,6 +1582,7 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 		C_Timer.After(0.5, reminders.Check)
 	else
 		reminders.Check("zone")
+		RefreshTracker() -- zone tags turn green where you are
 	end
 end)
 
@@ -1598,7 +1686,6 @@ function module:OnEnabledChanged(enabled)
 			reminders.Check()
 		end)
 		ClaimReminders()
-		zonesBefore = CurrentZones()
 		ready = ready or initialized -- turned on while playing
 	elseif card then
 		card:Hide()

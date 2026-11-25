@@ -263,7 +263,7 @@ pops up the next time you log in; `/nra todo respec` just goes on your **to-do l
 
 - **Later instead:** put a trigger in front (the same for to-dos).
   - A time: `/nra remind 30m check the auction house` (s, m, h, d: `2d`, `1h30m`).
-  - A zone or subzone: `/nra remind in Darkshore: turtle quest`.
+  - A zone or subzone: `/nra remind in Darkshore: turtle quest` (straight away if you're there).
   - A level: `/nra remind at 30: train`.
   - **Another character's next login:** `/nra remind @Bankalt: mail the bags`. This also goes with the
     others (`@Bankalt at 20: ...`).
@@ -273,7 +273,10 @@ pops up the next time you log in; `/nra todo respec` just goes on your **to-do l
   card also lists the reminders still open from before, under a line. They wait for combat to end, and
   play a sound (pick it in the settings).
 - **To-dos** skip the card and the sound: they go straight on the list when they come due.
-- **The to-do list** on screen holds both until you tick them (reminders after their card, an option).
+- **The list on screen** ("Reminders & To-do") holds both until you tick them (reminders after their
+  card, an option), in two parts: **REMINDERS** first, then **TO DO**.
+  - A coloured tag says where, when or who from (`Ironforge:`, `21:30:`, `Bankalt:`). Zone tags turn
+    **green** while you're there.
   - **In your order:** drag a row, or use the arrows on the row under the mouse (shift-click: to the
     top or bottom).
   - Ticked ones fade out after a moment (untick in time to keep one).

@@ -140,7 +140,7 @@ return {
 			t.ok(NraKitRemindersCard:IsShown(), "after combat")
 			local row = Rows(NraKitRemindersCard)[1]
 			row.check.scripts.OnClick(row.check)
-			wow.click("Close")
+			NraKitRemindersCard:Hide()
 		end)
 
 		t.test("one that came due while you were logged out says so", function()
@@ -151,42 +151,40 @@ return {
 			t.ok(reminder.state == "due" and reminder.away, "away")
 			t.ok(reminders.DueNote(reminder):find("while you were away", 1, true), "said")
 			reminders.SetDone(reminder.id, true)
-			wow.click("Close")
+			NraKitRemindersCard:Hide()
 		end)
 
-		t.test("a zone reminder: when you enter it, not where you are when you write it", function()
+		t.test("a zone reminder: when you're in it, straight away if you write it there", function()
 			wow.data.zone = "Elwynn Forest"
 			Remind("in darkshore: turtle quest")
+			t.equal(Mine("turtle quest").state, "waiting", "not there")
 			Remind("in Elwynn Forest: sell the junk")
-			t.ok(wow.printed[1]:find("You're there now", 1, true), "said it waits")
-			wow.fire("ZONE_CHANGED_NEW_AREA")
-			t.equal(Mine("sell the junk").state, "waiting", "not where you are")
+			t.equal(Mine("sell the junk").state, "due", "you're there: due now")
+			t.ok(NraKitRemindersCard:IsShown(), "card")
+			wow.click("Done")
 			wow.data.zone = "Darkshore"
 			wow.fire("ZONE_CHANGED_NEW_AREA")
 			t.equal(Mine("turtle quest").state, "due", "entered Darkshore (any case)")
-			t.equal(Mine("sell the junk").state, "waiting", "left Elwynn")
-			wow.data.zone = "Elwynn Forest"
-			wow.fire("ZONE_CHANGED_NEW_AREA")
-			t.equal(Mine("sell the junk").state, "due", "back in Elwynn")
-			t.equal(#Rows(NraKitRemindersCard), 2, "both on the card")
-			GetSubZoneText = function()
-				return "Ratchet"
-			end
-			Remind("in Ratchet: boat")
-			wow.data.zone = "The Barrens"
+			wow.click("Done")
 			GetSubZoneText = function()
 				return ""
 			end
-			wow.fire("ZONE_CHANGED")
+			wow.data.zone = "The Barrens"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+			Remind("in Ratchet: boat")
+			t.equal(Mine("boat").state, "waiting", "not in Ratchet yet")
 			GetSubZoneText = function()
 				return "Ratchet"
 			end
 			wow.fire("ZONE_CHANGED")
 			t.equal(Mine("boat").state, "due", "subzones count")
-			for _, reminder in ipairs(reminders.Due()) do
-				reminders.SetDone(reminder.id, true)
+			wow.click("Done")
+			GetSubZoneText = function()
+				return ""
 			end
-			wow.click("Close")
+			wow.data.zone = "Elwynn Forest"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+			t.equal(#reminders.Due(), 0, "all done")
 		end)
 
 		t.test("the card: what popped it up on top, what's still open under it", function()
@@ -222,7 +220,7 @@ return {
 			wow.fire("PLAYER_LEVEL_UP", 31)
 			t.equal(Mine("train").state, "due", "due")
 			reminders.SetDone(Mine("train").id, true)
-			wow.click("Close")
+			NraKitRemindersCard:Hide()
 		end)
 
 		t.test("right-click: remind me again later", function()
@@ -236,7 +234,7 @@ return {
 			reminders.Check()
 			t.equal(reminder.state, "due", "back")
 			reminders.SetDone(reminder.id, true)
-			wow.click("Close")
+			NraKitRemindersCard:Hide()
 		end)
 
 		t.test("without the tracker, closing just hides them until the next login", function()
@@ -248,7 +246,7 @@ return {
 			Login()
 			t.ok(NraKitRemindersCard:IsShown(), "back at login")
 			reminders.SetDone(Mine("buy arrows").id, true)
-			wow.click("Close")
+			NraKitRemindersCard:Hide()
 			ns:SetSetting("remindersTracker", true)
 		end)
 
@@ -295,7 +293,7 @@ return {
 			t.ok(not NraKitRemindersCard:IsShown(), "no card")
 			t.equal(#wow.played, 0, "no sound")
 			t.ok(NraKitRemindersTracker:IsShown() and #Rows(NraKitRemindersTracker) == 1, "on the list")
-			t.equal(rawget(NraKitRemindersTracker.title, "text"), "To do (1)", "the list's name")
+			t.equal(rawget(NraKitRemindersTracker.title, "text"), "Reminders & To-do (1)", "the list's name")
 			SlashCmdList.NRAKIT("todo in Ironforge: buy reagents")
 			wow.data.zone = "Ironforge"
 			wow.fire("ZONE_CHANGED_NEW_AREA")
@@ -364,6 +362,31 @@ return {
 			wow.advance(1)
 			reminders.RefreshTracker()
 			t.equal(#Rows(tracker), 2, "gone")
+		end)
+
+		t.test("the list: reminders and to-dos in their own parts, tagged with where; arrows stay in the part", function()
+			wow.data.zone = "Ironforge"
+			Remind("in Ironforge: see the banker")
+			NraKitRemindersCard:Hide()
+			local tracker = NraKitRemindersTracker
+			local sections = rawget(tracker, "sections")
+			t.ok(sections.loud:IsShown() and sections.quiet:IsShown(), "REMINDERS and TO DO")
+			local row
+			for _, each in ipairs(Rows(tracker)) do
+				if each.reminder.text == "see the banker" then
+					row = each
+				end
+			end
+			local text = rawget(row.text, "text")
+			t.ok(text:find("|cff4cd94cIronforge|r", 1, true), "tagged, green while you're there: " .. text)
+			wow.data.zone = "Elwynn Forest"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+			t.ok(rawget(row.text, "text"):find("|cffffd100Ironforge|r", 1, true), "gold elsewhere")
+			row.scripts.OnEnter(row)
+			t.ok(row.up:IsShown() and row.down:IsShown(), "both arrows")
+			t.equal(row.up:GetAlpha(), 0.3, "it's alone in its part: up dimmed")
+			t.equal(row.down:GetAlpha(), 0.3, "and down")
+			reminders.SetDone(row.reminder.id, true)
 		end)
 
 		t.test("right-click turns a to-do into a reminder; the login card leaves to-dos out", function()

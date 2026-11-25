@@ -2,8 +2,9 @@ local _, ns = ...
 
 -- The Reminders window (/nra remind): a box to write a new one (same words as the command;
 -- "Pop up" makes it a reminder, else a to-do), then your reminders and to-dos in sections:
--- To do (due, not ticked off, in your order: drag or use the arrows), Waiting (with when they
--- come due), For your other characters (ones you left them) and Done (folded; the last few).
+-- Reminders and To do (due, not ticked off, each in your order: drag or use the arrows),
+-- Waiting (with when they come due, and whether they pop up), For your other characters
+-- (ones you left them) and Done (folded; the last few).
 --
 -- Tick a box to mark one done (untick to bring it back), click the text to edit it,
 -- right-click for more (remind me again later, delete).
@@ -208,11 +209,10 @@ end
 
 -- The sections: { label, rows = { { reminder, when } }, foldable }.
 local function Collect()
-	local now, waiting, others, done = {}, {}, {}, {}
+	local now, todo, waiting, others, done = {}, {}, {}, {}, {}
 	for _, reminder in ipairs(reminders.List()) do
 		if reminder.state == "due" then
-			local note = reminders.DueNote(reminder)
-			table.insert(now, { reminder = reminder, when = reminder.quiet and (note ~= "" and note .. " · to-do" or "To-do") or note })
+			table.insert(reminder.quiet and todo or now, { reminder = reminder, when = reminders.DueNote(reminder) })
 		elseif reminder.state == "waiting" then
 			local when = reminders.Describe(reminder)
 			table.insert(waiting, { reminder = reminder, when = reminder.quiet and (when .. " · to-do") or (when .. " · pops up") })
@@ -234,19 +234,22 @@ local function Collect()
 	local function ByID(a, b)
 		return a.reminder.id < b.reminder.id
 	end
-	table.sort(now, function(a, b)
+	local function ByOrder(a, b)
 		if (a.reminder.order or math.huge) ~= (b.reminder.order or math.huge) then
 			return (a.reminder.order or math.huge) < (b.reminder.order or math.huge)
 		end
 		return a.reminder.id < b.reminder.id
-	end)
+	end
+	table.sort(now, ByOrder)
+	table.sort(todo, ByOrder)
 	table.sort(waiting, ByID)
 	table.sort(others, ByID)
 	table.sort(done, function(a, b)
 		return (a.reminder.doneAt or 0) > (b.reminder.doneAt or 0)
 	end)
 	return {
-		{ label = "To do", rows = now },
+		{ label = "Reminders", rows = now },
+		{ label = "To do", rows = todo },
 		{ label = "Waiting", rows = waiting },
 		{ label = "For your other characters", rows = others },
 		{ label = "Done", rows = done, foldable = true },
