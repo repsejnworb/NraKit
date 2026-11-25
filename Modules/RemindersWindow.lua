@@ -360,7 +360,10 @@ local function FormBox(width, numeric)
 	box:SetAutoFocus(false)
 	box:SetNumeric(numeric == true)
 	box:SetMaxLetters(numeric and 4 or 255)
-	box:SetScript("OnEscapePressed", box.ClearFocus)
+	box:SetScript("OnEscapePressed", function(self)
+		self:ClearFocus()
+		form:Hide() -- Escape cancels the form
+	end)
 	return box
 end
 
@@ -477,6 +480,15 @@ local function CreateForm()
 		RefreshForm()
 	end)
 	form.kindChips[1]:SetPoint("TOPLEFT", 180, -PAD - 1)
+	local back = UI.CreateFlatButton(form, "< Back to the list", 22)
+	back:SetPoint("TOPRIGHT", -PAD, -PAD)
+	back:SetScript("OnClick", function()
+		form:Hide()
+	end)
+	back:SetScript("OnEnter", function(self)
+		UI.ShowTooltip(self, "Back to the list", "Closes the form without adding anything (also Cancel, or Escape while typing).")
+	end)
+	back:SetScript("OnLeave", GameTooltip_Hide)
 	local LEFT = 130
 
 	FormLabel("Reminder", -56)

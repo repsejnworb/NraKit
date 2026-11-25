@@ -551,6 +551,13 @@ return {
 			t.ok(form:IsShown(), "the form")
 			local textBox = rawget(form, "textBox")
 
+			t.ok(wow.click("< Back to the list") and not form:IsShown(), "back to the list without adding")
+			wow.click("Add")
+			textBox.scripts.OnEscapePressed(textBox)
+			t.ok(not form:IsShown(), "Escape in the form cancels it too")
+			wow.click("Add")
+			t.ok(wow.click("Cancel") and not form:IsShown(), "and Cancel")
+			wow.click("Add")
 			t.ok(wow.click("Add reminder"), "submit empty")
 			t.ok(form:IsShown() and rawget(rawget(form, "problem"), "text"):find("say", 1, true), "asks what it should say")
 
