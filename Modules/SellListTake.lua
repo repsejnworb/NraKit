@@ -99,9 +99,9 @@ end
 
 -- A free bag slot that can hold the item, not one already used by this take; nil if your bags
 -- are full (for it).
-local function FreeBagSlot(itemID, skip)
+local function FreeBagSlot(itemID, skip, refused)
 	for _, bag in ipairs(BagsFor(itemID)) do
-		for slot = 1, C_Container.GetContainerNumSlots(bag) do
+		for slot = 1, refused and refused[bag] and 0 or C_Container.GetContainerNumSlots(bag) do
 			if not C_Container.GetContainerItemID(bag, slot) and not (skip and skip[bag .. ":" .. slot]) then
 				return bag, slot
 			end
@@ -154,7 +154,7 @@ local function TakeFromBank(item, want)
 	if GetCursorInfo() then
 		return "Stopped: you have something on your cursor."
 	end
-	local maxStack, done, targets = MaxStack(item), 0, {}
+	local maxStack, done, targets, refused = MaxStack(item), 0, {}, {}
 	local split = false
 	for _, place in ipairs(item.slots) do
 		local remaining = want - done
@@ -168,21 +168,35 @@ local function TakeFromBank(item, want)
 			if amount < info.stackCount and split then
 				break
 			end
-			local bag, slot = FreeBagSlot(item.id, targets)
-			if not bag then
-				return string.format("Bags full: took %d of %d.", done, want)
+			-- Put it down; if the game refuses a bag (it's still on the cursor: "The item doesn't
+			-- go into that container"), put it back and try the next bag.
+			local moved = false
+			while not moved do
+				local bag, slot = FreeBagSlot(item.id, targets, refused)
+				if not bag then
+					return string.format("Bags full: took %d of %d.", done, want)
+				end
+				Debug(string.format("%s %d from bank %d:%d (stack %d) into bag %d:%d (%s)",
+					amount < info.stackCount and "split" or "move", amount, place.bag, place.slot, info.stackCount,
+					bag, slot, tostring(C_Container.GetBagName and C_Container.GetBagName(bag))))
+				if amount < info.stackCount then
+					C_Container.SplitContainerItem(place.bag, place.slot, amount)
+				else
+					C_Container.PickupContainerItem(place.bag, place.slot)
+				end
+				C_Container.PickupContainerItem(bag, slot)
+				targets[bag .. ":" .. slot] = true
+				if GetCursorInfo() then
+					Debug("refused by bag " .. bag .. ": putting it back, trying the next bag")
+					ClearCursor() -- back where it came from
+					refused[bag] = true
+				else
+					moved = true
+				end
 			end
-			Debug(string.format("%s %d from bank %d:%d (stack %d) into bag %d:%d",
-				amount < info.stackCount and "split" or "move", amount, place.bag, place.slot, info.stackCount, bag, slot))
 			if amount < info.stackCount then
-				C_Container.SplitContainerItem(place.bag, place.slot, amount)
 				split = true
-			else
-				C_Container.PickupContainerItem(place.bag, place.slot)
 			end
-			C_Container.PickupContainerItem(bag, slot)
-			Debug("cursor after:", tostring(GetCursorInfo()))
-			targets[bag .. ":" .. slot] = true
 			done = done + amount
 		end
 	end

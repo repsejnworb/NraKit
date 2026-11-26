@@ -1,7 +1,7 @@
 -- Sell List: what in your bags is worth selling, the most valuable first, at the auction house
 -- (Auctionator) and at a vendor; soulbound ones apart, kept ones off the list.
 
-Enum.BagIndex = { Backpack = 0, Bag_1 = 1, ReagentBag = 5, CharacterBankTab_1 = 6 }
+Enum.BagIndex = { Backpack = 0, Bag_1 = 1, Bag_2 = 2, ReagentBag = 5, CharacterBankTab_1 = 6 }
 -- The auction house window (its addon already loaded), and a merchant's.
 CreateFrame("Frame", "AuctionHouseFrame")
 CreateFrame("Frame", "MerchantFrame"):Hide()
@@ -33,8 +33,9 @@ local BAG = {
 	{ itemID = 1006, stackCount = 2 }, -- an old auction price: 2g, 6 days old
 }
 -- A second bag with 4 empty slots, and the bank's first tab (bag 6).
-local BAG_SIZE = { [0] = #BAG, [1] = 4, [5] = 0, [6] = 4 }
-local CONTAINERS = { [0] = BAG, [1] = {}, [5] = {}, [6] = {} }
+local BAG_SIZE = { [0] = #BAG, [1] = 4, [2] = 0, [5] = 0, [6] = 4 }
+local CONTAINERS = { [0] = BAG, [1] = {}, [2] = {}, [5] = {}, [6] = {} }
+local REFUSES = {} -- bags the game won't put the item in ("The item doesn't go into that container")
 C_Container.GetContainerNumSlots = function(bag)
 	return BAG_SIZE[bag] or 0
 end
@@ -52,23 +53,37 @@ end
 C_Container.GetContainerNumFreeSlots = function()
 	return 0, 0
 end
--- The cursor, like the game: pick up from a slot, then put down in another (or split part).
+-- The cursor, like the game: pick up from a slot, then put down in another (or split part);
+-- a bag that refuses leaves it on the cursor, and ClearCursor puts it back where it came from.
 local cursor, picked
 C_Container.PickupContainerItem = function(bag, slot)
 	picked = { bag, slot }
 	local items = CONTAINERS[bag]
 	if cursor then
-		if not items[slot] then
+		if not items[slot] and not REFUSES[bag] then
 			items[slot], cursor = cursor, nil
 		end
 	else
 		cursor, items[slot] = items[slot], nil
+		if cursor then
+			cursor.from = { bag, slot }
+		end
 	end
 end
 C_Container.SplitContainerItem = function(bag, slot, amount)
 	local item = CONTAINERS[bag][slot]
 	item.stackCount = item.stackCount - amount
-	cursor = { itemID = item.itemID, stackCount = amount }
+	cursor = { itemID = item.itemID, stackCount = amount, from = { bag, slot }, split = item }
+end
+ClearCursor = function()
+	if cursor then
+		if cursor.split then
+			cursor.split.stackCount = cursor.split.stackCount + cursor.stackCount
+		else
+			CONTAINERS[cursor.from[1]][cursor.from[2]] = cursor
+		end
+		cursor = nil
+	end
 end
 GetCursorInfo = function()
 	return cursor and "item" or nil
@@ -615,6 +630,33 @@ return {
 			wow.fire("BANKFRAME_CLOSED")
 			BankFrame:Hide()
 			BAG_SIZE[5], CONTAINERS[1], CONTAINERS[6] = 0, {}, {}
+		end)
+
+		-- Regression: the game refused a bag ("The item doesn't go into that container") and the
+		-- footer still said it was taken.
+		t.test("a bag the game refuses: put back, the next bag tried", function()
+			cursor = nil
+			CONTAINERS[1], CONTAINERS[2] = {}, {}
+			BAG_SIZE[2] = 2
+			REFUSES[1] = true
+			CONTAINERS[6] = { { itemID = 1010, stackCount = 1 } }
+			BankFrame:Show()
+			wow.fire("BANKFRAME_OPENED")
+			local crystal
+			for _, item in ipairs(sell.Collect().ah) do
+				if item.where == "bank" then
+					crystal = item
+				end
+			end
+			sell.Take(crystal)
+			t.equal(cursor, nil, "nothing left on the cursor")
+			t.equal(CONTAINERS[1][1], nil, "not in the bag that refused")
+			t.equal(CONTAINERS[2][1] and CONTAINERS[2][1].itemID, 1010, "in the next bag")
+			t.ok(sell.TakeStatus():find("Took 1", 1, true), "and only then says it took it")
+			wow.fire("BANKFRAME_CLOSED")
+			BankFrame:Hide()
+			REFUSES[1], BAG_SIZE[2] = nil, 0
+			CONTAINERS[2], CONTAINERS[6] = {}, {}
 		end)
 
 		t.test("bags too full for it all: Take All says how many fit", function()
