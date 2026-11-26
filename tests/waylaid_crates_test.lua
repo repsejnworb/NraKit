@@ -141,6 +141,48 @@ return {
 			t.equal(#lists, 5, "rewritten even if unchanged (it may have been deleted)")
 		end)
 
+		-- The game's tooltip, as /run printed it for Expert Parts.
+		local EXPERT_PARTS_USE = "Use: Fill the crate with any bundle from the following list:\n"
+			.. "- 8 Iron Strut\n- 5 Mithril Tube\n- 12 Unstable Trigger\n- 5 Mithril Casing"
+
+		t.test("reads the bundles off the game's crate tooltip", function()
+			local bundles = ns.waylaidCrates.ParseBundles({ lines = {
+				{ leftText = "Waylaid Crate: Expert Parts" },
+				{ leftText = EXPERT_PARTS_USE },
+				{ leftText = "Requires Level 20" },
+			} })
+			t.equal(table.concat(bundles, ", "), "12 Unstable Trigger, 5 Mithril Casing, 5 Mithril Tube, 8 Iron Strut", "all four")
+		end)
+
+		t.test("/nra crates check lists crates that differ from the game, and ones it doesn't know", function()
+			-- Items load at once; every crate's tooltip lists Expert Parts' bundles, and
+			-- 248800 is a crate NraKit doesn't have.
+			items[248800] = { name = "Waylaid Crate: Grand Parts", bags = 0, bank = 0 }
+			Item = { CreateFromItemID = function(_, id)
+				return {
+					IsItemEmpty = function() return false end,
+					ContinueOnItemLoad = function(_, done) done() end,
+					GetItemName = function() return items[id] and items[id].name end,
+				}
+			end }
+			C_Item.DoesItemExistByID = function(id) return items[id] ~= nil end
+			C_TooltipInfo.GetHyperlink = function()
+				return { lines = { { leftText = EXPERT_PARTS_USE } } }
+			end
+			local after
+			C_Timer.After = function(_, fn) after = fn end
+			wow.printed = {}
+			SlashCmdList.NRAKIT("crates check")
+			after()
+			local text = table.concat(wow.printed, "\n")
+			t.ok(not text:find("Expert Parts|r (248710)", 1, true), "Expert Parts matches")
+			t.ok(text:find("Waylaid Crate: Journeyman Ore|r (248687)", 1, true), "Journeyman Ore differs: " .. text)
+			t.ok(text:find("NraKit: 10 Silver Ore, 20 Iron Ore", 1, true), "with NraKit's list")
+			t.ok(text:find("Grand Parts|r (248800) isn't in NraKit", 1, true), "unknown crate")
+			t.ok(text:find("30 of 30 crates loaded", 1, true), "summary: " .. text)
+			t.noErrors()
+		end)
+
 		t.test("waits for reagent names the client hasn't loaded", function()
 			items[MITHRIL_TUBE].name = nil
 			items[JOURNEYMAN_ORE].bags = 1

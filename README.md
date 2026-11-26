@@ -247,6 +247,7 @@ scan, with the **cheapest in green**.
   in the amounts they need (two crates, twice the amount). Open it in Auctionator's Shopping tab to
   look them all up. It's rewritten when your crates change, but not while the auction house is open.
 - Optionally shows the price of one of each reagent too.
+- `/nra crates check` compares NraKit's crate list with the game's own tooltips (after a patch, say).
 
 ### Trackers & Reminders
 

@@ -139,6 +139,7 @@ With a **fishing pole in your main hand**, **double right-click** the world to c
 Needs **Auctionator**. A Waylaid Crate's tooltip shows **what each bundle it takes costs** at the auction house, from Auctionator's last scan, with the **cheapest in green**.
 - An Auctionator shopping list, **"Waylaid Crates"**, holds every bundle of the crates in your bags, in the amounts they need. Open it in Auctionator's Shopping tab to look them all up. It's rewritten when your crates change, but not while the auction house is open.
 - Optionally shows the price of one of each reagent too.
+- `/nra crates check` compares NraKit's crate list with the game's own tooltips (after a patch, say).
 
 ## Trackers & Reminders
 

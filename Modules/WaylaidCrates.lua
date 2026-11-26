@@ -245,6 +245,105 @@ eventFrame:SetScript("OnEvent", function(_, event)
 	end
 end)
 
+---------------------------------------------------------------------------
+-- /nra crates check: the game's own crate tooltips against the table above
+---------------------------------------------------------------------------
+
+-- Crate item IDs are around here; anything called "Waylaid Crate: ..." in this range that
+-- the table doesn't have is reported.
+local SCAN_FROM, SCAN_TO = 248500, 248800
+
+-- "8 Iron Strut" for each "- 8 Iron Strut" line the tooltip lists.
+function crates.ParseBundles(tooltipData)
+	local bundles = {}
+	for _, line in ipairs(tooltipData and tooltipData.lines or {}) do
+		local text = (line.leftText or ""):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+		for count, name in (text .. "\n"):gmatch("%-%s*(%d+)%s+([^\n]-)%s*\n") do
+			table.insert(bundles, count .. " " .. name)
+		end
+	end
+	table.sort(bundles)
+	return bundles
+end
+
+-- Calls done(name) once the item's data is loaded (never for an item that doesn't exist).
+local function WithItem(itemID, done)
+	local item = Item:CreateFromItemID(itemID)
+	if item:IsItemEmpty() then
+		return
+	end
+	item:ContinueOnItemLoad(function()
+		done(item:GetItemName())
+	end)
+end
+
+local function CrateTooltip(crateID)
+	return C_TooltipInfo.GetHyperlink("item:" .. crateID)
+end
+
+local function CheckCrate(crateID, report)
+	WithItem(crateID, function(crateName)
+		local bundles = CRATES[crateID]
+		local ours, left = {}, #bundles
+		for _, bundle in ipairs(bundles) do
+			WithItem(bundle[2], function(name)
+				table.insert(ours, bundle[1] .. " " .. (name or ("item " .. bundle[2])))
+				left = left - 1
+				if left == 0 then
+					table.sort(ours)
+					local game = crates.ParseBundles(CrateTooltip(crateID))
+					report(crateID, crateName, game, ours)
+				end
+			end)
+		end
+	end)
+end
+
+function crates.Check()
+	local checked, wrong = 0, 0
+	local function Report(crateID, crateName, game, ours)
+		checked = checked + 1
+		local gameText, ourText = table.concat(game, ", "), table.concat(ours, ", ")
+		if gameText ~= ourText then
+			wrong = wrong + 1
+			ns:Print(string.format("|cffff6666%s|r (%d)\n  game: %s\n  NraKit: %s", crateName or "?", crateID,
+				gameText ~= "" and gameText or "(no list found)", ourText))
+		end
+	end
+	local total = 0
+	for crateID in pairs(CRATES) do
+		total = total + 1
+		CheckCrate(crateID, Report)
+	end
+	-- Crates the table doesn't know.
+	if C_Item.DoesItemExistByID then
+		for itemID = SCAN_FROM, SCAN_TO do
+			if not CRATES[itemID] and C_Item.DoesItemExistByID(itemID) then
+				WithItem(itemID, function(name)
+					if name and name:find("^Waylaid Crate:") then
+						wrong = wrong + 1
+						local game = crates.ParseBundles(CrateTooltip(itemID))
+						ns:Print(string.format("|cffff6666%s|r (%d) isn't in NraKit\n  game: %s", name, itemID,
+							table.concat(game, ", ")))
+					end
+				end)
+			end
+		end
+	end
+	ns:Print("checking " .. total .. " Waylaid Crates against the game...")
+	C_Timer.After(5, function()
+		ns:Print(string.format("crate check done: %d of %d crates loaded, %d problem(s).", checked, total, wrong))
+	end)
+end
+
+local function OnSlashCommand(rest)
+	if rest:lower() == "check" then
+		crates.Check()
+	else
+		ns:PrintCommandHelp("crates")
+	end
+end
+
 local EVENTS = { "BAG_UPDATE_DELAYED", "AUCTION_HOUSE_SHOW", "AUCTION_HOUSE_CLOSED", "ITEM_DATA_LOAD_RESULT" }
 
 local function IsEventValid(event)
@@ -253,6 +352,10 @@ end
 
 function module:OnInitialize()
 	TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, OnItemTooltip)
+	ns:RegisterSlashCommand("crates", OnSlashCommand, {
+		summary = "Waylaid Crate prices: check NraKit's crate list against the game",
+		usage = { "/nra crates check - compare every crate's bundles with the game's tooltips and list differences" },
+	})
 	self:OnEnabledChanged(ns:IsModuleEnabled(self.key))
 end
 
