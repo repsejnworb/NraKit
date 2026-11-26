@@ -252,6 +252,7 @@ end)
 -- Crate item IDs are around here; anything called "Waylaid Crate: ..." in this range that
 -- the table doesn't have is reported.
 local SCAN_FROM, SCAN_TO = 248500, 248800
+local CHECK_TRIES = 6 -- one a second
 
 -- "8 Iron Strut" for each "- 8 Iron Strut" line the tooltip lists.
 function crates.ParseBundles(tooltipData)
@@ -291,8 +292,18 @@ local function CheckCrate(crateID, report)
 				left = left - 1
 				if left == 0 then
 					table.sort(ours)
-					local game = crates.ParseBundles(CrateTooltip(crateID))
-					report(crateID, crateName, game, ours)
+					-- The "Use:" text (an item spell) loads after the item; ask again a few times.
+					local tries = 0
+					local function Compare()
+						tries = tries + 1
+						local game = crates.ParseBundles(CrateTooltip(crateID))
+						if #game == 0 and tries < CHECK_TRIES then
+							C_Timer.After(1, Compare)
+						else
+							report(crateID, crateName, game, ours)
+						end
+					end
+					Compare()
 				end
 			end)
 		end
@@ -331,7 +342,7 @@ function crates.Check()
 		end
 	end
 	ns:Print("checking " .. total .. " Waylaid Crates against the game...")
-	C_Timer.After(5, function()
+	C_Timer.After(CHECK_TRIES + 2, function()
 		ns:Print(string.format("crate check done: %d of %d crates loaded, %d problem(s).", checked, total, wrong))
 	end)
 end

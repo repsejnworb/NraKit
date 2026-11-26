@@ -183,6 +183,36 @@ return {
 			t.noErrors()
 		end)
 
+		t.test("the check waits for crate text the game hasn't loaded yet", function()
+			-- In game most crates' "Use:" text was missing on the first read (regression).
+			local reads = 0
+			C_TooltipInfo.GetHyperlink = function()
+				reads = reads + 1
+				if reads <= 30 then
+					return { lines = { { leftText = "Waylaid Crate: Expert Parts" } } }
+				end
+				return { lines = { { leftText = EXPERT_PARTS_USE } } }
+			end
+			local retries, summary = {}, nil
+			C_Timer.After = function(seconds, fn)
+				if seconds == 1 then
+					table.insert(retries, fn)
+				else
+					summary = fn
+				end
+			end
+			wow.printed = {}
+			SlashCmdList.NRAKIT("crates check")
+			for _, fn in ipairs(retries) do
+				fn()
+			end
+			summary()
+			local text = table.concat(wow.printed, "\n")
+			t.ok(not text:find("no list found", 1, true), "read again: " .. text)
+			t.ok(not text:find("Expert Parts|r (248710)", 1, true), "Expert Parts matches")
+			t.ok(text:find("30 of 30 crates loaded", 1, true), "summary: " .. text)
+		end)
+
 		t.test("waits for reagent names the client hasn't loaded", function()
 			items[MITHRIL_TUBE].name = nil
 			items[JOURNEYMAN_ORE].bags = 1
