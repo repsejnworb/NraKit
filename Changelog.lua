@@ -22,6 +22,9 @@ local _, ns = ...
 -- notes) and /commands are coloured. Write short: no brackets-and-semicolon chains.
 
 ns.changelog = {
+	{ version = "Unreleased", entries = {
+		{ "improved", title = "Sell List", "**Bank** and **Mail** switches at its top list what's in your bank and mailbox too, mixed in by value but marked, and counted apart." },
+	} },
 	{ version = "0.32.0", date = "2026-11-26", entries = {
 		{ "new", title = "Shortcuts", module = "shortcuts",
 			"Short commands for NraKit's everyday ones, each the same as its /nra command.",
@@ -38,8 +41,8 @@ ns.changelog = {
 				"**Auction house and vendor prices** side by side; the better one is bright, and a stale auction price is marked.",
 				"It **opens by itself beside the auction house** (a button there too), and optionally at **merchants**.",
 				"There, **Alt+click** an item to put it in Auctionator's Selling tab, or click to pick it up.",
-				"Split into **To Sell: Auction House** and **To Sell: Vendor**; switch on your **bank and mail** to see those too.",
-				"Says when a fresh scan **changed the prices**, with a refresh button; right-click for **Keep, don't list**.",
+				"Split into **To Sell: Auction House** and **To Sell: Vendor**; right-click one for **Keep, don't list**.",
+				"Says when a fresh scan **changed the prices**, with a refresh button; sorts by any column.",
 			},
 			tip = "Auction prices come from **Auctionator**; without it, it's vendor prices." },
 		{ "improved", title = "Auctionator Prices", "Now in the new **Auction House** section, and the Inventory tab shows what each character's items are worth at the auction house." },
