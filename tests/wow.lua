@@ -88,6 +88,23 @@ local methods = {
 	GetAlpha = function(self)
 		return rawget(self, "alpha") or 1
 	end,
+	-- Status bars remember their value, range and colour.
+	SetValue = function(self, value)
+		rawset(self, "value", value)
+	end,
+	GetValue = function(self)
+		return rawget(self, "value") or 0
+	end,
+	SetMinMaxValues = function(self, min, max)
+		rawset(self, "minMax", { min, max })
+	end,
+	GetMinMaxValues = function(self)
+		local minMax = rawget(self, "minMax") or { 0, 1 }
+		return minMax[1], minMax[2]
+	end,
+	SetStatusBarColor = function(self, r, g, b, a)
+		rawset(self, "color", { r, g, b, a })
+	end,
 	SetScale = function(self, scale)
 		rawset(self, "scale", scale)
 	end,

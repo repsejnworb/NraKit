@@ -12,14 +12,14 @@ local _, ns = ...
 --
 -- The mark is NraKit's own bar over the rage bar; the rage bar itself is never changed.
 --
--- Proc alerts: the game shows no proc glow on Forever for Overpower, Revenge and Victory
--- Rush, so they're registered with NraKit's shared proc alerts (ProcAlerts.lua).
+-- Proc alerts: the game shows no proc glow on Forever for Overpower, Revenge, Victory Rush
+-- and Execute, so they're registered with NraKit's shared proc alerts (ProcAlerts.lua).
 
 local module = {
 	key = "warrior",
 	section = "Classes",
 	name = "Warrior",
-	description = "Small things for warriors: a mark on your rage bar where the rage you keep on changing stance ends, and a glow when Overpower, Revenge or Victory Rush can be used.",
+	description = "Small things for warriors: a mark on your rage bar where the rage you keep on changing stance ends, and a glow when Overpower, Revenge, Victory Rush or Execute can be used.",
 	default = false,
 	options = {
 		{
@@ -66,7 +66,7 @@ local module = {
 			key = "warriorProcs",
 			header = "Proc alerts",
 			name = "Glow when a proc can be used",
-			description = "Your action button glows (like the game's own proc glow) while Overpower, Revenge or Victory Rush can be used, which the game doesn't show for them.",
+			description = "Your action button glows (like the game's own proc glow) while Overpower, Revenge, Victory Rush or Execute can be used, which the game doesn't show for them. Bright: press it now. Dim: it's up, but you're short of rage or it's on cooldown.",
 			default = true,
 		},
 		{
@@ -91,10 +91,17 @@ local module = {
 			default = true,
 		},
 		{
+			key = "warriorProcExecute",
+			parent = "warriorProcs",
+			name = "Execute",
+			description = "While your target is low enough on health to Execute.",
+			default = true,
+		},
+		{
 			key = "warriorProcCountdown",
 			parent = "warriorProcs",
-			name = "Countdown",
-			description = "A ring on the glow counts down how long the proc lasts. NraKit learns each one's time the first time it runs out unused, so the ring shows from then on.",
+			name = "Time left",
+			description = "A thin gold bar along the bottom of the button drains as the proc runs out, turning orange (and the glow pulsing) at the end. NraKit learns each proc's time the first time it runs out unused, so the bar shows from then on.",
 			default = true,
 		},
 		{
@@ -270,6 +277,7 @@ ns.procAlerts.Register({
 		{ name = "Overpower", option = "warriorProcOverpower" },
 		{ name = "Revenge", option = "warriorProcRevenge" },
 		{ name = "Victory Rush", option = "warriorProcVictoryRush" },
+		{ name = "Execute", option = "warriorProcExecute", timed = false },
 	},
 	options = {
 		countdown = "warriorProcCountdown",

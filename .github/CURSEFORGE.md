@@ -52,7 +52,7 @@ Get alerted when a **mob or player from your own list** shows up.
 ### Warrior
 **Tactical Mastery mark:** the rage bar of the **Personal Resource Display** shows a small arrow at how much rage you **keep when you change stance**: 10 from Tactical Mastery, plus 5 per rank of Improved Tactical Mastery. It follows what you've learned and your talents by itself. The arrow sits at the top, bottom or both, at the size you like, and you can shade the bar up to it.
 
-**Proc alerts:** the game shows no proc glow for **Overpower, Revenge and Victory Rush**, so NraKit makes their action buttons glow (the game's own proc glow) while you can use them, dimmed while you're short of rage. A countdown ring shows how long the proc lasts (NraKit learns each one's time the first time it runs out). Optionally a sound, and the icon next to the Personal Resource Display's rage bar.
+**Proc alerts:** the game shows no proc glow for **Overpower, Revenge, Victory Rush and Execute**, so NraKit makes their action buttons glow (the game's own proc glow) while you can use them. Bright means press it now; dim means it's up but you're short of rage or it's on cooldown. A thin gold bar along the button drains as the proc runs out, turning orange with the glow pulsing at the end (NraKit learns each one's time the first time it runs out). Optionally a sound, and the icon next to the Personal Resource Display's rage bar.
 
 ## Quests
 
