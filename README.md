@@ -280,7 +280,7 @@ rank).
 **What in your bags is worth selling**, the most valuable first, so you don't have to hover every
 item. A tab in the NraKit window (`/nra sell`).
 
-- **Auction house and vendor prices side by side** (auction prices from Auctionator), for each item
+- **Vendor and auction house prices side by side** (auction prices from Auctionator), for each item
   and the whole stack. The better of the two is bright; "a vendor pays more" says when to vendor.
 - An auction price **more than 3 days old** is marked, so you don't undercut yourself on old data.
 - It **opens by itself** beside the auction house when you open it (switch that off at the top of
@@ -291,8 +291,11 @@ item. A tab in the NraKit window (`/nra sell`).
   slot. Also a **What can I sell?** button in the Inventory tab (on your own character).
 - After a fresh scan it says **"Prices have changed"** by the **refresh** button, rather than
   reshuffling the list under your mouse.
-- **Soulbound** items are apart, under "Vendor only". Right-click an item → **Keep, don't list** for
-  potions, food and reagents you use.
+- Split by where each item sells best: **To Sell: Auction House** and **To Sell: Vendor**
+  (soulbound items too). At the auction house the vendor group starts folded. Right-click an item
+  for **Keep, don't list** on potions, food and reagents you use.
+- Optionally it also **opens at merchants**, docked beside them with the vendor group first: click an
+  item, then the merchant's window, to sell it.
 - Leaves out items worth less than a **minimum** (5 silver), optionally lists your **bank**, and
   sorts by **any column**. The footer says what it's all worth.
 - Without Auctionator it still works, on vendor prices.

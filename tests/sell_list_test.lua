@@ -2,8 +2,10 @@
 -- (Auctionator) and at a vendor; soulbound ones apart, kept ones off the list.
 
 Enum.BagIndex = { Backpack = 0 }
--- The auction house window (its addon already loaded).
+-- The auction house window (its addon already loaded), and a merchant's.
 CreateFrame("Frame", "AuctionHouseFrame")
+CreateFrame("Frame", "MerchantFrame"):Hide()
+rawset(MerchantFrame, "page", 1)
 
 -- Your bags: one bag with these slots.
 local BAG = {
@@ -83,43 +85,43 @@ return {
 			return table.concat(names, ", ")
 		end
 
-		t.test("the most valuable first, at the AH or a vendor, whichever pays more", function()
+		t.test("split by where each sells best, the most valuable first", function()
 			local groups = sell.Collect()
-			t.equal(Names(groups.sell), "Black Lotus, Mithril Bar, Old Price, Wolf Meat", "by value")
-			local bar = groups.sell[2]
+			t.equal(Names(groups.ah), "Black Lotus, Mithril Bar, Old Price", "to sell at the auction house")
+			local bar = groups.ah[2]
 			t.equal(bar.count, 58, "both stacks of Mithril Bar")
 			t.equal(bar.ahTotal, 58 * 12000, "at the AH")
-			t.equal(groups.sell[4].best, "vendor", "Wolf Meat: the vendor pays more")
-			t.equal(groups.sell[3].age, 6, "how old the price is")
-			t.equal(groups.sellTotal, 3 * 450000 + 58 * 12000 + 2 * 20000, "auction total")
-			t.equal(groups.vendorTotal, 5 * 300, "vendor total")
+			t.equal(bar.groupEach, 12000, "each: the auction price of one")
+			t.equal(groups.ah[3].age, 6, "how old the price is")
+			t.equal(groups.ahTotal, 3 * 450000 + 58 * 12000 + 2 * 20000, "auction total")
+			t.equal(Names(groups.vendor), "Soulbound Ring, Wolf Meat", "to sell at a vendor, soulbound too")
+			t.equal(groups.vendor[2].groupEach, 300, "each: the vendor price of one")
+			t.equal(groups.vendorTotal, 5000 + 5 * 300, "vendor total")
 		end)
 
-		t.test("soulbound items are vendor only; junk below the minimum is left out", function()
-			local groups = sell.Collect()
-			t.equal(Names(groups.vendor), "Soulbound Ring", "soulbound apart")
-			t.ok(not Names(groups.sell):find("Broken Fang", 1, true), "5c is below 10s")
+		t.test("junk below the minimum is left out", function()
+			t.ok(not Names(sell.Collect().vendor):find("Broken Fang", 1, true), "5c is below 5s")
 			ns:SetSetting("sellListMinValue", 0)
-			t.ok(Names(sell.Collect().sell):find("Broken Fang", 1, true), "listed with no minimum")
-			ns:SetSetting("sellListMinValue", 10)
+			t.ok(Names(sell.Collect().vendor):find("Broken Fang", 1, true), "listed with no minimum")
+			ns:SetSetting("sellListMinValue", 5)
 		end)
 
 		t.test("kept items stay off the list", function()
 			sell.SetKept(1002, true)
 			local groups = sell.Collect()
-			t.ok(not Names(groups.sell):find("Mithril", 1, true), "not to sell")
+			t.ok(not Names(groups.ah):find("Mithril", 1, true), "not to sell")
 			t.equal(Names(groups.kept), "Mithril Bar", "but under Kept")
 			sell.SetKept(1002, false)
-			t.ok(Names(sell.Collect().sell):find("Mithril", 1, true), "listed again")
+			t.ok(Names(sell.Collect().ah):find("Mithril", 1, true), "listed again")
 		end)
 
 		t.test("click a column to sort by it, again to turn it around", function()
 			sell.SetSort("name")
-			t.equal(Names(sell.Collect().sell), "Black Lotus, Mithril Bar, Old Price, Wolf Meat", "A to Z")
+			t.equal(Names(sell.Collect().ah), "Black Lotus, Mithril Bar, Old Price", "A to Z")
 			sell.SetSort("name")
-			t.equal(Names(sell.Collect().sell), "Wolf Meat, Old Price, Mithril Bar, Black Lotus", "Z to A")
+			t.equal(Names(sell.Collect().ah), "Old Price, Mithril Bar, Black Lotus", "Z to A")
 			sell.SetSort("vendor")
-			t.equal(sell.Collect().sell[1].name, "Mithril Bar", "money columns start high (29s at a vendor)")
+			t.equal(sell.Collect().ah[1].name, "Mithril Bar", "money columns start high (29s at a vendor)")
 			sell.SetSort("value")
 		end)
 
@@ -129,7 +131,7 @@ return {
 			local rows = wow.findAll(function(frame)
 				return wow.visible(frame) and rawget(frame, "item") ~= nil
 			end)
-			t.equal(#rows, 4, "a row for each item to sell (the folded groups closed)")
+			t.equal(#rows, 5, "a row for each item to sell, at the auction house and a vendor")
 		end)
 
 		t.test("at the auction house: a button, the list beside it, closing with it", function()
@@ -165,7 +167,7 @@ return {
 			t.ok(ns.UI.IsDocked(), "beside the auction house")
 			local check = wow.findAll(function(frame)
 				local label = rawget(frame, "Text")
-				return wow.visible(frame) and label and label.text == "Open this list by itself at the auction house"
+				return wow.visible(frame) and label and label.text == "Open by itself at the auction house"
 			end)[1]
 			t.ok(check and check:GetChecked(), "a switch at the top of the list, on")
 			check:SetChecked(false)
@@ -177,6 +179,34 @@ return {
 			t.ok(not _G.NraKitSellListFrame:IsShown(), "then it doesn't open by itself")
 			wow.fire("AUCTION_HOUSE_CLOSED")
 			ns:SetSetting("sellListAutoOpen", true)
+		end)
+
+		t.test("at the auction house the vendor group starts folded; each place remembers its own", function()
+			wow.fire("AUCTION_HOUSE_SHOW")
+			t.ok(sell.IsOpen("ah") and not sell.IsOpen("vendor"), "auctioning: vendor folded")
+			sell.SetOpen("vendor", true)
+			t.ok(sell.IsOpen("vendor"), "opened by hand")
+			wow.fire("AUCTION_HOUSE_CLOSED")
+			t.ok(sell.IsOpen("vendor") and sell.IsOpen("ah"), "away: both open")
+			wow.fire("AUCTION_HOUSE_SHOW")
+			t.ok(sell.IsOpen("vendor"), "back at the auction house: as you left it")
+			wow.fire("AUCTION_HOUSE_CLOSED")
+		end)
+
+		t.test("at merchants (an option) it docks there, vendor group first", function()
+			MerchantFrame:Hide()
+			MerchantFrame:Show()
+			t.ok(not _G.NraKitSellListFrame:IsShown(), "off by default")
+			wow.fire("MERCHANT_CLOSED")
+			ns:SetSetting("sellListMerchantOpen", true)
+			MerchantFrame:Hide()
+			MerchantFrame:Show()
+			t.ok(_G.NraKitSellListFrame:IsShown(), "opens at the merchant")
+			t.ok(ns.UI.IsDocked(), "beside it")
+			t.ok(sell.IsOpen("vendor") and not sell.IsOpen("ah"), "vendor open, auction house folded")
+			wow.fire("MERCHANT_CLOSED")
+			t.ok(not ns.UI.IsDocked() and not _G.NraKitSellListFrame:IsShown(), "closes with the merchant")
+			ns:SetSetting("sellListMerchantOpen", false)
 		end)
 
 		t.test("a fresh scan while it's open says prices have changed, until you refresh", function()
@@ -207,8 +237,8 @@ return {
 			local saved = Auctionator
 			Auctionator = nil
 			local groups = sell.Collect()
-			t.equal(groups.sell[1].best, "vendor", "vendor prices only")
-			t.equal(groups.sellTotal, 0, "nothing at the auction house")
+			t.equal(#groups.ah, 0, "nothing to sell at the auction house")
+			t.equal(groups.vendor[1].best, "vendor", "vendor prices only")
 			Auctionator = saved
 			t.noErrors()
 		end)

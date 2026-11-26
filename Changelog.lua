@@ -36,9 +36,9 @@ ns.changelog = {
 			"What in your bags is worth selling, the most valuable first, so you don't have to hover every item.",
 			points = {
 				"**Auction house and vendor prices** side by side; the better one is bright, and a stale auction price is marked.",
-				"It **opens by itself beside the auction house** (a button there too); also in the Inventory tab, and /nra sell.",
+				"It **opens by itself beside the auction house** (a button there too), and optionally at **merchants**.",
 				"There, **Alt+click** an item to put it in Auctionator's Selling tab, or click to pick it up.",
-				"Soulbound items are apart (vendor only), and right-click one for **Keep, don't list** on what you use.",
+				"Split into **To Sell: Auction House** and **To Sell: Vendor**; right-click one for **Keep, don't list**.",
 				"Says when a fresh scan **changed the prices**, with a refresh button; sorts by any column.",
 			},
 			tip = "Auction prices come from **Auctionator**; without it, it's vendor prices." },

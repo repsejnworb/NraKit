@@ -7,11 +7,12 @@ local _, ns = ...
 --
 -- Each item is priced at the auction house (Auctionator's last scan, with how old that is)
 -- and at a vendor; the better of the two is its value. Without Auctionator it's vendor
--- prices only. Groups:
---   to sell      tradeable items worth at least the minimum
---   vendor only  soulbound ones (they can't go on the auction house), folded
---   bank         your bank as Inventory tracker last saw it (an option)
---   kept         items you marked "Keep, don't list" (potions, food...), shown on request
+-- prices only. Groups, by where each item sells best:
+--   To Sell: Auction House   tradeable items the auction house pays more for
+--   To Sell: Vendor          the rest, soulbound ones too (folded at the auction house)
+--   In Your Bank             your bank as Inventory tracker last saw it (an option)
+--   Kept                     items you marked "Keep, don't list" (potions, food...), folded
+-- It can also open at merchants (an option), docked beside them, vendor group first.
 --
 -- Saved: NraKitDB.sellListKept = { [itemID] = true }, sellListSort = { key, ascending },
 -- sellListOpen = { [group] = true/false } (folded or not).
@@ -54,6 +55,12 @@ local module = {
 			default = true,
 		},
 		{
+			key = "sellListMerchantOpen",
+			name = "Open the list at merchants",
+			description = "The Sell list also opens by itself beside a merchant's window, with what sells best to a vendor first. Click an item, then click the merchant's window to sell it.",
+			default = false,
+		},
+		{
 			key = "sellListAHButton",
 			name = "Button on the auction house",
 			description = "A \"Sell list\" button at the top of the auction house window.",
@@ -75,9 +82,14 @@ local sell = { STALE_DAYS = STALE_DAYS }
 ns.sellList = sell
 
 local auctionHouseOpen = false
+local merchantOpen = false
 
 function sell.IsAuctionHouseOpen()
 	return auctionHouseOpen
+end
+
+function sell.IsMerchantOpen()
+	return merchantOpen
 end
 
 local function API()
@@ -207,7 +219,7 @@ local SORTS = {
 		return a.count < b.count
 	end,
 	each = function(a, b)
-		return (a.each or 0) < (b.each or 0)
+		return (a.groupEach or 0) < (b.groupEach or 0)
 	end,
 	ah = function(a, b)
 		return (a.ahTotal or 0) < (b.ahTotal or 0)
@@ -259,16 +271,21 @@ local function SortItems(items)
 	end)
 end
 
--- Everything, grouped: { sell = {...}, vendor = {...}, bank = {...}, kept = {...},
--- sellTotal (auction), vendorTotal (vendor, of the sell group), loading }.
+-- Everything, grouped by where it sells best: { ah = {...}, vendor = {...} (soulbound ones
+-- too: at a vendor that makes no difference), bank = {...}, kept = {...}, ahTotal, vendorTotal,
+-- loading }. Each item gets groupEach: the price of one where its group sells it.
 function sell.Collect()
 	local min = (ns:GetValue("sellListMinValue") or 5) * 100
-	local groups = { sell = {}, vendor = {}, bank = {}, kept = {}, sellTotal = 0, vendorTotal = 0, loading = false }
+	local groups = { ah = {}, vendor = {}, bank = {}, kept = {}, ahTotal = 0, vendorTotal = 0, loading = false }
 	local function Add(item)
 		if not Price(item) then
 			groups.loading = true
 			return
 		end
+		if item.bound then
+			item.value, item.best = item.vendorTotal, "vendor"
+		end
+		item.groupEach = item.best == "ah" and item.each or item.vendorEach
 		if sell.IsKept(item.id) then
 			table.insert(groups.kept, item)
 		elseif item.value <= 0 or item.value < min then
@@ -278,18 +295,12 @@ function sell.Collect()
 			if item.best == "vendor" or item.bindType ~= 1 then
 				table.insert(groups.bank, item)
 			end
-		elseif item.bound then
-			if item.vendorTotal >= min then
-				item.value, item.best = item.vendorTotal, "vendor"
-				table.insert(groups.vendor, item)
-			end
+		elseif item.best == "ah" then
+			table.insert(groups.ah, item)
+			groups.ahTotal = groups.ahTotal + item.ahTotal
 		else
-			table.insert(groups.sell, item)
-			if item.best == "ah" then
-				groups.sellTotal = groups.sellTotal + item.ahTotal
-			else
-				groups.vendorTotal = groups.vendorTotal + item.vendorTotal
-			end
+			table.insert(groups.vendor, item)
+			groups.vendorTotal = groups.vendorTotal + item.vendorTotal
 		end
 	end
 	for _, item in ipairs(BagItems()) do
@@ -300,24 +311,44 @@ function sell.Collect()
 			Add(item)
 		end
 	end
-	for _, list in ipairs({ groups.sell, groups.vendor, groups.bank, groups.kept }) do
+	for _, list in ipairs({ groups.ah, groups.vendor, groups.bank, groups.kept }) do
 		SortItems(list)
 	end
 	return groups
 end
 
--- Whether a group is open (to sell and bank are, vendor only and kept start folded).
-function sell.IsOpen(group)
-	local open = NraKitDB.sellListOpen and NraKitDB.sellListOpen[group]
-	if open == nil then
-		return group == "sell" or group == "bank"
+-- Where you are: "ah", "merchant" or "away". Groups fold by it.
+function sell.Context()
+	if auctionHouseOpen then
+		return "ah"
+	elseif merchantOpen then
+		return "merchant"
 	end
-	return open
+	return "away"
+end
+
+-- Whether a group is open. Each place remembers its own: at the auction house the vendor
+-- group starts folded, at a merchant the auction house group; Kept starts folded everywhere.
+function sell.IsOpen(group)
+	local context = sell.Context()
+	local saved = NraKitDB.sellListOpen and NraKitDB.sellListOpen[context]
+	if saved and saved[group] ~= nil then
+		return saved[group]
+	end
+	if group == "kept" then
+		return false
+	end
+	return not (context == "ah" and group == "vendor" or context == "merchant" and group == "ah")
 end
 
 function sell.SetOpen(group, open)
+	local context = sell.Context()
 	NraKitDB.sellListOpen = NraKitDB.sellListOpen or {}
-	NraKitDB.sellListOpen[group] = open
+	-- (Saved per group before places had their own.)
+	if type(NraKitDB.sellListOpen[context]) ~= "table" then
+		NraKitDB.sellListOpen[context] = {}
+	end
+	NraKitDB.sellListOpen[context][group] = open
 	if sell.onChanged then
 		sell.onChanged()
 	end
@@ -367,12 +398,15 @@ local function CreateAHButton()
 	UpdateAHButton()
 end
 
--- Opens the list; at the auction house (if that's the option) NraKit's window docks beside
--- it, whichever tab you go to next, until the auction house closes.
+-- Opens the list; at the auction house or a merchant (if that's the option) NraKit's window
+-- docks beside it, whichever tab you go to next, until it closes.
 function ns:OpenSellList()
-	if auctionHouseOpen and ns:GetOption("sellListDock") and type(AuctionHouseFrame) == "table"
-		and AuctionHouseFrame:IsShown() and not ns.UI.IsDocked() then
-		ns.UI.Dock(AuctionHouseFrame)
+	if ns:GetOption("sellListDock") and not ns.UI.IsDocked() then
+		if auctionHouseOpen and type(AuctionHouseFrame) == "table" and AuctionHouseFrame:IsShown() then
+			ns.UI.Dock(AuctionHouseFrame)
+		elseif merchantOpen and type(MerchantFrame) == "table" and MerchantFrame:IsShown() then
+			ns.UI.Dock(MerchantFrame)
+		end
 	end
 	if sell.ShowWindow then
 		sell.ShowWindow()
@@ -391,12 +425,34 @@ eventFrame:SetScript("OnEvent", function(_, event, addonName)
 	elseif event == "AUCTION_HOUSE_CLOSED" then
 		auctionHouseOpen = false
 		ns.UI.Undock()
+	elseif event == "MERCHANT_CLOSED" then
+		merchantOpen = false
+		ns.UI.Undock()
 	end
 end)
+
+-- A merchant opens the list (an option), once its window is shown so the list docks beside it.
+local merchantHooked = false
+
+local function HookMerchant()
+	if type(MerchantFrame) ~= "table" or merchantHooked then
+		return
+	end
+	merchantHooked = true
+	MerchantFrame:HookScript("OnShow", function()
+		if ns:IsModuleEnabled(module.key) then
+			merchantOpen = true
+			if ns:GetOption("sellListMerchantOpen") then
+				ns:OpenSellList()
+			end
+		end
+	end)
+end
 
 function module:OnInitialize()
 	eventFrame:RegisterEvent("ADDON_LOADED")
 	CreateAHButton()
+	HookMerchant()
 	ns:RegisterSlashCommand("sell", function()
 		if not ns:IsModuleEnabled(module.key) then
 			ns:Print("Turn on Sell list first (/nra).")
@@ -411,7 +467,7 @@ function module:OnInitialize()
 end
 
 function module:OnEnabledChanged(enabled)
-	for _, event in ipairs({ "AUCTION_HOUSE_SHOW", "AUCTION_HOUSE_CLOSED" }) do
+	for _, event in ipairs({ "AUCTION_HOUSE_SHOW", "AUCTION_HOUSE_CLOSED", "MERCHANT_CLOSED" }) do
 		if enabled then
 			eventFrame:RegisterEvent(event)
 		else

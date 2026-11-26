@@ -27,19 +27,22 @@ local FOOTER_HEIGHT = 36
 
 -- Columns, from the right edge of a row: { right offset, width }.
 local AH_RIGHT, AH_WIDTH = -8, 110
-local EACH_RIGHT, EACH_WIDTH = -126, 96
-local VENDOR_RIGHT, VENDOR_WIDTH = -230, 96
+local VENDOR_RIGHT, VENDOR_WIDTH = -126, 96
+local EACH_RIGHT, EACH_WIDTH = -230, 96
 local COUNT_RIGHT, COUNT_WIDTH = -334, 50
 local CHECK_SECONDS = 2 -- how often the shown prices are compared with Auctionator's
 
+-- Groups, in the order they're listed (at a merchant the vendor group comes first).
 local GROUPS = {
-	{ key = "sell", label = "To sell" },
-	{ key = "vendor", label = "Vendor only", note = "soulbound: they can't go on the auction house" },
-	{ key = "bank", label = "In your bank", note = "take them out to sell them" },
-	{ key = "kept", label = "Kept", note = "you keep these off the list: right-click one to list it again" },
+	ah = { key = "ah", label = "To Sell: Auction House" },
+	vendor = { key = "vendor", label = "To Sell: Vendor" },
+	bank = { key = "bank", label = "In Your Bank", note = "take them out to sell them" },
+	kept = { key = "kept", label = "Kept", note = "you keep these off the list: right-click one to list it again" },
 }
+local ORDER = { "ah", "vendor", "bank", "kept" }
+local MERCHANT_ORDER = { "vendor", "ah", "bank", "kept" }
 
-local frame, scroll, footerText, footerNote, refreshButton, autoOpenCheck
+local frame, scroll, footerText, footerNote, refreshButton, autoOpenCheck, merchantOpenCheck
 local sortTitles = {}
 local shownItems = {} -- the items on screen, to notice when their auction prices change
 local pricesChanged = false
@@ -103,7 +106,7 @@ local function OnRowClick(self, button)
 				and ItemLocation:CreateFromBagAndSlot(item.bag, item.slot) or nil
 			HandleModifiedItemClick(link, location)
 		end
-	elseif sell.IsAuctionHouseOpen() and item.bag and not InCombatLockdown() then
+	elseif (sell.IsAuctionHouseOpen() or sell.IsMerchantOpen()) and item.bag and not InCombatLockdown() then
 		C_Container.PickupContainerItem(item.bag, item.slot)
 	end
 end
@@ -126,6 +129,8 @@ local function OnRowEnter(self)
 		if sell.HasAuctionator() then
 			GameTooltip:AddLine("Alt-click to put it in Auctionator's Selling tab.", 0.5, 0.5, 0.5, true)
 		end
+	elseif item.bag and sell.IsMerchantOpen() then
+		GameTooltip:AddLine("Click to pick it up, then click the merchant's window to sell it.", 0.5, 0.5, 0.5, true)
 	end
 	GameTooltip:AddLine("Shift-click to link, right-click to keep it off the list", 0.5, 0.5, 0.5)
 	GameTooltip:Show()
@@ -180,7 +185,10 @@ local function NoteText(item)
 	elseif item.best == "vendor" and sell.HasAuctionator() and not item.bound then
 		table.insert(parts, "no auction price")
 	end
-	if item.age and item.age > sell.STALE_DAYS then
+	if item.bound then
+		table.insert(parts, "soulbound")
+	end
+	if item.best == "ah" and item.age and item.age > sell.STALE_DAYS then
 		table.insert(parts, string.format("|cffff9933price %d days old|r", item.age))
 	end
 	if item.disenchant then
@@ -200,8 +208,9 @@ local function FillRow(row, item, index)
 	row.count:SetText(item.count > 1 and ("x" .. item.count) or "")
 	row.count:SetTextColor(unpack(UI.TEXT))
 	local stale = item.age and item.age > sell.STALE_DAYS
-	row.each:SetText(item.each and Money(item.each) or "")
-	row.each:SetTextColor(unpack(stale and UI.TEXT_DIM or UI.TEXT))
+	-- Each: the price of one where its group sells it.
+	row.each:SetText(item.groupEach and item.groupEach > 0 and Money(item.groupEach) or "")
+	row.each:SetTextColor(unpack(stale and item.best == "ah" and UI.TEXT_DIM or UI.TEXT))
 	row.ah:SetText(item.ahTotal and Money(item.ahTotal) or "|cff666666-|r")
 	row.vendor:SetText(item.vendorTotal > 0 and Money(item.vendorTotal) or "|cff666666-|r")
 	-- The better of the two is bright, the other dim.
@@ -301,6 +310,7 @@ function Render()
 	pool:ReleaseAll()
 	UpdateSortTitles()
 	autoOpenCheck:SetChecked(ns:GetOption("sellListAutoOpen"))
+	merchantOpenCheck:SetChecked(ns:GetOption("sellListMerchantOpen"))
 	local content = scroll.content
 	local width = content:GetWidth() - 2 * PAD
 	local groups = sell.Collect()
@@ -308,9 +318,10 @@ function Render()
 	wipe(shownItems)
 	pricesChanged = false
 
-	for _, group in ipairs(GROUPS) do
-		local items = groups[group.key]
-		if #items > 0 or group.key == "sell" then
+	for _, key in ipairs(sell.IsMerchantOpen() and MERCHANT_ORDER or ORDER) do
+		local group = GROUPS[key]
+		local items = groups[key]
+		if #items > 0 or key == "ah" or key == "vendor" then
 			local open = sell.IsOpen(group.key)
 			local header = AcquireGroupHeader(content)
 			header.group = group.key
@@ -329,7 +340,7 @@ function Render()
 			if open then
 				if #items == 0 then
 					local text = groups.loading and "Loading item info..."
-						or "Nothing in your bags worth selling (or it's all kept or below your minimum)."
+						or (key == "ah" and "Nothing that sells better at the auction house." or "Nothing that sells better at a vendor.")
 					y = y - Message(content, text, y - 2)
 				end
 				for index, item in ipairs(items) do
@@ -347,8 +358,8 @@ function Render()
 	content:SetHeight(-y + PAD)
 	scroll:SetScroll(scroll:GetVerticalScroll())
 
-	footerText:SetText(string.format("|cffffffff~%s|r at the auction house (%d items)   ·   %s at vendors",
-		Money(groups.sellTotal), #groups.sell, Money(groups.vendorTotal)))
+	footerText:SetText(string.format("|cffffffff~%s|r at the auction house (%d)   ·   %s at vendors (%d)",
+		Money(groups.ahTotal), #groups.ah, Money(groups.vendorTotal), #groups.vendor))
 	UpdateFooterNote()
 end
 
@@ -397,15 +408,24 @@ local function CreateWindow()
 	toolbar:SetPoint("TOPRIGHT")
 	toolbar:SetHeight(TOOLBAR_HEIGHT)
 	UI.AddLine(toolbar, "BOTTOM")
-	autoOpenCheck = CreateFrame("CheckButton", nil, toolbar, "UICheckButtonTemplate")
-	autoOpenCheck:SetSize(22, 22)
-	autoOpenCheck:SetPoint("LEFT", PAD, 0)
-	autoOpenCheck.Text:SetFontObject("GameFontHighlightSmall")
-	autoOpenCheck.Text:SetText("Open this list by itself at the auction house")
-	autoOpenCheck:SetHitRectInsets(0, -260, 0, 0)
-	autoOpenCheck:SetScript("OnClick", function(self)
-		ns:SetSetting("sellListAutoOpen", self:GetChecked() and true or false)
-	end)
+	local function Switch(text, key, anchor)
+		local check = CreateFrame("CheckButton", nil, toolbar, "UICheckButtonTemplate")
+		check:SetSize(22, 22)
+		if anchor then
+			check:SetPoint("LEFT", anchor.Text, "RIGHT", 18, -1)
+		else
+			check:SetPoint("LEFT", PAD, 0)
+		end
+		check.Text:SetFontObject("GameFontHighlightSmall")
+		check.Text:SetText(text)
+		check:SetHitRectInsets(0, -(check.Text:GetStringWidth() + 4), 0, 0)
+		check:SetScript("OnClick", function(self)
+			ns:SetSetting(key, self:GetChecked() and true or false)
+		end)
+		return check
+	end
+	autoOpenCheck = Switch("Open by itself at the auction house", "sellListAutoOpen")
+	merchantOpenCheck = Switch("At merchants", "sellListMerchantOpen", autoOpenCheck)
 
 	local top = CreateFrame("Frame", nil, body)
 	top:SetPoint("TOPLEFT", 0, -TOOLBAR_HEIGHT - 1)
@@ -417,7 +437,7 @@ local function CreateWindow()
 	itemTitle:SetPoint("LEFT", PAD + 30, 0)
 	SortTitle(top, "Count", "count", COUNT_RIGHT, COUNT_WIDTH)
 	SortTitle(top, "Each", "each", EACH_RIGHT, EACH_WIDTH)
-	SortTitle(top, "Auction house", "ah", AH_RIGHT, AH_WIDTH)
+	SortTitle(top, "Auction House", "ah", AH_RIGHT, AH_WIDTH)
 	SortTitle(top, "Vendor", "vendor", VENDOR_RIGHT, VENDOR_WIDTH)
 	local valueTitle = SortTitle(top, "Value", "value", 0, 60, "LEFT")
 	valueTitle:ClearAllPoints()
