@@ -7,6 +7,19 @@ CreateFrame("Frame", "AuctionHouseFrame")
 CreateFrame("Frame", "MerchantFrame"):Hide()
 CreateFrame("Frame", "BankFrame"):Hide()
 CreateFrame("Frame", "MailFrame"):Hide()
+CreateFrame("Frame", "OpenMailFrame"):Hide()
+-- The bank's page tabs down its right side, 50 wide (Forever's BankFrame.bankPageTabPool).
+local bankTab = CreateFrame("Frame")
+bankTab:SetWidth(50)
+rawset(BankFrame, "bankPageTabPool", { EnumerateActive = function()
+	local done = false
+	return function()
+		if not done then
+			done = true
+			return bankTab
+		end
+	end
+end })
 rawset(MerchantFrame, "page", 1)
 
 -- Your bags: one bag with these slots.
@@ -393,6 +406,8 @@ return {
 			t.equal(#buttons, 1, "a button on the bank")
 			buttons[1].scripts.OnClick(buttons[1])
 			t.ok(_G.NraKitSellListFrame:IsShown() and ns.UI.IsDocked(), "the list, beside the bank")
+			local anchor, x = ns.UI.DockAnchor()
+			t.ok(anchor == BankFrame and x == 56, "past the bank's side tabs (50 wide): " .. tostring(x))
 			local listed = false
 			for _, item in ipairs(sell.Collect().ah) do
 				listed = listed or item.where == "bank"
@@ -405,6 +420,16 @@ return {
 				return rawget(frame, "parent") == MailFrame and rawget(frame, "text") and frame.text.text == "NraKit Sell List"
 			end)
 			t.equal(#mailButtons, 1, "and one on the mailbox")
+			MailFrame:Show()
+			wow.fire("MAIL_SHOW")
+			mailButtons[1].scripts.OnClick(mailButtons[1])
+			t.equal(ns.UI.DockAnchor(), MailFrame, "beside the mailbox")
+			OpenMailFrame:Show()
+			t.equal(ns.UI.DockAnchor(), OpenMailFrame, "opening a mail moves it past the mail")
+			OpenMailFrame:Hide()
+			t.equal(ns.UI.DockAnchor(), MailFrame, "and back when it closes")
+			wow.fire("MAIL_CLOSED")
+			MailFrame:Hide()
 			CONTAINERS[6] = {}
 		end)
 
@@ -421,6 +446,8 @@ return {
 			end
 			sell.AskTake(bars, UIParent)
 			t.equal(sell.Prompt().all.text.text, "Take 1 (All That Fit)", "room for one")
+			-- Regression: it was on the list's own layer, so it drew behind it.
+			t.equal(sell.Prompt():GetFrameStrata(), "FULLSCREEN_DIALOG", "above the list")
 			sell.HidePrompt()
 			wow.fire("BANKFRAME_CLOSED")
 			ns:SetSetting("sellListBank", false)

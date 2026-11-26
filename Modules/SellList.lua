@@ -524,19 +524,61 @@ end
 
 -- Opens the list; at the auction house, a merchant, the bank or the mailbox (if that's the
 -- option) NraKit's window docks beside it, whichever tab you go to next, until it closes.
+-- The bank's page tabs hang off its right side: dock past the widest of them. (Forever's
+-- bank: BankFrame.bankPageTabPool, tabs anchored to its top right; read only.)
+local function BankTabsWidth()
+	local width = 0
+	local pool = type(BankFrame) == "table" and BankFrame.bankPageTabPool
+	if pool and pool.EnumerateActive then
+		for tab in pool:EnumerateActive() do
+			if tab:IsShown() then
+				width = math.max(width, tab:GetWidth() or 0)
+			end
+		end
+	end
+	return width
+end
+
+-- An open mail shows to the right of the mailbox, where the list docks: then the list moves
+-- right of it, and back when it closes.
+local function MailDock()
+	if type(OpenMailFrame) == "table" and OpenMailFrame:IsShown() then
+		return OpenMailFrame
+	end
+	return MailFrame
+end
+
 local DOCKS = {
-	{ open = function() return auctionHouseOpen end, frame = "AuctionHouseFrame" },
-	{ open = function() return merchantOpen end, frame = "MerchantFrame" },
-	{ open = function() return placeOpen.bank end, frame = "BankFrame" },
-	{ open = function() return placeOpen.mail end, frame = "MailFrame" },
+	{ open = function() return auctionHouseOpen end, frame = function() return AuctionHouseFrame end },
+	{ open = function() return merchantOpen end, frame = function() return MerchantFrame end },
+	{ open = function() return placeOpen.bank end, frame = function() return BankFrame end,
+		x = function() return BankTabsWidth() + 6 end },
+	{ open = function() return placeOpen.mail end, frame = MailDock },
 }
+
+local openMailHooked = false
+
+local function HookOpenMail()
+	if openMailHooked or type(OpenMailFrame) ~= "table" then
+		return
+	end
+	openMailHooked = true
+	local function Follow()
+		local anchor = ns.UI.DockAnchor()
+		if anchor and (anchor == MailFrame or anchor == OpenMailFrame) then
+			ns.UI.MoveDock(MailDock())
+		end
+	end
+	OpenMailFrame:HookScript("OnShow", Follow)
+	OpenMailFrame:HookScript("OnHide", Follow)
+end
 
 function ns:OpenSellList()
 	if ns:GetOption("sellListDock") and not ns.UI.IsDocked() then
 		for _, dock in ipairs(DOCKS) do
-			local frame = _G[dock.frame]
-			if dock.open() and type(frame) == "table" and frame:IsShown() then
-				ns.UI.Dock(frame)
+			local frame = dock.open() and dock.frame()
+			if type(frame) == "table" and frame:IsShown() then
+				ns.UI.Dock(frame, dock.x and dock.x())
 				break
 			end
 		end
@@ -581,6 +623,7 @@ eventFrame:SetScript("OnEvent", function(_, event, addonName)
 	elseif event == "MAIL_SHOW" or event == "MAIL_CLOSED" then
 		placeOpen.mail = event == "MAIL_SHOW"
 		CreatePlaceButtons()
+		HookOpenMail()
 		if not placeOpen.mail then
 			ns.UI.Undock()
 		end

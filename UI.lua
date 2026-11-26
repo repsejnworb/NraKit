@@ -170,7 +170,7 @@ end
 
 -- Docked: NraKit's windows open beside another frame (the auction house) instead of where
 -- they usually are, whichever tab; dragging one while docked moves them for that visit only.
-local dock -- { anchor, position = { point, relativePoint, x, y } after a drag }
+local dock -- { anchor, x (gap right of it), position = { point, relativePoint, x, y } after a drag }
 
 local function SavePosition(frame)
 	local point, _, relativePoint, x, y = frame:GetPoint()
@@ -189,7 +189,7 @@ local function ApplyPosition(frame)
 		if dock.position then
 			frame:SetPoint(dock.position[1], UIParent, dock.position[2], dock.position[3], dock.position[4])
 		else
-			frame:SetPoint("TOPLEFT", dock.anchor, "TOPRIGHT", 4, 0)
+			frame:SetPoint("TOPLEFT", dock.anchor, "TOPRIGHT", dock.x or 4, 0)
 		end
 		return
 	end
@@ -200,13 +200,37 @@ local function ApplyPosition(frame)
 	end
 end
 
--- Docks NraKit's windows beside `anchor` (see dock above).
-function UI.Dock(anchor)
-	dock = { anchor = anchor }
+-- Docks NraKit's windows beside `anchor`, `x` right of it (default 4; e.g. past a window's
+-- side tabs). See dock above.
+function UI.Dock(anchor, x)
+	dock = { anchor = anchor, x = x }
 end
 
 function UI.IsDocked()
 	return dock ~= nil
+end
+
+-- What it's docked to, and how far right of it (nil when not docked).
+function UI.DockAnchor()
+	if dock then
+		return dock.anchor, dock.x or 4
+	end
+end
+
+-- Moves the dock to another frame (e.g. beside an open mail instead of the mailbox); the open
+-- window follows, unless you've dragged it.
+function UI.MoveDock(anchor, x)
+	if not dock then
+		return
+	end
+	dock.anchor, dock.x = anchor, x
+	if not dock.position then
+		for _, frame in pairs(tabWindows) do
+			if frame:IsShown() then
+				ApplyPosition(frame)
+			end
+		end
+	end
 end
 
 -- Undocks: the open window closes (it went with what it was docked to), and the next one

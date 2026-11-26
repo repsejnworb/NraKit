@@ -247,7 +247,8 @@ end
 local function CreatePrompt()
 	prompt = CreateFrame("Frame", "NraKitSellTakePrompt", UIParent)
 	prompt:SetSize(300, 118)
-	prompt:SetFrameStrata("DIALOG")
+	-- Above the list (both would be DIALOG, and the list comes to the front when clicked).
+	prompt:SetFrameStrata("FULLSCREEN_DIALOG")
 	prompt:SetToplevel(true)
 	prompt:EnableMouse(true)
 	prompt:EnableKeyboard(true)
@@ -338,6 +339,7 @@ function sell.AskTake(item, row)
 	prompt:ClearAllPoints()
 	prompt:SetPoint("TOPRIGHT", row, "BOTTOMRIGHT", 0, -2)
 	prompt:Show()
+	prompt:Raise()
 end
 
 function sell.HidePrompt()
