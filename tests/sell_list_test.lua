@@ -1,7 +1,7 @@
 -- Sell List: what in your bags is worth selling, the most valuable first, at the auction house
 -- (Auctionator) and at a vendor; soulbound ones apart, kept ones off the list.
 
-Enum.BagIndex = { Backpack = 0, Bag_1 = 1, Bag_2 = 2, ReagentBag = 5, CharacterBankTab_1 = 6 }
+Enum.BagIndex = { Keyring = -1, Backpack = 0, Bag_1 = 1, Bag_2 = 2, ReagentBag = 5, CharacterBankTab_1 = 6 }
 -- The auction house window (its addon already loaded), and a merchant's.
 CreateFrame("Frame", "AuctionHouseFrame")
 CreateFrame("Frame", "MerchantFrame"):Hide()
@@ -33,8 +33,8 @@ local BAG = {
 	{ itemID = 1006, stackCount = 2 }, -- an old auction price: 2g, 6 days old
 }
 -- A second bag with 4 empty slots, and the bank's first tab (bag 6).
-local BAG_SIZE = { [0] = #BAG, [1] = 4, [2] = 0, [5] = 0, [6] = 4 }
-local CONTAINERS = { [0] = BAG, [1] = {}, [2] = {}, [5] = {}, [6] = {} }
+local BAG_SIZE = { [-1] = 0, [0] = #BAG, [1] = 4, [2] = 0, [5] = 0, [6] = 4 }
+local CONTAINERS = { [-1] = {}, [0] = BAG, [1] = {}, [2] = {}, [5] = {}, [6] = {} }
 local REFUSES = {} -- bags the game won't put the item in ("The item doesn't go into that container")
 C_Container.GetContainerNumSlots = function(bag)
 	return BAG_SIZE[bag] or 0
@@ -630,6 +630,40 @@ return {
 			wow.fire("BANKFRAME_CLOSED")
 			BankFrame:Hide()
 			BAG_SIZE[5], CONTAINERS[1], CONTAINERS[6] = 0, {}, {}
+		end)
+
+		-- Regression: Forever's keyring (bag -1) came first, and everything was put there: "That
+		-- item doesn't go in that container". It takes keys only, and isn't room in your bags.
+		t.test("the keyring only takes keys, and isn't room for anything else", function()
+			BAG_SIZE[-1] = 4
+			CONTAINERS[1] = {}
+			local function Has(list, bag)
+				for _, each in ipairs(list) do
+					if each == bag then
+						return true
+					end
+				end
+				return false
+			end
+			t.ok(not Has(sell.BagsFor(1010), -1), "Arcane Crystal: not the keyring")
+			local crystal = { id = 1010, where = "bank", count = 1 }
+			t.equal(sell.Room(crystal), 4, "room: your 4 free bag slots, not the keyring's")
+			cursor = nil
+			CONTAINERS[6] = { { itemID = 1010, stackCount = 1 } }
+			BankFrame:Show()
+			wow.fire("BANKFRAME_OPENED")
+			for _, item in ipairs(sell.Collect().ah) do
+				if item.where == "bank" then
+					crystal = item
+				end
+			end
+			sell.Take(crystal)
+			t.equal(CONTAINERS[-1][1], nil, "not in the keyring")
+			t.equal(CONTAINERS[1][1] and CONTAINERS[1][1].itemID, 1010, "in a bag")
+			wow.fire("BANKFRAME_CLOSED")
+			BankFrame:Hide()
+			BAG_SIZE[-1] = 0
+			CONTAINERS[1], CONTAINERS[6] = {}, {}
 		end)
 
 		-- Regression: the game refused a bag ("The item doesn't go into that container") and the

@@ -41,6 +41,9 @@ local function MaxStack(item)
 end
 
 local REAGENT_BAG = Enum.BagIndex and Enum.BagIndex.ReagentBag or 5
+-- Forever has a keyring (bag -1, 32 slots): it takes keys only.
+local KEYRING = Enum.BagIndex and Enum.BagIndex.Keyring or -1
+local KEY_CLASS = Enum.ItemClass and Enum.ItemClass.Key or 13
 
 -- /nra sell debug: what taking does, in chat.
 local function Debug(...)
@@ -60,19 +63,26 @@ local function IsProfessionBag(bag)
 	return inventoryID ~= nil and IsInventoryItemProfessionBag("player", inventoryID) == true
 end
 
--- The bags an item can go in, the way the game fills them: the reagent bag first for crafting
--- reagents (it takes nothing else: "The item doesn't go into that container"), then profession
--- bags of its kind (herbs, ore...), then ordinary bags.
+-- The bags an item can go in, the way the game fills them: the keyring only for keys, the
+-- reagent bag first for crafting reagents (each takes nothing else: "That item doesn't go in
+-- that container"), then profession bags of its kind (herbs, ore...), then ordinary bags.
+-- Also returns why, per bag (for /nra sell debug).
 local function BagsFor(itemID)
 	local family = C_Item.GetItemFamily and C_Item.GetItemFamily(itemID) or 0
 	local isReagent = select(17, C_Item.GetItemInfo(itemID)) == true
+	local isKey = select(6, C_Item.GetItemInfoInstant(itemID)) == KEY_CLASS
 	local first, ordinary = {}, {}
 	local why = {}
 	for _, bag in ipairs(ns.inventory.BagsAt("bags")) do
 		local _, bagFamily = C_Container.GetContainerNumFreeSlots(bag)
 		bagFamily = bagFamily or 0
 		local profession = IsProfessionBag(bag)
-		if bag == REAGENT_BAG then
+		if bag == KEYRING then
+			if isKey then
+				table.insert(first, bag)
+			end
+			why[#why + 1] = string.format("%d:keyring%s", bag, isKey and "+" or "-")
+		elseif bag == REAGENT_BAG then
 			if isReagent then
 				table.insert(first, bag)
 			end
@@ -89,12 +99,11 @@ local function BagsFor(itemID)
 			why[#why + 1] = bag .. ":ordinary+"
 		end
 	end
-	Debug(string.format("item %s family %s reagent %s; bags %s", tostring(itemID), tostring(family),
-		tostring(isReagent), table.concat(why, " ")))
 	for _, bag in ipairs(ordinary) do
 		table.insert(first, bag)
 	end
-	return first
+	return first, string.format("item %s family %s reagent %s key %s; bags %s", tostring(itemID), tostring(family),
+		tostring(isReagent), tostring(isKey), table.concat(why, " "))
 end
 
 -- A free bag slot that can hold the item, not one already used by this take; nil if your bags
@@ -155,6 +164,7 @@ local function TakeFromBank(item, want)
 		return "Stopped: you have something on your cursor."
 	end
 	local maxStack, done, targets, refused = MaxStack(item), 0, {}, {}
+	Debug(select(2, BagsFor(item.id)))
 	local split = false
 	for _, place in ipairs(item.slots) do
 		local remaining = want - done
