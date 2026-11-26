@@ -553,6 +553,16 @@ instead of just vanishing.
   it, and while the **mouse is over** a bar. Each is an option.
 - Every change is animated: fading in is quick, but never a jump.
 
+#### Shortcuts
+
+Short commands for NraKit's everyday ones, each the same as its `/nra` command: **`/remind`, `/todo`, `/item`,
+`/dps`, `/shop`, `/bank`, `/goal`, `/note`, `/wish`, `/scan` and `/done`**.
+
+- NraKit **only takes ones nobody else uses**: a command another addon, the game or an emote already has is left
+  alone, and an addon that takes one later gets it. `/nra` always works.
+- `/nra shortcuts` lists them, and which are in use elsewhere (and by what).
+- Each can be turned off, and one whose feature is off isn't taken.
+
 #### Player notes
 
 Give players a **label** (Kill on sight, Avoid, Neutral or Liked), **tags** of your own and a **dated

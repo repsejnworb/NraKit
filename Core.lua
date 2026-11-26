@@ -194,9 +194,8 @@ local function PrintAllHelp()
 	end
 end
 
-SLASH_NRAKIT1 = "/nrakit"
-SLASH_NRAKIT2 = "/nra"
-SlashCmdList.NRAKIT = function(input)
+-- Runs a /nra command line ("goal 20 linen"), as typed after /nra (Shortcuts.lua uses it too).
+function ns:RunSlashCommand(input)
 	local command, rest = strtrim(input or ""):match("^(%S*)%s*(.-)$")
 	command = command:lower()
 	local handler = slashCommands[command]
@@ -213,6 +212,12 @@ SlashCmdList.NRAKIT = function(input)
 	else
 		ns:Print("Unknown command \"" .. command .. "\". Type /nra help for the list.")
 	end
+end
+
+SLASH_NRAKIT1 = "/nrakit"
+SLASH_NRAKIT2 = "/nra"
+SlashCmdList.NRAKIT = function(input)
+	ns:RunSlashCommand(input)
 end
 
 -- Things waiting for you, counted on the NraKit button's badge (Modules/NraKitButton.lua):

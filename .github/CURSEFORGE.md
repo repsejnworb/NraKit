@@ -312,6 +312,12 @@ The game's **Cooldown Manager** bars show in combat and **fade out a while after
 - They also come back with a **hostile target** (lining up a pull), fading right away when you drop it, and while the **mouse is over** a bar. Each is an option.
 - Every change is animated: fading in is quick, but never a jump.
 
+### Shortcuts
+Short commands for NraKit's everyday ones, each the same as its `/nra` command: **`/remind`, `/todo`, `/item`, `/dps`, `/shop`, `/bank`, `/goal`, `/note`, `/wish`, `/scan` and `/done`**.
+- NraKit **only takes ones nobody else uses**: a command another addon, the game or an emote already has is left alone, and an addon that takes one later gets it. `/nra` always works.
+- `/nra shortcuts` lists them, and which are in use elsewhere (and by what).
+- Each can be turned off, and one whose feature is off isn't taken.
+
 ### Player notes
 Remember who stole your mining node, who ninja'd the loot and who was a great healer.
 - Give a player a **label** (Kill on sight, Avoid, Neutral or Liked), **tags** of your own and a **dated log of notes** (each note saves the date, zone and your character).

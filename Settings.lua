@@ -15,6 +15,9 @@ local addonName, ns = ...
 ns.sectionOrder = { "Units & Nameplates", "Classes", "Quests", "Bags & Items", "Professions", "Trackers & Reminders", "Mail", "Utilities" }
 
 ns.settings = {}
+-- Functions called with (moduleKey, on) after any module is turned on or off (e.g. Shortcuts
+-- adds or takes back a feature's short command).
+ns.moduleToggledCallbacks = {}
 ns.optionsButtons = {} -- module key -> list of { label, description, onClick }
 
 -- { { name = section, modules = { module, ... }, subsections = { { name, modules }, ... } }, ... }
@@ -214,6 +217,9 @@ function ns:RegisterSettings()
 					module:OnEnabledChanged(value)
 				end
 				ns.UI.RefreshTabs() -- its tab brightens or dims, its page turns into its window
+				for _, callback in ipairs(ns.moduleToggledCallbacks) do
+					callback(module.key, value)
+				end
 			end)
 
 			local subcategory, sublayout
