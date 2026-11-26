@@ -42,6 +42,24 @@ end
 
 local REAGENT_BAG = Enum.BagIndex and Enum.BagIndex.ReagentBag or 5
 
+-- /nra sell debug: what taking does, in chat.
+local function Debug(...)
+	if sell.debug then
+		print("|cffff9933NraKit sell debug:|r", ...)
+	end
+end
+sell.Debug = Debug
+
+-- Whether a bag is a profession bag (herbs, enchanting...), as Blizzard's bags tell: its type
+-- (GetContainerNumFreeSlots' bagFamily) can be 0 on some clients.
+local function IsProfessionBag(bag)
+	if bag == 0 or not (C_Container.ContainerIDToInventoryID and IsInventoryItemProfessionBag) then
+		return false
+	end
+	local inventoryID = C_Container.ContainerIDToInventoryID(bag)
+	return inventoryID ~= nil and IsInventoryItemProfessionBag("player", inventoryID) == true
+end
+
 -- The bags an item can go in, the way the game fills them: the reagent bag first for crafting
 -- reagents (it takes nothing else: "The item doesn't go into that container"), then profession
 -- bags of its kind (herbs, ore...), then ordinary bags.
@@ -49,21 +67,30 @@ local function BagsFor(itemID)
 	local family = C_Item.GetItemFamily and C_Item.GetItemFamily(itemID) or 0
 	local isReagent = select(17, C_Item.GetItemInfo(itemID)) == true
 	local first, ordinary = {}, {}
+	local why = {}
 	for _, bag in ipairs(ns.inventory.BagsAt("bags")) do
 		local _, bagFamily = C_Container.GetContainerNumFreeSlots(bag)
 		bagFamily = bagFamily or 0
+		local profession = IsProfessionBag(bag)
 		if bag == REAGENT_BAG then
 			if isReagent then
 				table.insert(first, bag)
 			end
-		elseif bagFamily ~= 0 then
-			if bit.band(family or 0, bagFamily) ~= 0 then
+			why[#why + 1] = string.format("%d:reagent%s", bag, isReagent and "+" or "-")
+		elseif bagFamily ~= 0 or profession then
+			-- A profession bag takes only its kind: an item whose family matches it.
+			local fits = bagFamily ~= 0 and bit.band(family or 0, bagFamily) ~= 0
+			if fits then
 				table.insert(first, bag)
 			end
+			why[#why + 1] = string.format("%d:profession(fam %s)%s", bag, tostring(bagFamily), fits and "+" or "-")
 		else
 			table.insert(ordinary, bag)
+			why[#why + 1] = bag .. ":ordinary+"
 		end
 	end
+	Debug(string.format("item %s family %s reagent %s; bags %s", tostring(itemID), tostring(family),
+		tostring(isReagent), table.concat(why, " ")))
 	for _, bag in ipairs(ordinary) do
 		table.insert(first, bag)
 	end
@@ -145,6 +172,8 @@ local function TakeFromBank(item, want)
 			if not bag then
 				return string.format("Bags full: took %d of %d.", done, want)
 			end
+			Debug(string.format("%s %d from bank %d:%d (stack %d) into bag %d:%d",
+				amount < info.stackCount and "split" or "move", amount, place.bag, place.slot, info.stackCount, bag, slot))
 			if amount < info.stackCount then
 				C_Container.SplitContainerItem(place.bag, place.slot, amount)
 				split = true
@@ -152,6 +181,7 @@ local function TakeFromBank(item, want)
 				C_Container.PickupContainerItem(place.bag, place.slot)
 			end
 			C_Container.PickupContainerItem(bag, slot)
+			Debug("cursor after:", tostring(GetCursorInfo()))
 			targets[bag .. ":" .. slot] = true
 			done = done + amount
 		end
@@ -177,6 +207,7 @@ local function MailStep()
 	if not FreeBagSlot(job.item.id) then
 		return Finish(string.format("Bags full: took %d of %d stacks.", job.done, job.want))
 	end
+	Debug(string.format("mail %d attachment %d", next.mail, next.attachment))
 	TakeInboxItem(next.mail, next.attachment)
 	job.done = job.done + 1
 	job.waiting = true
@@ -206,6 +237,13 @@ runner:SetScript("OnEvent", function()
 end)
 runner:RegisterEvent("MAIL_INBOX_UPDATE")
 runner:RegisterEvent("BAG_UPDATE_DELAYED")
+
+-- While debugging: the game's red error messages, to see what it refused.
+local errors = CreateFrame("Frame")
+errors:RegisterEvent("UI_ERROR_MESSAGE")
+errors:SetScript("OnEvent", function(_, _, _, message)
+	Debug("game error:", tostring(message))
+end)
 
 -- Takes from where the item is, as much as fits: `stacks` stacks (nil: all of it), or with
 -- `items`, that many items (the bank only: mail comes a whole attachment at a time).

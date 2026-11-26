@@ -778,7 +778,12 @@ function module:OnInitialize()
 	HookMerchant()
 	HookPlaces()
 	HookOpenMail()
-	ns:RegisterSlashCommand("sell", function()
+	ns:RegisterSlashCommand("sell", function(rest)
+		if rest:lower() == "debug" then
+			sell.debug = not sell.debug
+			ns:Print("Sell List debug " .. (sell.debug and "on: taking from the bank and mail is logged in chat." or "off."))
+			return
+		end
 		if not ns:IsModuleEnabled(module.key) then
 			ns:Print("Turn on Sell List first (/nra).")
 			return
@@ -786,7 +791,7 @@ function module:OnInitialize()
 		ns:OpenSellList()
 	end, {
 		summary = "The Sell List: what in your bags is worth selling",
-		usage = { "/nra sell - open the Sell List" },
+		usage = { "/nra sell - open the Sell List", "/nra sell debug - log taking from the bank and mail in chat (to report a problem)" },
 	})
 	self:OnEnabledChanged(ns:IsModuleEnabled(self.key))
 end
