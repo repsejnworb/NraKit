@@ -16,6 +16,9 @@ local _, ns = ...
 --           "new" entry with its module (tests/changelog_test.lua checks).
 
 ns.changelog = {
+	{ version = "Unreleased", entries = {
+		{ "new", "Cooldown Manager fade: the game's Cooldown Manager bars show in combat and fade out, animated, a while after it instead of just vanishing. Pick which bars, how long they stay and fade, and how faint they fade to; they also come back with a hostile target (fading right away when you drop it) and while the mouse is over one. Set the bars to Always in Edit Mode.", module = "cooldownManagerFade" },
+	} },
 	{ version = "0.30.0", date = "2026-11-26", entries = {
 		{ "new", "/nra dps shows or hides the game's damage meter (the same as its setting in the options), with or without Damage meter look." },
 	} },

@@ -297,6 +297,14 @@ A **clean, flat look** for the game's own damage meter.
 
 ![damageMeterLook](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/damageMeterLook.png)
 
+### Cooldown Manager fade
+The game's **Cooldown Manager** bars show in combat and **fade out a while after it**, animated, instead of just vanishing.
+- Set the bars to **Always** in Edit Mode: one set to "In combat" is hidden by the game before it can fade. Visible is the bar's own Edit Mode opacity.
+- Pick **which bars**: Essential Cooldowns and Utility Cooldowns (on by default), Tracked Buffs and Tracked Bars.
+- **Stay after combat** (10 seconds), **Fade over** (2 seconds) and **Faded opacity** (0%, or a faint trace).
+- They also come back with a **hostile target** (lining up a pull), fading right away when you drop it, and while the **mouse is over** a bar. Each is an option.
+- Every change is animated: fading in is quick, but never a jump.
+
 ### Player notes
 Remember who stole your mining node, who ninja'd the loot and who was a great healer.
 - Give a player a **label** (Kill on sight, Avoid, Neutral or Liked), **tags** of your own and a **dated log of notes** (each note saves the date, zone and your character).
