@@ -424,10 +424,12 @@ local function CreatePrompt()
 	end)
 end
 
--- Asks how much to take (by `row`); with one stack there's nothing to ask.
+-- Asks how much to take (by `row`): from the bank whenever there's more than one (even in one
+-- stack: "take 4 of these 9"), from mail when there's more than one attachment (they can't be
+-- split). A single one is taken at once; Shift-click takes all that fits without asking.
 function sell.AskTake(item, row)
 	local total = sell.Stacks(item)
-	if total <= 1 then
+	if (item.where == "bank" and item.count <= 1) or (item.where ~= "bank" and total <= 1) then
 		sell.Take(item)
 		return
 	end
@@ -436,10 +438,16 @@ function sell.AskTake(item, row)
 	end
 	prompt.item, prompt.total, prompt.maxStack = item, total, MaxStack(item)
 	prompt.room = sell.Room(item)
-	prompt.unit = "stacks"
+	-- All in one stack: count in items. Several: in stacks.
+	prompt.unit = (item.where == "bank" and total <= 1) and "items" or "stacks"
 	prompt.title:SetText(item.name or ("Item " .. item.id))
 	prompt.where:SetText(string.format("%d in %s", item.count, item.where == "mail" and "your mail" or "your bank"))
-	SetAmount(math.min(prompt.room, total)) -- as much as fits
+	-- As much as fits.
+	if prompt.unit == "items" then
+		SetAmount(math.min(item.count, prompt.room * prompt.maxStack))
+	else
+		SetAmount(math.min(prompt.room, total))
+	end
 	prompt:ClearAllPoints()
 	prompt:SetPoint("TOPRIGHT", row, "BOTTOMRIGHT", 0, -2)
 	prompt:Show()

@@ -553,6 +553,34 @@ return {
 			CONTAINERS[6], INBOX = {}, {}
 		end)
 
+		t.test("one stack of several asks too, counting in items", function()
+			cursor = nil
+			CONTAINERS[1] = {}
+			CONTAINERS[6] = { { itemID = 1009, stackCount = 9 } }
+			BankFrame:Show()
+			wow.fire("BANKFRAME_OPENED")
+			local bars
+			for _, item in ipairs(sell.Collect().ah) do
+				if item.where == "bank" then
+					bars = item
+				end
+			end
+			sell.AskTake(bars, UIParent)
+			local prompt = sell.Prompt()
+			t.ok(prompt:IsShown(), "9 in one stack: it asks")
+			t.equal(prompt.unit, "items", "in items")
+			t.equal(prompt.amount, 9, "all 9 to start")
+			for _ = 1, 5 do
+				prompt.minus.scripts.OnClick(prompt.minus)
+			end
+			prompt.take.scripts.OnClick(prompt.take)
+			t.equal(CONTAINERS[1][1].stackCount, 4, "took 4")
+			t.equal(CONTAINERS[6][1].stackCount, 5, "5 left")
+			wow.fire("BANKFRAME_CLOSED")
+			BankFrame:Hide()
+			CONTAINERS[1], CONTAINERS[6] = {}, {}
+		end)
+
 		-- Regression: a non-reagent was sent to the reagent bag ("The item doesn't go into that
 		-- container") and nothing was taken.
 		t.test("the reagent bag only takes crafting reagents", function()
