@@ -414,9 +414,14 @@ local function RenderSpells(content, width)
 		row.known:SetText(match.known and "|cff40c040Known|r" or "")
 		-- Its class, in the class colour: tells your Charge from a mob's.
 		local color = match.class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[match.class]
+		local profession = not match.class and match.known and ns.spellLookup.ProfessionOf(match.id)
 		if match.class then
 			row.class:SetText(ClassName(match.class))
 			row.class:SetTextColor(color and color.r or 1, color and color.g or 1, color and color.b or 1)
+		elseif profession then
+			-- A recipe you know: its profession, not a class.
+			row.class:SetText(profession)
+			row.class:SetTextColor(unpack(UI.TEXT))
 		else
 			row.class:SetText("other")
 			row.class:SetTextColor(unpack(UI.TEXT_DIM))

@@ -8,8 +8,10 @@ local _, ns = ...
 -- The game doesn't say which class a spell is (its skill line answers nothing for class spells),
 -- so each character's spellbook is remembered as you log in (its class tabs, not General:
 -- learned and future spells), account-wide in NraKitDB.spellClassData = { [CLASS] = { [id] = true } }.
--- Spells you know (IsPlayerSpell: lower ranks too) are your class's as well. Classes you
--- haven't logged in on aren't known; their spells show as "other".
+-- A lower rank you know (Cleave Rank 2) is your class's too: it shares a name with a spell in your
+-- class's spellbook. "Knowing" a spell isn't enough by itself: you also know your recipes,
+-- languages, armour skills... Classes you haven't logged in on aren't known; their spells show
+-- as "other" (a known recipe shows its profession).
 --
 -- Recipes: a profession's recipe is a spell the game gives a profession
 -- (C_TradeSkillUI.GetProfessionInfoByRecipeID), readable without the profession window,
@@ -36,6 +38,7 @@ end
 ---------------------------------------------------------------------------
 
 local spellList -- { { id, name, lower }, ... } once read
+local classNames -- [CLASS] = { [lower-case name] = true }, from the spellbooks
 local recipeIndex = 1 -- next spell (in spellList) to check, while finding recipes
 local found -- recipe IDs found this time (while finding them)
 local spellCursor = 1
@@ -126,6 +129,7 @@ function spells.CollectSpellbook()
 	local data = ClassData()
 	data[class] = data[class] or {}
 	local known = data[class]
+	classNames = nil -- the names are worked out again
 	local bank = Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Player or 0
 	for line = 2, C_SpellBook.GetNumSpellBookSkillLines() or 0 do -- 1 is General: racials, auto attack
 		local info = C_SpellBook.GetSpellBookSkillLineInfo(line)
@@ -154,15 +158,48 @@ function spells.KnownClasses()
 	return list
 end
 
--- A spell's class (from the spellbooks), or nil.
-function spells.ClassOf(id, known)
-	if known then
-		return select(2, UnitClass("player"))
+-- Each class's spell names (lower-case), from the spellbooks: for telling a lower rank you
+-- know (Cleave Rank 2) is your class's. Worked out when needed.
+local function ClassNames()
+	if not classNames then
+		classNames = {}
+		for class, ids in pairs(ClassData()) do
+			local names = {}
+			for id in pairs(ids) do
+				local name = C_Spell.GetSpellName(id)
+				if name then
+					names[name:lower()] = true
+				end
+			end
+			classNames[class] = names
+		end
 	end
+	return classNames
+end
+
+-- A spell's class (from the spellbooks), or nil. `known` (you know it) with `lower` (its name):
+-- a lower rank of one of your class's spells counts too.
+function spells.ClassOf(id, known, lower)
 	for class, ids in pairs(ClassData()) do
 		if ids[id] then
 			return class
 		end
+	end
+	if known and lower then
+		local _, myClass = UnitClass("player")
+		local names = ClassNames()[myClass]
+		if names and names[lower] then
+			return myClass
+		end
+	end
+end
+
+-- A spell that's a profession's recipe: its profession's name, or nil (for showing a known
+-- recipe as "Cooking" rather than as a class's).
+function spells.ProfessionOf(id)
+	local info = C_TradeSkillUI.GetProfessionInfoByRecipeID(id)
+	if info and info.profession ~= nil and info.professionName and info.professionName ~= "" then
+		return info.professionName
 	end
 end
 
@@ -177,10 +214,11 @@ function spells.Search(query, limit, filter)
 		local at = spell.lower:find(query, 1, true)
 		if at then
 			local known = IsPlayerSpell(spell.id) == true
-			local class = spells.ClassOf(spell.id, known)
-			if not filter or (filter == "mine" and known) or (filter == "other" and not class) or filter == class then
+			local class = spells.ClassOf(spell.id, known, spell.lower)
+			local mine = known and class ~= nil and class == myClass -- your class's, and you know it
+			if not filter or (filter == "mine" and mine) or (filter == "other" and not class) or filter == class then
 				table.insert(matches, { id = spell.id, name = spell.name, starts = at == 1, known = known, class = class,
-					group = known and 1 or class == myClass and 2 or class and 3 or 4 })
+					group = mine and 1 or class == myClass and 2 or class and 3 or 4 })
 			end
 		end
 	end

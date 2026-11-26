@@ -8,7 +8,7 @@ local SPELLS = { [100] = "Charge", [7370] = "Charge", [6673] = "Battle Shout", [
 -- and Overpower (not learned yet: a future spell).
 local SPELLBOOK = {
 	{ name = "General", items = { { id = 6603, type = 1 } } },
-	{ name = "Arms", items = { { id = 100, type = 1 }, { id = 7384, type = 2 } } },
+	{ name = "Arms", items = { { id = 100, type = 1 }, { id = 7384, type = 2 }, { id = 7369, type = 1 } } },
 }
 C_SpellBook = {
 	GetNumSpellBookSkillLines = function()
@@ -40,8 +40,11 @@ end
 C_Spell.GetSpellLink = function(id)
 	return "|Hspell:" .. id .. "|h[" .. tostring(SPELLS[id]) .. "]|h"
 end
+-- You know your Charge, Cleave Rank 2 (845; Cleave in your spellbook is 7369), and the Green Iron
+-- Bracers recipe and the Common language (both known, neither a class spell). 7370 is a pet's Charge.
+SPELLS[845], SPELLS[7369], SPELLS[668] = "Cleave", "Cleave", "Common"
 IsPlayerSpell = function(id)
-	return id == 100 -- your Charge; 7370 is a pet's
+	return id == 100 or id == 845 or id == 3501 or id == 668
 end
 local linked
 ChatEdit_InsertLink = function(link)
@@ -122,6 +125,17 @@ return {
 			t.equal(spells.ClassOf(6603), nil, "Auto Attack (General): no class")
 			t.equal(spells.ClassOf(7370), nil, "a pet's or mob's Charge: no class")
 			t.equal(#spells.Search("charge", 10, "mine"), 1, "Mine: your Charge")
+			-- Regression: every spell you know showed as your class's: recipes, languages...
+			t.equal(spells.ClassOf(3501, true, "green iron bracers"), nil, "a known recipe: no class")
+			t.equal(spells.ClassOf(668, true, "common"), nil, "a language: no class")
+			t.equal(spells.ClassOf(845, true, "cleave"), "WARRIOR", "a lower rank you know: your class's")
+			local mine = {}
+			for _, match in ipairs(spells.Search("", 50, "mine")) do
+				mine[#mine + 1] = match.name
+			end
+			table.sort(mine)
+			t.equal(table.concat(mine, ","), "Charge,Cleave", "Mine: your class's spells you know (Charge, Cleave Rank 2), no recipe or language")
+			t.equal(spells.ProfessionOf(3501), "Blacksmithing", "a known recipe shows its profession")
 			t.equal(#spells.Search("charge", 10, "other"), 1, "Other: the other Charge")
 			t.equal(spells.Search("", 10, "MAGE")[1].id, 133, "Mage: Fireball")
 		end)
@@ -144,9 +158,7 @@ return {
 			end)[1]
 			box:SetText("")
 			t.ok(wow.click("Mine"), "Mine")
-			local rows = Rows("spells")
-			t.equal(#rows, 1, "your spell, with nothing typed")
-			t.equal(rows[1].id, 100, "your Charge")
+			t.equal(#Rows("spells"), 2, "your spells, with nothing typed (Charge, Cleave Rank 2)")
 			t.ok(wow.click("All"), "All")
 			t.ok(#Rows("spells") > 1, "everything, yours first")
 			t.equal(ns.spellLookup.Search("", 10)[1].id, 100, "yours on top")
