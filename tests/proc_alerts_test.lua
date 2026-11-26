@@ -6,7 +6,7 @@
 local usable = {} -- spellID -> true
 local cooldown = {} -- spellID -> { isActive, isOnGCD }
 C_Spell.GetSpellInfo = function(name)
-	local ids = { Riposte = 14251, Finish = 9999 }
+	local ids = { Riposte = 14251, Finish = 9999, Victory = 34428 }
 	return ids[name] and { spellID = ids[name] }
 end
 C_Spell.IsSpellUsable = function(spellID)
@@ -17,13 +17,21 @@ C_Spell.GetSpellCooldown = function(spellID)
 end
 C_ActionBar = {
 	FindSpellActionButtons = function(spellID)
-		return ({ [14251] = { 7 }, [9999] = { 8 } })[spellID] or {}
+		return ({ [14251] = { 7 }, [9999] = { 8 }, [34428] = { 9 } })[spellID] or {}
 	end,
 }
 local button = CreateFrame("CheckButton", "MultiBarBottomLeftButton1")
 rawset(button, "action", 7)
 local finishButton = CreateFrame("CheckButton", "MultiBarBottomLeftButton2")
 rawset(finishButton, "action", 8)
+local victoryButton = CreateFrame("CheckButton", "MultiBarBottomLeftButton3")
+rawset(victoryButton, "action", 9)
+
+-- Victory comes from a buff, "Victorious": readable out of combat, hidden (nil) in combat.
+local buff -- { duration, expirationTime } or nil
+C_UnitAuras.GetAuraDataBySpellName = function(unit, name)
+	return unit == "player" and name == "Victorious" and buff or nil
+end
 
 local on = true
 
@@ -36,7 +44,8 @@ return {
 			IsEnabled = function()
 				return on
 			end,
-			spells = { { name = "Riposte", option = "warriorProcs" }, { name = "Finish", option = "warriorProcs", timed = false } },
+			spells = { { name = "Riposte", option = "warriorProcs" }, { name = "Finish", option = "warriorProcs", timed = false },
+				{ name = "Victory", option = "warriorProcs", aura = "Victorious" } },
 			options = { countdown = "warriorProcCountdown", icon = "warriorProcIcon", sound = "warriorProcSound",
 				soundChoice = "warriorProcSoundChoice" },
 		})
@@ -106,6 +115,31 @@ return {
 			usable[9999] = nil
 			wow.fire("SPELL_UPDATE_USABLE")
 			t.equal(alerts.Window("Finish"), nil, "nothing learned")
+		end)
+
+		t.test("a proc from a buff takes the buff's time, and counts down the seconds", function()
+			buff = { duration = 20, expirationTime = GetTime() + 17 } -- 3 seconds ago
+			usable[34428] = true
+			wow.fire("SPELL_UPDATE_USABLE")
+			wow.advance(0.5)
+			local glow = Glow(victoryButton)
+			t.equal(alerts.Window("Victory"), 20, "its length, remembered")
+			t.equal(glow.timer:GetValue(), 16.5 / 20, "the buff's own start, not when NraKit saw it")
+			t.equal(glow.number:GetText(), 17, "seconds left")
+			usable[34428], buff = nil, nil
+			wow.fire("SPELL_UPDATE_USABLE")
+		end)
+
+		t.test("in combat (buff hidden) it uses the length seen before", function()
+			usable[34428] = true
+			wow.fire("SPELL_UPDATE_USABLE")
+			wow.advance(5)
+			local glow = Glow(victoryButton)
+			t.equal(glow.timer:GetValue(), 15 / 20, "15 of 20 seconds left")
+			t.ok(glow.number:IsShown(), "a long one shows the number")
+			usable[34428] = nil
+			wow.fire("SPELL_UPDATE_USABLE")
+			t.ok(not Glow().number:IsShown(), "a short one (Riposte, 5 sec) doesn't")
 		end)
 
 		t.test("a set that's off shows nothing", function()

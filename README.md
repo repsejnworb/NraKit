@@ -106,7 +106,8 @@ shade the bar up to it.
 **Proc alerts:** the game shows no proc glow for **Overpower, Revenge, Victory Rush and Execute**, so NraKit makes
 their action buttons glow (the game's own proc glow) while you can use them. Bright means press it now; dim means
 it's up but you're short of rage or it's on cooldown. A thin gold bar along the button drains as the proc runs out,
-turning orange with the glow pulsing at the end (NraKit learns each one's time the first time it runs out).
+turning orange with the glow pulsing at the end; Victory Rush also counts down its seconds. Its time comes from its
+buff; NraKit learns Overpower's and Revenge's the first time one runs out.
 Optionally a sound, and the icon next to the Personal Resource Display's rage bar.
 
 ### Quests

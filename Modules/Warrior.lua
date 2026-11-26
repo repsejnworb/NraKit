@@ -102,7 +102,7 @@ local module = {
 			key = "warriorProcCountdown",
 			parent = "warriorProcs",
 			name = "Time left",
-			description = "A thin gold bar along the bottom of the button drains as the proc runs out, turning orange (and the glow pulsing) at the end. NraKit learns each proc's time the first time it runs out unused, so the bar shows from then on.",
+			description = "A thin gold bar along the bottom of the button drains as the proc runs out, turning orange (and the glow pulsing) at the end; long ones (Victory Rush) also count down the seconds. Victory Rush's time comes from its buff; Overpower's and Revenge's NraKit learns the first time one runs out unused, so their bar shows from then on.",
 			default = true,
 		},
 		{
@@ -277,7 +277,7 @@ ns.procAlerts.Register({
 	spells = {
 		{ name = "Overpower", option = "warriorProcOverpower" },
 		{ name = "Revenge", option = "warriorProcRevenge" },
-		{ name = "Victory Rush", option = "warriorProcVictoryRush" },
+		{ name = "Victory Rush", option = "warriorProcVictoryRush", aura = "Victorious" }, -- buff 402975, 20 sec
 		{ name = "Execute", option = "warriorProcExecute", timed = false },
 	},
 	options = {

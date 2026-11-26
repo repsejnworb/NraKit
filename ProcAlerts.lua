@@ -9,14 +9,17 @@ local _, ns = ...
 --   bright glow                 press it now
 --   dim glow                    it's up, but not yet: short of power, or on its cooldown
 --   thin gold bar draining      how long the proc has left; orange, and the glow pulses, at the end
+--   small number, top left      seconds left, for long procs only (a short one's bar says enough)
 --
 -- A feature registers a set of spells with its own option keys:
 --   ns.procAlerts.Register({
 --     key = "warrior",                        -- unique
 --     IsEnabled = function() ... end,         -- the whole set on (module, class, option)
 --     spells = { { name = "Overpower", option = "warriorProcOverpower" }, ...,
---                { name = "Execute", option = ..., timed = false } },  -- usable while a condition
---                                                    -- holds, not for a time: no time bar
+--                { name = "Execute", option = ..., timed = false },  -- usable while a condition
+--                                                  -- holds, not for a time: no time bar
+--                { name = "Victory Rush", option = ..., aura = "Victorious" } },  -- a buff on you
+--                                                  -- that makes it usable: its exact time
 --     options = { countdown = <key>, icon = <key>, sound = <key>, soundChoice = <key> },
 --   })
 -- and calls ns.procAlerts.Refresh() when its module or options change.
@@ -26,9 +29,11 @@ local _, ns = ...
 -- never are, so "on its own cooldown" (not just the global one) dims the glow.
 -- Spells are found by name, so whatever rank or ID the player knows is the one watched.
 --
--- How long a proc lasts is measured, not looked up: when one runs out unused (while usable,
--- not cast), its time is remembered (NraKitDB.procAlertWindows[name], the longest seen; a
--- stance change cutting one short never lowers it) and the time bar uses it from then on.
+-- How long a proc lasts (NraKitDB.procAlertWindows[name]): for one that comes from a buff on
+-- you (spell.aura), the buff's own start and length, read out of combat (in combat the game
+-- hides buffs from addons; then the length seen before is used). Others are measured: when
+-- one runs out unused (while usable, not cast), its time is remembered (the longest seen; a
+-- stance change cutting one short never lowers it). The time bar uses it from then on.
 --
 -- Everything is NraKit's own frames over the buttons (which are protected): no clicks, and
 -- the buttons themselves are never changed.
@@ -40,6 +45,7 @@ local FADE_SECONDS = 0.25
 local ENDING_SECONDS = 1.5 -- the last of a proc's time: the bar turns orange, the glow pulses
 local PULSES_PER_SECOND = 2.5
 local TIMER_HEIGHT = 3
+local NUMBER_FROM = 8 -- procs this long or longer also show seconds left as a number
 local TIMER_COLOR = { 1, 0.82, 0.25 }
 local ENDING_COLOR = { 1, 0.45, 0.1 }
 local CHECK_EVERY = 0.25 -- while a proc is up (a dimmed one ends without an event)
@@ -120,6 +126,14 @@ local function NewTimer(parent, anchor)
 	return timer
 end
 
+-- Seconds left, small in the top-left corner (the keybind is top right).
+local function NewNumber(parent, anchor)
+	local number = parent:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
+	number:SetPoint("TOPLEFT", anchor, "TOPLEFT", 2, -2)
+	number:Hide()
+	return number
+end
+
 local function Glow(button)
 	local glow = glows[button]
 	if not glow then
@@ -133,6 +147,7 @@ local function Glow(button)
 		glow.alert:SetSize(button:GetWidth() * 1.4, button:GetHeight() * 1.4)
 		glow.alert:SetPoint("CENTER")
 		glow.timer = NewTimer(glow, button)
+		glow.number = NewNumber(glow, button)
 		glows[button] = glow
 	end
 	return glow
@@ -152,6 +167,7 @@ local function Icon(name, spellID)
 		icon.alert:SetSize(ICON_SIZE * 1.4, ICON_SIZE * 1.4)
 		icon.alert:SetPoint("CENTER")
 		icon.timer = NewTimer(icon, icon)
+		icon.number = NewNumber(icon, icon)
 		icons[name] = icon
 	end
 	if icon then
@@ -179,6 +195,7 @@ local function Show(frame, state, since, window)
 		frame.endsAt = nil
 		frame.timer:Hide()
 	end
+	frame.number:SetShown(window ~= nil and window >= NUMBER_FROM)
 end
 
 local function Hide(frame)
@@ -259,6 +276,22 @@ local function Ended(name, info, now)
 	end
 end
 
+-- The buff behind a proc, if the game lets addons read it now (not in combat): its start
+-- and length.
+local function AuraTime(auraName)
+	if not (C_UnitAuras and C_UnitAuras.GetAuraDataBySpellName) then
+		return nil
+	end
+	local aura = C_UnitAuras.GetAuraDataBySpellName("player", auraName, "HELPFUL")
+	if not aura or Secret(aura.duration) or Secret(aura.expirationTime) then
+		return nil
+	end
+	if not aura.duration or aura.duration <= 0 or not aura.expirationTime then
+		return nil
+	end
+	return aura.expirationTime - aura.duration, aura.duration
+end
+
 -- Reads each proc's state and plays a set's sound for any that just came up. Redraws when
 -- one changed, or always with redraw (the bars or options changed).
 local function Check(redraw)
@@ -290,6 +323,17 @@ local function Check(redraw)
 			elseif not state and info.state then
 				Ended(spell.name, info, now)
 				info.since = nil
+			end
+			-- A buff behind it: its exact time, and its length remembered for when it can't be read.
+			if state and spell.aura then
+				local start, length = AuraTime(spell.aura)
+				if start then
+					if start ~= info.since or Windows()[spell.name] ~= length then
+						changed = true
+					end
+					info.since = start
+					Windows()[spell.name] = length
+				end
 			end
 			if state ~= info.state then
 				changed = true
@@ -364,6 +408,10 @@ fader:SetScript("OnUpdate", function(_, elapsed)
 				frame.timer:SetValue(left / frame.window)
 				local color = left <= ENDING_SECONDS and ENDING_COLOR or TIMER_COLOR
 				frame.timer:SetStatusBarColor(color[1], color[2], color[3])
+				if frame.number:IsShown() then
+					frame.number:SetText(left > 0 and math.ceil(left) or "")
+					frame.number:SetTextColor(color[1], color[2], color[3])
+				end
 				-- The glow pulses at the end, so "use it or lose it" catches the eye.
 				local pulse = left <= ENDING_SECONDS and left > 0
 					and 0.55 + 0.45 * math.abs(math.cos(now * math.pi * PULSES_PER_SECOND)) or 1
