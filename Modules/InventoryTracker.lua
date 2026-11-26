@@ -272,10 +272,10 @@ local function Describe(character, itemID)
 	return total, table.concat(parts, ", ")
 end
 
-local function AddRealmLines(lines, realmName, characters, itemID)
+local function AddRealmLines(lines, realmName, characters, itemID, includeMe)
 	for name, character in pairs(characters) do
 		local isMe = realmName == realm and name == playerName
-		if not isMe or ns:GetOption("inventoryTrackerCurrent") then
+		if not isMe or includeMe or ns:GetOption("inventoryTrackerCurrent") then
 			local total, where = Describe(character, itemID)
 			if total then
 				local label = realmName == realm and name or (name .. " (" .. realmName .. ")")
@@ -283,6 +283,29 @@ local function AddRealmLines(lines, realmName, characters, itemID)
 			end
 		end
 	end
+end
+
+-- Every character with the item, you included (all realms if that's the option):
+-- { { label, class, total, where, isMe }, ... }, you first, then by count.
+local function Holders(itemID)
+	local lines = {}
+	if ns:GetOption("inventoryTrackerAllRealms") then
+		for realmName, characters in pairs(NraKitDB.inventory or {}) do
+			AddRealmLines(lines, realmName, characters, itemID, true)
+		end
+	elseif realm then
+		AddRealmLines(lines, realm, GetRealmData(realm), itemID, true)
+	end
+	table.sort(lines, function(a, b)
+		if a.isMe ~= b.isMe then
+			return a.isMe
+		end
+		if a.total ~= b.total then
+			return a.total > b.total
+		end
+		return a.label < b.label
+	end)
+	return lines
 end
 
 local function OnItemTooltip(tooltip, data)
@@ -490,6 +513,7 @@ ns.inventory = {
 	end,
 	Forget = ForgetCharacter,
 	ClassColor = ClassColor,
+	Holders = Holders,
 }
 
 ns:AddOptionsButton(module.key, "Browse inventories", "Open the browser of every character's bags, bank, mail and equipped items (/nra inv).", function()

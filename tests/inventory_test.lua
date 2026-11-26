@@ -81,6 +81,15 @@ return {
 			t.ok(text:find("Total: 15", 1, true), "total: " .. text)
 		end)
 
+		t.test("Holders lists everyone with the item, you too (for the Shopping list's have)", function()
+			ns:SetSetting("inventoryTrackerCurrent", false)
+			local holders = ns.inventory.Holders(LINEN)
+			t.equal(holders[1].label, "Nra Kit", "you first, even with yourself off in tooltips")
+			t.equal(holders[1].total, 5, "your count")
+			t.equal(#holders, 3, "and the others")
+			ns:SetSetting("inventoryTrackerCurrent", true)
+		end)
+
 		t.test("mail to your characters by full name", function()
 			Mail("nra smith", 2)
 			t.equal(characters["Nra Smith"].mail[LINEN], 2, "lowercase full name")

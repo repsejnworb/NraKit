@@ -135,11 +135,16 @@ With a **fishing pole in your main hand**, **double right-click** the world to c
 - Right-clicking NPCs and players, and holding right-click to turn the camera, work as normal.
 - The double-click time is adjustable.
 
-### Waylaid Crate prices
-Needs **Auctionator**. A Waylaid Crate's tooltip shows **what each bundle it takes costs** at the auction house, from Auctionator's last scan, with the **cheapest in green**.
-- An Auctionator shopping list, **"Waylaid Crates"**, holds every bundle of the crates in your bags, in the amounts they need. Open it in Auctionator's Shopping tab to look them all up. It's rewritten when your crates change, but not while the auction house is open.
-- Optionally shows the price of one of each reagent too.
-- `/nra crates check` compares NraKit's crate list with the game's own tooltips (after a patch, say).
+### Auctionator prices
+Needs **Auctionator**. What things cost at the auction house, from Auctionator's last scan.
+- **Waylaid Crates:** a crate's tooltip shows **what each bundle it takes costs**, with the **cheapest in green**. An Auctionator shopping list, **"Waylaid Crates"**, holds every bundle of the crates in your bags, in the amounts they need. It's rewritten when your crates change, but not while the auction house is open. `/nra crates check` compares NraKit's crate list with the game's own tooltips (after a patch, say).
+- **Recipes:** a recipe's tooltip (click a recipe link in chat) shows **what one craft costs**: each reagent and the total.
+- **Shopping lists:** right-click a recipe link in chat or a recipe in your profession window (or use the **Shopping list** button by its reagents) for **Create shopping list for this recipe** (an Auctionator list named after the recipe, with one craft's reagents) or **Add to NraKit Shopping List** (adds one craft's reagents to your big list).
+- **The NraKit Shopping List** (`/nra shop`, a tab in the NraKit window): everything you're crafting, with what it's for, the **amount** (type it, or - and +), the price of one and of them all, and **how many you have** on all your characters (hover for who; needs Inventory Tracker, else your bags and bank). Remove items, or **Clear list** (it asks first). Auctionator gets a copy, **"NraKit Shopping List"**, kept up to date while you're away from the auction house; at it, **Search at AH** searches for everything.
+- **Vendor items** (thread, dye, vials...) show the **vendor's price**, tagged "vendor": NraKit remembers what merchants you visit sell (Auctionator's vendor prices fill the gaps). They're left out of Auctionator lists (an option).
+- Optionally shows the price per item too.
+
+![auctionatorWaylaid](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/auctionatorWaylaid.png)
 
 ## Trackers & Reminders
 

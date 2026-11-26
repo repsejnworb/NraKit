@@ -17,7 +17,7 @@ local _, ns = ...
 
 ns.changelog = {
 	{ version = "Unreleased", entries = {
-		{ "new", "Waylaid Crate prices (needs Auctionator): a Waylaid Crate's tooltip shows what each bundle it takes costs at the auction house, with the cheapest in green. An Auctionator shopping list, \"Waylaid Crates\", holds every bundle of the crates in your bags in the amounts they need, ready to search at the auction house.", module = "waylaidCrates" },
+		{ "new", "Auctionator prices (needs Auctionator): what things cost at the auction house, from Auctionator's last scan. A Waylaid Crate's tooltip prices each bundle it takes, with the cheapest in green, and an Auctionator shopping list, \"Waylaid Crates\", holds every bundle of the crates in your bags. A recipe's tooltip shows what one craft costs. Right-click a recipe link in chat or a recipe in your profession window to make an Auctionator shopping list of its reagents, or to add them to the NraKit Shopping List: a new tab (/nra shop) with everything you're crafting, its amounts (change them), prices, a total and how many you have on all your characters, which Auctionator gets a copy of. Reagents sold by vendors show the vendor's price (NraKit remembers them from merchants you visit) and are left out of the auction house search.", module = "auctionatorPrices" },
 		{ "fixed", "NraKit's messages in the middle of the screen are only as wide as what they show, so the mouse no longer holds one up (or clicks it) from far beside its text." },
 	} },
 	{ version = "0.28.0", date = "2026-11-25", entries = {
