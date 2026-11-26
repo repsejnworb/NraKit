@@ -41,6 +41,7 @@ Modules\AuctionatorPrices.lua
 Modules\ShoppingListWindow.lua
 Modules\SellList.lua
 Modules\SellListWindow.lua
+Modules\SellListTake.lua
 Modules\DoubleClickFishing.lua
 Modules\UnspentTalents.lua
 Modules\CampfireTimer.lua

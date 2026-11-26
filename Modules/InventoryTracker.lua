@@ -193,11 +193,12 @@ local function ScanEquipped()
 	Store("equipped", counts)
 end
 
+-- Mail you'd have to pay for (C.O.D.) isn't yours yet, so it isn't counted.
 local function ScanMail()
 	local counts = {}
 	for index = 1, GetInboxNumItems() do
-		local itemCount = select(8, GetInboxHeaderInfo(index))
-		if itemCount and itemCount > 0 then
+		local _, _, _, _, _, cod, _, itemCount = GetInboxHeaderInfo(index)
+		if itemCount and itemCount > 0 and not (cod and cod > 0) then
 			for attachment = 1, ATTACHMENTS_MAX_RECEIVE do
 				local _, itemID, _, count = GetInboxItem(index, attachment)
 				if itemID then
@@ -543,7 +544,20 @@ local function OnSlashCommand(input)
 end
 
 -- For the browser.
+-- The bag indexes of "bags" or "bank" (for reading them live, e.g. the Sell List at the bank).
+local function BagsAt(location)
+	local bags = {}
+	for index, where in pairs(BAG_LOCATIONS) do
+		if where == location then
+			table.insert(bags, index)
+		end
+	end
+	table.sort(bags)
+	return bags
+end
+
 ns.inventory = {
+	BagsAt = BagsAt,
 	LOCATIONS = LOCATIONS,
 	LOCATION_LABELS = LOCATION_LABELS,
 	GetRealm = function()

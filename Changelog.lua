@@ -23,7 +23,8 @@ local _, ns = ...
 
 ns.changelog = {
 	{ version = "Unreleased", entries = {
-		{ "improved", title = "Sell List", "**Bank** and **Mail** switches at its top list what's in your bank and mailbox too, mixed in by value but marked, and counted apart." },
+		{ "improved", title = "Sell List", "**Bank** and **Mail** switches at its top list what's in your bank and mailbox too, mixed in by value but marked. At the bank or mailbox, **click one to take it** into your bags (it asks how many stacks)." },
+		{ "fixed", title = "Inventory Tracker", "Items in a cash-on-delivery mail no longer count as yours before you've paid for them." },
 	} },
 	{ version = "0.32.0", date = "2026-11-26", entries = {
 		{ "new", title = "Shortcuts", module = "shortcuts",

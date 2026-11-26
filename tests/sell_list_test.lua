@@ -1,7 +1,7 @@
 -- Sell List: what in your bags is worth selling, the most valuable first, at the auction house
 -- (Auctionator) and at a vendor; soulbound ones apart, kept ones off the list.
 
-Enum.BagIndex = { Backpack = 0 }
+Enum.BagIndex = { Backpack = 0, Bag_1 = 1, CharacterBankTab_1 = 6 }
 -- The auction house window (its addon already loaded), and a merchant's.
 CreateFrame("Frame", "AuctionHouseFrame")
 CreateFrame("Frame", "MerchantFrame"):Hide()
@@ -17,19 +17,71 @@ local BAG = {
 	{ itemID = 1005, stackCount = 1 }, -- junk: 5c
 	{ itemID = 1006, stackCount = 2 }, -- an old auction price: 2g, 6 days old
 }
+-- A second bag with 4 empty slots, and the bank's first tab (bag 6).
+local BAG_SIZE = { [0] = #BAG, [1] = 4, [6] = 4 }
+local CONTAINERS = { [0] = BAG, [1] = {}, [6] = {} }
 C_Container.GetContainerNumSlots = function(bag)
-	return bag == 0 and #BAG or 0
+	return BAG_SIZE[bag] or 0
 end
 C_Container.GetContainerItemInfo = function(bag, slot)
-	local item = bag == 0 and BAG[slot]
+	local item = CONTAINERS[bag] and CONTAINERS[bag][slot]
 	if item then
 		return { itemID = item.itemID, stackCount = item.stackCount, isBound = item.isBound,
 			hyperlink = "item:" .. item.itemID, iconFileID = 1, quality = 1 }
 	end
 end
-local picked
+C_Container.GetContainerItemID = function(bag, slot)
+	local item = CONTAINERS[bag] and CONTAINERS[bag][slot]
+	return item and item.itemID
+end
+C_Container.GetContainerNumFreeSlots = function()
+	return 0, 0
+end
+-- The cursor, like the game: pick up from a slot, then put down in another (or split part).
+local cursor, picked
 C_Container.PickupContainerItem = function(bag, slot)
 	picked = { bag, slot }
+	local items = CONTAINERS[bag]
+	if cursor then
+		if not items[slot] then
+			items[slot], cursor = cursor, nil
+		end
+	else
+		cursor, items[slot] = items[slot], nil
+	end
+end
+C_Container.SplitContainerItem = function(bag, slot, amount)
+	local item = CONTAINERS[bag][slot]
+	item.stackCount = item.stackCount - amount
+	cursor = { itemID = item.itemID, stackCount = amount }
+end
+GetCursorInfo = function()
+	return cursor and "item" or nil
+end
+
+-- The mailbox: a mail with two stacks of Thorium Bar, and a C.O.D. one with a third.
+local INBOX = {}
+GetInboxNumItems = function()
+	return #INBOX
+end
+GetInboxHeaderInfo = function(index)
+	local mail = INBOX[index]
+	return nil, nil, "Bob", "Thorium", 0, mail.cod, 3, #mail.items
+end
+GetInboxItem = function(index, attachment)
+	local item = INBOX[index] and INBOX[index].items[attachment]
+	if item then
+		return "Thorium Bar", item.itemID, 1, item.stackCount, 1
+	end
+end
+TakeInboxItem = function(index, attachment)
+	local item = table.remove(INBOX[index].items, attachment)
+	for slot = 1, 4 do
+		if not CONTAINERS[1][slot] then
+			CONTAINERS[1][slot] = item
+			return
+		end
+	end
 end
 -- Alt+click hands the item, with its bag slot, to HandleModifiedItemClick (Auctionator hooks it).
 ItemLocation = { CreateFromBagAndSlot = function(_, bag, slot)
@@ -45,6 +97,7 @@ local ITEMS = {
 	[1001] = { "Black Lotus", 0 }, [1002] = { "Mithril Bar", 50 }, [1003] = { "Wolf Meat", 300 },
 	[1004] = { "Soulbound Ring", 5000, 1 }, [1005] = { "Broken Fang", 5 }, [1006] = { "Old Price", 100 },
 	[1007] = { "Banked Gem", 100 }, [1008] = { "Pickup Trinket", 2000, 1 },
+	[1009] = { "Thorium Bar", 100 }, [1010] = { "Arcane Crystal", 1000 },
 }
 C_Item.GetItemInfo = function(item)
 	local id = tonumber(tostring(item):match("%d+"))
@@ -54,7 +107,8 @@ C_Item.GetItemInfo = function(item)
 	end
 end
 
-local AH = { [1001] = 450000, [1002] = 12000, [1003] = 10, [1006] = 20000, [1007] = 90000, [1008] = 70000 }
+local AH = { [1001] = 450000, [1002] = 12000, [1003] = 10, [1006] = 20000, [1007] = 90000, [1008] = 70000,
+	[1009] = 5000, [1010] = 900000 }
 local AGE = { [1006] = 6 }
 local function ID(link)
 	return tonumber(tostring(link):match("%d+"))
@@ -147,6 +201,7 @@ return {
 			end)[1]
 			row.scripts.OnClick(row, "LeftButton")
 			t.equal(picked and picked[1], 0, "clicking an item picks it up, to drop in the sell slot")
+			C_Container.PickupContainerItem(picked[1], picked[2]) -- (and put it back)
 			IsModifiedClick = function()
 				return true
 			end
@@ -270,6 +325,103 @@ return {
 			t.equal(picked, nil, "a bank item can't be picked up from here")
 			wow.fire("AUCTION_HOUSE_CLOSED")
 			ns:SetSetting("sellListBank", false)
+			ns:SetSetting("sellListMail", false)
+		end)
+
+		t.test("at the bank: click to take, a prompt for more than one stack", function()
+			cursor = nil
+			CONTAINERS[6] = {
+				{ itemID = 1009, stackCount = 20 }, { itemID = 1009, stackCount = 20 }, { itemID = 1009, stackCount = 5 },
+				{ itemID = 1010, stackCount = 1 },
+			}
+			ns:SetSetting("sellListBank", true)
+			wow.fire("BANKFRAME_OPENED")
+			ns:OpenSellList()
+			local function Row(name)
+				return wow.findAll(function(frame)
+					local item = wow.visible(frame) and rawget(frame, "item")
+					return item and item.where == "bank" and item.name == name
+				end)[1]
+			end
+			local crystal = Row("Arcane Crystal")
+			t.ok(crystal and crystal.item.slots, "read live from the bank")
+			crystal.scripts.OnClick(crystal, "LeftButton")
+			wow.advance(0.3)
+			t.equal(C_Container.GetContainerItemID(1, 1), 1010, "one stack: taken at once")
+			t.equal(CONTAINERS[6][4], nil, "out of the bank")
+			wow.advance(0.3)
+
+			sell.onChanged()
+			local bars = Row("Thorium Bar")
+			bars.scripts.OnClick(bars, "LeftButton")
+			local prompt = sell.Prompt()
+			t.ok(prompt and prompt:IsShown(), "three stacks: it asks")
+			t.equal(prompt.stacks, 3, "starting at all that fits (3 free slots)")
+			prompt.minus.scripts.OnClick(prompt.minus)
+			prompt.take.scripts.OnClick(prompt.take)
+			for _ = 1, 5 do
+				wow.advance(0.3)
+			end
+			t.equal(CONTAINERS[1][2].stackCount + CONTAINERS[1][3].stackCount, 40, "two stacks in your bags")
+			t.equal(CONTAINERS[6][3].stackCount, 5, "the rest still in the bank")
+			t.ok(sell.TakeStatus():find("Took 40", 1, true), "says what it took")
+
+			sell.onChanged()
+			bars = Row("Thorium Bar")
+			IsShiftKeyDown = function()
+				return true
+			end
+			bars.scripts.OnClick(bars, "LeftButton")
+			IsShiftKeyDown = function() end
+			wow.advance(0.3)
+			t.equal(CONTAINERS[1][4] and CONTAINERS[1][4].stackCount, 5, "Shift-click: the rest, without asking")
+			wow.advance(0.3)
+			wow.fire("BANKFRAME_CLOSED")
+			ns:SetSetting("sellListBank", false)
+		end)
+
+		t.test("bags too full for it all: Take All says how many fit", function()
+			CONTAINERS[1] = { { itemID = 1, stackCount = 1 }, { itemID = 1, stackCount = 1 }, { itemID = 1, stackCount = 1 } }
+			CONTAINERS[6] = { { itemID = 1009, stackCount = 20 }, { itemID = 1009, stackCount = 20 } }
+			ns:SetSetting("sellListBank", true)
+			wow.fire("BANKFRAME_OPENED")
+			local bars
+			for _, item in ipairs(sell.Collect().ah) do
+				if item.where == "bank" then
+					bars = item
+				end
+			end
+			sell.AskTake(bars, UIParent)
+			t.equal(sell.Prompt().all.text.text, "Take 1 (All That Fit)", "room for one")
+			sell.HidePrompt()
+			wow.fire("BANKFRAME_CLOSED")
+			ns:SetSetting("sellListBank", false)
+			CONTAINERS[1] = {}
+		end)
+
+		t.test("at the mailbox: take its stacks one at a time; C.O.D. mail isn't listed", function()
+			INBOX = {
+				{ cod = 0, items = { { itemID = 1009, stackCount = 20 }, { itemID = 1009, stackCount = 20 } } },
+				{ cod = 5000, items = { { itemID = 1009, stackCount = 20 } } },
+			}
+			ns:SetSetting("sellListMail", true)
+			wow.fire("MAIL_SHOW")
+			local bars
+			for _, item in ipairs(sell.Collect().ah) do
+				if item.where == "mail" then
+					bars = item
+				end
+			end
+			t.equal(bars.count, 40, "the C.O.D. stack left out")
+			t.ok(sell.Take(bars), "take them")
+			for _ = 1, 4 do
+				wow.advance(0.6)
+				wow.fire("MAIL_INBOX_UPDATE")
+			end
+			t.equal(#INBOX[1].items, 0, "both taken")
+			t.equal(#INBOX[2].items, 1, "the C.O.D. one left alone")
+			t.equal(CONTAINERS[1][1].stackCount + CONTAINERS[1][2].stackCount, 40, "in your bags")
+			wow.fire("MAIL_CLOSED")
 			ns:SetSetting("sellListMail", false)
 		end)
 

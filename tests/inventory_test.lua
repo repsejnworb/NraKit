@@ -135,6 +135,29 @@ return {
 			t.equal(Mailed(), before + 21, "and only once")
 		end)
 
+		-- Regression: items in a cash-on-delivery mail counted as yours before you paid.
+		t.test("a C.O.D. mail's items aren't counted until you pay", function()
+			local inbox = {
+				{ cod = 0, items = { { id = 2589, count = 7 } } },
+				{ cod = 5000, items = { { id = 2589, count = 20 } } },
+			}
+			GetInboxNumItems = function()
+				return #inbox
+			end
+			GetInboxHeaderInfo = function(index)
+				local mail = inbox[index]
+				return nil, nil, "Bob", "", 0, mail.cod, 3, #mail.items
+			end
+			GetInboxItem = function(index, attachment)
+				local item = inbox[index].items[attachment]
+				if item then
+					return "Linen Cloth", item.id, 1, item.count
+				end
+			end
+			wow.fire("MAIL_INBOX_UPDATE")
+			t.equal(characters["Nra Kit"].mail[2589], 7, "only the mail that's paid for")
+		end)
+
 		t.test("mail finds a character still saved under its first name", function()
 			Mail("Bob Stone", 6)
 			t.equal(characters.Bob.mail[LINEN], 6, "old entry Bob")

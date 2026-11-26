@@ -41,12 +41,14 @@ local GROUPS = {
 local ORDER = { "ah", "vendor", "kept" }
 local MERCHANT_ORDER = { "vendor", "ah", "kept" }
 
--- Bank and mail items (the Bank and Mail switches): a badge on the icon, a cooler row.
+-- Bank and mail items (the Bank and Mail switches): a badge on the icon and a row tint of
+-- their own (the bank warm, like a vault; mail cool blue). At the bank or mailbox: click to take.
 local PLACES = {
-	bank = { label = "Bank", icon = "Interface\\Minimap\\Tracking\\Banker", note = "in your bank: take it out to sell it" },
-	mail = { label = "Mail", icon = "Interface\\Minimap\\Tracking\\Mailbox", note = "in your mail: collect it first" },
+	bank = { label = "Bank", icon = "Interface\\Minimap\\Tracking\\Banker", tint = { 1, 0.7, 0.25, 0.08 }, color = "ffd9a54c",
+		away = "in your bank: take it out to sell it", here = "in your bank: click to take it" },
+	mail = { label = "Mail", icon = "Interface\\Minimap\\Tracking\\Mailbox", tint = { 0.35, 0.55, 1, 0.08 }, color = "ff66a6ff",
+		away = "in your mail: collect it first", here = "in your mail: click to take it" },
 }
-local ELSEWHERE_TINT = { 0.35, 0.55, 1, 0.07 }
 
 local frame, scroll, footerText, footerNote, refreshButton, autoOpenCheck, merchantOpenCheck
 local placeChips = {} -- the Bank and Mail switches
@@ -102,6 +104,15 @@ end
 
 local function OnRowClick(self, button)
 	local item = self.item
+	-- A bank or mail item, while you're there: take it (Shift: all that fits, no asking).
+	if item.where and sell.IsPlaceOpen(item.where) and button == "LeftButton" and not IsAltKeyDown() then
+		if IsShiftKeyDown() then
+			sell.Take(item, sell.Room(item))
+		else
+			sell.AskTake(item, self)
+		end
+		return
+	end
 	if button == "RightButton" then
 		OpenRowMenu(self)
 	elseif IsModifiedClick() then
@@ -138,8 +149,11 @@ local function OnRowEnter(self)
 		end
 	elseif item.bag and sell.IsMerchantOpen() then
 		GameTooltip:AddLine("Click to pick it up, then click the merchant's window to sell it.", 0.5, 0.5, 0.5, true)
+	elseif item.where and sell.IsPlaceOpen(item.where) then
+		GameTooltip:AddLine("Click to take it into your bags; Shift-click to take all that fits.", 0.5, 0.5, 0.5, true)
 	elseif item.where then
-		GameTooltip:AddLine("In your " .. item.where .. ", as last seen: " .. PLACES[item.where].note:match(": (.+)$") .. ".", 0.4, 0.65, 1, true)
+		GameTooltip:AddLine(item.where == "bank" and "In your bank, as last seen. Open your bank to take it."
+			or "In your mail, as last seen. Open your mailbox to take it.", 0.5, 0.5, 0.5, true)
 	end
 	GameTooltip:AddLine("Shift-click to link, right-click to keep it off the list", 0.5, 0.5, 0.5)
 	GameTooltip:Show()
@@ -193,7 +207,8 @@ end
 local function NoteText(item)
 	local parts = {}
 	if item.where then
-		table.insert(parts, "|cff66a6ff" .. PLACES[item.where].note .. "|r")
+		local place = PLACES[item.where]
+		table.insert(parts, "|c" .. place.color .. (sell.IsPlaceOpen(item.where) and place.here or place.away) .. "|r")
 	end
 	if item.best == "vendor" and item.ahTotal then
 		table.insert(parts, "|cffffd100a vendor pays more|r")
@@ -216,7 +231,7 @@ local function FillRow(row, item, index)
 	row.item = item
 	local place = item.where and PLACES[item.where]
 	if place then
-		row.bg:SetColorTexture(unpack(ELSEWHERE_TINT))
+		row.bg:SetColorTexture(unpack(place.tint))
 	else
 		row.bg:SetColorTexture(1, 1, 1, index % 2 == 0 and 0.03 or 0)
 	end
@@ -305,7 +320,11 @@ end
 
 -- The note by the refresh button: prices have changed, or there are no auction prices.
 function UpdateFooterNote()
-	if pricesChanged then
+	local taking = sell.TakeStatus and sell.TakeStatus()
+	if taking then
+		footerNote:SetText(taking)
+		footerNote:SetTextColor(unpack(UI.GOLD))
+	elseif pricesChanged then
 		footerNote:SetText("Prices have changed: refresh")
 		footerNote:SetTextColor(unpack(UI.ACCENT))
 	else
@@ -393,7 +412,7 @@ function Render()
 	local text = string.format("|cffffffff~%s|r at the auction house (%d)   ·   %s at vendors (%d)",
 		Money(groups.ahTotal), bagsAH, Money(groups.vendorTotal), bagsVendor)
 	if groups.elsewhereTotal > 0 then
-		text = text .. "   ·   |cff66a6ff+" .. Money(groups.elsewhereTotal) .. " in bank & mail|r"
+		text = text .. "   ·   |cff999999+" .. Money(groups.elsewhereTotal) .. " in bank & mail|r"
 	end
 	footerText:SetText(text)
 	for _, chip in ipairs(placeChips) do
@@ -567,6 +586,7 @@ local function CreateWindow()
 	end)
 	frame:HookScript("OnHide", function()
 		events:UnregisterAllEvents()
+		sell.HidePrompt()
 	end)
 	-- Now and then: have the auction prices of what's shown changed (a fresh scan)?
 	local sinceCheck = 0
@@ -582,6 +602,12 @@ local function CreateWindow()
 		end
 	end)
 	sell.onChanged = Render
+	sell.onTakeStatus = function()
+		if frame:IsShown() then
+			UpdateFooterNote()
+		end
+	end
+	sell.onPlaceChanged = sell.HidePrompt
 end
 
 function sell.ShowWindow()

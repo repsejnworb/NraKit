@@ -86,10 +86,12 @@ local CALLER = "NraKit"
 local STALE_DAYS = 3 -- an auction price older than this is dimmed
 
 local sell = { STALE_DAYS = STALE_DAYS }
+local Changed
 ns.sellList = sell
 
 local auctionHouseOpen = false
 local merchantOpen = false
+local placeOpen = { bank = false, mail = false } -- at the bank, at the mailbox
 
 function sell.IsAuctionHouseOpen()
 	return auctionHouseOpen
@@ -97,6 +99,12 @@ end
 
 function sell.IsMerchantOpen()
 	return merchantOpen
+end
+
+-- Whether you're at the bank or the mailbox ("bank", "mail"): then it's read live and you
+-- can take from it.
+function sell.IsPlaceOpen(where)
+	return placeOpen[where] == true
 end
 
 local function API()
@@ -213,9 +221,70 @@ local function MyInventory()
 	return realm and NraKitDB.inventory and NraKitDB.inventory[realm] and NraKitDB.inventory[realm][inventory.GetPlayer()]
 end
 
--- What's in your bank or mail ("bank", "mail") as Inventory Tracker last saw it:
--- { id, count, where } (no links: priced by ID).
+-- Your bank, read live (you're at it): one entry per item (gear per link), with every slot
+-- it's in: { id, link, count, bound, where = "bank", slots = { { bag, slot, count } } }.
+local function LiveBankItems()
+	local byKey, items = {}, {}
+	for _, bag in ipairs(ns.inventory and ns.inventory.BagsAt("bank") or {}) do
+		for slot = 1, C_Container.GetContainerNumSlots(bag) do
+			local info = C_Container.GetContainerItemInfo(bag, slot)
+			if info and info.itemID then
+				local gear = C_Item.IsEquippableItem and C_Item.IsEquippableItem(info.itemID)
+				local key = gear and info.hyperlink or info.itemID
+				local item = byKey[key]
+				if not item then
+					item = { id = info.itemID, link = info.hyperlink, count = 0, bound = true, where = "bank", slots = {},
+						icon = info.iconFileID, quality = info.quality }
+					byKey[key] = item
+					table.insert(items, item)
+				end
+				local count = math.max(info.stackCount or 1, 1)
+				item.count = item.count + count
+				item.bound = item.bound and info.isBound == true
+				table.insert(item.slots, { bag = bag, slot = slot, count = count })
+			end
+		end
+	end
+	return items
+end
+
+-- Your mail, read live (you're at the mailbox): one entry per item, with every attachment it's
+-- in: { id, link, count, where = "mail", attachments = { { mail, attachment, count } } }.
+-- C.O.D. mail is left out: it isn't yours until you pay.
+local function LiveMailItems()
+	local byKey, items = {}, {}
+	for mail = 1, GetInboxNumItems() do
+		local _, _, _, _, _, cod, _, itemCount = GetInboxHeaderInfo(mail)
+		if itemCount and itemCount > 0 and not (cod and cod > 0) then
+			for attachment = 1, ATTACHMENTS_MAX_RECEIVE do
+				local _, itemID, icon, count, quality = GetInboxItem(mail, attachment)
+				if itemID then
+					local link = GetInboxItemLink and GetInboxItemLink(mail, attachment)
+					local gear = C_Item.IsEquippableItem and C_Item.IsEquippableItem(itemID)
+					local key = gear and link or itemID
+					local item = byKey[key]
+					if not item then
+						item = { id = itemID, link = link, count = 0, where = "mail", attachments = {}, icon = icon, quality = quality }
+						byKey[key] = item
+						table.insert(items, item)
+					end
+					count = math.max(count or 1, 1)
+					item.count = item.count + count
+					table.insert(item.attachments, { mail = mail, attachment = attachment, count = count })
+				end
+			end
+		end
+	end
+	return items
+end
+sell.LiveMailItems = LiveMailItems
+
+-- What's in your bank or mail ("bank", "mail"): read live while you're there, else as
+-- Inventory Tracker last saw it ({ id, count, where }, no links: priced by ID).
 local function ElsewhereItems(where)
+	if placeOpen[where] then
+		return where == "bank" and LiveBankItems() or LiveMailItems()
+	end
 	local me = MyInventory()
 	local items = {}
 	for itemID, count in pairs(me and me[where] or {}) do
@@ -230,9 +299,11 @@ function sell.LastSeen(where)
 	return me and me.seen and me.seen[where]
 end
 
--- Whether the bank or mail is listed (its switch is on, and Inventory Tracker with it).
+-- Whether the bank or mail is listed: its switch is on, and you're there or Inventory Tracker
+-- remembers it.
 function sell.Shows(where)
-	return ns:IsModuleEnabled("inventoryTracker") and ns:GetOption(where == "bank" and "sellListBank" or "sellListMail") == true
+	return ns:GetOption(where == "bank" and "sellListBank" or "sellListMail") == true
+		and (placeOpen[where] or ns:IsModuleEnabled("inventoryTracker"))
 end
 
 local SORTS = {
@@ -308,8 +379,9 @@ function sell.Collect()
 			groups.loading = true
 			return
 		end
-		-- Whether a bank or mail item is soulbound isn't saved; one that binds when picked up is.
-		if item.where and item.bindType == 1 then
+		-- Whether a saved bank or mail item is soulbound isn't known; one that binds when picked
+		-- up is. (Read live, the bank says; mail is never soulbound to you yet.)
+		if item.where and not item.slots and item.bindType == 1 then
 			item.bound = true
 		end
 		if item.bound then
@@ -443,6 +515,16 @@ function ns:OpenSellList()
 	end
 end
 
+-- Redraws the list (if it's open): what's in a place changed, or you came or went.
+function Changed()
+	if sell.onChanged then
+		sell.onChanged()
+	end
+	if sell.onPlaceChanged then
+		sell.onPlaceChanged()
+	end
+end
+
 local eventFrame = CreateFrame("Frame")
 eventFrame:SetScript("OnEvent", function(_, event, addonName)
 	if event == "ADDON_LOADED" then
@@ -458,6 +540,14 @@ eventFrame:SetScript("OnEvent", function(_, event, addonName)
 	elseif event == "MERCHANT_CLOSED" then
 		merchantOpen = false
 		ns.UI.Undock()
+	elseif event == "BANKFRAME_OPENED" or event == "BANKFRAME_CLOSED" then
+		placeOpen.bank = event == "BANKFRAME_OPENED"
+		Changed()
+	elseif event == "MAIL_SHOW" or event == "MAIL_CLOSED" then
+		placeOpen.mail = event == "MAIL_SHOW"
+		Changed()
+	elseif event == "MAIL_INBOX_UPDATE" then
+		Changed()
 	end
 end)
 
@@ -497,7 +587,8 @@ function module:OnInitialize()
 end
 
 function module:OnEnabledChanged(enabled)
-	for _, event in ipairs({ "AUCTION_HOUSE_SHOW", "AUCTION_HOUSE_CLOSED", "MERCHANT_CLOSED" }) do
+	for _, event in ipairs({ "AUCTION_HOUSE_SHOW", "AUCTION_HOUSE_CLOSED", "MERCHANT_CLOSED",
+		"BANKFRAME_OPENED", "BANKFRAME_CLOSED", "MAIL_SHOW", "MAIL_CLOSED", "MAIL_INBOX_UPDATE" }) do
 		if enabled then
 			eventFrame:RegisterEvent(event)
 		else

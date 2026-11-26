@@ -298,8 +298,11 @@ item. A tab in the NraKit window (`/nra sell`).
   item, then the merchant's window, to sell it.
 - **Bank** and **Mail** switches at the top list what's in your bank and mailbox too (as Inventory
   Tracker last saw them), mixed in by value but **marked**: a bank or mailbox badge on the icon, a
-  bluish row, and a note on what to do ("take it out to sell it"). They can't be clicked into the
-  auction house, and the footer counts them apart: "+120g in bank & mail".
+  row tint of their own (warm for the bank, blue for mail), and a note on what to do. The footer
+  counts them apart: "+120g in bank & mail". Cash-on-delivery mail isn't listed: it isn't yours yet.
+- **At the bank or mailbox, click one to take it** into your bags. With more than one stack it asks
+  how many (starting at what fits in your bags; **Take All**), Shift-click takes all that fits.
+  From the bank it can take part of a stack; a mail's attachments come one at a time.
 - Leaves out items worth less than a **minimum** (5 silver) and sorts by **any column**. The footer
   says what it's all worth.
 - Without Auctionator it still works, on vendor prices.
