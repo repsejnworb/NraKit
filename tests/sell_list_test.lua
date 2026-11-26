@@ -5,6 +5,8 @@ Enum.BagIndex = { Backpack = 0, Bag_1 = 1, CharacterBankTab_1 = 6 }
 -- The auction house window (its addon already loaded), and a merchant's.
 CreateFrame("Frame", "AuctionHouseFrame")
 CreateFrame("Frame", "MerchantFrame"):Hide()
+CreateFrame("Frame", "BankFrame"):Hide()
+CreateFrame("Frame", "MailFrame"):Hide()
 rawset(MerchantFrame, "page", 1)
 
 -- Your bags: one bag with these slots.
@@ -378,6 +380,32 @@ return {
 			wow.advance(0.3)
 			wow.fire("BANKFRAME_CLOSED")
 			ns:SetSetting("sellListBank", false)
+		end)
+
+		t.test("a button on the bank and mailbox opens the list beside them", function()
+			CONTAINERS[6] = { { itemID = 1010, stackCount = 1 } }
+			BankFrame:Show()
+			wow.fire("BANKFRAME_OPENED")
+			_G.NraKitSellListFrame:Hide()
+			local buttons = wow.findAll(function(frame)
+				return rawget(frame, "parent") == BankFrame and rawget(frame, "text") and frame.text.text == "NraKit Sell List"
+			end)
+			t.equal(#buttons, 1, "a button on the bank")
+			buttons[1].scripts.OnClick(buttons[1])
+			t.ok(_G.NraKitSellListFrame:IsShown() and ns.UI.IsDocked(), "the list, beside the bank")
+			local listed = false
+			for _, item in ipairs(sell.Collect().ah) do
+				listed = listed or item.where == "bank"
+			end
+			t.ok(listed, "at the bank, the bank is listed even with its switch off")
+			wow.fire("BANKFRAME_CLOSED")
+			BankFrame:Hide()
+			t.ok(not ns.UI.IsDocked() and not _G.NraKitSellListFrame:IsShown(), "closes with the bank")
+			local mailButtons = wow.findAll(function(frame)
+				return rawget(frame, "parent") == MailFrame and rawget(frame, "text") and frame.text.text == "NraKit Sell List"
+			end)
+			t.equal(#mailButtons, 1, "and one on the mailbox")
+			CONTAINERS[6] = {}
 		end)
 
 		t.test("bags too full for it all: Take All says how many fit", function()

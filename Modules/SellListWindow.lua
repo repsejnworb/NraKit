@@ -417,7 +417,7 @@ function Render()
 	footerText:SetText(text)
 	for _, chip in ipairs(placeChips) do
 		chip:SetSelected(sell.Shows(chip.where))
-		local available = ns:IsModuleEnabled("inventoryTracker")
+		local available = ns:IsModuleEnabled("inventoryTracker") or sell.IsPlaceOpen(chip.where)
 		chip:SetEnabled(available)
 		chip:SetAlpha(available and 1 or 0.5)
 	end
@@ -515,6 +515,11 @@ local function CreateWindow()
 		end)
 		chip:SetScript("OnEnter", function(self)
 			local title = "Show your " .. self.where
+			if sell.IsPlaceOpen(self.where) then
+				UI.ShowTooltip(self, title, "You're at your " .. (self.where == "bank" and "bank" or "mailbox")
+					.. ": it's always listed here, to take from. This switch is for when you're away.")
+				return
+			end
 			if not ns:IsModuleEnabled("inventoryTracker") then
 				UI.ShowTooltip(self, title, "Turn on Inventory Tracker to include your bank and mail.")
 				return

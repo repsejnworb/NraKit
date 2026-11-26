@@ -70,13 +70,19 @@ local module = {
 		{
 			key = "sellListAHButton",
 			name = "Button on the auction house",
-			description = "A \"Sell List\" button at the top of the auction house window.",
+			description = "A \"NraKit Sell List\" button at the top of the auction house window.",
+			default = true,
+		},
+		{
+			key = "sellListPlaceButtons",
+			name = "Buttons on the bank and mailbox",
+			description = "A \"NraKit Sell List\" button at the top of the bank and mailbox windows: the list opens beside them, to take what's worth selling.",
 			default = true,
 		},
 		{
 			key = "sellListDock",
-			name = "Open beside the auction house",
-			description = "At the auction house, the list opens right next to it instead of where NraKit's windows usually are.",
+			name = "Open beside the auction house, bank or mailbox",
+			description = "There, the list opens right next to its window instead of where NraKit's windows usually are.",
 			default = true,
 		},
 	},
@@ -299,11 +305,14 @@ function sell.LastSeen(where)
 	return me and me.seen and me.seen[where]
 end
 
--- Whether the bank or mail is listed: its switch is on, and you're there or Inventory Tracker
--- remembers it.
+-- Whether the bank or mail is listed: always while you're there (read live, to take from),
+-- else when its switch is on and Inventory Tracker remembers it.
 function sell.Shows(where)
+	if placeOpen[where] then
+		return true
+	end
 	return ns:GetOption(where == "bank" and "sellListBank" or "sellListMail") == true
-		and (placeOpen[where] or ns:IsModuleEnabled("inventoryTracker"))
+		and ns:IsModuleEnabled("inventoryTracker")
 end
 
 local SORTS = {
@@ -457,57 +466,79 @@ function sell.SetOpen(group, open)
 end
 
 ---------------------------------------------------------------------------
--- The button on the auction house
+-- Buttons on the auction house, bank and mailbox windows
 ---------------------------------------------------------------------------
 
-local ahButton
+-- Where a "NraKit Sell List" button goes, by the window's close button: { frame name, option }.
+local PLACE_BUTTONS = {
+	{ frame = "AuctionHouseFrame", option = "sellListAHButton" },
+	{ frame = "BankFrame", option = "sellListPlaceButtons" },
+	{ frame = "MailFrame", option = "sellListPlaceButtons" },
+}
+local placeButtons = {} -- frame name -> button
 
-local function UpdateAHButton()
-	if not ahButton then
-		return
+local function UpdatePlaceButtons()
+	for _, place in ipairs(PLACE_BUTTONS) do
+		local button = placeButtons[place.frame]
+		if button then
+			button:SetShown(ns:IsModuleEnabled(module.key) and ns:GetOption(place.option))
+		end
 	end
-	ahButton:SetShown(ns:IsModuleEnabled(module.key) and ns:GetOption("sellListAHButton"))
 end
 
-local function CreateAHButton()
-	if ahButton or type(AuctionHouseFrame) ~= "table" then
-		return
+local function CreatePlaceButtons()
+	for _, place in ipairs(PLACE_BUTTONS) do
+		local parent = _G[place.frame]
+		if not placeButtons[place.frame] and type(parent) == "table" and parent.GetFrameLevel then
+			local button = ns.UI.CreateFlatButton(parent, "NraKit Sell List", 20)
+			-- Above the window's border and title, which are drawn far above the window itself.
+			local title = parent.TitleContainer
+			button:SetFrameLevel((title and title:GetFrameLevel() or parent:GetFrameLevel() + 500) + 5)
+			button:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -30, -1)
+			button:SetScript("OnClick", function()
+				if sell.IsWindowShown and sell.IsWindowShown() then
+					sell.HideWindow()
+				else
+					ns:OpenSellList()
+				end
+			end)
+			button:SetScript("OnEnter", function(self)
+				ns.UI.ShowTooltip(self, "Sell List", "What in your bags is worth selling, most valuable first. Opens beside this window.")
+			end)
+			button:SetScript("OnLeave", GameTooltip_Hide)
+			placeButtons[place.frame] = button
+			if place.frame == "AuctionHouseFrame" then
+				-- Opening the auction house opens the list (an option). The window is shown by
+				-- now, so the list can dock beside it.
+				parent:HookScript("OnShow", function()
+					if ns:IsModuleEnabled(module.key) and ns:GetOption("sellListAutoOpen") then
+						auctionHouseOpen = true
+						ns:OpenSellList()
+					end
+				end)
+			end
+		end
 	end
-	ahButton = ns.UI.CreateFlatButton(AuctionHouseFrame, "NraKit Sell List", 20)
-	-- Above the window's border and title, which are drawn far above the window itself.
-	local title = AuctionHouseFrame.TitleContainer
-	ahButton:SetFrameLevel((title and title:GetFrameLevel() or AuctionHouseFrame:GetFrameLevel() + 500) + 5)
-	ahButton:SetPoint("TOPRIGHT", AuctionHouseFrame, "TOPRIGHT", -30, -1)
-	ahButton:SetScript("OnClick", function()
-		if sell.IsWindowShown and sell.IsWindowShown() then
-			sell.HideWindow()
-		else
-			ns:OpenSellList()
-		end
-	end)
-	ahButton:SetScript("OnEnter", function(self)
-		ns.UI.ShowTooltip(self, "Sell List", "What in your bags is worth selling, most valuable first.")
-	end)
-	ahButton:SetScript("OnLeave", GameTooltip_Hide)
-	-- Opening the auction house opens the list (an option). The window is shown by now, so the
-	-- list can dock beside it.
-	AuctionHouseFrame:HookScript("OnShow", function()
-		if ns:IsModuleEnabled(module.key) and ns:GetOption("sellListAutoOpen") then
-			auctionHouseOpen = true
-			ns:OpenSellList()
-		end
-	end)
-	UpdateAHButton()
+	UpdatePlaceButtons()
 end
 
--- Opens the list; at the auction house or a merchant (if that's the option) NraKit's window
--- docks beside it, whichever tab you go to next, until it closes.
+-- Opens the list; at the auction house, a merchant, the bank or the mailbox (if that's the
+-- option) NraKit's window docks beside it, whichever tab you go to next, until it closes.
+local DOCKS = {
+	{ open = function() return auctionHouseOpen end, frame = "AuctionHouseFrame" },
+	{ open = function() return merchantOpen end, frame = "MerchantFrame" },
+	{ open = function() return placeOpen.bank end, frame = "BankFrame" },
+	{ open = function() return placeOpen.mail end, frame = "MailFrame" },
+}
+
 function ns:OpenSellList()
 	if ns:GetOption("sellListDock") and not ns.UI.IsDocked() then
-		if auctionHouseOpen and type(AuctionHouseFrame) == "table" and AuctionHouseFrame:IsShown() then
-			ns.UI.Dock(AuctionHouseFrame)
-		elseif merchantOpen and type(MerchantFrame) == "table" and MerchantFrame:IsShown() then
-			ns.UI.Dock(MerchantFrame)
+		for _, dock in ipairs(DOCKS) do
+			local frame = _G[dock.frame]
+			if dock.open() and type(frame) == "table" and frame:IsShown() then
+				ns.UI.Dock(frame)
+				break
+			end
 		end
 	end
 	if sell.ShowWindow then
@@ -528,12 +559,12 @@ end
 local eventFrame = CreateFrame("Frame")
 eventFrame:SetScript("OnEvent", function(_, event, addonName)
 	if event == "ADDON_LOADED" then
-		if addonName == "Blizzard_AuctionHouseUI" then
-			CreateAHButton()
+		if addonName == "Blizzard_AuctionHouseUI" or addonName == "Blizzard_MailFrame" then
+			CreatePlaceButtons()
 		end
 	elseif event == "AUCTION_HOUSE_SHOW" then
 		auctionHouseOpen = true
-		CreateAHButton()
+		CreatePlaceButtons()
 	elseif event == "AUCTION_HOUSE_CLOSED" then
 		auctionHouseOpen = false
 		ns.UI.Undock()
@@ -542,9 +573,17 @@ eventFrame:SetScript("OnEvent", function(_, event, addonName)
 		ns.UI.Undock()
 	elseif event == "BANKFRAME_OPENED" or event == "BANKFRAME_CLOSED" then
 		placeOpen.bank = event == "BANKFRAME_OPENED"
+		CreatePlaceButtons()
+		if not placeOpen.bank then
+			ns.UI.Undock()
+		end
 		Changed()
 	elseif event == "MAIL_SHOW" or event == "MAIL_CLOSED" then
 		placeOpen.mail = event == "MAIL_SHOW"
+		CreatePlaceButtons()
+		if not placeOpen.mail then
+			ns.UI.Undock()
+		end
 		Changed()
 	elseif event == "MAIL_INBOX_UPDATE" then
 		Changed()
@@ -571,7 +610,7 @@ end
 
 function module:OnInitialize()
 	eventFrame:RegisterEvent("ADDON_LOADED")
-	CreateAHButton()
+	CreatePlaceButtons()
 	HookMerchant()
 	ns:RegisterSlashCommand("sell", function()
 		if not ns:IsModuleEnabled(module.key) then
@@ -595,11 +634,11 @@ function module:OnEnabledChanged(enabled)
 			eventFrame:UnregisterEvent(event)
 		end
 	end
-	UpdateAHButton()
+	UpdatePlaceButtons()
 end
 
 function module:OnOptionChanged()
-	UpdateAHButton()
+	UpdatePlaceButtons()
 	if sell.onChanged then
 		sell.onChanged()
 	end
