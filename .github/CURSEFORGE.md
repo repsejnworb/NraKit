@@ -161,6 +161,7 @@ With a **fishing pole in your main hand**, **double right-click** the world to c
 ### Sell List
 **What in your bags is worth selling**, the most valuable first, so you don't have to hover every item.
 - **Auction house and vendor prices side by side** (auction prices from Auctionator); the better one is bright, and a **stale** auction price is marked.
+- A **Gain** column: how much more the auction house pays than a vendor; the auction house group is ranked by it, so items barely worth listing sink.
 - It **opens by itself beside the auction house**; pick where in its **Automatically Open At** menu (auction house, merchants, bank, mailbox), **per character**. A **button on the auction house** opens it too. There, **Alt+click** an item to put it in **Auctionator's Selling tab**, or click to pick it up for the sell slot. Also in the Inventory tab, and `/nra sell`.
 - After a fresh scan it says **"Prices have changed"** by the **refresh** button.
 - Split into **To Sell: Auction House** and **To Sell: Vendor** (soulbound items too); right-click one for **Keep, don't list** on what you use.

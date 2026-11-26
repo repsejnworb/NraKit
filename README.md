@@ -287,6 +287,8 @@ item. A tab in the NraKit window (`/nra sell`).
 
 - **Vendor and auction house prices side by side** (auction prices from Auctionator), for each item
   and the whole stack. The better of the two is bright; "a vendor pays more" says when to vendor.
+- A **Gain** column: how much more the auction house pays than a vendor. The auction house group is
+  ranked by it, so 20s that a vendor pays 1c for comes before 40s that a vendor pays 39s for.
 - An auction price **more than 3 days old** is marked, so you don't undercut yourself on old data.
 - It **opens by itself** beside the auction house when you open it. Pick where in the **Automatically
   Open At** menu at the top of the list (or its settings): the auction house (on by default),

@@ -35,6 +35,7 @@ ns.changelog = {
 			} },
 		{ "improved", title = "Bag Tithe", "With Auctionator, a slot is worth its **auction house** price when that's more than a vendor pays, so valuable trade goods aren't ranked as junk (soulbound items stay at vendor price)." },
 		{ "improved", title = "Sell List", "Items you're still farming for a Farm Goal stay in their own folded group until the goal is done, so you don't sell what you're collecting." },
+		{ "improved", title = "Sell List", "A **Gain** column shows how much more the auction house pays than a vendor, and the auction house items are ranked by it: 20s that a vendor pays 1c for now comes before 40s that a vendor pays 39s for." },
 	} },
 	{ version = "0.34.0", date = "2026-11-26", entries = {
 		{ "improved", title = "Sell List", "**Automatically Open At** is per character: your bank alt can open it at the bank and mailbox, your main just at the auction house." },

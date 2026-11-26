@@ -137,6 +137,7 @@ local ITEMS = {
 	[1004] = { "Soulbound Ring", 5000, 1 }, [1005] = { "Broken Fang", 5 }, [1006] = { "Old Price", 100 },
 	[1007] = { "Banked Gem", 100 }, [1008] = { "Pickup Trinket", 2000, 1 },
 	[1009] = { "Thorium Bar", 100, 0, true }, [1010] = { "Arcane Crystal", 1000 },
+	[1011] = { "Silk Cloth", 3900 }, [1012] = { "Rough Gem", 1 },
 }
 C_Item.GetItemInfo = function(item)
 	local id = tonumber(tostring(item):match("%d+"))
@@ -147,7 +148,7 @@ C_Item.GetItemInfo = function(item)
 end
 
 local AH = { [1001] = 450000, [1002] = 12000, [1003] = 10, [1006] = 20000, [1007] = 90000, [1008] = 70000,
-	[1009] = 5000, [1010] = 900000 }
+	[1009] = 5000, [1010] = 900000, [1011] = 4000, [1012] = 2000 }
 local AGE = { [1006] = 6 }
 local function ID(link)
 	return tonumber(tostring(link):match("%d+"))
@@ -223,6 +224,24 @@ return {
 			sell.SetSort("vendor")
 			t.equal(sell.Collect().ah[1].name, "Mithril Bar", "money columns start high (29s at a vendor)")
 			sell.SetSort("value")
+			t.equal(Names(sell.Collect().ah), "Black Lotus, Mithril Bar, Old Price", "by value")
+			NraKitDB.sellListSort = nil
+		end)
+
+		t.test("ranked by what the auction house pays over a vendor (gain)", function()
+			-- 40s that a vendor pays 39s for, and 20s that a vendor pays 1c for.
+			table.insert(BAG, { itemID = 1011, stackCount = 1 })
+			table.insert(BAG, { itemID = 1012, stackCount = 1 })
+			BAG_SIZE[0] = #BAG
+			local groups = sell.Collect()
+			t.equal(Names(groups.ah), "Black Lotus, Mithril Bar, Old Price, Rough Gem, Silk Cloth",
+				"20s over 1c ranks above 40s over 39s")
+			t.equal(groups.ah[5].gain, 100, "Silk Cloth gains 1s")
+			t.equal(groups.ah[4].gain, 1999, "Rough Gem gains 19s 99c")
+			t.equal(groups.vendor[1].gain, nil, "vendor items have no gain")
+			table.remove(BAG)
+			table.remove(BAG)
+			BAG_SIZE[0] = #BAG
 		end)
 
 		t.test("the window lists them, with totals", function()

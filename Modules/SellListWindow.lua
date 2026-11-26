@@ -26,10 +26,11 @@ local TOP_HEIGHT = 30
 local FOOTER_HEIGHT = 36
 
 -- Columns, from the right edge of a row: { right offset, width }.
-local AH_RIGHT, AH_WIDTH = -8, 110
-local VENDOR_RIGHT, VENDOR_WIDTH = -126, 96
-local EACH_RIGHT, EACH_WIDTH = -230, 96
-local COUNT_RIGHT, COUNT_WIDTH = -334, 50
+local GAIN_RIGHT, GAIN_WIDTH = -8, 96
+local AH_RIGHT, AH_WIDTH = -112, 110
+local VENDOR_RIGHT, VENDOR_WIDTH = -230, 96
+local EACH_RIGHT, EACH_WIDTH = -334, 96
+local COUNT_RIGHT, COUNT_WIDTH = -438, 50
 local CHECK_SECONDS = 2 -- how often the shown prices are compared with Auctionator's
 
 -- Groups, in the order they're listed (at a merchant the vendor group comes first).
@@ -190,6 +191,7 @@ local function AcquireRow(content)
 		end
 		row.vendor = Column(VENDOR_RIGHT, VENDOR_WIDTH)
 		row.ah = Column(AH_RIGHT, AH_WIDTH)
+		row.gain = Column(GAIN_RIGHT, GAIN_WIDTH)
 		row.each = Column(EACH_RIGHT, EACH_WIDTH, "GameFontHighlightSmall")
 		row.count = Column(COUNT_RIGHT, COUNT_WIDTH, "GameFontHighlightSmall")
 		row.name = MakeLabel(row, "")
@@ -261,6 +263,9 @@ local function FillRow(row, item, index)
 		row.vendor:SetTextColor(1, 1, 1)
 		row.ah:SetTextColor(unpack(UI.TEXT_DIM))
 	end
+	-- Gain: what the auction house pays over a vendor.
+	row.gain:SetText(item.gain and Money(item.gain) or "|cff666666-|r")
+	row.gain:SetTextColor(unpack(stale and UI.TEXT_DIM or UI.GOLD))
 end
 
 -- A group's heading row: click to fold or open it.
@@ -446,7 +451,7 @@ end
 ------------------------------------------------------------------------------
 
 -- A column title you click to sort by it.
-local function SortTitle(parent, text, key, right, width, justify)
+local function SortTitle(parent, text, key, right, width, justify, note)
 	local title = CreateFrame("Button", nil, parent)
 	title:SetSize(width, TOP_HEIGHT)
 	title:SetPoint("RIGHT", right - PAD, 0)
@@ -461,7 +466,7 @@ local function SortTitle(parent, text, key, right, width, justify)
 		sell.SetSort(self.key)
 	end)
 	title:SetScript("OnEnter", function(self)
-		UI.ShowTooltip(self, "Sort by " .. text:lower(), "Click again to turn the order around.")
+		UI.ShowTooltip(self, "Sort by " .. text:lower(), (note and note .. " " or "") .. "Click again to turn the order around.")
 	end)
 	title:SetScript("OnLeave", GameTooltip_Hide)
 	table.insert(sortTitles, title)
@@ -573,6 +578,8 @@ local function CreateWindow()
 	SortTitle(top, "Each", "each", EACH_RIGHT, EACH_WIDTH)
 	SortTitle(top, "Auction House", "ah", AH_RIGHT, AH_WIDTH)
 	SortTitle(top, "Vendor", "vendor", VENDOR_RIGHT, VENDOR_WIDTH)
+	SortTitle(top, "Gain", "gain", GAIN_RIGHT, GAIN_WIDTH, nil,
+		"What the auction house pays over a vendor: the most worth the bother of listing first.")
 	local valueTitle = SortTitle(top, "Value", "value", 0, 60, "LEFT")
 	valueTitle:ClearAllPoints()
 	valueTitle:SetPoint("LEFT", itemTitle.text, "RIGHT", 16, 0)

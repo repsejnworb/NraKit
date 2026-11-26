@@ -405,12 +405,17 @@ local SORTS = {
 	value = function(a, b)
 		return a.value < b.value
 	end,
+	-- What the auction house pays over a vendor: 40s that a vendor pays 39s for is worth
+	-- listing less than 20s that a vendor pays 1c for. (Vendor items have none: by value.)
+	gain = function(a, b)
+		return (a.gain or 0) < (b.gain or 0)
+	end,
 }
 
 function sell.GetSort()
 	local sort = NraKitDB.sellListSort
 	if not (sort and SORTS[sort.key]) then
-		return "value", false
+		return "gain", false
 	end
 	return sort.key, sort.ascending == true
 end
@@ -450,7 +455,8 @@ end
 -- too: at a vendor that makes no difference), kept = {...}, ahTotal, vendorTotal (of what's
 -- in your bags), elsewhereTotal (of what's in your bank and mail, when shown), loading }.
 -- Bank and mail items (item.where) are in the same groups as your bags', marked. Each item
--- gets groupEach: the price of one where its group sells it.
+-- gets groupEach: the price of one where its group sells it, and auction ones gain: what the
+-- auction house pays over a vendor.
 function sell.Collect()
 	local min = (ns:GetValue("sellListMinValue") or 5) * 100
 	local groups = { ah = {}, vendor = {}, goals = {}, kept = {}, ahTotal = 0, vendorTotal = 0, elsewhereTotal = 0,
@@ -470,6 +476,7 @@ function sell.Collect()
 			item.value, item.best = item.vendorTotal, "vendor"
 		end
 		item.groupEach = item.best == "ah" and item.each or item.vendorEach
+		item.gain = item.best == "ah" and item.ahTotal - item.vendorTotal or nil
 		if goalItems[item.id] then
 			table.insert(groups.goals, item)
 		elseif sell.IsKept(item.id) then
