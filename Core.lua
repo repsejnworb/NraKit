@@ -7,6 +7,8 @@ ns.moduleOrder = {}
 -- Modules register themselves at file load. A module is a table with:
 --   key         unique id, also the SavedVariables key for its enabled flag
 --   section     group in both settings UIs; one of ns.sectionOrder (Settings.lua)
+--   subsection  optional; a group inside the section (e.g. "Warrior" in "Classes"): the NraKit
+--               window lists it under the section in its sidebar, showing just its features
 --   name        label shown in the settings panel
 --   description tooltip shown in the settings panel
 --   default     whether the module is enabled on a fresh install (always false: every

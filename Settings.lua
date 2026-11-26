@@ -17,7 +17,8 @@ ns.sectionOrder = { "Units & Nameplates", "Classes", "Quests", "Bags & Items", "
 ns.settings = {}
 ns.optionsButtons = {} -- module key -> list of { label, description, onClick }
 
--- { { name = section, modules = { module, ... } }, ... } in display order.
+-- { { name = section, modules = { module, ... }, subsections = { { name, modules }, ... } }, ... }
+-- in display order; subsections in the order their first module registered.
 function ns:GetSections()
 	local byName, sections = {}, {}
 	for _, name in ipairs(self.sectionOrder) do
@@ -30,7 +31,22 @@ function ns:GetSections()
 			byName[name] = { name = name, modules = {} }
 			table.insert(sections, byName[name])
 		end
-		table.insert(byName[name].modules, module)
+		local section = byName[name]
+		table.insert(section.modules, module)
+		section.subsections = section.subsections or {}
+		if module.subsection then
+			local subsection
+			for _, each in ipairs(section.subsections) do
+				if each.name == module.subsection then
+					subsection = each
+				end
+			end
+			if not subsection then
+				subsection = { name = module.subsection, modules = {} }
+				table.insert(section.subsections, subsection)
+			end
+			table.insert(subsection.modules, module)
+		end
 	end
 	for i = #sections, 1, -1 do
 		if #sections[i].modules == 0 then

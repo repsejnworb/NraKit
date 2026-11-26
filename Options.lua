@@ -3,7 +3,8 @@ local addonName, ns = ...
 -- NraKit's own settings window (/nra), next to Blizzard's Options > AddOns page.
 --
 -- Left: a search box, "What's new" (with a dot while there's something you haven't
--- seen), "All features" and one entry per section (with enabled/total counts). Right: a
+-- seen), "All features" and one entry per section (with enabled/total counts), with its
+-- subsections indented under it (e.g. Classes > Warrior: just that one's features, options open). Right: a
 -- card per feature with its on/off switch and description; a card's options open inline
 -- under it. What's new lists Changelog.lua by version, with an on/off switch and a
 -- Settings link next to each new feature. Everything is built from the module definitions and
@@ -25,6 +26,8 @@ local TEXT, TEXT_DIM = UI.TEXT, UI.TEXT_DIM
 local frame, content, scrollFrame, searchBox, enabledOnlyCheck, whatsNewButton
 local navButtons = {}
 local selectedSection -- nil = all features
+local selectedSubsection -- within selectedSection; nil = the whole section
+local SUBSECTION_INDENT = 14
 local showWhatsNew = false
 local unseenEntries = {} -- changelog entries new to you, marked until the window closes
 local openVersions = {} -- version -> true/false once you've opened or closed it
@@ -686,7 +689,8 @@ local function UpdateNav()
 			end
 		end
 		button.count:SetText(on .. "/" .. total)
-		button:SetSelected(not searching and not showWhatsNew and button.section == selectedSection)
+		button:SetSelected(not searching and not showWhatsNew and button.section == selectedSection
+			and button.subsection == selectedSubsection)
 	end
 	local unseen = ns.whatsNew.UnseenCount()
 	whatsNewButton:SetSelected(not searching and showWhatsNew)
@@ -717,11 +721,14 @@ function Render()
 
 	for _, section in ipairs(ns:GetSections()) do
 		if query ~= "" or not selectedSection or selectedSection == section.name then
+			-- A subsection (e.g. Warrior): just its features, their options open.
+			local subsection = query == "" and selectedSubsection
 			local cards = {}
 			for _, module in ipairs(section.modules) do
 				local match = MatchModule(module, section.name)
-				if match and (not enabledOnly or IsOn(module.key)) then
-					table.insert(cards, { module = module, forceOpen = match == "options" })
+				if match and (not enabledOnly or IsOn(module.key))
+					and (not subsection or module.subsection == subsection) then
+					table.insert(cards, { module = module, forceOpen = match == "options" or subsection ~= nil })
 				end
 			end
 			if #cards > 0 then
@@ -729,7 +736,7 @@ function Render()
 					y = y - 10
 				end
 				local heading = AcquireText("GameFontNormalLarge")
-				heading:SetText(section.name)
+				heading:SetText(subsection and (section.name .. "  >  " .. subsection) or section.name)
 				heading:SetTextColor(1, 1, 1)
 				heading:SetPoint("TOPLEFT", content, "TOPLEFT", x + 2, y)
 				y = y - 28
@@ -757,12 +764,17 @@ end
 -- Window
 ------------------------------------------------------------------------------
 
-local function CreateNavButton(parent, label, section, modules)
-	local button = UI.CreateNavButton(parent, SIDEBAR_WIDTH - 2 * PAD, 26, label)
-	button.section, button.modules = section, modules
+local function CreateNavButton(parent, label, section, modules, subsection)
+	local indent = subsection and SUBSECTION_INDENT or 0
+	local button = UI.CreateNavButton(parent, SIDEBAR_WIDTH - 2 * PAD - indent, subsection and 22 or 26, label)
+	button.section, button.modules, button.subsection = section, modules, subsection
+	button.indent = indent
+	if subsection then
+		button.text:SetFontObject("GameFontHighlightSmall")
+	end
 
 	button:SetScript("OnClick", function(self)
-		selectedSection = self.section
+		selectedSection, selectedSubsection = self.section, self.subsection
 		showWhatsNew = false
 		if query ~= "" then
 			searchBox:SetText("") -- also re-renders
@@ -819,8 +831,13 @@ local function CreateWindow()
 	anchor:SetPoint("TOPLEFT", whatsNewButton, "BOTTOMLEFT", 0, -10)
 	for _, section in ipairs(ns:GetSections()) do
 		local button = CreateNavButton(sidebar, section.name, section.name, section.modules)
-		button:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -2)
+		button:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", -anchor.indent, -2)
 		anchor = button
+		for _, subsection in ipairs(section.subsections) do
+			local subButton = CreateNavButton(sidebar, subsection.name, section.name, subsection.modules, subsection.name)
+			subButton:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", SUBSECTION_INDENT - anchor.indent, -2)
+			anchor = subButton
+		end
 	end
 
 	enabledOnlyCheck = CreateFrame("CheckButton", nil, sidebar, "UICheckButtonTemplate")

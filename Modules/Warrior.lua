@@ -18,6 +18,7 @@ local _, ns = ...
 local module = {
 	key = "warrior",
 	section = "Classes",
+	subsection = "Warrior",
 	name = "Warrior",
 	description = "Small things for warriors: a mark on your rage bar where the rage you keep on changing stance ends, and a glow when Overpower, Revenge, Victory Rush or Execute can be used.",
 	default = false,
