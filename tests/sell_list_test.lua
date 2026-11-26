@@ -568,6 +568,7 @@ return {
 			sell.AskTake(bars, UIParent)
 			local prompt = sell.Prompt()
 			t.ok(prompt:IsShown(), "9 in one stack: it asks")
+			t.ok(prompt.take.isSelected and not prompt.all.isSelected, "Take is the main button, Take All isn't")
 			t.equal(prompt.unit, "items", "in items")
 			t.equal(prompt.amount, 9, "all 9 to start")
 			for _ = 1, 5 do

@@ -282,7 +282,9 @@ local function UpdatePrompt()
 	prompt.all.text:SetText(fits < prompt.total and string.format("Take %d (All That Fit)", fits) or "Take All")
 	prompt.all:SetWidth(prompt.all.text:GetStringWidth() + 20)
 	prompt.all:SetEnabled(fits > 0)
-	prompt.take:SetEnabled(prompt.amount > 0 and stacks <= prompt.room)
+	local canTake = prompt.amount > 0 and stacks <= prompt.room
+	prompt.take:SetEnabled(canTake)
+	prompt.take:SetSelected(canTake) -- lit as the main button only while it can be clicked
 end
 
 -- The amount, kept between 1 and the most there is (in the unit shown).
@@ -398,11 +400,15 @@ local function CreatePrompt()
 	prompt.cancel:SetScript("OnClick", function()
 		prompt:Hide()
 	end)
+	-- Take is the main button (lit), by Cancel; Take All is apart, far left, so it isn't
+	-- clicked by mistake after choosing an amount.
 	prompt.take = UI.CreateFlatButton(prompt, "Take", 24)
+	prompt.take:SetWidth(64)
 	prompt.take:SetPoint("RIGHT", prompt.cancel, "LEFT", -6, 0)
+	prompt.take:SetSelected(true)
 	prompt.take:SetScript("OnClick", TakeChosen)
 	prompt.all = UI.CreateFlatButton(prompt, "Take All", 24)
-	prompt.all:SetPoint("RIGHT", prompt.take, "LEFT", -6, 0)
+	prompt.all:SetPoint("BOTTOMLEFT", 12, 12)
 	prompt.all:SetScript("OnClick", function()
 		sell.Take(prompt.item, math.min(prompt.room, prompt.total))
 		prompt:Hide()
