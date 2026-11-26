@@ -31,6 +31,17 @@ function sell.TakeStatus()
 	return status
 end
 
+-- Forgets the last result ("Took 3 items from your bank."): it's about the moment it happened.
+-- Not while a take is still going.
+function sell.ClearTakeStatus()
+	if not job and status then
+		status = nil
+		if sell.onTakeStatus then
+			sell.onTakeStatus()
+		end
+	end
+end
+
 local function SetStatus(text)
 	status = text
 	if sell.onTakeStatus then

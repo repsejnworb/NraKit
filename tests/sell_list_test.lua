@@ -524,6 +524,7 @@ return {
 			t.ok(sell.TakeStatus():find("Took 18", 1, true), "all 18 taken")
 			wow.fire("BANKFRAME_CLOSED")
 			BankFrame:Hide()
+			t.equal(sell.TakeStatus(), nil, "the result gone when you leave the bank")
 			CONTAINERS[1], CONTAINERS[6] = {}, {}
 		end)
 
@@ -556,6 +557,10 @@ return {
 			t.equal(CONTAINERS[1][1].stackCount + CONTAINERS[1][2].stackCount, 25, "a stack of 20 and 5 split off")
 			t.equal(CONTAINERS[6][2].stackCount, 15, "15 left in the bank")
 			t.ok(sell.TakeStatus():find("Took 25", 1, true), "says so")
+			-- The result goes when it's old: the list opened again, Refresh, or leaving the bank.
+			_G.NraKitSellListFrame:Hide()
+			ns:OpenSellList()
+			t.equal(sell.TakeStatus(), nil, "gone when the list opens again")
 			wow.fire("BANKFRAME_CLOSED")
 			BankFrame:Hide()
 			ns:SetSetting("sellListBank", false)

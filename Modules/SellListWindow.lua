@@ -597,6 +597,7 @@ local function CreateWindow()
 	refreshButton.icon:SetPoint("CENTER")
 	refreshButton:SetScript("OnClick", function()
 		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+		sell.ClearTakeStatus()
 		Render()
 	end)
 	refreshButton:SetScript("OnEnter", function(self)
@@ -613,6 +614,7 @@ local function CreateWindow()
 		for _, event in ipairs({ "BAG_UPDATE_DELAYED", "ITEM_DATA_LOAD_RESULT", "GET_ITEM_INFO_RECEIVED" }) do
 			events:RegisterEvent(event)
 		end
+		sell.ClearTakeStatus() -- the last result was about the last time
 		Render()
 	end)
 	frame:HookScript("OnHide", function()
@@ -638,7 +640,13 @@ local function CreateWindow()
 			UpdateFooterNote()
 		end
 	end
-	sell.onPlaceChanged = sell.HidePrompt
+	sell.onPlaceChanged = function()
+		sell.HidePrompt()
+		-- Left the bank or mailbox: what was taken there is old news.
+		if not sell.AtBankOrMailbox() then
+			sell.ClearTakeStatus()
+		end
+	end
 end
 
 function sell.ShowWindow()
