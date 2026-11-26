@@ -141,6 +141,7 @@ return {
 			rawset(DamageMeter, "visibility", Enum.DamageMeterVisibility.InCombat)
 			SlashCmdList.NRAKIT("dps")
 			t.ok(wow.printed[#wow.printed]:find("in combat only", 1, true), "visibility: " .. wow.printed[#wow.printed])
+			t.ok(wow.printed[#wow.printed]:find("Always in Edit Mode", 1, true), "and how to make it always show")
 			rawset(DamageMeter, "visibility", nil)
 			C_DamageMeter = { IsDamageMeterAvailable = function() return false end }
 			SlashCmdList.NRAKIT("dps")

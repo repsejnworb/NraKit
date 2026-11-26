@@ -354,18 +354,22 @@ end)
 
 local ENABLED_CVAR = "damageMeterEnabled"
 
--- Why the meter may still not show once it's on: its Edit Mode visibility.
+-- Why the meter may still not show once it's on: its Edit Mode visibility. NraKit leaves that
+-- alone (changing it would taint the meter or your Edit Mode layout); set to Always, it's
+-- /nra dps alone that decides.
+local ALWAYS_HINT = " Set its visibility to Always in Edit Mode, and /nra dps alone decides."
+
 local function VisibilityNote()
 	local visibility = DamageMeter and DamageMeter.visibility
 	local values = Enum.DamageMeterVisibility
 	if not visibility or not values then
 		return ""
 	elseif visibility == values.InCombat then
-		return " It shows in combat only (Edit Mode)."
+		return " It shows in combat only." .. ALWAYS_HINT
 	elseif visibility == values.InGroup then
-		return " It shows in a group only (Edit Mode)."
+		return " It shows in a group only." .. ALWAYS_HINT
 	elseif visibility == values.Hidden then
-		return " Edit Mode has it set to hidden, though."
+		return " Edit Mode has it hidden, though." .. ALWAYS_HINT
 	end
 	return ""
 end

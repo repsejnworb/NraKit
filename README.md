@@ -517,7 +517,8 @@ A **clean, flat look** for the game's own damage meter.
 - Size, style, icons and class colours are still set in Edit Mode.
 - Turning it off asks for a reload to bring back the game's look.
 - `/nra dps` shows or hides the damage meter (the game's own setting), whether or not the look is on.
-  `/nra dps show` and `/nra dps hide` do one or the other.
+  `/nra dps show` and `/nra dps hide` do one or the other. With the meter's visibility set to
+  **Always** in Edit Mode, `/nra dps` alone decides (NraKit doesn't change Edit Mode for you).
 
 <img width="336" height="145" alt="damageMeterLook" src=".github/screenshots/damageMeterLook.png" />
 
