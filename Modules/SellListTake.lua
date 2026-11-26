@@ -5,11 +5,13 @@ local _, ns = ...
 -- it; with more than one stack, a small panel by the row asks how many (Take All takes what
 -- fits). Shift-click takes all that fits without asking.
 --
---   Bank   the same as by hand: pick up from the bank slot, put it in a free bag slot that can
---          hold it (C_Container.PickupContainerItem, SplitContainerItem for part of a stack).
---          Nothing protected: "using" the item (Blizzard's right-click) would be, for potions.
---          All of it right in your click: done later (from a timer) the game picks the item up
---          but quietly won't put it down (seen in game). Whole stacks first, then one split.
+--   Bank   the same as by hand: pick up from the bank slot, put it down in your bags
+--          (C_Container.PickupContainerItem, SplitContainerItem for part of a stack). Nothing
+--          protected: "using" the item (Blizzard's right-click) would be, for potions. Tidily:
+--          one move at a time (a slot is locked until the server has it), the smallest bank
+--          stack first, onto a partial stack of it in your bags if there is one, else into an
+--          empty slot, so 2 + 2 + 3 potions become 5 + 2. A bag the game refuses (still on the
+--          cursor) gets the item put back and isn't tried again.
 --   Mail   TakeInboxItem, one attachment at a time (an attachment is a stack: it can't be
 --          split), waiting for each to arrive; mail numbers shift as mails empty, so the
 --          inbox is read again before each. C.O.D. mail is never listed (SellList.lua).
@@ -20,8 +22,9 @@ local UI = ns.UI
 local sell = ns.sellList
 
 local MAIL_WAIT_SECONDS = 0.5 -- at least this between mail takes, and until the inbox updates
+local BANK_STEP_SECONDS = 0.15 -- between bank moves (each also waits for its slots to unlock)
 
-local job -- { item, where, want (items or attachments), done, maxStack, targets = { "bag:slot" = true } }
+local job -- { item, where, want (items, or mail attachments), done, maxStack, refused = { [bag] = true } }
 local status -- the footer's line about taking: "Taking 2 of 5...", "Took 3 stacks", ...
 
 function sell.TakeStatus()
@@ -119,17 +122,50 @@ local function FreeBagSlot(itemID, skip, refused)
 end
 sell.BagsFor = BagsFor
 
--- How many free bag slots can hold the item: room, in stacks.
-function sell.Room(item)
-	local skip, room = {}, 0
-	while true do
-		local bag, slot = FreeBagSlot(item.id, skip)
-		if not bag then
-			return room
+-- How many of the item your bags can take: empty slots that can hold it, and what's left on
+-- partial stacks of it.
+function sell.RoomItems(item)
+	local maxStack, room = MaxStack(item), 0
+	for _, bag in ipairs(BagsFor(item.id)) do
+		for slot = 1, C_Container.GetContainerNumSlots(bag) do
+			local info = C_Container.GetContainerItemInfo(bag, slot)
+			if not info then
+				room = room + maxStack
+			elseif info.itemID == item.id and maxStack > 1 then
+				room = room + math.max(0, maxStack - (info.stackCount or 0))
+			end
 		end
-		skip[bag .. ":" .. slot] = true
-		room = room + 1
 	end
+	return room
+end
+
+-- Room in your bags, in (full) stacks of the item.
+function sell.Room(item)
+	return math.floor(sell.RoomItems(item) / MaxStack(item))
+end
+
+-- A partial stack of the item in your bags to top up: bag, slot, how many more it takes.
+-- `waiting` is true when there is one but it's locked (a move onto it is still going).
+local function PartialStack(item, maxStack, refused)
+	if maxStack <= 1 then
+		return nil
+	end
+	local waiting = false
+	for _, bag in ipairs(BagsFor(item.id)) do
+		if not refused[bag] then
+			for slot = 1, C_Container.GetContainerNumSlots(bag) do
+				local info = C_Container.GetContainerItemInfo(bag, slot)
+				if info and info.itemID == item.id and (info.stackCount or 0) < maxStack then
+					if info.isLocked then
+						waiting = true
+					else
+						return bag, slot, maxStack - info.stackCount
+					end
+				end
+			end
+		end
+	end
+	return nil, nil, nil, waiting
 end
 
 -- How many stacks the item is where it is: bank stacks of its full size, or mail attachments.
@@ -157,60 +193,66 @@ local function Plural(count, one, many)
 	return count .. " " .. (count == 1 and one or many)
 end
 
--- The bank: moves `want` items into free bag slots, now (in your click): whole stacks into
--- free slots, then the rest split off one stack. Returns the line to show.
-local function TakeFromBank(item, want)
+-- The bank: one move. Returns nothing while it's still going (or waiting for a lock).
+local function BankStep()
+	local remaining = job.want - job.done
+	if remaining <= 0 then
+		return Finish("Took " .. Plural(job.done, "item", "items") .. " from your bank.")
+	end
 	if GetCursorInfo() then
-		return "Stopped: you have something on your cursor."
+		return Finish("Stopped: you have something on your cursor.")
 	end
-	local maxStack, done, targets, refused = MaxStack(item), 0, {}, {}
-	Debug(select(2, BagsFor(item.id)))
-	local split = false
-	for _, place in ipairs(item.slots) do
-		local remaining = want - done
-		if remaining <= 0 then
-			break
-		end
+	-- The smallest stack still in the bank (that empties bank slots); wait if they're locked.
+	local source, locked = nil, false
+	for _, place in ipairs(job.item.slots) do
 		local info = C_Container.GetContainerItemInfo(place.bag, place.slot)
-		if info and info.itemID == item.id and not info.isLocked and (info.stackCount or 0) > 0 then
-			local amount = math.min(remaining, info.stackCount, maxStack)
-			-- Part of a stack: only once (the stack is locked until the server has split it).
-			if amount < info.stackCount and split then
-				break
+		if info and info.itemID == job.item.id and (info.stackCount or 0) > 0 then
+			if info.isLocked then
+				locked = true
+			elseif not source or info.stackCount < source.count then
+				source = { bag = place.bag, slot = place.slot, count = info.stackCount }
 			end
-			-- Put it down; if the game refuses a bag (it's still on the cursor: "The item doesn't
-			-- go into that container"), put it back and try the next bag.
-			local moved = false
-			while not moved do
-				local bag, slot = FreeBagSlot(item.id, targets, refused)
-				if not bag then
-					return string.format("Bags full: took %d of %d.", done, want)
-				end
-				Debug(string.format("%s %d from bank %d:%d (stack %d) into bag %d:%d (%s)",
-					amount < info.stackCount and "split" or "move", amount, place.bag, place.slot, info.stackCount,
-					bag, slot, tostring(C_Container.GetBagName and C_Container.GetBagName(bag))))
-				if amount < info.stackCount then
-					C_Container.SplitContainerItem(place.bag, place.slot, amount)
-				else
-					C_Container.PickupContainerItem(place.bag, place.slot)
-				end
-				C_Container.PickupContainerItem(bag, slot)
-				targets[bag .. ":" .. slot] = true
-				if GetCursorInfo() then
-					Debug("refused by bag " .. bag .. ": putting it back, trying the next bag")
-					ClearCursor() -- back where it came from
-					refused[bag] = true
-				else
-					moved = true
-				end
-			end
-			if amount < info.stackCount then
-				split = true
-			end
-			done = done + amount
 		end
 	end
-	return "Took " .. Plural(done, "item", "items") .. " from your bank."
+	if not source then
+		if locked then
+			return
+		end
+		return Finish("Took " .. Plural(job.done, "item", "items") .. " from your bank.")
+	end
+	-- Onto a partial stack of it in your bags (wait if one is still locked from the last
+	-- move), else into an empty slot.
+	local bag, slot, room, waiting = PartialStack(job.item, job.maxStack, job.refused)
+	if waiting then
+		return
+	end
+	local into = "stack"
+	if not bag then
+		bag, slot = FreeBagSlot(job.item.id, nil, job.refused)
+		room, into = job.maxStack, "empty"
+	end
+	if not bag then
+		return Finish(string.format("Bags full: took %d of %d.", job.done, job.want))
+	end
+	local amount = math.min(remaining, source.count, room)
+	Debug(string.format("%s %d from bank %d:%d (stack %d) onto bag %d:%d (%s, %s)",
+		amount < source.count and "split" or "move", amount, source.bag, source.slot, source.count, bag, slot, into,
+		tostring(C_Container.GetBagName and C_Container.GetBagName(bag))))
+	if amount < source.count then
+		C_Container.SplitContainerItem(source.bag, source.slot, amount)
+	else
+		C_Container.PickupContainerItem(source.bag, source.slot)
+	end
+	C_Container.PickupContainerItem(bag, slot)
+	if GetCursorInfo() then
+		-- Refused ("That item doesn't go in that container"): back it goes; not that bag again.
+		Debug("refused by bag " .. bag .. ": putting it back, trying the next bag")
+		ClearCursor()
+		job.refused[bag] = true
+		return
+	end
+	job.done = job.done + amount
+	SetStatus(string.format("Taking %d of %d...", job.done, job.want))
 end
 
 -- The mail: takes the next attachment of the item, then waits for it to arrive.
@@ -245,10 +287,15 @@ runner:SetScript("OnUpdate", function(_, elapsed)
 		runner:Hide()
 		return
 	end
-	if not sell.IsPlaceOpen("mail") then
-		return Finish("Stopped: the mailbox closed.")
+	if not sell.IsPlaceOpen(job.where) then
+		return Finish("Stopped: the " .. (job.where == "bank" and "bank" or "mailbox") .. " closed.")
 	end
-	if sinceStep >= MAIL_WAIT_SECONDS and not job.waiting then
+	if job.where == "bank" then
+		if sinceStep >= BANK_STEP_SECONDS then
+			sinceStep = 0
+			BankStep()
+		end
+	elseif sinceStep >= MAIL_WAIT_SECONDS and not job.waiting then
 		sinceStep = 0
 		MailStep()
 	end
@@ -269,25 +316,33 @@ errors:SetScript("OnEvent", function(_, _, _, message)
 	Debug("game error:", tostring(message))
 end)
 
--- Takes from where the item is, as much as fits: `stacks` stacks (nil: all of it), or with
--- `items`, that many items (the bank only: mail comes a whole attachment at a time).
--- Call it from a click: the bank's moves happen right then.
+-- Takes from where the item is: `stacks` stacks (nil: all of it), or with `items`, that many
+-- items (the bank only: mail comes a whole attachment at a time).
 function sell.Take(item, stacks, items)
 	if job or not (item.where and sell.IsPlaceOpen(item.where)) or InCombatLockdown() then
 		return false
 	end
 	local maxStack = MaxStack(item)
+	local want
 	if item.where == "bank" then
-		local want = items or (stacks or math.huge) * maxStack
-		SetStatus(TakeFromBank(item, math.min(want, item.count)))
-		return true
+		want = math.min(items or (stacks or math.huge) * maxStack, item.count)
+		Debug(select(2, BagsFor(item.id)))
+	else
+		want = math.min(stacks or math.huge, #item.attachments)
 	end
-	local want = math.min(stacks or math.huge, #item.attachments)
-	job = { item = item, where = item.where, want = want, done = 0, maxStack = maxStack }
+	job = { item = item, where = item.where, want = want, done = 0, maxStack = maxStack, refused = {} }
 	sinceStep = math.huge
 	SetStatus(string.format("Taking 0 of %d...", want))
 	runner:Show()
 	return true
+end
+
+-- Takes all of it that fits in your bags (Shift-click, Take All).
+function sell.TakeAllThatFits(item)
+	if item.where == "bank" then
+		return sell.Take(item, nil, math.min(item.count, sell.RoomItems(item)))
+	end
+	return sell.Take(item, math.min(sell.Room(item), sell.Stacks(item)))
 end
 
 function sell.IsTaking()
@@ -338,13 +393,25 @@ local function UpdatePrompt()
 	else
 		prompt.detail:SetText(string.format("(%s)", Plural(items, "item", "items")))
 	end
-	local fits = math.min(prompt.room, prompt.total)
-	prompt.roomText:SetText("Room in your bags: " .. Plural(prompt.room, "stack", "stacks"))
-	prompt.roomText:SetTextColor(unpack(prompt.room < prompt.total and UI.ACCENT or UI.TEXT_DIM))
-	prompt.all.text:SetText(fits < prompt.total and string.format("Take %d (All That Fit)", fits) or "Take All")
+	-- What fits: the bank in items (onto partial stacks too), mail in whole attachments.
+	local short, fits, canTake
+	if item.where == "bank" then
+		short = prompt.fitsItems < item.count
+		fits = prompt.unit == "items" and prompt.fitsItems or math.ceil(prompt.fitsItems / prompt.maxStack)
+		canTake = items <= prompt.fitsItems
+		prompt.roomText:SetText("Room in your bags: " .. (prompt.unit == "items" and Plural(prompt.roomItems, "item", "items")
+			or Plural(math.floor(prompt.roomItems / prompt.maxStack), "stack", "stacks")))
+	else
+		short = prompt.room < prompt.total
+		fits = math.min(prompt.room, prompt.total)
+		canTake = stacks <= prompt.room
+		prompt.roomText:SetText("Room in your bags: " .. Plural(prompt.room, "stack", "stacks"))
+	end
+	prompt.roomText:SetTextColor(unpack(short and UI.ACCENT or UI.TEXT_DIM))
+	prompt.all.text:SetText(short and string.format("Take %d (All That Fit)", fits) or "Take All")
 	prompt.all:SetWidth(prompt.all.text:GetStringWidth() + 20)
 	prompt.all:SetEnabled(fits > 0)
-	local canTake = prompt.amount > 0 and stacks <= prompt.room
+	canTake = canTake and prompt.amount > 0
 	prompt.take:SetEnabled(canTake)
 	prompt.take:SetSelected(canTake) -- lit as the main button only while it can be clicked
 end
@@ -378,8 +445,8 @@ end
 local function CreatePrompt()
 	prompt = CreateFrame("Frame", "NraKitSellTakePrompt", UIParent)
 	prompt:SetSize(PROMPT_WIDTH, PROMPT_HEIGHT)
-	-- Above the list (both would be DIALOG, and the list comes to the front when clicked).
-	prompt:SetFrameStrata("FULLSCREEN_DIALOG")
+	-- Above the list (HIGH), like the game's own pop-ups.
+	prompt:SetFrameStrata("DIALOG")
 	prompt:SetToplevel(true)
 	prompt:EnableMouse(true)
 	prompt:EnableKeyboard(true)
@@ -472,7 +539,7 @@ local function CreatePrompt()
 	prompt.all = UI.CreateFlatButton(prompt, "Take All", 24)
 	prompt.all:SetPoint("BOTTOMLEFT", 12, 12)
 	prompt.all:SetScript("OnClick", function()
-		sell.Take(prompt.item, math.min(prompt.room, prompt.total))
+		sell.TakeAllThatFits(prompt.item)
 		prompt:Hide()
 	end)
 
@@ -506,13 +573,18 @@ function sell.AskTake(item, row)
 	end
 	prompt.item, prompt.total, prompt.maxStack = item, total, MaxStack(item)
 	prompt.room = sell.Room(item)
+	prompt.roomItems = sell.RoomItems(item)
+	prompt.fitsItems = math.min(item.count, prompt.roomItems)
 	-- All in one stack: count in items. Several: in stacks.
 	prompt.unit = (item.where == "bank" and total <= 1) and "items" or "stacks"
 	prompt.title:SetText(item.name or ("Item " .. item.id))
 	prompt.where:SetText(string.format("%d in %s", item.count, item.where == "mail" and "your mail" or "your bank"))
 	-- As much as fits.
 	if prompt.unit == "items" then
-		SetAmount(math.min(item.count, prompt.room * prompt.maxStack))
+		SetAmount(prompt.fitsItems)
+	elseif item.where == "bank" then
+		-- All of it if it fits; else the whole stacks that fit.
+		SetAmount(prompt.fitsItems >= item.count and total or math.max(1, math.floor(prompt.fitsItems / prompt.maxStack)))
 	else
 		SetAmount(math.min(prompt.room, total))
 	end

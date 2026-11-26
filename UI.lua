@@ -309,7 +309,9 @@ function UI.CreateWindow(globalName, titleText, width, height, sidebarWidth, tab
 	local frame = CreateFrame("Frame", globalName, UIParent)
 	frame:SetSize(width, height)
 	frame:SetPoint("CENTER")
-	frame:SetFrameStrata("DIALOG")
+	-- HIGH: above the game's windows (bank, auction house...), below its pop-ups (DIALOG:
+	-- "Clean up your bank?", delete confirmations), which must show in front.
+	frame:SetFrameStrata("HIGH")
 	frame:SetToplevel(true)
 	frame:SetClampedToScreen(true)
 	frame:SetMovable(true)

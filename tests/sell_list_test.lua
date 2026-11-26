@@ -60,8 +60,17 @@ C_Container.PickupContainerItem = function(bag, slot)
 	picked = { bag, slot }
 	local items = CONTAINERS[bag]
 	if cursor then
-		if not items[slot] and not REFUSES[bag] then
+		local there = items[slot]
+		if not there and not REFUSES[bag] then
 			items[slot], cursor = cursor, nil
+		elseif there and there.itemID == cursor.itemID then
+			-- Onto a stack of the same item: as much as fits (20), the rest stays on the cursor.
+			local moved = math.min(cursor.stackCount, 20 - there.stackCount)
+			there.stackCount = there.stackCount + moved
+			cursor.stackCount = cursor.stackCount - moved
+			if cursor.stackCount == 0 then
+				cursor = nil
+			end
 		end
 	else
 		cursor, items[slot] = items[slot], nil
@@ -161,6 +170,12 @@ Auctionator = { API = { v1 = {
 return {
 	enable = { "sellList", "auctionatorPrices", "inventoryTracker" },
 	run = function(t, ns, wow)
+		-- Lets taking from the bank finish (one move at a time).
+		local function Settle()
+			for _ = 1, 40 do
+				wow.advance(0.2)
+			end
+		end
 		local sell = ns.sellList
 		local function Names(list)
 			local names = {}
@@ -397,6 +412,7 @@ return {
 			local crystal = Row("Arcane Crystal")
 			t.ok(crystal and crystal.item.slots, "read live from the bank")
 			crystal.scripts.OnClick(crystal, "LeftButton")
+			Settle() -- bank moves go one at a time
 			wow.advance(0.3)
 			t.equal(C_Container.GetContainerItemID(1, 1), 1010, "one stack: taken at once")
 			t.equal(CONTAINERS[6][4], nil, "out of the bank")
@@ -410,11 +426,23 @@ return {
 			t.equal(prompt.amount, 3, "starting at all that fits (3 free slots), in stacks")
 			prompt.minus.scripts.OnClick(prompt.minus)
 			prompt.take.scripts.OnClick(prompt.take)
+			Settle() -- bank moves go one at a time
 			for _ = 1, 5 do
 				wow.advance(0.3)
 			end
-			t.equal(CONTAINERS[1][2].stackCount + CONTAINERS[1][3].stackCount, 40, "two stacks in your bags")
-			t.equal(CONTAINERS[6][3].stackCount, 5, "the rest still in the bank")
+			local function Stacks(bag, itemID)
+				local stacks = {}
+				for slot = 1, BAG_SIZE[bag] do
+					local item = CONTAINERS[bag][slot]
+					if item and item.itemID == itemID then
+						table.insert(stacks, item.stackCount)
+					end
+				end
+				table.sort(stacks)
+				return table.concat(stacks, ",")
+			end
+			t.equal(Stacks(1, 1009), "20,20", "two full stacks in your bags")
+			t.equal(Stacks(6, 1009), "5", "5 left in the bank")
 			t.ok(sell.TakeStatus():find("Took 40", 1, true), "says what it took")
 
 			sell.onChanged()
@@ -423,6 +451,7 @@ return {
 				return true
 			end
 			bars.scripts.OnClick(bars, "LeftButton")
+			Settle() -- bank moves go one at a time
 			IsShiftKeyDown = function() end
 			wow.advance(0.3)
 			t.equal(CONTAINERS[1][4] and CONTAINERS[1][4].stackCount, 5, "Shift-click: the rest, without asking")
@@ -470,6 +499,34 @@ return {
 			CONTAINERS[6] = {}
 		end)
 
+		t.test("taking stacks them tidily: small bank stacks become full ones in your bags", function()
+			cursor = nil
+			CONTAINERS[1] = { { itemID = 1009, stackCount = 12 } } -- a partial stack already in your bags
+			CONTAINERS[6] = { { itemID = 1009, stackCount = 3 }, { itemID = 1009, stackCount = 6 }, { itemID = 1009, stackCount = 9 } }
+			BankFrame:Show()
+			wow.fire("BANKFRAME_OPENED")
+			local bars
+			for _, item in ipairs(sell.Collect().ah) do
+				if item.where == "bank" then
+					bars = item
+				end
+			end
+			sell.Take(bars)
+			Settle()
+			local stacks = {}
+			for slot = 1, 4 do
+				if CONTAINERS[1][slot] then
+					table.insert(stacks, CONTAINERS[1][slot].stackCount)
+				end
+			end
+			table.sort(stacks)
+			t.equal(table.concat(stacks, ","), "10,20", "12 + 3 + 6 + 9 = 30: topped up to 20, then 10")
+			t.ok(sell.TakeStatus():find("Took 18", 1, true), "all 18 taken")
+			wow.fire("BANKFRAME_CLOSED")
+			BankFrame:Hide()
+			CONTAINERS[1], CONTAINERS[6] = {}, {}
+		end)
+
 		t.test("the prompt counts in stacks or items; items takes whole stacks, then splits the rest", function()
 			cursor = nil
 			CONTAINERS[1] = {}
@@ -495,6 +552,7 @@ return {
 			end
 			t.equal(prompt.amount, 25, "25 items")
 			prompt.take.scripts.OnClick(prompt.take)
+			Settle() -- bank moves go one at a time
 			t.equal(CONTAINERS[1][1].stackCount + CONTAINERS[1][2].stackCount, 25, "a stack of 20 and 5 split off")
 			t.equal(CONTAINERS[6][2].stackCount, 15, "15 left in the bank")
 			t.ok(sell.TakeStatus():find("Took 25", 1, true), "says so")
@@ -590,6 +648,7 @@ return {
 				prompt.minus.scripts.OnClick(prompt.minus)
 			end
 			prompt.take.scripts.OnClick(prompt.take)
+			Settle() -- bank moves go one at a time
 			t.equal(CONTAINERS[1][1].stackCount, 4, "took 4")
 			t.equal(CONTAINERS[6][1].stackCount, 5, "5 left")
 			wow.fire("BANKFRAME_CLOSED")
@@ -625,6 +684,7 @@ return {
 				end
 			end
 			sell.Take(crystal)
+			Settle() -- bank moves go one at a time
 			t.equal(CONTAINERS[5][1], nil, "not put in the reagent bag")
 			t.ok(sell.TakeStatus():find("Bags full", 1, true), "your bags are full for it")
 			wow.fire("BANKFRAME_CLOSED")
@@ -658,6 +718,7 @@ return {
 				end
 			end
 			sell.Take(crystal)
+			Settle() -- bank moves go one at a time
 			t.equal(CONTAINERS[-1][1], nil, "not in the keyring")
 			t.equal(CONTAINERS[1][1] and CONTAINERS[1][1].itemID, 1010, "in a bag")
 			wow.fire("BANKFRAME_CLOSED")
@@ -683,6 +744,7 @@ return {
 				end
 			end
 			sell.Take(crystal)
+			Settle() -- bank moves go one at a time
 			t.equal(cursor, nil, "nothing left on the cursor")
 			t.equal(CONTAINERS[1][1], nil, "not in the bag that refused")
 			t.equal(CONTAINERS[2][1] and CONTAINERS[2][1].itemID, 1010, "in the next bag")
@@ -708,7 +770,10 @@ return {
 			sell.AskTake(bars, UIParent)
 			t.equal(sell.Prompt().all.text.text, "Take 1 (All That Fit)", "room for one")
 			-- Regression: it was on the list's own layer, so it drew behind it.
-			t.equal(sell.Prompt():GetFrameStrata(), "FULLSCREEN_DIALOG", "above the list")
+			t.equal(sell.Prompt():GetFrameStrata(), "DIALOG", "above the list (HIGH)")
+			-- Regression: NraKit's windows were DIALOG, the layer of the game's pop-ups, and hid
+			-- "Clean up your bank?" behind them.
+			t.equal(_G.NraKitSellListFrame:GetFrameStrata(), "HIGH", "NraKit's windows below the game's pop-ups")
 			sell.HidePrompt()
 			wow.fire("BANKFRAME_CLOSED")
 			BankFrame:Hide()

@@ -107,7 +107,7 @@ local function OnRowClick(self, button)
 	-- A bank or mail item, while you're there: take it (Shift: all that fits, no asking).
 	if item.where and sell.IsPlaceOpen(item.where) and button == "LeftButton" and not IsAltKeyDown() then
 		if IsShiftKeyDown() then
-			sell.Take(item, sell.Room(item))
+			sell.TakeAllThatFits(item)
 		else
 			sell.AskTake(item, self)
 		end
