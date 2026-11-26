@@ -1,4 +1,4 @@
--- Campfire timer: the campfire rest (once per time you sit down), and the sleeping bag
+-- Campfire Timer: the campfire rest (once per time you sit down), and the sleeping bag
 -- (Resting) waits for 3 stacks of Well-Rested.
 
 local WELCOMING_CAMPFIRE, CAMP_BENEFITS = 1229739, 1229741

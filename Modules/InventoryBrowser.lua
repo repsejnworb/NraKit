@@ -1,13 +1,13 @@
 local _, ns = ...
 
--- Inventory browser (/nra inv): a window over Inventory tracker's data.
+-- Inventory browser (/nra inv): a window over Inventory Tracker's data.
 --
--- Sidebar: "All characters", then each character (class colour, level, gold); right-
+-- Sidebar: "All Characters", then each character (class colour, level, gold); right-
 -- click one to forget it. Top: location tabs (All, Bags, Bank, Mail, Equipped), a
 -- grid/list toggle, search, and category chips. A line under them says how fresh the
 -- data is (the bank and mail are only read while open).
 --
--- One character opens as a bag-like grid; "All characters" opens as a list that says
+-- One character opens as a bag-like grid; "All Characters" opens as a list that says
 -- who has what. The toggle is remembered separately for the two.
 --
 -- Item names, quality and prices come from C_Item.GetItemInfo, which may need the
@@ -26,7 +26,7 @@ local CATEGORIES = {
 	{ key = "all", label = "All" },
 	{ key = "gear", label = "Gear" },
 	{ key = "consumable", label = "Consumables" },
-	{ key = "tradegoods", label = "Trade goods" },
+	{ key = "tradegoods", label = "Trade Goods" },
 	{ key = "recipe", label = "Recipes" },
 	{ key = "quest", label = "Quest" },
 	{ key = "other", label = "Other" },
@@ -123,7 +123,7 @@ local function RoughGold(copper)
 	return "~" .. (BreakUpLargeNumbers and BreakUpLargeNumbers(gold) or tostring(gold)) .. "|cffffd100g|r"
 end
 
--- Gold, and on a line of its own what the items are worth (Auctionator prices), if known.
+-- Gold, and on a line of its own what the items are worth (Auctionator Prices), if known.
 local function WorthText(money, itemsValue)
 	local text = money and Money(money) or ""
 	if itemsValue and itemsValue > 0 then
@@ -472,7 +472,7 @@ local function RenderSidebar(characters)
 	end
 
 	local totalMoney -- nil until some character's gold is known
-	local totalItems -- the auction value of everyone's items (Auctionator prices), nil without
+	local totalItems -- the auction value of everyone's items (Auctionator Prices), nil without
 	local valueOf = {}
 	for _, character in ipairs(characters) do
 		if character.data.money then
@@ -485,7 +485,7 @@ local function RenderSidebar(characters)
 		end
 	end
 	valued = totalItems ~= nil
-	local all = AddButton("All characters", nil)
+	local all = AddButton("All Characters", nil)
 	all:SetSubtext(WorthText(totalMoney, totalItems))
 	all.count:SetText(#characters)
 	all:SetSelected(selected == nil)
@@ -589,7 +589,7 @@ function Render()
 		button:SetSelected(button.key == view)
 	end
 	infoText:SetText(DescribeFreshness(characters))
-	-- Only for your own bags: the Sell list is what you can sell now, here.
+	-- Only for your own bags: the Sell List is what you can sell now, here.
 	local viewingMe = not selected
 		or (selected.realm == ns.inventory.GetRealm() and selected.name == ns.inventory.GetPlayer())
 	sellButton:SetShown(ns:IsModuleEnabled("sellList") and viewingMe)
@@ -723,14 +723,14 @@ local function CreateBrowser()
 		table.insert(categoryChips, chip)
 	end
 
-	-- The Sell list (its own tab), while that feature is on.
-	sellButton = UI.CreateFlatButton(body, "What can I sell?", 20)
+	-- The Sell List (its own tab), while that feature is on.
+	sellButton = UI.CreateFlatButton(body, "What Can I Sell?", 20)
 	sellButton:SetPoint("TOPRIGHT", -PAD, -PAD - 32)
 	sellButton:SetScript("OnClick", function()
 		UI.ShowTab("sell")
 	end)
 	sellButton:SetScript("OnEnter", function(self)
-		UI.ShowTooltip(self, "Sell list", "What in your bags is worth selling, most valuable first.")
+		UI.ShowTooltip(self, "Sell List", "What in your bags is worth selling, most valuable first.")
 	end)
 	sellButton:SetScript("OnLeave", GameTooltip_Hide)
 
@@ -779,7 +779,7 @@ end
 
 function ns:OpenInventoryBrowser()
 	if not ns:IsModuleEnabled("inventoryTracker") then
-		ns:Print("Turn on Inventory tracker first (/nra).")
+		ns:Print("Turn on Inventory Tracker first (/nra).")
 		return
 	end
 	if not frame then

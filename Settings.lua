@@ -205,7 +205,7 @@ end
 function ns:RegisterSettings()
 	local category, layout = Settings.RegisterVerticalLayoutCategory(addonName)
 
-	layout:AddInitializer(CreateSettingsButtonInitializer("", "Open NraKit window", function()
+	layout:AddInitializer(CreateSettingsButtonInitializer("", "Open NraKit Window", function()
 		ns:OpenSettings()
 	end, "The same settings in NraKit's own window, with search. Also opens with /nra.", true))
 

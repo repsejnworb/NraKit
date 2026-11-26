@@ -1,4 +1,4 @@
--- Player notes from before tags: each player's label (from an editable list) becomes one
+-- Player Notes from before tags: each player's label (from an editable list) becomes one
 -- of the four fixed labels, and a label of your own becomes a tag too.
 
 return {

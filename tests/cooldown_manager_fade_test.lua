@@ -1,4 +1,4 @@
--- Cooldown Manager fade: the bars show in combat (and with a hostile target, and under the
+-- Cooldown Manager Fade: the bars show in combat (and with a hostile target, and under the
 -- mouse) and fade out, animated, a while after; visible is their Edit Mode opacity.
 
 -- hooksecurefunc really hooks here on tables (for the Edit Mode opacity).

@@ -1,4 +1,4 @@
--- Wishlist: adding items (command, drop, Item lookup's right-click), the window by slot
+-- Wishlist: adding items (command, drop, Item Lookup's right-click), the window by slot
 -- and filter, notes, ticking off items you get (with a message), and the tooltip line.
 
 -- hooksecurefunc really hooks global functions here (loot rolls), and this feature's
@@ -186,7 +186,7 @@ return {
 			t.ok(not wishlist.Get(SHOULDER).got, "not got")
 			row = Row(SHOULDER)
 			row.scripts.OnClick(row, "RightButton")
-			t.ok(wow.menuEntry(menu.entries, "Copy Wowhead link"), "Wowhead link")
+			t.ok(wow.menuEntry(menu.entries, "Copy Wowhead Link"), "Wowhead link")
 			wow.menuEntry(menu.entries, "Remove from wishlist").onClick()
 			t.ok(not wishlist.Get(SHOULDER), "removed")
 			t.ok(not Row(SHOULDER), "gone from the window")
@@ -224,7 +224,7 @@ return {
 			t.ok(wishlist.Get(BOOTS), "added")
 		end)
 
-		t.test("right-click in Item lookup adds to the wishlist", function()
+		t.test("right-click in Item Lookup adds to the wishlist", function()
 			wishlist.Remove(SHOULDER)
 			ns.itemLookup.Search = function()
 				return { { id = SHOULDER, name = "Herod's Shoulder", quality = 3 } }, 1
@@ -236,7 +236,7 @@ return {
 					row = frame
 				end
 			end
-			t.ok(row, "the item in Item lookup")
+			t.ok(row, "the item in Item Lookup")
 			row.scripts.OnClick(row, "RightButton")
 			wow.menuEntry(menu.entries, "Add to wishlist").onClick()
 			t.ok(wishlist.Get(SHOULDER), "added")
@@ -252,14 +252,14 @@ return {
 			return false
 		end
 
-		t.test("a star on wishlist items in Item lookup and loot rolls", function()
+		t.test("a star on wishlist items in Item Lookup and loot rolls", function()
 			local row
 			for _, frame in ipairs(wow.frames) do
 				if rawget(frame, "itemID") == SHOULDER and wow.visible(frame) then
 					row = frame
 				end
 			end
-			t.ok(Starred(row), "the Item lookup row of a wishlist item")
+			t.ok(Starred(row), "the Item Lookup row of a wishlist item")
 			row.scripts.OnClick(row, "RightButton")
 			wow.menuEntry(menu.entries, "Remove from wishlist").onClick()
 			t.ok(not Starred(row), "gone when it's removed")

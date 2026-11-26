@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Auctionator prices: what things cost, from Auctionator's last scan (and vendor prices).
+-- Auctionator Prices: what things cost, from Auctionator's last scan (and vendor prices).
 --
 --   Waylaid Crates   A crate takes any one bundle from its list (8 Iron Strut or 5 Mithril
 --                    Tube...), all at once. Its tooltip prices each bundle and marks the
@@ -23,7 +23,7 @@ local module = {
 	key = "auctionatorPrices",
 	section = "Auction House",
 	subsection = "Auctionator",
-	name = "Auctionator prices",
+	name = "Auctionator Prices",
 	description = "Needs the Auctionator addon. What Waylaid Crates and recipes cost at the auction house (from Auctionator's last scan, or the vendor's price), shopping lists for Auctionator from recipes, and the NraKit Shopping List for everything you're crafting.",
 	default = false,
 	options = {
@@ -51,7 +51,7 @@ local module = {
 		{
 			key = "auctionatorShopping",
 			name = "Shopping lists from recipes",
-			description = "Right-click a recipe link in chat or a recipe in your profession window (or use the Shopping list button there) to make an Auctionator shopping list of its reagents, or to add them to the NraKit Shopping List.",
+			description = "Right-click a recipe link in chat or a recipe in your profession window (or use the Shopping List button there) to make an Auctionator shopping list of its reagents, or to add them to the NraKit Shopping List.",
 			default = true,
 		},
 		{
@@ -64,7 +64,7 @@ local module = {
 		{
 			key = "auctionatorHave",
 			name = "Show how many you have",
-			description = "In tooltips, how many of each reagent you have on all your characters (with Inventory tracker on; else in your bags and bank): green if your bags hold enough, yellow if you have enough elsewhere (bank, other characters), grey if not. A recipe also shows what's left to buy.",
+			description = "In tooltips, how many of each reagent you have on all your characters (with Inventory Tracker on; else in your bags and bank): green if your bags hold enough, yellow if you have enough elsewhere (bank, other characters), grey if not. A recipe also shows what's left to buy.",
 			default = true,
 		},
 		{
@@ -251,7 +251,7 @@ function prices.WhereText(itemID)
 		return nil
 	end
 	if not holders then
-		-- Without Inventory tracker: your bags and bank.
+		-- Without Inventory Tracker: your bags and bank.
 		local bags = C_Item.GetItemCount(itemID) or 0
 		local parts = {}
 		if bags > 0 then
@@ -634,7 +634,7 @@ function shopping.Clear()
 	ShoppingChanged()
 end
 
--- How many you have: the total over your characters (Inventory tracker's data, with who has
+-- How many you have: the total over your characters (Inventory Tracker's data, with who has
 -- how many: { { label, class, total, where }, ... }), or your bags and bank without it.
 -- Whether inventories are valued at auction prices (the option, with Auctionator there).
 function prices.ValuesInventories()
@@ -650,7 +650,7 @@ function prices.AuctionValue(itemID)
 	return API().GetAuctionPriceByItemID(CALLER, itemID)
 end
 
--- A character's bags, bank and mail at auction house prices (Inventory tracker's data); nil
+-- A character's bags, bank and mail at auction house prices (Inventory Tracker's data); nil
 -- with the option off.
 function prices.InventoryValue(data)
 	if not IsOn("auctionatorInventoryValue") then
@@ -770,7 +770,7 @@ local function HookProfessions()
 		return
 	end
 	-- Not a child of the reagents frame: that one sizes itself to its children.
-	professionButton = ns.UI.CreateFlatButton(form, "Shopping list", 18)
+	professionButton = ns.UI.CreateFlatButton(form, "Shopping List", 18)
 	professionButton.label = form.Reagents and form.Reagents.Label
 	professionButton:SetFrameLevel(form:GetFrameLevel() + 10)
 	professionButton:Hide()
@@ -781,7 +781,7 @@ local function HookProfessions()
 		end
 	end)
 	professionButton:SetScript("OnEnter", function(self)
-		ns.UI.ShowTooltip(self, "Shopping list", "Make an Auctionator shopping list of this recipe's reagents, or add them to the NraKit Shopping List.")
+		ns.UI.ShowTooltip(self, "Shopping List", "Make an Auctionator shopping list of this recipe's reagents, or add them to the NraKit Shopping List.")
 	end)
 	professionButton:SetScript("OnLeave", GameTooltip_Hide)
 	if form.Init then
@@ -964,7 +964,7 @@ function module:OnInitialize()
 		usage = { "/nra crates check - compare every crate's bundles with the game's tooltips and list differences" },
 	})
 	local shopHelp = {
-		summary = "Open the NraKit Shopping List (needs Auctionator prices)",
+		summary = "Open the NraKit Shopping List (needs Auctionator Prices)",
 		usage = { "/nra shop - open the NraKit Shopping List (also /nra shopping)" },
 	}
 	ns:RegisterSlashCommand("shop", OnShopCommand, shopHelp)

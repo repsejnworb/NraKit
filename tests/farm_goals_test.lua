@@ -1,4 +1,4 @@
--- Farm goals: the goals window form, counting, completion, sounds and editing.
+-- Farm Goals: the goals window form, counting, completion, sounds and editing.
 
 local SILK = 4306
 local SILK_LINK = "|cffffffff|Hitem:4306::::::::30:::::|h[Silk Cloth]|h|r"
@@ -48,7 +48,7 @@ return {
 
 		t.test("opens on New goal when there are none, and Create waits for an item", function()
 			ns:OpenGoalsWindow()
-			local ok, why = wow.click("Create goal")
+			local ok, why = wow.click("Create Goal")
 			t.equal(ok, false, "Create clicked")
 			t.equal(why, "disabled", "Create button state")
 		end)
@@ -61,7 +61,7 @@ return {
 			wow.type(wow.amountBox(), "100")
 			t.ok(wow.tick("Bags"), "ticked Bags")
 			t.ok(wow.tick("Bank"), "ticked Bank")
-			t.ok(wow.click("Create goal"), "clicked Create goal")
+			t.ok(wow.click("Create Goal"), "clicked Create goal")
 			local goal = Newest(ns)
 			t.equal(goal.type, "item", "type")
 			t.equal(goal.itemID, SILK, "item")
@@ -88,7 +88,7 @@ return {
 			local goal = Newest(ns)
 			ns:OpenGoalsWindow("edit", goal.id)
 			wow.type(wow.amountBox(), "200")
-			t.ok(wow.click("Save changes"), "clicked Save changes")
+			t.ok(wow.click("Save Changes"), "clicked Save changes")
 			t.equal(goal.target, 200, "new target")
 			t.equal(goal.gained, 6, "progress kept")
 			t.equal(goal.start, 50, "starting count kept")
@@ -98,7 +98,7 @@ return {
 			local goal = Newest(ns)
 			ns:OpenGoalsWindow("edit", goal.id)
 			wow.type(wow.amountBox(), "")
-			local ok, why = wow.click("Save changes")
+			local ok, why = wow.click("Save Changes")
 			t.equal(why, "disabled", "Save with no amount")
 			t.equal(goal.target, 200, "target unchanged")
 			wow.click("Cancel")
@@ -109,7 +109,7 @@ return {
 			local goal = Newest(ns)
 			ns:OpenGoalsWindow("edit", goal.id)
 			wow.dropItem(2589)
-			t.ok(wow.click("Save changes"), "clicked Save changes")
+			t.ok(wow.click("Save Changes"), "clicked Save changes")
 			t.equal(goal.itemID, 2589, "item changed")
 			t.equal(goal.gained, 0, "progress reset")
 			t.equal(goal.start, 0, "starting count reset")
@@ -174,7 +174,7 @@ return {
 			wow.click("Reputation")
 			t.ok(wow.clickEntry("Timbermaw Hold"), "picked the faction")
 			t.ok(wow.click("Revered"), "picked Revered")
-			t.ok(wow.click("Create goal"), "clicked Create goal")
+			t.ok(wow.click("Create Goal"), "clicked Create goal")
 			local goal = Newest(ns)
 			t.equal(goal.type, "rep", "type")
 			t.equal(goal.target, 7, "target standing")
@@ -189,7 +189,7 @@ return {
 			ns:OpenGoalsWindow("new")
 			wow.click("Skill")
 			t.ok(wow.clickEntry("Swords"), "picked Swords")
-			t.ok(wow.click("Create goal"), "clicked Create goal")
+			t.ok(wow.click("Create Goal"), "clicked Create goal")
 			local goal = Newest(ns)
 			t.equal(goal.toMax, true, "to max")
 			wow.data.skills[2].rank = 250
@@ -205,7 +205,7 @@ return {
 			t.ok(wow.clickEntry("Honor"), "picked Honor")
 			wow.click("Gain an amount")
 			wow.type(wow.amountBox(), "100")
-			t.ok(wow.click("Create goal"), "clicked Create goal")
+			t.ok(wow.click("Create Goal"), "clicked Create goal")
 			local goal = Newest(ns)
 			t.equal(goal.mode, "gain", "mode")
 			wow.data.currencies[1].quantity = 150
@@ -294,13 +294,13 @@ return {
 			t.ok(NraKitGoalsTracker.header:IsShown(), "header back in the full view")
 		end)
 
-		t.test("tracker settings opens the settings window on Farm goals, expanded", function()
+		t.test("tracker settings opens the settings window on Farm Goals, expanded", function()
 			ns:OpenSettings("farm goals", "farmGoals")
 			t.ok(NraKitOptionsFrame:IsShown(), "settings shown")
 			local soundRows = wow.findAll(function(frame)
 				return frame.shown and rawget(frame, "optionKey") == "farmGoalsCompleteSoundChoice"
 			end)
-			t.equal(#soundRows, 1, "Farm goals options are open")
+			t.equal(#soundRows, 1, "Farm Goals options are open")
 		end)
 
 		t.test("the icons view shows short amounts", function()
@@ -338,7 +338,7 @@ return {
 			ns:OpenGoalsWindow("active")
 			t.ok(wow.click("New target"), "New target button")
 			wow.type(wow.amountBox(), "35")
-			t.ok(wow.click("Save changes"), "saved")
+			t.ok(wow.click("Save Changes"), "saved")
 			t.equal(goal.target, 35, "new target")
 			t.ok(not goal.completed, "running again")
 		end)
@@ -393,12 +393,12 @@ return {
 			ns:OpenGoalsWindow("new")
 			wow.click("Gold")
 			wow.type(wow.amountBox(), "1g 50s")
-			t.ok(wow.click("Create goal"), "clicked Create goal")
+			t.ok(wow.click("Create Goal"), "clicked Create goal")
 			local goal = Newest(ns)
 			t.equal(goal.target, 15000, "copper")
 			ns:OpenGoalsWindow("edit", goal.id)
 			t.equal(wow.amountBox().text, "1g 50s", "edit shows the amount")
-			t.ok(wow.click("Save changes"), "saves unchanged")
+			t.ok(wow.click("Save Changes"), "saves unchanged")
 			t.equal(goal.target, 15000, "still the same")
 		end)
 
@@ -497,14 +497,14 @@ return {
 			t.ok(IconCell(222), "macro icons in the picker")
 			t.ok(IconCell("Interface\\Icons\\INV_Misc_Bag_08"), "icon names get their path")
 			IconCell(222).scripts.OnClick(IconCell(222))
-			t.ok(wow.click("Save changes"), "saved")
+			t.ok(wow.click("Save Changes"), "saved")
 			t.equal(goal.icon, 222, "chosen icon saved")
 			t.equal(select(2, ns.goals.Describe(goal)), 222, "shown everywhere the goal is")
 
 			ns:OpenGoalsWindow("edit", goal.id)
 			IconButton().scripts.OnClick(IconButton())
 			t.ok(wow.click("Automatic  (follows what the goal tracks)"), "Automatic")
-			t.ok(wow.click("Save changes"), "saved")
+			t.ok(wow.click("Save Changes"), "saved")
 			t.equal(goal.icon, nil, "automatic again")
 			t.ok(tostring(select(2, ns.goals.Describe(goal))):find("Level_40$"), "automatic icon")
 			ns.goals.RemoveGoal(goal.id)
@@ -519,7 +519,7 @@ return {
 			end
 			IconButton().scripts.OnReceiveDrag(IconButton())
 			GetCursorInfo = nil
-			t.ok(wow.click("Create goal"), "created")
+			t.ok(wow.click("Create Goal"), "created")
 			local goal = Newest(ns)
 			t.equal(goal.icon, 132903, "the item's icon")
 			goal.completed = time()

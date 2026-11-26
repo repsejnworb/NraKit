@@ -1,4 +1,4 @@
--- Damage meter look: a stand-in of the game's damage meter (one window, one row), skinned.
+-- Damage Meter Look: a stand-in of the game's damage meter (one window, one row), skinned.
 
 local FLAT = "Interface\\Buttons\\WHITE8X8"
 

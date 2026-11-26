@@ -317,7 +317,7 @@ return {
 			t.equal(point[5], 700, "header shown again: nothing moved")
 			-- Right-click: the tab; shift-right-click: the settings; shift-click: hide until next login.
 			header.scripts.OnClick(header, "RightButton")
-			t.ok(NraKitRemindersFrame:IsShown(), "right-click: Reminders & To-do")
+			t.ok(NraKitRemindersFrame:IsShown(), "right-click: Reminders & To-Do")
 			NraKitRemindersFrame:Hide()
 			IsShiftKeyDown = function()
 				return true
@@ -494,7 +494,7 @@ return {
 			rawset(tracker, "IsMouseOver", nil)
 			t.equal(rawget(tracker, "headerBorder"):GetAlpha(), 1, "the header keeps its border")
 			-- Background opacity greys out in the NraKit window while they're set apart.
-			ns:OpenSettings("Reminders & to-dos", "reminders")
+			ns:OpenSettings("Reminders & To-Dos", "reminders")
 			local function BackgroundSlider()
 				for _, frame in ipairs(wow.frames) do
 					local option = rawget(frame, "option")
@@ -506,7 +506,7 @@ return {
 			t.equal(BackgroundSlider().enabled, false, "Background opacity greyed out")
 						ns:SetSetting("remindersListBackgroundSplit", false)
 			t.equal(rawget(tracker, "headerBg"):GetAlpha(), 0, "together again: Background for both")
-			ns:OpenSettings("Reminders & to-dos", "reminders")
+			ns:OpenSettings("Reminders & To-Dos", "reminders")
 			t.ok(BackgroundSlider().enabled ~= false, "and back")
 			NraKitOptionsFrame:Hide()
 			-- Height: the most it grows to; past that the items scroll.
@@ -743,7 +743,7 @@ return {
 				end
 			end
 			t.ok(labels["For your other characters"] and labels["Waiting"] and labels["Done"], "sections")
-			t.ok(labels["|cffff9933Reminders|r & |cff66bfffTo-do|r"], "the tab's name in the two colours")
+			t.ok(labels["|cffff9933Reminders|r & |cff66bfffTo-Do|r"], "the tab's name in the two colours")
 			t.ok(labels["Bob Stone: next login"], "who and when")
 			t.ok(labels["In 2 h (" .. date("%H:%M", now + 7200) .. ")"], "when a timed one comes")
 			local row = wow.findAll(function(frame)
@@ -777,16 +777,16 @@ return {
 			box.scripts.OnEnterPressed(box)
 			t.ok(Mine("polish the boots").quiet and Mine("polish the boots").state == "due", "a to-do, on the list")
 			wow.click("Add")
-			t.ok(wow.click("Add to-do"), "the form is for a to-do")
+			t.ok(wow.click("Add To-Do"), "the form is for a to-do")
 			local formSwitch = rawget(NraKitReminderForm, "kindChips")[1]
 			formSwitch.scripts.OnClick(formSwitch)
-			t.ok(wow.click("Add reminder"), "switched in the form")
+			t.ok(wow.click("Add Reminder"), "switched in the form")
 			t.ok(NraKitDB.remindersAddQuiet, "the switch at the top stays")
 			NraKitReminderForm:Hide()
 			wow.click("Reminder")
 			t.equal(NraKitDB.remindersAddQuiet, nil, "back to reminders")
 			NraKitRemindersTracker:Hide()
-			t.ok(wow.click("Show list"), "Show list")
+			t.ok(wow.click("Show List"), "Show List")
 			t.ok(NraKitRemindersTracker:IsShown(), "the list")
 			t.ok(wow.click("Settings"), "Settings")
 			t.ok(NraKitOptionsFrame:IsShown(), "the settings")
@@ -830,20 +830,20 @@ return {
 			t.ok(form:IsShown(), "the form")
 			local textBox = rawget(form, "textBox")
 
-			t.ok(wow.click("< Back to the list") and not form:IsShown(), "back to the list without adding")
+			t.ok(wow.click("< Back to the List") and not form:IsShown(), "back to the list without adding")
 			wow.click("Add")
 			textBox.scripts.OnEscapePressed(textBox)
 			t.ok(not form:IsShown(), "Escape in the form cancels it too")
 			wow.click("Add")
 			t.ok(wow.click("Cancel") and not form:IsShown(), "and Cancel")
 			wow.click("Add")
-			t.ok(wow.click("Add reminder"), "submit empty")
+			t.ok(wow.click("Add Reminder"), "submit empty")
 			t.ok(form:IsShown() and rawget(rawget(form, "problem"), "text"):find("say", 1, true), "asks what it should say")
 
 			wow.type(textBox, "sell the greens")
 			wow.click("After a time")
 			wow.click("1 hour")
-			wow.click("Add reminder")
+			wow.click("Add Reminder")
 			t.ok(not form:IsShown(), "closed")
 			local reminder = Mine("sell the greens")
 			t.ok(reminder and reminder.kind == "time" and reminder.at == now + 3600, "in an hour")
@@ -854,17 +854,17 @@ return {
 			local zoneBox = rawget(form, "zoneBox")
 			wow.type(zoneBox, "dar")
 			t.ok(wow.click("Ashenvale") == false and wow.click("Darnassus"), "matching zones to pick")
-			wow.click("Add reminder")
+			wow.click("Add Reminder")
 			t.equal(Mine("fish quest").zone, "Darnassus", "picked zone")
 
 			wow.click("Add")
 			wow.type(textBox, "visit the trainer")
 			wow.click("At a level")
 			wow.type(rawget(form, "levelBox"), "20")
-			wow.click("Add reminder")
+			wow.click("Add Reminder")
 			t.ok(rawget(rawget(form, "problem"), "text"):find("already", 1, true), "a level you have")
 			wow.type(rawget(form, "levelBox"), "35")
-			wow.click("Add reminder")
+			wow.click("Add Reminder")
 			t.equal(Mine("visit the trainer").level, 35, "level")
 
 			wow.click("Add")
@@ -880,7 +880,7 @@ return {
 			t.ok(wow.menuEntry(menu.entries, "Me (Nra)"), "you first")
 			wow.menuEntry(menu.entries, "Bob Stone").onClick("Bob Stone")
 			wow.type(rawget(form, "levelBox"), "20")
-			wow.click("Add reminder")
+			wow.click("Add Reminder")
 			local theirs
 			for _, each in ipairs(reminders.List("Bob Stone")) do
 				if each.text == "mail the mats" then
@@ -910,7 +910,7 @@ return {
 			t.equal(rawget(rawget(form, "zoneBox"), "text"), "Ironforge", "its zone")
 			wow.type(rawget(form, "textBox"), "polish the boots too")
 			wow.type(rawget(form, "zoneBox"), "Elwynn Forest")
-			t.ok(wow.click("Save changes"), "Save changes")
+			t.ok(wow.click("Save Changes"), "Save Changes")
 			t.ok(not form:IsShown(), "back to the list")
 			t.equal(todo.text, "polish the boots too", "new text")
 			t.equal(todo.zone, "Elwynn Forest", "new zone")
@@ -923,7 +923,7 @@ return {
 			local at = timed.at
 			ns:OpenReminders(timed.id)
 			wow.type(rawget(form, "textBox"), "water the roses")
-			wow.click("Save changes")
+			wow.click("Save Changes")
 			t.ok(timed.text == "water the roses" and timed.at == at, "the time didn't move")
 
 			-- The gear on a row in the tab.
@@ -938,7 +938,7 @@ return {
 			local select = rawget(form, "characterSelect")
 			select.scripts.OnClick(select)
 			wow.menuEntry(menu.entries, "Bob Stone").onClick("Bob Stone")
-			wow.click("Save changes")
+			wow.click("Save Changes")
 			t.equal(Mine("water the roses"), nil, "not yours any more")
 			local theirs
 			for _, each in ipairs(reminders.List("Bob Stone")) do

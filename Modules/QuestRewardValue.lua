@@ -8,7 +8,7 @@ local _, ns = ...
 local module = {
 	key = "questRewardValue",
 	section = "Quests",
-	name = "Best quest reward",
+	name = "Best Quest Reward",
 	description = "When a quest lets you choose a reward, show a gold coin on the choice that sells to a vendor for the most gold (vendor price times stack size).",
 	default = false,
 }

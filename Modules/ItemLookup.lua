@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Item lookup: search every item in the game by name (/nra item nightbl). The window is
+-- Item Lookup: search every item in the game by name (/nra item nightbl). The window is
 -- ItemLookupWindow.lua; this file keeps the list of names it searches.
 --
 -- The game can't search items by name, and the client only knows the names of items it
@@ -21,7 +21,7 @@ local _, ns = ...
 local module = {
 	key = "itemLookup",
 	section = "Tools",
-	name = "Item lookup",
+	name = "Item Lookup",
 	description = "Search every item in the game by name: /nra item nightbl lists the matching items in a window, with their tooltips. The list of names fills in by itself in the background (a few minutes, once per game version).",
 	default = false,
 }
@@ -305,7 +305,7 @@ end
 
 function module:OnInitialize()
 	local help = {
-		summary = "Item lookup: search every item in the game by name",
+		summary = "Item Lookup: search every item in the game by name",
 		usage = {
 			"/nra item <name> - list the items whose name contains it (also /nra items)",
 			"/nra item - open the item lookup window",
@@ -313,7 +313,7 @@ function module:OnInitialize()
 	}
 	local function OnSlashCommand(input)
 		if not ns:IsModuleEnabled(module.key) then
-			ns:Print("Turn on Item lookup first (/nra).")
+			ns:Print("Turn on Item Lookup first (/nra).")
 			return
 		end
 		ns:OpenItemLookup(input)

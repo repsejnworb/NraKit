@@ -26,7 +26,7 @@ return {
 			t.ok(wow.click("Warrior"), "a Warrior entry in the sidebar")
 			t.ok(Shown("Classes  >  Warrior"), "headed Classes > Warrior")
 			t.ok(Shown("Tactical Mastery mark"), "its options are open")
-			t.ok(not Shown("Class-colored health bars"), "nothing from other sections")
+			t.ok(not Shown("Class-Colored Health Bars"), "nothing from other sections")
 		end)
 
 		t.test("clicking the section shows the whole section again", function()

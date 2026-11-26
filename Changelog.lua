@@ -31,8 +31,8 @@ ns.changelog = {
 				"/nra shortcuts lists them, and which are in use elsewhere.",
 				"Turn each on or off. One whose feature is off isn't taken.",
 			} },
-		{ "improved", title = "What's new", "Easier to read: each new feature has its name, a one-line summary and bullet points, with key words picked out." },
-		{ "new", title = "Sell list", module = "sellList",
+		{ "improved", title = "What's New", "Easier to read: each new feature has its name, a one-line summary and bullet points, with key words picked out." },
+		{ "new", title = "Sell List", module = "sellList",
 			"What in your bags is worth selling, the most valuable first, so you don't have to hover every item.",
 			points = {
 				"**Auction house and vendor prices** side by side; the better one is bright, and a stale auction price is marked.",
@@ -42,11 +42,11 @@ ns.changelog = {
 				"Says when a fresh scan **changed the prices**, with a refresh button; sorts by any column.",
 			},
 			tip = "Auction prices come from **Auctionator**; without it, it's vendor prices." },
-		{ "improved", title = "Auctionator prices", "Now in the new **Auction House** section, and the Inventory tab shows what each character's items are worth at the auction house." },
-		{ "improved", title = "Settings", "Features are sorted into clearer sections: **Interface**, Classes, Quests, Bags & Items, Professions, **Auction House**, Mail, Trackers & Reminders, **Social** and **Tools**, and a few have shorter names." },
+		{ "improved", title = "Auctionator Prices", "Now in the new **Auction House** section, and the Inventory tab shows what each character's items are worth at the auction house." },
+		{ "improved", title = "Settings", "Features are sorted into clearer sections: **Interface**, Classes, Quests, Bags & Items, Professions, **Auction House**, Mail, Trackers & Reminders, **Social** and **Tools**, a few have shorter names, and names and headings are in Title Case." },
 	} },
 	{ version = "0.31.0", date = "2026-11-26", entries = {
-		{ "new", title = "Cooldown Manager fade", module = "cooldownManagerFade",
+		{ "new", title = "Cooldown Manager Fade", module = "cooldownManagerFade",
 			"The game's Cooldown Manager bars show in combat and **fade out**, animated, a while after it instead of just vanishing.",
 			points = {
 				"Pick **which bars**, how long they **stay** and **fade**, and how faint they fade to.",
@@ -70,7 +70,7 @@ ns.changelog = {
 		{ "new", title = "/nra dps", "Shows or hides the game's damage meter (the same as its setting in the options), with or without Damage meter look." },
 	} },
 	{ version = "0.29.0", date = "2026-11-26", entries = {
-		{ "new", title = "Auctionator prices", module = "auctionatorPrices",
+		{ "new", title = "Auctionator Prices", module = "auctionatorPrices",
 			"What things cost at the auction house, from Auctionator's last scan.",
 			points = {
 				"**Waylaid Crates**: the tooltip prices each bundle, the cheapest in green, and an Auctionator shopping list holds every bundle of the crates in your bags.",

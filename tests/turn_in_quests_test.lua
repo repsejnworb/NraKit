@@ -1,4 +1,4 @@
--- Quests to turn in: finished quests by turn-in zone, the window's clicks, and the reminder.
+-- Quests to Turn In: finished quests by turn-in zone, the window's clicks, and the reminder.
 
 -- The quest log: headings and quests ({ title, id, done, map }).
 local LOG = {
@@ -226,7 +226,7 @@ return {
 			wow.fire("ZONE_CHANGED_NEW_AREA")
 			SlashCmdList.NRAKIT("done")
 			t.ok(not NraKitTurnInFrame:IsShown(), "no window")
-			t.ok(Printed("Turn on Quests to turn in first"), "says how")
+			t.ok(Printed("Turn on Quests to Turn In first"), "says how")
 			t.noErrors()
 		end)
 	end,

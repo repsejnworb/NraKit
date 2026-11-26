@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- The Sell list tab (SellList.lua has the data): your bags' items worth selling, the most
+-- The Sell List tab (SellList.lua has the data): your bags' items worth selling, the most
 -- valuable first. Columns: count, at a vendor, the auction price of one and at the auction
 -- house (all of them, last: it's the one you look for); the better of vendor and auction is
 -- bright. Click a column title to sort by it. Groups below "To sell" fold: soulbound (vendor
@@ -87,7 +87,7 @@ local function OpenRowMenu(row)
 				sell.SetKept(item.id, true)
 			end)
 		end
-		root:CreateButton("Copy Wowhead link", function()
+		root:CreateButton("Copy Wowhead Link", function()
 			ns.wowheadLink.Show("item", item.id)
 		end)
 	end)
@@ -399,7 +399,7 @@ local function SortTitle(parent, text, key, right, width, justify)
 end
 
 local function CreateWindow()
-	frame = UI.CreateWindow("NraKitSellListFrame", "Sell list", WIDTH, HEIGHT, 0, "sell")
+	frame = UI.CreateWindow("NraKitSellListFrame", "Sell List", WIDTH, HEIGHT, 0, "sell")
 	local body = frame.body
 
 	-- Toolbar: open the list by itself at the auction house (the same as the option).
@@ -520,7 +520,7 @@ function sell.IsWindowShown()
 end
 
 UI.RegisterTab({
-	key = "sell", label = "Sell list", menuLabel = "Sell list", order = 9, frameName = "NraKitSellListFrame",
+	key = "sell", label = "Sell List", menuLabel = "Sell List", order = 9, frameName = "NraKitSellListFrame",
 	open = function()
 		ns:OpenSellList()
 	end,

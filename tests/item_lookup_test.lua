@@ -1,4 +1,4 @@
--- Item lookup: learning item names in the background from a stand-in server, items the
+-- Item Lookup: learning item names in the background from a stand-in server, items the
 -- server won't name yet (not in Forever, or not discovered), searching, and the window.
 
 -- The client's items (GetItemInfoInstant knows them) and what the server says about them.

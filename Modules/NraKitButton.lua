@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- NraKit button: NraKit's icon, on screen wherever you drag it. A badge counts what's waiting
+-- NraKit Button: NraKit's icon, on screen wherever you drag it. A badge counts what's waiting
 -- for you (due reminders, and what's new if you want); the tooltip says what. Left-click and
 -- shift-click do what you pick in the settings (by default: what's waiting, else the NraKit
 -- window; and your reminders). Right-click is NraKit's menu, the same as the addon button's.
@@ -20,7 +20,7 @@ local function Actions()
 			ns:OpenSettings()
 		end },
 		{ key = "menu", label = "NraKit's menu" },
-		{ key = "reminders", label = "To-do list (else the Reminders & To-do tab)", run = function()
+		{ key = "reminders", label = "To-do list (else the Reminders & To-Do tab)", run = function()
 			if ns:IsModuleEnabled("reminders") and #ns.reminders.Due() > 0 then
 				ns.reminders.ShowTracker()
 			else
@@ -35,14 +35,14 @@ local function Actions()
 			end })
 		end
 	end
-	table.insert(actions, { key = "turnin", label = "Quests to turn in", run = function()
+	table.insert(actions, { key = "turnin", label = "Quests to Turn In", run = function()
 		if ns:IsModuleEnabled("turnInQuests") then
 			ns.turnInQuests.Toggle()
 		else
-			ns:Print("Turn on Quests to turn in first (/nra).")
+			ns:Print("Turn on Quests to Turn In first (/nra).")
 		end
 	end })
-	table.insert(actions, { key = "whatsnew", label = "What's new", run = function()
+	table.insert(actions, { key = "whatsnew", label = "What's New", run = function()
 		ns:OpenWhatsNew()
 	end })
 	table.insert(actions, { key = "none", label = "Nothing" })
@@ -60,7 +60,7 @@ end
 local module = {
 	key = "nraButton",
 	section = "Tools",
-	name = "NraKit button",
+	name = "NraKit Button",
 	description = "NraKit's icon on screen, wherever you drag it. A badge counts what's waiting for you, like due reminders. Pick what left-click and shift-click do; right-click is NraKit's menu.",
 	default = false,
 	options = {
@@ -125,7 +125,7 @@ local module = {
 		{
 			key = "nraButtonBadgeWhatsNew",
 			parent = "nraButtonBadge",
-			name = "What's new",
+			name = "What's New",
 			description = "Changes in NraKit you haven't looked at yet (/nra new).",
 			default = false,
 		},

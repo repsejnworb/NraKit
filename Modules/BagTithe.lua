@@ -67,7 +67,7 @@ local module = {
 		},
 		{
 			key = "bagTitheAltClick",
-			header = "Ignore list",
+			header = "Ignore List",
 			name = "Alt+click to ignore items",
 			description = "While Bag Tithe is active, Alt+left-click an item to leave it out of the ranking, or to put it back. Ignored items are remembered on all your characters.",
 			default = true,
@@ -171,7 +171,7 @@ local function RankSlots()
 			local info = C_Container.GetContainerItemInfo(bag, slot)
 			if info and not tithe:IsIgnored(info.itemID) and ns.KnownRecipeIsJunk
 				and ns:KnownRecipeIsJunk(bag, slot, info.itemID) then
-				-- Known recipes (Known recipes module option) rank first, whatever they sell for.
+				-- Known Recipes (Known Recipes module option) rank first, whatever they sell for.
 				table.insert(candidates, { key = SlotKey(bag, slot), value = 0, known = true })
 			elseif info and not info.hasNoValue and not tithe:IsIgnored(info.itemID) then
 				local sellPrice = select(11, C_Item.GetItemInfo(info.hyperlink or info.itemID))
@@ -480,8 +480,8 @@ end
 
 function module:OnSettingsRegistered(rootCategory)
 	local page = tithe:CreateIgnoreListPage()
-	local pageCategory = Settings.RegisterCanvasLayoutSubcategory(rootCategory, page, "Bag Tithe ignore list")
-	ns:AddOptionsButton(module.key, "Edit ignore list", "Show and edit the items Bag Tithe leaves out of the ranking.", function()
+	local pageCategory = Settings.RegisterCanvasLayoutSubcategory(rootCategory, page, "Bag Tithe Ignore List")
+	ns:AddOptionsButton(module.key, "Edit Ignore List", "Show and edit the items Bag Tithe leaves out of the ranking.", function()
 		ns:OpenBlizzardSettings(pageCategory)
 	end)
 end

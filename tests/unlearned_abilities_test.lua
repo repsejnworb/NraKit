@@ -1,4 +1,4 @@
--- Unlearned abilities: a warrior respecs from Protection to Fury. Concussion Blow stays on
+-- Unlearned Abilities: a warrior respecs from Protection to Fury. Concussion Blow stays on
 -- the bar unlearned: it gets a mark, a tooltip line and a message that takes it off.
 
 local CONCUSSION_BLOW, SLAM, BLOODTHIRST = 100, 200, 300

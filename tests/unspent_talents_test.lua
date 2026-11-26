@@ -1,4 +1,4 @@
--- Unspent talent points: the reminder shows while points are unspent, and stays out of the
+-- Unspent Talent Points: the reminder shows while points are unspent, and stays out of the
 -- way of the talents window.
 
 -- This module's timers run at once (set before the addon loads: it queues a refresh while
@@ -34,7 +34,7 @@ return {
 		local function Shown()
 			for _, frame in ipairs(wow.frames) do
 				local text = rawget(frame, "text")
-				if type(text) == "string" and text:find("^Unspent talent points") and wow.visible(frame) then
+				if type(text) == "string" and text:find("^Unspent Talent Points") and wow.visible(frame) then
 					return true
 				end
 			end

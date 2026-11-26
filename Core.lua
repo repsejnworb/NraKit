@@ -164,7 +164,7 @@ function ns:RegisterSlashCommand(name, handler, help)
 	end
 end
 
--- Whether "/nra <name>" is a command (What's new colours "/nra shop" as one).
+-- Whether "/nra <name>" is a command (What's New colours "/nra shop" as one).
 function ns:IsSlashCommand(name)
 	return slashCommands[name:lower()] ~= nil
 end
@@ -225,8 +225,8 @@ SlashCmdList.NRAKIT = function(input)
 	ns:RunSlashCommand(input)
 end
 
--- Things waiting for you, counted on the NraKit button's badge (Modules/NraKitButton.lua):
--- badge = { key, label, option = <NraKit button option that turns it on>, module = <feature
+-- Things waiting for you, counted on the NraKit Button's badge (Modules/NraKitButton.lua):
+-- badge = { key, label, option = <NraKit Button option that turns it on>, module = <feature
 -- that must be on>?, count = function() -> number, text = function(count) -> tooltip line,
 -- open = function() shows it }. Call ns:BadgeChanged() when a count changes.
 ns.badges = {}
@@ -241,7 +241,7 @@ function ns:BadgeChanged()
 	end
 end
 
--- Actions in NraKit's menus (the addon button's and the NraKit button's), after the windows:
+-- Actions in NraKit's menus (the addon button's and the NraKit Button's), after the windows:
 -- action = { label = text or function() -> text (nil leaves it out), module = <feature that
 -- must be on>?, onClick }.
 ns.menuActions = {}
@@ -254,7 +254,7 @@ local function UnseenCount()
 	return ns.whatsNew and ns.whatsNew.UnseenCount() or 0
 end
 
--- NraKit's menu: the windows of features that are on, their actions, What's new and Settings.
+-- NraKit's menu: the windows of features that are on, their actions, What's New and Settings.
 function ns:FillMenu(root)
 	root:CreateTitle(addonName)
 	local windows = 0
@@ -286,7 +286,7 @@ function ns:FillMenu(root)
 		root:CreateDivider()
 	end
 	local unseen = UnseenCount()
-	root:CreateButton(unseen > 0 and string.format("What's new |cffff9933(%d)|r", unseen) or "What's new", function()
+	root:CreateButton(unseen > 0 and string.format("What's New |cffff9933(%d)|r", unseen) or "What's New", function()
 		ns:OpenWhatsNew()
 	end)
 	root:CreateButton("Settings", function()
@@ -320,11 +320,11 @@ function NraKit_OnCompartmentEnter(_, button)
 			table.insert(names, tab.menuLabel or tab.label)
 		end
 	end
-	table.insert(names, "What's new")
+	table.insert(names, "What's New")
 	GameTooltip_AddInstructionLine(GameTooltip, "Right-click: " .. table.concat(names, ", "))
 	local unseen = UnseenCount()
 	if unseen > 0 then
-		GameTooltip_AddNormalLine(GameTooltip, string.format("What's new: %d %s since you last looked (/nra new)",
+		GameTooltip_AddNormalLine(GameTooltip, string.format("What's New: %d %s since you last looked (/nra new)",
 			unseen, unseen == 1 and "change" or "changes"))
 	end
 	GameTooltip:Show()

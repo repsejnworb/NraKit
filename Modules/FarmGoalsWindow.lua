@@ -6,7 +6,7 @@ local _, ns = ...
 -- New goal form: pick a type (Item, Level, XP, Gold). An item can be dropped on the
 -- slot, shift-clicked while the name box has focus, or typed. Item and gold goals can
 -- start from what you already have: tick bags, bank, mail and other characters (the
--- last two need Inventory tracker's data) and the starting count updates live.
+-- last two need Inventory Tracker's data) and the starting count updates live.
 -- "Edit" fills the same form with an existing goal (type fixed) to fix its target,
 -- item, starting count or sounds without recreating it.
 --
@@ -262,7 +262,7 @@ local function RenderActive(content, width)
 			.. "the time left. You get a chime at 25, 50 and 75%, and a fanfare when a goal is done.")
 		text:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -10)
 		local button = pool:Acquire("emptyButton", function()
-			local b = UI.CreateFlatButton(content, "+  Create a goal", 28)
+			local b = UI.CreateFlatButton(content, "+  Create a Goal", 28)
 			b:SetWidth(160)
 			b:SetSelected(true)
 			b:SetScript("OnClick", function()
@@ -343,7 +343,7 @@ local function RenderHistory(content, width)
 		y = y - 30
 	else
 		local clear = pool:Acquire("clearHistory", function()
-			local b = UI.CreateFlatButton(content, "Clear history", 22)
+			local b = UI.CreateFlatButton(content, "Clear History", 22)
 			b:SetScript("OnClick", function()
 				wipe(G().GetData().history)
 				Render()
@@ -678,7 +678,7 @@ function UpdateForm()
 	form.startText:ClearAllPoints()
 	form.startText:SetPoint("TOPLEFT", lastSeed, "BOTTOMLEFT", 2, -24)
 	if holdings and not holdings.trackerOn then
-		form.othersText:SetText("Turn on Inventory tracker to include mail and other characters.")
+		form.othersText:SetText("Turn on Inventory Tracker to include mail and other characters.")
 	else
 		form.othersText:SetText(table.concat(others, "  ·  "))
 	end
@@ -736,7 +736,7 @@ function UpdateForm()
 	if editing and valid and (goal.itemID ~= itemID or goal.key ~= formKey or (goal.mode or "reach") ~= formMode) then
 		hint = "Changing what's tracked starts its progress over."
 	end
-	form.create:SetText(editing and "Save changes" or "Create goal")
+	form.create:SetText(editing and "Save Changes" or "Create Goal")
 	form.create:SetEnabled(valid and true or false)
 	form.cancel:SetShown(editing)
 	form.createHint:ClearAllPoints()
@@ -1415,7 +1415,7 @@ end
 local function CreateGoalsWindow()
 	frame = UI.CreateWindow("NraKitGoalsFrame", "Goals", WIDTH, HEIGHT, SIDEBAR_WIDTH, "goals")
 
-	local newButton = UI.CreateFlatButton(frame.sidebar, "+  New goal", 28)
+	local newButton = UI.CreateFlatButton(frame.sidebar, "+  New Goal", 28)
 	newButton:SetWidth(SIDEBAR_WIDTH - 2 * PAD)
 	newButton:SetPoint("TOPLEFT", PAD, -PAD)
 	newButton:SetSelected(true)
@@ -1467,7 +1467,7 @@ end
 -- /nra goal, the tracker's "+" and "Edit". With a page ("new", "edit", ...), always shows it.
 function ns:OpenGoalsWindow(toPage, goalID)
 	if not ns:IsModuleEnabled("farmGoals") then
-		ns:Print("Turn on Farm goals first (/nra).")
+		ns:Print("Turn on Farm Goals first (/nra).")
 		return
 	end
 	if not frame then
@@ -1511,13 +1511,13 @@ function ns:OpenGoalsWindow(toPage, goalID)
 end
 
 UI.RegisterTab({
-	key = "goals", label = "Goals", menuLabel = "Farm goals", order = 3, frameName = "NraKitGoalsFrame",
+	key = "goals", label = "Goals", menuLabel = "Farm Goals", order = 3, frameName = "NraKitGoalsFrame",
 	open = function()
 		ns:OpenGoalsWindow()
 	end,
 	module = "farmGoals",
 })
 
-ns:AddOptionsButton("farmGoals", "Open goals window", "Your goals, history and a new goal (/nra goal).", function()
+ns:AddOptionsButton("farmGoals", "Open Goals Window", "Your goals, history and a new goal (/nra goal).", function()
 	ns:OpenGoalsWindow()
 end)

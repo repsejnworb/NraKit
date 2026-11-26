@@ -1,4 +1,4 @@
--- Sell list: what in your bags is worth selling, the most valuable first, at the auction house
+-- Sell List: what in your bags is worth selling, the most valuable first, at the auction house
 -- (Auctionator) and at a vendor; soulbound ones apart, kept ones off the list.
 
 Enum.BagIndex = { Backpack = 0 }
@@ -137,7 +137,7 @@ return {
 		t.test("at the auction house: a button, the list beside it, closing with it", function()
 			_G.NraKitSellListFrame:Hide()
 			wow.fire("AUCTION_HOUSE_SHOW")
-			local ok = wow.click("NraKit Sell list")
+			local ok = wow.click("NraKit Sell List")
 			t.ok(ok, "a button on the auction house")
 			t.ok(_G.NraKitSellListFrame:IsShown(), "opens the list")
 			t.ok(ns.UI.IsDocked(), "NraKit's window docks beside the auction house")

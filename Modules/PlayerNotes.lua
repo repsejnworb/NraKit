@@ -1,12 +1,12 @@
 local _, ns = ...
 
--- Player notes: per player a label, any number of tags and a dated log of notes. The
+-- Player Notes: per player a label, any number of tags and a dated log of notes. The
 -- label and tags show in unit tooltips; the right-click menu on a player (unit frames,
 -- chat names, group, guild and friends lists) opens the notes or sets the label.
 --
 -- The label is one of four fixed ones (called "tone" in the code), and it decides what
 -- happens: Kill on sight and Avoid players trigger warnings when they join your group,
--- invite you, whisper you or open a trade, and Unit scanner alerts for Kill on sight
+-- invite you, whisper you or open a trade, and Unit Scanner alerts for Kill on sight
 -- ones nearby (it asks ScanEntry). A Liked player can have a rating, 1 to 5 stars in
 -- halves. Tags are your own words ("Ninjalooter", "Good tank") for grouping players; the
 -- window lists players by tag.
@@ -31,13 +31,13 @@ local _, ns = ...
 local module = {
 	key = "playerNotes",
 	section = "Social",
-	name = "Player notes",
+	name = "Player Notes",
 	description = "Keep notes on players: a label (Kill on sight, Avoid, Neutral or Liked), tags of your own to group them (Ninjalooter, Good tank, ...) and a dated log of what happened. Shown in their tooltip; right-click a player (portrait, party frame, chat name) for Player note to label them or write a note. Warns you when a player you've marked Avoid or Kill on sight joins your group, invites, whispers or trades you. /nra note opens your notes.",
 	default = false,
 	options = {
 		{
 			key = "playerNotesTooltip",
-			header = "Showing notes",
+			header = "Showing Notes",
 			name = "Show in tooltips",
 			description = "Add the player's label and latest note to their tooltip.",
 			default = true,
@@ -102,10 +102,10 @@ local module = {
 		},
 		{
 			key = "playerNotesScanHostile",
-			header = "Unit scanner",
+			header = "Unit Scanner",
 			requires = "unitScanner",
 			name = "Alert when Hostile players are nearby",
-			description = "Unit scanner alerts you (with its sound, marker and target button) when a player labelled Kill on sight shows up: nameplates, mouseover, targets. Needs Unit scanner turned on. Players of your own faction are only seen on mouseover and as targets unless friendly nameplates are on.",
+			description = "Unit Scanner alerts you (with its sound, marker and target button) when a player labelled Kill on sight shows up: nameplates, mouseover, targets. Needs Unit Scanner turned on. Players of your own faction are only seen on mouseover and as targets unless friendly nameplates are on.",
 			default = true,
 		},
 	},
@@ -115,7 +115,7 @@ local notes = {}
 ns.playerNotes = notes
 
 -- The four labels ("tones"), in the order they're listed. warn: group/whisper/... warnings;
--- scan: Unit scanner. short: for the notebook's filters. words: what you can type for them in /nra note.
+-- scan: Unit Scanner. short: for the notebook's filters. words: what you can type for them in /nra note.
 notes.TONES = {
 	{ key = "hostile", name = "Kill on sight", short = "KoS", color = { 1, 0.25, 0.2 }, warn = true, scan = true,
 		words = { "kos", "killonsight", "hostile" } },
@@ -960,7 +960,7 @@ function notes.Warn(name, guid, reason)
 end
 
 -- /nra preview warning: the warning for a made-up Kill on sight player.
-ns:RegisterPreview("warning", "Player notes: the warning when a player you've marked joins your group", function()
+ns:RegisterPreview("warning", "Player Notes: the warning when a player you've marked joins your group", function()
 	ns:Print("|cffff8040Heads up:|r Bob Stone (Kill on sight) is in your group: \"stole my mining node\"")
 	if RaidNotice_AddMessage and RaidWarningFrame then
 		RaidNotice_AddMessage(RaidWarningFrame, "Bob Stone - Kill on sight", { r = 1, g = 0.2, b = 0.2 })
@@ -1003,7 +1003,7 @@ local function CheckRoster(quiet)
 end
 
 ------------------------------------------------------------------------------
--- Unit scanner
+-- Unit Scanner
 ------------------------------------------------------------------------------
 
 local scanEntries = {} -- key -> entry, kept so the scanner's alert cooldown works per player
@@ -1029,7 +1029,7 @@ function notes.HasScanTargets()
 	return hasScanTargets
 end
 
--- A Unit scanner entry for a Hostile player, or nil: { name, label, noted = true }.
+-- A Unit Scanner entry for a Hostile player, or nil: { name, label, noted = true }.
 function notes.ScanEntry(name, guid)
 	if not ScanEnabled() then
 		return nil
@@ -1051,7 +1051,7 @@ end
 ------------------------------------------------------------------------------
 
 local HELP = {
-	summary = "Player notes: label and tag players and keep notes on them",
+	summary = "Player Notes: label and tag players and keep notes on them",
 	usage = {
 		"/nra note - your target's notes, or the notebook",
 		"/nra note <note> - add a note to your target (a player)",
@@ -1180,7 +1180,7 @@ end
 
 local function OnSlashCommand(input)
 	if not ns:IsModuleEnabled(module.key) then
-		ns:Print("Player notes is turned off. Turn it on in /nra.")
+		ns:Print("Player Notes is turned off. Turn it on in /nra.")
 		return
 	end
 	input = strtrim(input or "")

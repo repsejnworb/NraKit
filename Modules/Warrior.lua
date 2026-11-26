@@ -65,7 +65,7 @@ local module = {
 		},
 		{
 			key = "warriorProcs",
-			header = "Proc alerts",
+			header = "Proc Alerts",
 			name = "Glow when a proc can be used",
 			description = "Your action button glows (like the game's own proc glow) while Overpower, Revenge, Victory Rush or Execute can be used, which the game doesn't show for them. Bright: press it now. Dim: it's up, but you're short of rage or it's on cooldown.",
 			default = true,

@@ -1,4 +1,4 @@
--- Auctionator prices: Waylaid Crates (the crate tooltip prices each bundle; an Auctionator list
+-- Auctionator Prices: Waylaid Crates (the crate tooltip prices each bundle; an Auctionator list
 -- holds the bundles of the crates you carry), recipes (one craft's cost; shopping lists),
 -- vendor prices, and the NraKit Shopping List.
 
@@ -56,7 +56,7 @@ return {
 			return lines
 		end
 
-		t.test("was \"Waylaid Crate prices\": turned on, it's on as Auctionator prices", function()
+		t.test("was \"Waylaid Crate prices\": turned on, it's on as Auctionator Prices", function()
 			t.ok(ns:IsModuleEnabled("auctionatorPrices"), "on")
 			t.equal(NraKitDB.waylaidCrates, nil, "old key gone")
 		end)
@@ -356,7 +356,7 @@ return {
 			items[IRON_BAR].bags, items[IRON_BAR].bank, items[GREEN_DYE].bags = 2, 1, 0
 		end)
 
-		t.test("where: with Inventory tracker, you first then your other characters, a few at most", function()
+		t.test("where: with Inventory Tracker, you first then your other characters, a few at most", function()
 			NraKitDB.inventoryTracker = true
 			local holders = function()
 				return {
@@ -464,11 +464,11 @@ return {
 			ns:SetSetting("auctionatorShopping", true)
 		end)
 
-		t.test("how many you have: bags and bank without Inventory tracker", function()
+		t.test("how many you have: bags and bank without Inventory Tracker", function()
 			t.equal(prices.Have(IRON_BAR), 3, "2 + 1")
 		end)
 
-		t.test("the Shopping list tab shows the list with its total", function()
+		t.test("the Shopping List tab shows the list with its total", function()
 			RightClickLink("enchant:" .. RECIPE)
 			Click("Add to NraKit Shopping List")
 			SlashCmdList.NRAKIT("shop")

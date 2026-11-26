@@ -181,7 +181,7 @@ local ROWS, ROW_HEIGHT = 16, 24
 local picker
 
 local function CreatePicker()
-	picker = UI.CreateWindow("NraKitSoundPicker", "Choose a sound", 460, 560, 0)
+	picker = UI.CreateWindow("NraKitSoundPicker", "Choose a Sound", 460, 560, 0)
 	picker:SetFrameStrata("FULLSCREEN_DIALOG")
 	local body = picker.body
 

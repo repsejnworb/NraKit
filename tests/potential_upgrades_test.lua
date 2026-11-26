@@ -1,4 +1,4 @@
--- Potential upgrades: rings compared for a warrior, with "Equip:" bonuses (attack power,
+-- Potential Upgrades: rings compared for a warrior, with "Equip:" bonuses (attack power,
 -- spell power, crit and hit rating) counted like stats, as a rough clue.
 
 INVSLOT_FINGER1, INVSLOT_FINGER2, INVSLOT_MAINHAND, INVSLOT_OFFHAND = 11, 12, 16, 17

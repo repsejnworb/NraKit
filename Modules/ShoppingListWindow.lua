@@ -29,7 +29,7 @@ local AMOUNT_RIGHT, AMOUNT_WIDTH = -348, 92
 
 local HELP = "Add what a recipe needs:\n"
 	.. "  - right-click a recipe link in chat\n"
-	.. "  - right-click a recipe in your profession window, or use its Shopping list button\n"
+	.. "  - right-click a recipe in your profession window, or use its Shopping List button\n"
 	.. "then pick |cffffd100Add to NraKit Shopping List|r. Each adds one craft's reagents.\n\n"
 	.. "Auctionator gets a copy, \"NraKit Shopping List\", in its Shopping tab."
 
@@ -77,7 +77,7 @@ local function OpenRowMenu(row)
 	local entry = row.entry
 	MenuUtil.CreateContextMenu(row, function(_, root)
 		root:CreateTitle(C_Item.GetItemNameByID(entry.id) or ("Item " .. entry.id))
-		root:CreateButton("Copy Wowhead link", function()
+		root:CreateButton("Copy Wowhead Link", function()
 			ns.wowheadLink.Show("item", entry.id)
 		end)
 		root:CreateDivider()
@@ -115,7 +115,7 @@ local function OnHaveEnter(self)
 			GameTooltip:AddDoubleLine(holder.label, string.format("%d (%s)", holder.total, holder.where), r, g, b, 1, 1, 1)
 		end
 	else
-		GameTooltip_AddNormalLine(GameTooltip, "In your bags and bank. Turn on Inventory tracker to count all your characters.", true)
+		GameTooltip_AddNormalLine(GameTooltip, "In your bags and bank. Turn on Inventory Tracker to count all your characters.", true)
 	end
 	GameTooltip:Show()
 end
@@ -359,7 +359,7 @@ local function ColumnTitle(parent, text, right, width, justify)
 end
 
 local function CreateWindow()
-	frame = UI.CreateWindow("NraKitShoppingListFrame", "Shopping list", WIDTH, HEIGHT, 0, "shopping")
+	frame = UI.CreateWindow("NraKitShoppingListFrame", "Shopping List", WIDTH, HEIGHT, 0, "shopping")
 	local body = frame.body
 
 	-- Column titles, over the rows' columns.
@@ -404,7 +404,7 @@ local function CreateWindow()
 	end)
 	searchButton:SetScript("OnLeave", GameTooltip_Hide)
 
-	clearButton = UI.CreateFlatButton(footer, "Clear list", 24)
+	clearButton = UI.CreateFlatButton(footer, "Clear List", 24)
 	clearButton:SetPoint("RIGHT", searchButton, "LEFT", -8, 0)
 	clearButton:SetScript("OnClick", ConfirmClear)
 
@@ -437,13 +437,13 @@ function ns:OpenShoppingList(show)
 end
 
 UI.RegisterTab({
-	key = "shopping", label = "Shopping list", menuLabel = "Shopping list", order = 8, frameName = "NraKitShoppingListFrame",
+	key = "shopping", label = "Shopping List", menuLabel = "Shopping List", order = 8, frameName = "NraKitShoppingListFrame",
 	open = function()
 		ns:OpenShoppingList(true)
 	end,
 	module = "auctionatorPrices",
 })
 
-ns:AddOptionsButton("auctionatorPrices", "Open shopping list", "The NraKit Shopping List (/nra shop).", function()
+ns:AddOptionsButton("auctionatorPrices", "Open Shopping List", "The NraKit Shopping List (/nra shop).", function()
 	ns:OpenShoppingList(true)
 end)

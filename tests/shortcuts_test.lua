@@ -60,7 +60,7 @@ return {
 
 		t.test("turning its feature off takes it back too", function()
 			ns:SetSetting("farmGoals", false)
-			t.equal(SLASH_NRAKITSHORTCUT_GOAL1, nil, "gone with Farm goals")
+			t.equal(SLASH_NRAKITSHORTCUT_GOAL1, nil, "gone with Farm Goals")
 			ns:SetSetting("farmGoals", true)
 			t.equal(SLASH_NRAKITSHORTCUT_GOAL1, "/goal", "back with it")
 		end)

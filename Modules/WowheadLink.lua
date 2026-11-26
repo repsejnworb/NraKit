@@ -14,7 +14,7 @@ local _, ns = ...
 local module = {
 	key = "wowheadLink",
 	section = "Tools",
-	name = "Copy Wowhead link",
+	name = "Copy Wowhead Link",
 	description = "Hover an item, spell, NPC, quest, achievement or currency and press Ctrl+C to copy a Wowhead (Forever) link to it. Change the key under Key Bindings > NraKit.",
 	default = false,
 }
@@ -25,7 +25,7 @@ local URL = "https://www.wowhead.com/forever/%s=%d"
 local IS_MAC = IsMacClient and IsMacClient()
 local COPY_KEY = IS_MAC and "Cmd+C" or "Ctrl+C"
 
-_G["BINDING_NAME_" .. BINDING] = "Copy Wowhead link of what's under the mouse"
+_G["BINDING_NAME_" .. BINDING] = "Copy Wowhead Link of what's under the mouse"
 
 local TYPE = Enum.TooltipDataType
 local PAGES = {
@@ -203,7 +203,7 @@ local function ShowBox(page, id, tooltipName)
 	box.edit:HighlightText()
 end
 
--- For other features (Inspect anything's "Abilities on Wowhead"): the box works whether
+-- For other features (Inspect Anything's "Abilities on Wowhead"): the box works whether
 -- or not this feature is on.
 ns.wowheadLink = {
 	Show = function(page, id, name)

@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Player notes in chat: shift-click a player in your notes (or Link in chat on their
+-- Player Notes in chat: shift-click a player in your notes (or Link in chat on their
 -- page) to put "[NraKit note: Name]" in your chat box. For others with NraKit the text
 -- becomes a link; clicking it asks your client for the note over hidden addon whispers,
 -- and a window shows the name, label, tags and notes with Add and Cancel.
@@ -229,7 +229,7 @@ local function CheckTimeout(id)
 	local request = requests[id]
 	if request and GetTime() - request.heard >= TIMEOUT - 0.01 then
 		requests[id] = nil
-		ns:Print(string.format("No answer from %s about %s. They may be offline, or not have NraKit with Player notes on.",
+		ns:Print(string.format("No answer from %s about %s. They may be offline, or not have NraKit with Player Notes on.",
 			request.from, request.name))
 	end
 end
@@ -468,7 +468,7 @@ local function AddShown()
 end
 
 local function CreateReviewWindow()
-	frame = UI.CreateWindow("NraKitNoteShareFrame", "Shared player note", WIDTH, HEIGHT, 0)
+	frame = UI.CreateWindow("NraKitNoteShareFrame", "Shared Player Note", WIDTH, HEIGHT, 0)
 	pool = UI.CreatePool()
 	local body = frame.body
 

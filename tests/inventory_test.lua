@@ -1,4 +1,4 @@
--- Inventory tracker and names: characters are "Firstname Surname", two of yours can share a
+-- Inventory Tracker and names: characters are "Firstname Surname", two of yours can share a
 -- first name, and data saved by older versions under the first name alone moves over.
 
 -- You're "Nra Kit". hooksecurefunc really hooks here (for SendMail and the AH's buy calls).
@@ -94,7 +94,7 @@ return {
 			t.ok(text:find("Total: 15", 1, true), "total: " .. text)
 		end)
 
-		t.test("Holders lists everyone with the item, you too (for the Shopping list's have)", function()
+		t.test("Holders lists everyone with the item, you too (for the Shopping List's have)", function()
 			ns:SetSetting("inventoryTrackerCurrent", false)
 			local holders = ns.inventory.Holders(LINEN)
 			t.equal(holders[1].label, "Nra Kit", "you first, even with yourself off in tooltips")

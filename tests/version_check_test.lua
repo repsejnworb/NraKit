@@ -103,7 +103,7 @@ return {
 			t.equal(check.Newer(), "0.14.0", "but the newest is kept")
 		end)
 
-		t.test("What's new shows that a newer version is out", function()
+		t.test("What's New shows that a newer version is out", function()
 			ns:OpenWhatsNew()
 			local notices = wow.findAll(function(frame)
 				local text = rawget(frame, "text")

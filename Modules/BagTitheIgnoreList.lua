@@ -1,7 +1,7 @@
 local _, ns = ...
 
 -- Settings page listing the items Bag Tithe ignores, with a remove button per
--- item and a "Clear all" button. Registered as a canvas page by BagTithe.lua.
+-- item and a "Clear All" button. Registered as a canvas page by BagTithe.lua.
 
 local tithe = ns.BagTithe
 
@@ -45,7 +45,7 @@ function tithe:CreateIgnoreListPage()
 
 	local title = page:CreateFontString(nil, "OVERLAY", "GameFontHighlightHuge")
 	title:SetPoint("TOPLEFT", 16, -16)
-	title:SetText("Bag Tithe ignore list")
+	title:SetText("Bag Tithe Ignore List")
 
 	local description = page:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	description:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
@@ -56,7 +56,7 @@ function tithe:CreateIgnoreListPage()
 	local clearButton = CreateFrame("Button", nil, page, "UIPanelButtonTemplate")
 	clearButton:SetSize(120, 22)
 	clearButton:SetPoint("TOPRIGHT", -16, -16)
-	clearButton:SetText("Clear all")
+	clearButton:SetText("Clear All")
 	clearButton:SetScript("OnClick", function()
 		tithe:ClearIgnoreList()
 	end)

@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Campfire timer: a progress bar in the middle of the screen while you rest at a
+-- Campfire Timer: a progress bar in the middle of the screen while you rest at a
 -- campfire (the "Welcoming Campfire" buff), so you can see when you're done without
 -- watching the buff icon. When the rest finishes you get "Camp Benefits"; the bar then
 -- turns green, says so for a few seconds and fades out. Walking away early just hides it.
@@ -15,7 +15,7 @@ local _, ns = ...
 local module = {
 	key = "campfireTimer",
 	section = "Trackers & Reminders",
-	name = "Campfire timer",
+	name = "Campfire Timer",
 	description = "Show a progress bar in the middle of the screen while you rest at a Welcoming Campfire or in a sleeping bag.",
 	default = false,
 	options = {
@@ -363,7 +363,7 @@ end
 -- /nra campfire: a short fake rest, to see (and place) the bar.
 local function Preview()
 	if not ns:IsModuleEnabled(module.key) then
-		ns:Print("Campfire timer is turned off.")
+		ns:Print("Campfire Timer is turned off.")
 		return
 	end
 	local now = GetTime()
@@ -376,12 +376,12 @@ local function Preview()
 	end)
 end
 
-ns:RegisterPreview("campfire", "Campfire timer: a 10-second rest (same as /nra campfire)", Preview)
+ns:RegisterPreview("campfire", "Campfire Timer: a 10-second rest (same as /nra campfire)", Preview)
 
 -- A sleeping bag rest with a stack every few seconds.
 local function PreviewBag()
 	if not ns:IsModuleEnabled(module.key) then
-		ns:Print("Campfire timer is turned off.")
+		ns:Print("Campfire Timer is turned off.")
 		return
 	end
 	ShowBag(0)
@@ -402,7 +402,7 @@ local function PreviewBag()
 	C_Timer.After(PREVIEW_STACK_SECONDS, NextStack)
 end
 
-ns:RegisterPreview("sleepingbag", "Campfire timer: resting in a sleeping bag until 3 stacks of Well-Rested", PreviewBag)
+ns:RegisterPreview("sleepingbag", "Campfire Timer: resting in a sleeping bag until 3 stacks of Well-Rested", PreviewBag)
 
 local eventFrame = CreateFrame("Frame")
 eventFrame:SetScript("OnEvent", Update)
@@ -411,7 +411,7 @@ function module:OnInitialize()
 	eventFrame:RegisterUnitEvent("UNIT_AURA", "player")
 	eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 	ns:RegisterSlashCommand("campfire", Preview, {
-		summary = "Campfire timer: show a 10-second preview of the bar",
+		summary = "Campfire Timer: show a 10-second preview of the bar",
 		usage = { "/nra campfire - preview the campfire bar (to check its look and position)" },
 	})
 	Update()

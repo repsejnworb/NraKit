@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Player notes window (/nra note, or Player note in a player's right-click menu).
+-- Player Notes window (/nra note, or Player note in a player's right-click menu).
 --
 -- Sidebar: "+ Add player" (a page with a name box, and your target as a shortcut),
 -- search (name, label, tag or note text), a filter chip per label (any number on; they
@@ -297,7 +297,7 @@ local function RenderSidebar()
 			return fold
 		end)
 		button.keys, button.allClosed = keys, allClosed
-		button.text:SetText(allClosed and "Unfold all" or "Fold all")
+		button.text:SetText(allClosed and "Unfold All" or "Fold All")
 		button:SetWidth(width)
 		button:SetPoint("TOPLEFT", content, "TOPLEFT", 0, y)
 		y = y - 18
@@ -382,7 +382,7 @@ local function RenderSidebar()
 		y = y - 24
 		if Filtering() then
 			local clear = sidebarPool:Acquire("clear", function()
-				local button = UI.CreateFlatButton(content, "Clear filters", 20)
+				local button = UI.CreateFlatButton(content, "Clear Filters", 20)
 				button:SetScript("OnClick", function()
 					wipe(toneFilter)
 					Render()
@@ -472,7 +472,7 @@ local function AddTypedNote()
 end
 
 local TONE_HELP = {
-	hostile = "Warnings when they join your group, invite, whisper or trade you, and Unit scanner alerts when they're nearby.",
+	hostile = "Warnings when they join your group, invite, whisper or trade you, and Unit Scanner alerts when they're nearby.",
 	caution = "Warnings when they join your group, invite, whisper or trade you.",
 	neutral = "Shown in their tooltip.",
 	friendly = "Shown in their tooltip, with a rating if you give them one (the stars next to Liked).",
@@ -723,7 +723,7 @@ local function RenderPlayer()
 
 	p.linkButton:SetShown(record ~= nil)
 	p.deleteButton:SetShown(record ~= nil)
-	p.deleteButton.text:SetText(confirmDelete and "Click again to delete" or "Delete player")
+	p.deleteButton.text:SetText(confirmDelete and "Click Again to Delete" or "Delete Player")
 	p.deleteButton:SetWidth(p.deleteButton.text:GetStringWidth() + 20)
 end
 
@@ -787,7 +787,7 @@ local function CreatePlayerPage(body)
 	footer:SetPoint("BOTTOMRIGHT")
 	footer:SetHeight(FOOTER_HEIGHT)
 	UI.AddLine(footer, "TOP")
-	p.linkButton = UI.CreateFlatButton(footer, "Link in chat", 22)
+	p.linkButton = UI.CreateFlatButton(footer, "Link in Chat", 22)
 	p.linkButton:SetPoint("LEFT", PAD, 0)
 	p.linkButton:SetScript("OnClick", function()
 		local _, key = Current()
@@ -799,7 +799,7 @@ local function CreatePlayerPage(body)
 		UI.ShowTooltip(self, "Link in chat", "Puts [NraKit note: " .. (CurrentName() or "") .. "] in your chat box. Others with NraKit can click it to see this player's label, tags and notes, and add them to theirs (while you're online). Shift-click a player in the list does the same.")
 	end)
 	p.linkButton:SetScript("OnLeave", GameTooltip_Hide)
-	p.deleteButton = UI.CreateFlatButton(footer, "Delete player", 22)
+	p.deleteButton = UI.CreateFlatButton(footer, "Delete Player", 22)
 	p.deleteButton:SetPoint("RIGHT", -PAD, 0)
 	p.deleteButton:SetScript("OnClick", function()
 		local _, key = Current()
@@ -842,14 +842,14 @@ local EMPTY_TEXT = table.concat({
 	"",
 	"|cffffd100From chat:|r /nra note Bob Stone kos #ninjalooter stole my node  (or /nra note kos ... for your target).",
 	"",
-	"Their label and latest note show in their tooltip. Players labelled Avoid or Kill on sight warn you when they join your group, invite, whisper or trade you, and Unit scanner alerts you when a Kill on sight player is nearby.",
+	"Their label and latest note show in their tooltip. Players labelled Avoid or Kill on sight warn you when they join your group, invite, whisper or trade you, and Unit Scanner alerts you when a Kill on sight player is nearby.",
 }, "\n")
 
 local function CreateEmptyPage(body)
 	local p = CreateFrame("Frame", nil, body)
 	p:SetAllPoints()
 	emptyPage = p
-	local title = MakeLabel(p, "Player notes", "GameFontNormalLarge")
+	local title = MakeLabel(p, "Player Notes", "GameFontNormalLarge")
 	title:SetPoint("TOPLEFT", PAD + 8, -PAD - 8)
 	local text = MakeLabel(p, EMPTY_TEXT, "GameFontHighlight")
 	text:SetPoint("TOPLEFT", PAD + 8, -PAD - 36)
@@ -1035,7 +1035,7 @@ local function CreateTagsPage(body)
 	p.newBox:SetPoint("TOPLEFT", PAD + 6, -96)
 	p.newBox:SetMaxLetters(30)
 	p.newBox:SetScript("OnEnterPressed", CreateTyped)
-	p.newButton = UI.CreateFlatButton(p, "+ New tag", 22)
+	p.newButton = UI.CreateFlatButton(p, "+ New Tag", 22)
 	p.newButton:SetPoint("LEFT", p.newBox, "RIGHT", 6, 0)
 	p.newButton:SetScript("OnClick", CreateTyped)
 
@@ -1070,9 +1070,9 @@ Render = function()
 end
 
 local function CreateNotesWindow()
-	frame = UI.CreateWindow("NraKitPlayerNotesFrame", "Player notes", WIDTH, HEIGHT, SIDEBAR_WIDTH, "notes")
+	frame = UI.CreateWindow("NraKitPlayerNotesFrame", "Player Notes", WIDTH, HEIGHT, SIDEBAR_WIDTH, "notes")
 
-	addButton = UI.CreateFlatButton(frame.sidebar, "+  Add player", 28)
+	addButton = UI.CreateFlatButton(frame.sidebar, "+  Add Player", 28)
 	addButton:SetWidth(SIDEBAR_WIDTH - 2 * PAD)
 	addButton:SetPoint("TOPLEFT", PAD, -PAD)
 	addButton:SetSelected(true)
@@ -1161,7 +1161,7 @@ end
 -- toggles it on the last page.
 function ns:OpenPlayerNotes(name, info)
 	if not ns:IsModuleEnabled("playerNotes") then
-		ns:Print("Turn on Player notes first (/nra).")
+		ns:Print("Turn on Player Notes first (/nra).")
 		return
 	end
 	if not frame then
@@ -1190,13 +1190,13 @@ function ns:OpenPlayerNotes(name, info)
 end
 
 UI.RegisterTab({
-	key = "notes", label = "Notes", menuLabel = "Player notes", order = 4, frameName = "NraKitPlayerNotesFrame",
+	key = "notes", label = "Notes", menuLabel = "Player Notes", order = 4, frameName = "NraKitPlayerNotesFrame",
 	open = function()
 		ns:OpenPlayerNotes()
 	end,
 	module = "playerNotes",
 })
 
-ns:AddOptionsButton("playerNotes", "Open player notes", "Everyone you have notes on, and your tags (/nra note).", function()
+ns:AddOptionsButton("playerNotes", "Open Player Notes", "Everyone you have notes on, and your tags (/nra note).", function()
 	ns:OpenPlayerNotes()
 end)

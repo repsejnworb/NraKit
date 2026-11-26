@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Reminders & to-dos: notes to yourself that come back when they're due. /nra remind <text>
+-- Reminders & To-Dos: notes to yourself that come back when they're due. /nra remind <text>
 -- is for your next login; a trigger in front makes it come back later instead:
 --   /nra remind 30m <text>                  in 30 minutes (s, m, h, d; 1h30m works too)
 --   /nra remind in <zone>: <text>           when you're in that zone (or subzone)
@@ -30,7 +30,7 @@ local REMINDER_COLOUR, TODO_COLOUR = { 1, 0.6, 0.2 }, { 0.4, 0.75, 1 }
 local module = {
 	key = "reminders",
 	section = "Trackers & Reminders",
-	name = "Reminders & to-dos",
+	name = "Reminders & To-Dos",
 	description = "Notes to yourself that come back when they're due: /nra remind <text> for your next login, or after a time (30m), when you enter a zone, reach a level or log in on another character. Due reminders show on a card you close yourself, so you don't miss them. To-dos (/nra todo) go straight on a list on screen instead, in your order.",
 	default = false,
 	options = {
@@ -72,12 +72,12 @@ local module = {
 		{
 			key = "remindersArrivalToast",
 			name = "Say so when you get there",
-			description = "A small message (no sound) listing the reminders and to-dos for a zone when you get there, together with Quests to turn in's.",
+			description = "A small message (no sound) listing the reminders and to-dos for a zone when you get there, together with Quests to Turn In's.",
 			default = true,
 		},
 		{
 			key = "remindersTracker",
-			header = "List on screen",
+			header = "List on Screen",
 			name = "Keep reminders on the list",
 			description = "When you close the card with reminders not ticked off, they stay on the list on screen until you tick them. (To-dos always go there.)",
 			default = true,
@@ -1599,7 +1599,7 @@ local function CreateTracker()
 		GameTooltip:Hide()
 		if button == "RightButton" then
 			if IsShiftKeyDown() then
-				ns:OpenSettings("Reminders & to-dos", "reminders")
+				ns:OpenSettings("Reminders & To-Dos", "reminders")
 			else
 				UI.ShowTab("reminders")
 			end
@@ -1613,10 +1613,10 @@ local function CreateTracker()
 	end)
 	header:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		GameTooltip_SetTitle(GameTooltip, "Reminders & To-do")
+		GameTooltip_SetTitle(GameTooltip, "Reminders & To-Do")
 		GameTooltip_AddInstructionLine(GameTooltip, NraKitDB.remindersTrackerFolded and "Click: unfold" or "Click: fold")
 		GameTooltip_AddInstructionLine(GameTooltip, "Shift-click: hide until your next login")
-		GameTooltip_AddInstructionLine(GameTooltip, "Right-click: open Reminders & To-do")
+		GameTooltip_AddInstructionLine(GameTooltip, "Right-click: open Reminders & To-Do")
 		GameTooltip_AddInstructionLine(GameTooltip, "Shift-right-click: settings")
 		if not ns:GetOption("remindersListLock") then
 			GameTooltip_AddInstructionLine(GameTooltip, "Drag to move")
@@ -2065,7 +2065,7 @@ end
 
 local function OnSlashCommand(rest)
 	if not ns:IsModuleEnabled(module.key) then
-		ns:Print("Turn on Reminders & to-dos first (/nra).")
+		ns:Print("Turn on Reminders & To-Dos first (/nra).")
 		return
 	end
 	if rest == "" then
@@ -2088,7 +2088,7 @@ reminders.OnSlashCommand = OnSlashCommand
 -- /nra remind); /nra todo show shows the list on screen.
 local function OnTodoCommand(rest)
 	if not ns:IsModuleEnabled(module.key) then
-		ns:Print("Turn on Reminders & to-dos first (/nra).")
+		ns:Print("Turn on Reminders & To-Dos first (/nra).")
 		return
 	end
 	if rest == "" then

@@ -9,7 +9,7 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
 - **Every feature is off by default** (module `default = false`). Sub-options inside a feature may default on.
 - **Changelog:** every `feat:`/`fix:` commit that changes something players can see adds a line to the `Unreleased`
   block at the top of `Changelog.lua`, in the same commit (add the block if it's missing). Write it for players
-  ("Player notes: ..."), not as the commit message; kinds are `new`, `improved`, `fixed`. A new feature's entry is
+  ("Player Notes: ..."), not as the commit message; kinds are `new`, `improved`, `fixed`. A new feature's entry is
   `{ "new", "...", module = "<module key>" }` (the window shows its on/off switch there; a test fails if a module
   has none). Only ever add entries, never remove or reorder them (the game counts them to know what's new to someone).
   Tests, refactors and docs need no entry. Write entries to be scanned, not read: a new feature gets
@@ -17,6 +17,11 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   line with a `title`. `**words**` stand out; no bracket-and-semicolon chains (format at the top of Changelog.lua). `just release` turns `Unreleased` into the version and writes `CHANGELOG.md`
   (the CurseForge/GitHub release notes); `just changelog-check` (run by release) fails on feat/fix commits with an
   empty `Unreleased`.
+- **Capitalisation:** Title Case for names and labels: feature (module) names, sections and subsections, window and
+  tab titles, headings, column titles, buttons, option `header`s ("Sell List", "To Sell: Auction House", "What Can I
+  Sell?"; small words like a/the/and/to/of/with stay lower case inside). Sentence case for anything read as a
+  sentence: descriptions, tooltips, notes, option names that are phrases ("Open the list at the auction house"),
+  messages and What's New text.
 - Each feature should be toggleable on the NraKit overview page; anything tunable goes in settings, not code constants.
 - Run `just test` before committing (it also syntax-checks). It uses LuaJIT (Lua 5.1, like the game). `tests/run.lua` loads the whole addon in TOC order into a
   stand-in client (`tests/wow.lua`), logs in and runs a `tests/*_test.lua` file; each file is a fresh process. Tests
@@ -72,7 +77,7 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   `tools/changelog.lua` is the release tooling (`count`, `release <version> <date>`, `markdown <version>`).
 - `VersionCheck.lua` – "a newer NraKit is out" and `/nra who`, over addon messages (prefix `NraKit`) to the guild and
   group. Uses the TOC `## Version`; a git clone (`@project-version@`) counts as `dev` and never compares.
-- `Options.lua` – NraKit's own window (`/nra`): sidebar with search, What's new and sections, a card per module with inline
+- `Options.lua` – NraKit's own window (`/nra`): sidebar with search, What's New and sections, a card per module with inline
   options. Built entirely from the module definitions, so new modules need no work here. Custom per-module buttons
   go through `ns:AddOptionsButton(moduleKey, label, description, onClick)` and show in both UIs.
 - `Bindings.xml` – keybindings (auto-loaded by the game, not listed in the TOC); binding names are set in Lua.

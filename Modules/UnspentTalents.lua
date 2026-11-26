@@ -3,12 +3,12 @@ local _, ns = ...
 -- Shows a large reminder in the middle of the screen while you have unspent talent
 -- points. Hidden while dead, (optionally) in combat, and while the talents window is open
 -- (you're spending them). It sits below windows, so an open window covers it. Based on
--- EnhanceQoL's "Unspent talent points" reminder.
+-- EnhanceQoL's "Unspent Talent Points" reminder.
 
 local module = {
 	key = "unspentTalents",
 	section = "Trackers & Reminders",
-	name = "Unspent talent points",
+	name = "Unspent Talent Points",
 	description = "Show a reminder in the middle of the screen while you have talent points to spend.",
 	default = false,
 	options = {
@@ -22,7 +22,7 @@ local module = {
 		{
 			key = "unspentTalentsShowCount",
 			name = "Show number of points",
-			description = "Add how many points are unspent, e.g. \"Unspent talent points (2)\".",
+			description = "Add how many points are unspent, e.g. \"Unspent Talent Points (2)\".",
 			default = true,
 		},
 		{
@@ -43,7 +43,7 @@ local module = {
 	},
 }
 
-local TEXT = "Unspent talent points"
+local TEXT = "Unspent Talent Points"
 local COLOR = { 1, 0.75, 0.2 }
 
 local frame, text
@@ -112,7 +112,7 @@ local function Refresh()
 end
 
 -- /nra preview talents: the reminder for a few seconds, with made-up points.
-ns:RegisterPreview("talents", "Unspent talent points: the reminder", function()
+ns:RegisterPreview("talents", "Unspent Talent Points: the reminder", function()
 	EnsureFrame()
 	ApplyStyle()
 	text:SetText(ns:GetOption("unspentTalentsShowCount") and string.format("%s (%d)", TEXT, 3) or TEXT)

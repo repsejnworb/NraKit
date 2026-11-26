@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Unlearned abilities: after a respec, the abilities you lost stay on your bars, only greyed
+-- Unlearned Abilities: after a respec, the abilities you lost stay on your bars, only greyed
 -- out like anything you can't use right now. This marks them (a red cross in the corner
 -- and a tooltip line), and when your spells change it says which ones on your bars you no
 -- longer know (click to take them off) and which new ones aren't on your bars yet.
@@ -13,7 +13,7 @@ local _, ns = ...
 local module = {
 	key = "unlearnedAbilities",
 	section = "Trackers & Reminders",
-	name = "Unlearned abilities",
+	name = "Unlearned Abilities",
 	description = "Mark abilities on your action bars that you don't know anymore (after a respec, say) with a red cross and a tooltip line. When your spells change, say which ones on your bars you lost (click to take them off) and which new ones aren't on your bars.",
 	default = false,
 	options = {
@@ -360,7 +360,7 @@ function unlearned.CheckChanges()
 	ShowWaiting()
 end
 
-ns:RegisterPreview("unlearned", "Unlearned abilities: the message after a respec", function()
+ns:RegisterPreview("unlearned", "Unlearned Abilities: the message after a respec", function()
 	ns.toast.Show({
 		style = "big",
 		heading = "Not learned anymore",
@@ -384,7 +384,7 @@ end)
 
 local function OnSlashCommand(input)
 	if not ns:IsModuleEnabled(module.key) then
-		ns:Print("Unlearned abilities is turned off. Turn it on in /nra.")
+		ns:Print("Unlearned Abilities is turned off. Turn it on in /nra.")
 		return
 	end
 	if strtrim(input or ""):lower() == "remove" then
@@ -439,7 +439,7 @@ local EVENTS = { "SPELLS_CHANGED", "PLAYER_ENTERING_WORLD", "ACTIONBAR_SLOT_CHAN
 
 function module:OnInitialize()
 	ns:RegisterSlashCommand("unlearned", OnSlashCommand, {
-		summary = "Unlearned abilities: list the abilities on your bars you don't know anymore",
+		summary = "Unlearned Abilities: list the abilities on your bars you don't know anymore",
 		usage = {
 			"/nra unlearned - list the abilities on your bars you don't know anymore",
 			"/nra unlearned remove - take them off your bars (after combat, if you're fighting)",

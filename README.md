@@ -13,33 +13,33 @@ Every feature is **off by default**, so turn on only what you want.
 Clone or symlink this repo into `World of Warcraft/_<flavor>_/Interface/AddOns/NraKit`
 (the folder name must be `NraKit`).
 
-## Getting started
+## Getting Started
 
-### The NraKit window
+### The NraKit Window
 
 Type `/nrakit` (or `/nra`) to open NraKit's window.
 
 - Features are grouped in a sidebar, with a search box, an on/off switch per feature and its options
   right underneath.
 - The same settings are also in the game's Settings panel under **AddOns → NraKit**.
-- NraKit's windows (Settings, Inventory, Goals, Notes, Items, Wishlist, Reminders & To-do) work as **tabs of one window**. Tabs of
+- NraKit's windows (Settings, Inventory, Goals, Notes, Items, Wishlist, Reminders & To-Do) work as **tabs of one window**. Tabs of
   features that are off are dimmed: they say what the feature does and turn it on with one click.
 - NraKit is also in the **addon button by the minimap**: left-click for settings, right-click for a
   menu of its windows.
 
 <img width="783" height="558" alt="nraKitUI" src=".github/screenshots/nraKitUI.png" />
 
-### What's new and updates
+### What's New and Updates
 
-- **What's new** (`/nra new`, at the top of the NraKit window) lists what changed in each version, and
+- **What's New** (`/nra new`, at the top of the NraKit window) lists what changed in each version, and
   new features can be turned on right there.
 - After an update, NraKit says so in one chat line.
 - It also tells you when a **newer version is out**, if someone in your guild or group already has it.
-  NraKit shares its version with other NraKit users there; switch it off on the What's new page.
+  NraKit shares its version with other NraKit users there; switch it off on the What's New page.
 - `/nra who` lists who in your guild and group runs NraKit, which version, and how many NraKit users
   you've come across (this session and in all).
 
-### Chat commands
+### Chat Commands
 
 - `/nra help` lists the chat commands; add `help` after one for details (e.g. `/nra goal help`).
 - `/nra preview` shows any of NraKit's on-screen messages (goal complete, quest reminders, alerts...)
@@ -47,7 +47,7 @@ Type `/nrakit` (or `/nra`) to open NraKit's window.
 
 ### Sounds
 
-Alert sounds (Campfire timer, Unit scanner, Farm goals, Player notes, Reminders & to-dos) can be changed:
+Alert sounds (Campfire Timer, Unit Scanner, Farm Goals, Player Notes, Reminders & To-Dos) can be changed:
 
 - Pick from a short list of good ones (hover to hear them).
 - Or use **More sounds...** to search every game sound, plus any sounds other addons share through
@@ -59,12 +59,12 @@ Grouped as in the NraKit window.
 
 ### Interface
 
-#### Class-colored health bars
+#### Class-Colored Health Bars
 
 Player, target, target of target, focus and party frames show **class-colored health bars** when the
 unit is a player. NPCs keep the default color.
 
-#### Engaged-only nameplates
+#### Engaged-Only Nameplates
 
 Full nameplates only for enemies that are **actually fighting you** (optionally your group too).
 
@@ -78,7 +78,7 @@ Full nameplates only for enemies that are **actually fighting you** (optionally 
 
 <img width="600" height="441" alt="engagedNameplatesOnly" src=".github/screenshots/engagedNameplatesOnly.png" />
 
-#### Cooldown Manager fade
+#### Cooldown Manager Fade
 
 The game's **Cooldown Manager** bars show in combat and **fade out a while after it**, animated,
 instead of just vanishing.
@@ -93,7 +93,7 @@ instead of just vanishing.
   it, and while the **mouse is over** a bar. Each is an option.
 - Every change is animated: fading in is quick, but never a jump.
 
-#### Damage meter look
+#### Damage Meter Look
 
 A **clean, flat look** for the game's own damage meter.
 
@@ -108,7 +108,7 @@ A **clean, flat look** for the game's own damage meter.
 
 <img width="336" height="145" alt="damageMeterLook" src=".github/screenshots/damageMeterLook.png" />
 
-#### Hide micro menu notifications
+#### Hide Micro Menu Notifications
 
 - Hides the blue "new" dot on the Shop button.
 - Shows the Legacy button's dot only while you have unspent Legacy Tree points (not for every new
@@ -132,17 +132,17 @@ Optionally a sound, and the icon next to the Personal Resource Display's rage ba
 
 ### Quests
 
-#### Best quest reward
+#### Best Quest Reward
 
 When a quest offers a choice of rewards, a **gold coin** marks the one that sells to a vendor for the
 most gold (vendor price × stack size).
 
-#### Quest level
+#### Quest Level
 
 The quest's level in front of its title in the quest dialog and quest details, e.g.
 "[24] The Defias Brotherhood", colored by difficulty like the quest log.
 
-#### Quests to turn in
+#### Quests to Turn In
 
 `/nra done` (or a key under Key Bindings → NraKit) shows a small window listing your **finished quests
 by the zone you turn them in**: the zone you're in first, then the nearest ("Wetlands (6): The Doomed
@@ -166,14 +166,14 @@ A button next to the bag sort button (separate or combined bags) **highlights yo
 slots** (vendor price × stack size).
 
   The message lists them one per line (click one to open the list), together with your **to-dos**
-  there (Reminders & to-dos).
+  there (Reminders & To-Dos).
 - Ranked from red to yellow, with rank numbers and sell values.
 - Everything else is dimmed; the bags work as normal underneath.
 - **Alt+click** an item to leave it out of the ranking; the ignore list is editable in the options.
 
 <img width="191" height="483" alt="bagTithe" src=".github/screenshots/bagTithe.png" />
 
-#### Potential upgrades
+#### Potential Upgrades
 
 Arrows on bag items and quest rewards, plus a tooltip line, for items that **beat what you have
 equipped**.
@@ -189,7 +189,7 @@ equipped**.
 
 <img width="283" height="254" alt="potentialUpgrade" src=".github/screenshots/potentialUpgrade.png" />
 
-#### Inventory tracker
+#### Inventory Tracker
 
 Item tooltips list **how many of the item each of your characters has, and where**, e.g.
 "Bob 12 (Bags 5, Bank 7)", with a total.
@@ -205,7 +205,7 @@ Item tooltips list **how many of the item each of your characters has, and where
   - search, category filters, how fresh each location is, and the vendor value of what's shown;
   - "All characters" lists who has what. Right-click a character to forget it.
 
-#### Open clams
+#### Open Clams
 
 A button at the bottom left of your bags (next to your money) **opens the next clam** one per click,
 showing its icon and how many are left.
@@ -221,7 +221,7 @@ showing its icon and how many are left.
 A **list of gear you want**, by slot, ticked off when you get it.
 
 - Add items with `/nra wishlist <item> [note]` (shift-click the item in; anything after it becomes its
-  note; shift-click several to add them all at once), by **right-clicking an item link in chat** or an item in Item lookup, or by **dropping an
+  note; shift-click several to add them all at once), by **right-clicking an item link in chat** or an item in Item Lookup, or by **dropping an
   item** on the window.
   `/nra wish` is short for it.
 - The Wishlist tab lists them in a section per slot, with the **level to wear** each one (grey while
@@ -232,7 +232,7 @@ A **list of gear you want**, by slot, ticked off when you get it.
 - Items you have (bags, bank or worn) are **ticked off**, with a message when one lands in your bags.
   An option takes them off the list instead.
 - A **star** marks wishlist items in your bags, at vendors, in quest rewards, the loot window, loot
-  rolls and Item lookup: gold while you want it, grey once you have it.
+  rolls and Item Lookup: gold while you want it, grey once you have it.
 - Item tooltips say when an item is on your wishlist, with your note.
 - `/nra preview wishlist` shows the message.
 
@@ -242,7 +242,7 @@ A **list of gear you want**, by slot, ticked off when you get it.
 
 ### Professions
 
-#### Known recipes
+#### Known Recipes
 
 Recipes you **already know get a green check** at vendors (with a greyed-out icon) and in your bags,
 so you don't have to mouse over each one.
@@ -265,7 +265,7 @@ tooltip says how much.
 
 <img width="600" height="499" alt="sousChef" src=".github/screenshots/sousChef.png" />
 
-#### Double-click fishing
+#### Double-Click Fishing
 
 With a fishing pole in your main hand, **double right-click the world to cast Fishing** (your highest
 rank).
@@ -275,7 +275,7 @@ rank).
 
 ### Auction House
 
-#### Sell list
+#### Sell List
 
 **What in your bags is worth selling**, the most valuable first, so you don't have to hover every
 item. A tab in the NraKit window (`/nra sell`).
@@ -300,7 +300,7 @@ item. A tab in the NraKit window (`/nra sell`).
   sorts by **any column**. The footer says what it's all worth.
 - Without Auctionator it still works, on vendor prices.
 
-#### Auctionator prices
+#### Auctionator Prices
 
 Needs **[Auctionator](https://www.curseforge.com/wow/addons/auctionator)**. What things cost at
 the auction house, from Auctionator's last scan.
@@ -313,18 +313,18 @@ the auction house, from Auctionator's last scan.
 - **Recipes:** a recipe's tooltip (click a recipe link in chat) shows **what one craft costs**:
   each reagent and the total.
 - **How many you have** of each reagent, on recipes and crates: on all your characters (with
-  Inventory tracker; else your bags and bank), **green** when your bags hold enough, **yellow** when
+  Inventory Tracker; else your bags and bank), **green** when your bags hold enough, **yellow** when
   you have enough elsewhere (bank, other characters), grey if not. When they aren't all in your
   bags, a line under it says **where**: "You 3 (Bags 2, Bank 1), Bankalt 12". A recipe also says
   what's left **to buy**.
 - **Shopping lists:** right-click a recipe link in chat or a recipe in your profession window (or
-  use the **Shopping list** button by its reagents) for:
+  use the **Shopping List** button by its reagents) for:
   - **Create shopping list for this recipe**: an Auctionator list named after the recipe, with one
     craft's reagents.
   - **Add to NraKit Shopping List**: adds one craft's reagents to your big list.
 - **The NraKit Shopping List** (`/nra shop`, a tab in the NraKit window): everything you're
   crafting, with what it's for, the **amount** (type it, or - and +), the price of one and of them
-  all, and **how many you have** on all your characters (hover for who; needs Inventory tracker,
+  all, and **how many you have** on all your characters (hover for who; needs Inventory Tracker,
   else your bags and bank). Remove items, or **Clear list** (it asks first). Auctionator gets a
   copy, **"NraKit Shopping List"**, kept up to date while you're away from the auction house; at
   it, **Search at AH** searches for everything.
@@ -367,7 +367,7 @@ Helpers for the mailbox. Each one is an option, and all are on once you turn Mai
 
 ### Trackers & Reminders
 
-#### Unspent talent points
+#### Unspent Talent Points
 
 A reminder in the middle of the screen while you have **talent points to spend**.
 
@@ -377,7 +377,7 @@ A reminder in the middle of the screen while you have **talent points to spend**
 
 <img width="307" height="82" alt="unspentTalentPoints" src=".github/screenshots/unspentTalentPoints.png" />
 
-#### Unlearned abilities
+#### Unlearned Abilities
 
 After a respec, abilities you don't know anymore stay on your bars, only greyed out like anything
 you can't use right now. This makes them stand out.
@@ -389,7 +389,7 @@ you can't use right now. This makes them stand out.
 - It also lists new abilities that aren't on your bars yet.
 - `/nra unlearned` lists them, `/nra unlearned remove` takes them off.
 
-#### Reminders & to-dos
+#### Reminders & To-Dos
 
 Notes to yourself that come back when they're due. `/nra remind Go to Darkshore and hand in quests`
 pops up the next time you log in; `/nra todo respec` just goes on your **to-do list** on screen.
@@ -410,9 +410,9 @@ pops up the next time you log in; `/nra todo respec` just goes on your **to-do l
   setting); then they go back to waiting, and come back in their place when you return. The header
   says how many are elsewhere. Right-click one to keep it on the list anyway.
 - Arriving in a zone with reminders or to-dos says so in a small message (no sound), shared with
-  Quests to turn in: how many, the zone, then a section for each (**QUESTS**, **REMINDERS & TO-DO**)
+  Quests to Turn In: how many, the zone, then a section for each (**QUESTS**, **REMINDERS & TO-DO**)
   listing them. Click a line to open what it's about.
-- **The list on screen** ("Reminders & To-do") holds both until you tick them (reminders after their
+- **The list on screen** ("Reminders & To-Do") holds both until you tick them (reminders after their
   card, an option), in two parts: **REMINDERS** first, then **TO DO**.
   - A coloured tag says where, when or who from (`Ironforge:`, `21:30:`, `Bankalt:`). Zone tags turn
     **green** while you're there.
@@ -420,7 +420,7 @@ pops up the next time you log in; `/nra todo respec` just goes on your **to-do l
     top or bottom).
   - Ticked ones fade out after a moment (untick in time to keep one).
   - Its header: **click** to fold it, **shift-click** to hide it until your next login, **right-click**
-    for the Reminders & To-do tab, **shift-right-click** for the settings. `/nra todo show`, a key (Key
+    for the Reminders & To-Do tab, **shift-right-click** for the settings. `/nra todo show`, a key (Key
     Bindings > NraKit) or **Show list** in the tab brings it back.
   - Settings for it: size, background opacity (down to just the text; for the header and the items
     together or apart; and a stronger one while the mouse is over it), overall opacity (text too), width and height (with more items than fit, it scrolls), which way it
@@ -428,7 +428,7 @@ pops up the next time you log in; `/nra todo respec` just goes on your **to-do l
     over the list), tags on or off, lock in place, hide in combat.
 - Right-click an item to make a to-do a reminder (or the other way), move it, be reminded again in 15
   minutes, an hour or next login, edit or delete it.
-- The **Reminders & To-do tab** (`/nra remind`) lists them: reminders and to-dos due now, waiting (and
+- The **Reminders & To-Do tab** (`/nra remind`) lists them: reminders and to-dos due now, waiting (and
   when they'll come, and whether they pop up), the ones you left your other characters, and done.
   Click one to edit its text; the **gear** on the row (or right-click, **Edit...**) opens it in the form to
   change everything else. **Show list** and **Settings** are at the bottom.
@@ -443,7 +443,7 @@ pops up the next time you log in; `/nra todo respec` just goes on your **to-do l
 <img width="441" height="209" alt="remindersLoginSummary" src=".github/screenshots/remindersLoginSummary.png" />
 <img width="682" height="204" alt="remindHelpText" src=".github/screenshots/remindHelpText.png" />
 
-#### Campfire timer
+#### Campfire Timer
 
 A progress bar in the middle of the screen while you **rest at a Welcoming Campfire**, with the time
 left. It turns green (with a sound) when Camp Benefits is ready.
@@ -455,7 +455,7 @@ left. It turns green (with a sound) when Camp Benefits is ready.
 
 <img width="261" height="57" alt="welcomingCampfire" src=".github/screenshots/welcomingCampfire.png" />
 
-#### Farm goals
+#### Farm Goals
 
 Set goals and track them in a small movable window: progress bar, amount gained, **rate per hour** and
 **time left**.
@@ -502,7 +502,7 @@ level or gain an amount).
 <img width="54" height="67" alt="goalTrackerIconOnly" src=".github/screenshots/goalTrackerIconOnly.png" />
 <img width="270" height="151" alt="goalCompletionToast" src=".github/screenshots/goalCompletionToast.png" />
 
-#### Unit scanner
+#### Unit Scanner
 
 Alerts you when a **mob or player from your list** shows up.
 
@@ -515,12 +515,12 @@ Alerts you when a **mob or player from your list** shows up.
 - **Your list:** target a unit and type `/nra scan` to add or remove it, or use
   `/nra scan <name or NPC ID>`, `/nra scan list`, `/nra scan remove <# or name>` and `/nra scan clear`.
 - Addons can only see units the game already shows you, so enemy nameplates should be on. With
-  Engaged-only nameplates, the scanner keeps them on while the list isn't empty.
-- With Player notes, it also alerts for players labelled Kill on sight (optional, on by default).
+  Engaged-Only Nameplates, the scanner keeps them on while the list isn't empty.
+- With Player Notes, it also alerts for players labelled Kill on sight (optional, on by default).
 
 ### Social
 
-#### Player notes
+#### Player Notes
 
 Give players a **label** (Kill on sight, Avoid, Neutral or Liked), **tags** of your own and a **dated
 log of notes** (each saves the date, zone and your character).
@@ -542,7 +542,7 @@ log of notes** (each saves the date, zone and your character).
   right-click → Player note → **Like and rate**, which then opens their notes to add a note or tags
   (an option). The stars show in their tooltip and your notes.
 - What the label does:
-  - Kill on sight: warnings and Unit scanner alerts;
+  - Kill on sight: warnings and Unit Scanner alerts;
   - Avoid: warnings;
   - Neutral or Liked: tooltip only.
 - `/nra note` opens the notebook, or your target's notes. In the notebook, **+ Add player** adds anyone
@@ -564,7 +564,7 @@ log of notes** (each saves the date, zone and your character).
 
 <img width="447" height="27" alt="playerNoteWarning" src=".github/screenshots/playerNoteWarning.png" />
 
-#### Inspect anything
+#### Inspect Anything
 
 One key (Key Bindings → NraKit) **inspects your target** (or what's under the mouse when you have
 none), in a window like the inspect window (same frame and place). It **stays open until you close
@@ -581,14 +581,14 @@ it**, even when they run off or you change target.
 
 <img width="343" height="430" alt="inspectAnything" src=".github/screenshots/inspectAnything.png" />
 
-#### Leave group with /leave
+#### Leave Group with /leave
 
 Type `/leave` (with nothing after it) or `/leavegroup` to leave your party, raid or instance group.
 `/leave <channel>` still leaves a chat channel.
 
 ### Tools
 
-#### Item lookup
+#### Item Lookup
 
 **Search every item in the game by name.** `/nra item nightbl` opens an Items tab listing the matches
 (icon, type, required level, how many your characters have).
@@ -603,7 +603,7 @@ Type `/leave` (with nothing after it) or `/leavegroup` to leave your party, raid
 <img width="1301" height="759" alt="itemLookup" src=".github/screenshots/itemLookup.png" />
 <img width="791" height="554" alt="itemLookup2" src=".github/screenshots/itemLookup2.png" />
 
-#### Copy Wowhead link
+#### Copy Wowhead Link
 
 Hover an item, spell, NPC, quest, achievement or currency and press **Ctrl+C**. A box opens in the
 middle of the screen with its wowhead.com/forever link selected; copy it with Ctrl+C (Cmd+C on a Mac)
@@ -625,7 +625,7 @@ Short commands for NraKit's everyday ones, each the same as its `/nra` command: 
 - `/nra shortcuts` lists them, and which are in use elsewhere (and by what).
 - Each can be turned off, and one whose feature is off isn't taken.
 
-#### NraKit button
+#### NraKit Button
 
 NraKit's icon on screen, wherever you drag it, looking like a minimap button.
 
@@ -633,9 +633,9 @@ NraKit's icon on screen, wherever you drag it, looking like a minimap button.
   you want, what's new. The tooltip
   says what.
 - **Pick what clicking and shift-clicking it do:** what's waiting (else the NraKit window), the NraKit
-  window, a tab, your reminders, quests to turn in, What's new, the menu, or nothing.
+  window, a tab, your reminders, quests to turn in, What's New, the menu, or nothing.
 - **Right-click** for NraKit's menu, the same as the addon button's (windows, Show due reminders,
-  What's new, Settings), with a lock.
+  What's New, Settings), with a lock.
 - Lock it, size it, or hide it in combat.
 
 ## Development
@@ -647,7 +647,7 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
 - `just check` syntax-checks the Lua files.
 - `just test` runs the tests: the addon is loaded into a stand-in WoW client (`tests/wow.lua`) and its
   windows are clicked through (`tests/*_test.lua`). They also run on every push (GitHub Actions).
-- `Changelog.lua` is the player-facing changelog (in game under What's new, and the release notes): add
+- `Changelog.lua` is the player-facing changelog (in game under What's New, and the release notes): add
   a line under `Unreleased` with every change players will notice.
 - `just next` shows the next version, the commits going into it and whether the changelog has them.
 - `just release` turns `Unreleased` into the next version, writes `CHANGELOG.md`, tags and pushes; CI

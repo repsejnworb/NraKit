@@ -1,4 +1,4 @@
--- Double-click fishing: when a double right-click binds right-click to the Fishing button,
+-- Double-Click Fishing: when a double right-click binds right-click to the Fishing button,
 -- and when it leaves right-click alone.
 
 local POLE = 6256

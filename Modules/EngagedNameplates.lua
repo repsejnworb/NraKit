@@ -20,7 +20,7 @@ local _, ns = ...
 local module = {
 	key = "engagedNameplates",
 	section = "Interface",
-	name = "Engaged-only nameplates",
+	name = "Engaged-Only Nameplates",
 	description = "Shows full nameplates only for enemies that are fighting you. Other enemy NPCs are hidden, in or out of combat. Your target, focus and enemy players always get full nameplates.",
 	default = false,
 	options = {
@@ -46,9 +46,9 @@ local module = {
 		},
 		{
 			key = "engagedNameplatesShowIdleNames",
-			header = "Idle enemies",
+			header = "Idle Enemies",
 			name = "Show names",
-			description = "Instead of hiding idle enemies completely, show just their name, styled to resemble overhead names. Real overhead names can't be shown for units that have a nameplate, so turn this on if you keep enemy nameplates on outside combat (e.g. for the Unit scanner).",
+			description = "Instead of hiding idle enemies completely, show just their name, styled to resemble overhead names. Real overhead names can't be shown for units that have a nameplate, so turn this on if you keep enemy nameplates on outside combat (e.g. for the Unit Scanner).",
 			default = false,
 		},
 		{
@@ -106,7 +106,7 @@ local COMBAT_TOGGLE_CVARS = {
 local SAVED_CVARS_KEY = "engagedNameplatesSavedCVars"
 
 -- Enemy plates are handled separately: the combat toggle turns them on for combat
--- (or for the Unit scanner) and only turns them off again if it was the one that
+-- (or for the Unit Scanner) and only turns them off again if it was the one that
 -- turned them on. Plates you turn on yourself (V key, settings) are yours: they stay
 -- on after combat. NraKitDB[OWNS_PLATES_KEY] is true while the
 -- current "on" is ours; CVAR_UPDATE from anything but us hands them back to you.
@@ -312,7 +312,7 @@ local function ApplyCVars()
 	end
 	NraKitDB[SAVED_CVARS_KEY] = next(saved) and saved or nil
 
-	-- The Unit scanner needs enemy plates to see units, so keep them on for it.
+	-- The Unit Scanner needs enemy plates to see units, so keep them on for it.
 	local wantPlates = managePlates
 		and (inCombat or (ns.UnitScanWantsEnemyNameplates and ns:UnitScanWantsEnemyNameplates()))
 	local platesOn = GetCVar(ENEMY_PLATES_CVAR) == "1"
@@ -352,7 +352,7 @@ local function OnCVarUpdate(name)
 	UpdateAllPlates()
 end
 
--- Called by the Unit scanner when it starts or stops needing enemy nameplates.
+-- Called by the Unit Scanner when it starts or stops needing enemy nameplates.
 -- Out of combat only; in combat the plates are on anyway and REGEN_ENABLED re-applies.
 function ns:RefreshEngagedNameplateCVars()
 	ApplyCVars()

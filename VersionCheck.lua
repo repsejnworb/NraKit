@@ -6,7 +6,7 @@ local addonName, ns = ...
 -- "HELLO:<version>". A copy with a newer release that hears an older one answers on the
 -- same channel ("VER:<version>") after a random second or two, unless someone else
 -- already did, so a big guild doesn't all answer at once. Hearing a newer release gives
--- one chat line per session; What's new shows it too.
+-- one chat line per session; What's New shows it too.
 --
 -- /nra who asks the guild and group ("WHO"); everyone answers by whisper ("VER:...")
 -- and the list prints a few seconds later, with how many NraKit users you've come
@@ -19,7 +19,7 @@ local addonName, ns = ...
 -- prank "v99" can at most cause one chat line. Addon messages are blocked in some
 -- situations (Midnight lockdown, e.g. instanced combat); then nothing is sent.
 --
--- The option (NraKitDB.versionCheck, on unless false, switched on the What's new page)
+-- The option (NraKitDB.versionCheck, on unless false, switched on the What's New page)
 -- also stops sending: nobody sees your version when it's off.
 
 local versionCheck = {}
@@ -255,7 +255,7 @@ local WHO_HELP = {
 
 local function OnWho()
 	if not versionCheck.Enabled() then
-		ns:Print("Version sharing is off (What's new, /nra new), so NraKit doesn't ask or answer.")
+		ns:Print("Version sharing is off (What's New, /nra new), so NraKit doesn't ask or answer.")
 		return
 	end
 	local since = GetTime()

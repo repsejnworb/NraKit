@@ -1,4 +1,4 @@
--- Player notes in chat (PlayerNotesShare.lua): linking a note, the link others see, asking
+-- Player Notes in chat (PlayerNotesShare.lua): linking a note, the link others see, asking
 -- for the note, the pieces it's sent in, and adding it from the review window.
 
 return {

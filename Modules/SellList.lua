@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Sell list: what in your bags is worth selling, most valuable first, so you don't have to
+-- Sell List: what in your bags is worth selling, most valuable first, so you don't have to
 -- hover every item. A tab in the NraKit window (SellListWindow.lua), opened from a button on
 -- the auction house (NraKit's window then docks beside it), from the Inventory tab, or with
 -- /nra sell.
@@ -10,7 +10,7 @@ local _, ns = ...
 -- prices only. Groups, by where each item sells best:
 --   To Sell: Auction House   tradeable items the auction house pays more for
 --   To Sell: Vendor          the rest, soulbound ones too (folded at the auction house)
---   In Your Bank             your bank as Inventory tracker last saw it (an option)
+--   In Your Bank             your bank as Inventory Tracker last saw it (an option)
 --   Kept                     items you marked "Keep, don't list" (potions, food...), folded
 -- It can also open at merchants (an option), docked beside them, vendor group first.
 --
@@ -20,7 +20,7 @@ local _, ns = ...
 local module = {
 	key = "sellList",
 	section = "Auction House",
-	name = "Sell list",
+	name = "Sell List",
 	description = "What in your bags is worth selling, most valuable first: auction house prices (from Auctionator, if you have it) and vendor prices, side by side. A button on the auction house opens it beside it; also in the Inventory tab and with /nra sell.",
 	default = false,
 	options = {
@@ -43,27 +43,27 @@ local module = {
 		{
 			key = "sellListBank",
 			name = "Also list your bank",
-			description = "A separate group with what's in your bank (as Inventory tracker last saw it), so you know what to take out before you sell.",
+			description = "A separate group with what's in your bank (as Inventory Tracker last saw it), so you know what to take out before you sell.",
 			default = false,
 			requires = "inventoryTracker",
 		},
 		{
 			key = "sellListAutoOpen",
-			header = "At the auction house",
+			header = "At the Auction House",
 			name = "Open the list at the auction house",
-			description = "The Sell list opens by itself, beside the auction house, when you open it. Also a switch at the top of the list.",
+			description = "The Sell List opens by itself, beside the auction house, when you open it. Also a switch at the top of the list.",
 			default = true,
 		},
 		{
 			key = "sellListMerchantOpen",
 			name = "Open the list at merchants",
-			description = "The Sell list also opens by itself beside a merchant's window, with what sells best to a vendor first. Click an item, then click the merchant's window to sell it.",
+			description = "The Sell List also opens by itself beside a merchant's window, with what sells best to a vendor first. Click an item, then click the merchant's window to sell it.",
 			default = false,
 		},
 		{
 			key = "sellListAHButton",
 			name = "Button on the auction house",
-			description = "A \"Sell list\" button at the top of the auction house window.",
+			description = "A \"Sell List\" button at the top of the auction house window.",
 			default = true,
 		},
 		{
@@ -199,7 +199,7 @@ local function BagItems()
 	return items
 end
 
--- Your bank as Inventory tracker last saw it: { id, count } (no links: priced by ID).
+-- Your bank as Inventory Tracker last saw it: { id, count } (no links: priced by ID).
 local function BankItems()
 	local inventory = ns.inventory
 	local realm = inventory and inventory.GetRealm()
@@ -371,7 +371,7 @@ local function CreateAHButton()
 	if ahButton or type(AuctionHouseFrame) ~= "table" then
 		return
 	end
-	ahButton = ns.UI.CreateFlatButton(AuctionHouseFrame, "NraKit Sell list", 20)
+	ahButton = ns.UI.CreateFlatButton(AuctionHouseFrame, "NraKit Sell List", 20)
 	-- Above the window's border and title, which are drawn far above the window itself.
 	local title = AuctionHouseFrame.TitleContainer
 	ahButton:SetFrameLevel((title and title:GetFrameLevel() or AuctionHouseFrame:GetFrameLevel() + 500) + 5)
@@ -384,7 +384,7 @@ local function CreateAHButton()
 		end
 	end)
 	ahButton:SetScript("OnEnter", function(self)
-		ns.UI.ShowTooltip(self, "Sell list", "What in your bags is worth selling, most valuable first.")
+		ns.UI.ShowTooltip(self, "Sell List", "What in your bags is worth selling, most valuable first.")
 	end)
 	ahButton:SetScript("OnLeave", GameTooltip_Hide)
 	-- Opening the auction house opens the list (an option). The window is shown by now, so the
@@ -455,13 +455,13 @@ function module:OnInitialize()
 	HookMerchant()
 	ns:RegisterSlashCommand("sell", function()
 		if not ns:IsModuleEnabled(module.key) then
-			ns:Print("Turn on Sell list first (/nra).")
+			ns:Print("Turn on Sell List first (/nra).")
 			return
 		end
 		ns:OpenSellList()
 	end, {
-		summary = "The Sell list: what in your bags is worth selling",
-		usage = { "/nra sell - open the Sell list" },
+		summary = "The Sell List: what in your bags is worth selling",
+		usage = { "/nra sell - open the Sell List" },
 	})
 	self:OnEnabledChanged(ns:IsModuleEnabled(self.key))
 end

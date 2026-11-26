@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Quests to turn in: a small window (/nra done, or a key) listing your finished quests by the
+-- Quests to Turn In: a small window (/nra done, or a key) listing your finished quests by the
 -- zone you turn them in ("Wetlands: The Doomed Fleet, Seeking Caitlin"), the zone you're in
 -- first, each with its level and in its difficulty colour as in the quest log ("[32] Malin's
 -- Request" in yellow). Click a quest to open the map on it (its turn-in shows there); right-click
@@ -18,7 +18,7 @@ local _, ns = ...
 local module = {
 	key = "turnInQuests",
 	section = "Quests",
-	name = "Quests to turn in",
+	name = "Quests to Turn In",
 	description = "A small window (/nra done, or a key under Key Bindings > NraKit) listing your finished quests by the zone you turn them in. Click one to see it on the map, right-click to make it your waypoint. Entering a zone where you have quests to turn in says so in chat.",
 	default = false,
 	options = {
@@ -407,7 +407,7 @@ local function ShowReminderToast(zoneName, titles)
 end
 
 -- /nra preview turnin: your first zone with turn-ins, or a made-up one.
-ns:RegisterPreview("turnin", "Quests to turn in: the message when you enter a zone", function()
+ns:RegisterPreview("turnin", "Quests to Turn In: the message when you enter a zone", function()
 	local zone = turnIn.Zones()[1]
 	local titles = {}
 	for _, quest in ipairs(zone and zone.quests or {}) do
@@ -468,12 +468,12 @@ end
 
 function module:OnInitialize()
 	local help = {
-		summary = "Quests to turn in: your finished quests by the zone you turn them in",
+		summary = "Quests to Turn In: your finished quests by the zone you turn them in",
 		usage = { "/nra done - show or hide the list (also /nra turnin)" },
 	}
 	local function OnSlashCommand()
 		if not ns:IsModuleEnabled(module.key) then
-			ns:Print("Turn on Quests to turn in first (/nra).")
+			ns:Print("Turn on Quests to Turn In first (/nra).")
 			return
 		end
 		turnIn.Toggle()

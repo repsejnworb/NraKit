@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Potential upgrades: marks items that are upgrades over what you have equipped,
+-- Potential Upgrades: marks items that are upgrades over what you have equipped,
 -- in your bags, on quest rewards and in item tooltips.
 --
 -- Two levels of confidence:
@@ -19,13 +19,13 @@ local _, ns = ...
 local module = {
 	key = "potentialUpgrades",
 	section = "Bags & Items",
-	name = "Potential upgrades",
+	name = "Potential Upgrades",
 	description = "Marks items that are upgrades over what you have equipped: a green arrow for clear upgrades (better or equal on everything that matters for your class), yellow for likely upgrades (better by a simple per-class stat priority). Shown in bags, on quest rewards and in item tooltips.",
 	default = false,
 	options = {
 		{
 			key = "potentialUpgradesLikely",
-			header = "What to mark",
+			header = "What to Mark",
 			name = "Likely upgrades (yellow)",
 			description = "Also mark items that aren't better on every stat, but come out ahead using your class's stat priority.",
 			default = true,
@@ -38,7 +38,7 @@ local module = {
 		},
 		{
 			key = "potentialUpgradesBags",
-			header = "Where to show",
+			header = "Where to Show",
 			name = "Bags",
 			description = "Show arrows on items in your bags.",
 			default = true,

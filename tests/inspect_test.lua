@@ -1,4 +1,4 @@
--- Inspect anything: NraKit's inspect window. Players get their gear (copied when it arrives,
+-- Inspect Anything: NraKit's inspect window. Players get their gear (copied when it arrives,
 -- kept when they leave, loaded after combat), NPCs the model and what can be read of them.
 
 local inspected, notified, dressedUp, clicked = {}, {}, {}, {}

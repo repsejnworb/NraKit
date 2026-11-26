@@ -1,4 +1,4 @@
--- NraKit button: a movable icon with a badge for what's waiting, click actions you pick and
+-- NraKit Button: a movable icon with a badge for what's waiting, click actions you pick and
 -- NraKit's menu on right-click.
 
 C_Timer.After = function(_, callback)
@@ -101,7 +101,7 @@ return {
 		end)
 
 		t.test("the click choices are dropdowns in the NraKit window", function()
-			ns:OpenSettings("NraKit button", "nraButton")
+			ns:OpenSettings("NraKit Button", "nraButton")
 			local found
 			for _, frame in ipairs(wow.frames) do
 				local option = rawget(frame, "option")
@@ -111,9 +111,9 @@ return {
 			end
 			t.ok(found, "dropdown")
 			found.scripts.OnClick(found)
-			wow.menuEntry(menu.entries, "Farm goals window").onClick("goals")
+			wow.menuEntry(menu.entries, "Farm Goals window").onClick("goals")
 			t.equal(ns:GetValue("nraButtonShiftClick"), "goals", "picked")
-			t.equal(rawget(found.text, "text"), "Farm goals window", "shows it")
+			t.equal(rawget(found.text, "text"), "Farm Goals window", "shows it")
 			NraKitOptionsFrame:Hide()
 		end)
 

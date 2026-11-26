@@ -1,4 +1,4 @@
--- What's new: the changelog data, what counts as new to you, the chat line after an
+-- What's New: the changelog data, what counts as new to you, the chat line after an
 -- update, and the page in the NraKit window.
 
 return {
@@ -137,7 +137,7 @@ return {
 				end)
 			end
 			t.ok(#Visible("•") >= 3, "bullets")
-			t.ok(#Visible("Cooldown Manager fade") >= 1, "the feature's title")
+			t.ok(#Visible("Cooldown Manager Fade") >= 1, "the feature's title")
 			t.ok(#Visible("help-i") >= 1, "a tip, with its icon")
 			t.ok(#Visible("|cffffffffwhich bars|r") >= 1, "highlighted words")
 		end)

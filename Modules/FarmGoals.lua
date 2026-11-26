@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Farm goals: "loot 4000 Silk Cloth", "reach level 40", "gain 50,000 XP", "have 100g",
+-- Farm Goals: "loot 4000 Silk Cloth", "reach level 40", "gain 50,000 XP", "have 100g",
 -- "reach Revered with Timbermaw Hold", "Swords to 300", "2,000 of a currency".
 --
 -- Goals count what you gain after making them: items you loot (from the loot chat
@@ -22,7 +22,7 @@ local _, ns = ...
 local module = {
 	key = "farmGoals",
 	section = "Trackers & Reminders",
-	name = "Farm goals",
+	name = "Farm Goals",
 	description = "Set farming goals (loot 4000 Silk Cloth, reach level 40, earn 100 gold, reach Revered, Swords to 300, a currency) and track them in a small movable window with rate per hour, time left and a fanfare when done. /nra goal opens the goals window.",
 	default = false,
 	options = {
@@ -574,13 +574,13 @@ end
 local function SampleGoal()
 	return { type = "item", itemID = ns.previewSample.itemID, target = 4000, active = 4520 }
 end
-ns:RegisterPreview("goal", "Farm goals: the \"Goal complete\" message", function()
+ns:RegisterPreview("goal", "Farm Goals: the \"Goal complete\" message", function()
 	ShowToast(SampleGoal())
 end)
-ns:RegisterPreview("goals", "Farm goals: several goals finished in one fight", function()
+ns:RegisterPreview("goals", "Farm Goals: several goals finished in one fight", function()
 	ShowToast(SampleGoal(), "and 2 more, while you were fighting", 3)
 end)
-ns:RegisterPreview("milestone", "Farm goals: the small 25/50/75% message", function()
+ns:RegisterPreview("milestone", "Farm Goals: the small 25/50/75% message", function()
 	ShowMilestone(SampleGoal(), 50)
 end)
 
@@ -1724,7 +1724,7 @@ local function ListGoals()
 end
 
 local SLASH_HELP = {
-	summary = "Farm goals: open the goals window, or add a goal straight from chat",
+	summary = "Farm Goals: open the goals window, or add a goal straight from chat",
 	usage = {
 		"/nra goal - open the goals window",
 		"/nra goal list - list your goals and where they stand",
@@ -1746,7 +1746,7 @@ end
 
 local function OnSlashCommand(input)
 	if not ns:IsModuleEnabled(module.key) then
-		ns:Print("Turn on Farm goals first (/nra).")
+		ns:Print("Turn on Farm Goals first (/nra).")
 		return
 	end
 	local first, rest = input:match("^(%S*)%s*(.-)$")

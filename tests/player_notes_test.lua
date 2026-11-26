@@ -1,5 +1,5 @@
--- Player notes: names, labels, tags, the chat command, tooltip, right-click menu, warnings,
--- the window, and Unit scanner alerts for Hostile players.
+-- Player Notes: names, labels, tags, the chat command, tooltip, right-click menu, warnings,
+-- the window, and Unit Scanner alerts for Hostile players.
 
 return {
 	enable = { "playerNotes" },
@@ -259,9 +259,9 @@ return {
 			t.equal(Listed("Ann Lee"), 1, "a tagged player leaves No tags")
 			notes.AddTag("Ann Lee", "Ninja looter")
 			t.equal(Listed("Ann Lee"), 2, "and shows under each of their tags")
-			t.ok(wow.click("Fold all"), "fold all")
+			t.ok(wow.click("Fold All"), "fold all")
 			t.equal(Listed("Ann Lee"), 0, "everything folded")
-			t.ok(wow.click("Unfold all"), "and unfold all")
+			t.ok(wow.click("Unfold All"), "and unfold all")
 			t.equal(Listed("Ann Lee"), 2, "open again")
 			IsShiftKeyDown = function()
 				return true
@@ -272,7 +272,7 @@ return {
 			end
 			t.equal(Listed("Ann Lee"), 1, "shift-click: only that section open")
 			t.equal(Listed("Gil Rowe"), 0, "the others folded")
-			t.ok(wow.click("Fold all") and wow.click("Unfold all"), "everything open again")
+			t.ok(wow.click("Fold All") and wow.click("Unfold All"), "everything open again")
 		end)
 
 		t.test("a player's page: + Tag picks your tags or makes a new one; a click removes one", function()
@@ -385,7 +385,7 @@ return {
 				end
 			end
 			t.ok(wow.click("Neutral"), "a label nobody has")
-			t.ok(wow.click("Clear filters"), "nobody matches: Clear filters")
+			t.ok(wow.click("Clear Filters"), "nobody matches: Clear filters")
 			t.ok(Listed("Ann Lee") > 0, "everyone back")
 			wow.click("Liked")
 			NraKitPlayerNotesFrame:Hide()
@@ -395,7 +395,7 @@ return {
 
 		t.test("+ Add player: needs a surname, then opens the new player", function()
 			NraKitPlayerNotesFrame:Show()
-			t.ok(wow.click("+  Add player"), "add page")
+			t.ok(wow.click("+  Add Player"), "add page")
 			local box
 			for _, frame in ipairs(wow.findAll(function(frame)
 				return frame.template == "InputBoxTemplate" and frame.scripts.OnTextChanged and wow.visible(frame)
@@ -422,7 +422,7 @@ return {
 					and frame.scripts.OnEnterPressed and not frame.scripts.OnEditFocusLost
 			end)[1]
 			wow.type(newBox, "Healers")
-			t.ok(wow.click("+ New tag"), "+ New tag")
+			t.ok(wow.click("+ New Tag"), "+ New Tag")
 			local healers
 			for _, tag in ipairs(notes.AllTags()) do
 				if tag.name == "Healers" then

@@ -58,7 +58,7 @@ local HELP = "Add gear you want:\n"
 	.. "  - shift-click an item into |cffffd100/nra wishlist|r (anything after it becomes its note; several items at once work too)\n"
 	.. "  - right-click an item link in chat\n"
 	.. "  - drop an item from your bags here\n"
-	.. "  - right-click an item in Item lookup (|cffffd100/nra item <name>|r)"
+	.. "  - right-click an item in Item Lookup (|cffffd100/nra item <name>|r)"
 
 local frame, searchBox, scroll, footerLeft, foldAll, noteBox, filterChips, helpButton
 local pool = UI.CreatePool()
@@ -162,7 +162,7 @@ local function OpenRowMenu(row)
 		root:CreateButton(entry.got and "Mark as not got" or "Mark as got", function()
 			wishlist.SetGot(entry.id, not entry.got)
 		end)
-		root:CreateButton("Copy Wowhead link", function()
+		root:CreateButton("Copy Wowhead Link", function()
 			ns.wowheadLink.Show("item", entry.id)
 		end)
 		root:CreateDivider()
@@ -395,7 +395,7 @@ function Render()
 		allClosed = allClosed and collapsed[key] == true
 	end
 	foldAll.keys, foldAll.allClosed = groupKeys, allClosed
-	foldAll.text:SetText(allClosed and "Unfold all" or "Fold all")
+	foldAll.text:SetText(allClosed and "Unfold All" or "Fold All")
 	foldAll:SetShown(#groupKeys > 0)
 
 	local got = 0
@@ -544,6 +544,6 @@ UI.RegisterTab({
 	module = "wishlist",
 })
 
-ns:AddOptionsButton("wishlist", "Open wishlist", "Your wishlist, by slot (/nra wishlist).", function()
+ns:AddOptionsButton("wishlist", "Open Wishlist", "Your wishlist, by slot (/nra wishlist).", function()
 	ns:OpenWishlist(true)
 end)

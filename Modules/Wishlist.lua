@@ -1,7 +1,7 @@
 local _, ns = ...
 
 -- Wishlist: gear you want, per character. Add items with /nra wishlist <item> [note]
--- (shift-click it in), with a right-click on an item link in chat or in Item lookup, or by
+-- (shift-click it in), with a right-click on an item link in chat or in Item Lookup, or by
 -- dropping one on the window. The window (WishlistWindow.lua) lists them by slot, with the level to wear
 -- them and your note on where they come from (NraKit has no database of sources).
 --
@@ -18,7 +18,7 @@ local module = {
 	key = "wishlist",
 	section = "Bags & Items",
 	name = "Wishlist",
-	description = "A list of gear you want, by slot, with the level to wear it and a note on where it comes from. Add items with /nra wishlist <item> (shift-click it in), by right-clicking an item link in chat or an item in Item lookup, or by dropping them on the window. Items you get are ticked off with a message, a star marks them in your bags, at vendors and in loot, and item tooltips say they're on your wishlist.",
+	description = "A list of gear you want, by slot, with the level to wear it and a note on where it comes from. Add items with /nra wishlist <item> (shift-click it in), by right-clicking an item link in chat or an item in Item Lookup, or by dropping them on the window. Items you get are ticked off with a message, a star marks them in your bags, at vendors and in loot, and item tooltips say they're on your wishlist.",
 	default = false,
 	options = {
 		{
@@ -431,7 +431,7 @@ function QueueStars()
 end
 
 ------------------------------------------------------------------------------
--- Right-click menus: Item lookup rows and item links in chat
+-- Right-click menus: Item Lookup rows and item links in chat
 ------------------------------------------------------------------------------
 
 -- A menu to add the item (link or ID) to the wishlist, or take it off; then onDone().

@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Unit scanner: alerts you when a unit from your own list shows up nearby.
+-- Unit Scanner: alerts you when a unit from your own list shows up nearby.
 --
 -- Addons can no longer probe for units by name (the old unitscan TargetUnit trick
 -- is protected), so we only look at units the client already gives us: nameplates
@@ -20,7 +20,7 @@ local _, ns = ...
 -- The list lives in NraKitDB.unitScanTargets (account-wide) as { name = , npcID = }
 -- entries; either may be missing until the unit has been seen.
 --
--- Player notes adds players with a Hostile label (Kill on sight, ...) when its "Alert
+-- Player Notes adds players with a Hostile label (Kill on sight, ...) when its "Alert
 -- when Hostile players are nearby" option is on: they're looked up by full name
 -- ("Firstname Surname") through ns.playerNotes.ScanEntry, not added to the list.
 
@@ -29,7 +29,7 @@ local MarkerLabel
 local module = {
 	key = "unitScanner",
 	section = "Trackers & Reminders",
-	name = "Unit scanner",
+	name = "Unit Scanner",
 	description = "Alerts you when a mob or player from your list shows up nearby (nameplate range, mouseover, targets and minimap markers). Manage the list with /nra scan: target a unit and type /nra scan, or /nra scan <name or NPC ID>, /nra scan list, /nra scan remove <# or name>.",
 	default = false,
 	options = {
@@ -75,7 +75,7 @@ local module = {
 		},
 		{
 			key = "unitScanMark",
-			header = "When found",
+			header = "When Found",
 			name = "Put a raid marker on it",
 			description = "Mark the unit with a raid target icon when it's found, unless it already has one. Only possible when the unit itself was seen (nameplate, mouseover, a target), not from a minimap marker or a yell; targeting it with the button marks it then. In a raid you need to be leader or assistant. Addons can't set markers in combat, so a unit found in combat is marked when combat ends if it's still in view.",
 			default = true,
@@ -119,7 +119,7 @@ local module = {
 		{
 			key = "unitScanKeepPlates",
 			name = "Keep enemy nameplates on",
-			description = "While your list isn't empty, keep enemy nameplates on outside combat when Engaged-only nameplates would turn them off: nameplates are the scanner's main way of seeing units. Idle enemies then show as that module draws them (hidden, or just their name if \"Show names\" is on).",
+			description = "While your list isn't empty, keep enemy nameplates on outside combat when Engaged-Only Nameplates would turn them off: nameplates are the scanner's main way of seeing units. Idle enemies then show as that module draws them (hidden, or just their name if \"Show names\" is on).",
 			default = true,
 		},
 	},
@@ -186,7 +186,7 @@ local function GetNpcID(guid)
 	return nil
 end
 
--- Whether there's anything to look for: the list, or Hostile players from Player notes.
+-- Whether there's anything to look for: the list, or Hostile players from Player Notes.
 local function HasWork()
 	return #GetTargets() > 0 or (ns.playerNotes ~= nil and ns.playerNotes.HasScanTargets())
 end
@@ -291,7 +291,7 @@ local BUTTON_SIZE = 36
 local BUTTON_POSITION_KEY = "unitScanButtonPosition"
 local DEFAULT_BUTTON_POSITION = { "CENTER", 0, 240 }
 
-_G["BINDING_NAME_CLICK " .. BUTTON_NAME .. ":LeftButton"] = "Target the unit Unit scanner found"
+_G["BINDING_NAME_CLICK " .. BUTTON_NAME .. ":LeftButton"] = "Target the unit Unit Scanner found"
 
 local targetButton
 -- Secure attributes, Show and Hide can't change in combat; these wait for REGEN_ENABLED.
@@ -367,7 +367,7 @@ local function CreateTargetButton()
 	end)
 	button:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
-		GameTooltip:AddLine("Unit scanner")
+		GameTooltip:AddLine("Unit Scanner")
 		GameTooltip:AddLine("Click to target: " .. (self.name or "?"), 1, 1, 1)
 		GameTooltip:AddLine("Right-click to dismiss, Shift-drag to move.", 0.7, 0.7, 0.7)
 		local key = GetBindingKey("CLICK " .. BUTTON_NAME .. ":LeftButton")
@@ -441,14 +441,14 @@ local function Alert(entry, source)
 end
 
 -- /nra preview scan: the alert's text and sound, for a made-up find.
-ns:RegisterPreview("scan", "Unit scanner: the alert when a unit is found (text and sound)", function()
+ns:RegisterPreview("scan", "Unit Scanner: the alert when a unit is found (text and sound)", function()
 	if ns:GetOption("unitScanSound") then
 		ns.sounds.PlayOption("unitScanSoundChoice", "kit:RAID_WARNING")
 	end
 	ShowScreenText("Hogger found!")
 end)
 
--- Checks one name / GUID pair against the list (and Player notes' Hostile players;
+-- Checks one name / GUID pair against the list (and Player Notes' Hostile players;
 -- surname is the second part of a player's name).
 local function Check(name, guid, source, unit, surname)
 	if name and IsSecret(name) then
@@ -522,13 +522,13 @@ local function ScanAll()
 	end
 end
 
--- Player notes changed which players are Hostile (or turned scanning for them on/off).
+-- Player Notes changed which players are Hostile (or turned scanning for them on/off).
 function ns:UnitScannerTargetsChanged()
 	ScanAll()
 end
 
 ---------------------------------------------------------------------------
--- Engaged-only nameplates integration
+-- Engaged-Only Nameplates integration
 ---------------------------------------------------------------------------
 
 function ns:UnitScanWantsEnemyNameplates()
@@ -583,7 +583,7 @@ local USAGE = {
 	"/nra scan clear - empty the list",
 }
 
-local HELP = { summary = "Unit scanner: the list of mobs and players to look for", usage = USAGE }
+local HELP = { summary = "Unit Scanner: the list of mobs and players to look for", usage = USAGE }
 
 local function PrintUsage()
 	ns:PrintCommandHelp("scan")
@@ -591,7 +591,7 @@ end
 
 local function WarnIfInactive()
 	if not ns:IsModuleEnabled(module.key) then
-		ns:Print("Unit scanner is turned off. Turn it on in /nra to start scanning.")
+		ns:Print("Unit Scanner is turned off. Turn it on in /nra to start scanning.")
 	elseif GetCVar("nameplateShowEnemies") == "0" and not ns:UnitScanWantsEnemyNameplates() then
 		ns:Print("Enemy nameplates are off, so only mouseover, targets and minimap markers are scanned.")
 	end

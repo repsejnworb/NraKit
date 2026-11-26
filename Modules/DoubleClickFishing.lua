@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Double-click fishing: with a fishing pole in your main hand, double right-click the world
+-- Double-Click Fishing: with a fishing pole in your main hand, double right-click the world
 -- to cast Fishing (like Fishing Ace! and Fishing Buddy's Easy Cast did).
 --
 -- Casting is protected, so a secure button casts it. On the second right press within the
@@ -15,7 +15,7 @@ local _, ns = ...
 local module = {
 	key = "doubleClickFishing",
 	section = "Professions",
-	name = "Double-click fishing",
+	name = "Double-Click Fishing",
 	description = "With a fishing pole in your main hand, double right-click the world to cast Fishing. Right-clicking NPCs and players, and holding right-click to turn the camera, work as normal.",
 	default = false,
 	options = {

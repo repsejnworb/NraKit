@@ -1,7 +1,7 @@
 local _, ns = ...
 
 -- Shared look for NraKit's windows (settings, inventory browser): a dark flat panel
--- with hairline borders and an orange accent, like the Campfire timer bar.
+-- with hairline borders and an orange accent, like the Campfire Timer bar.
 
 local UI = {}
 ns.UI = UI
@@ -383,7 +383,7 @@ local function CreateOffPage()
 		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
 		ns:SetSetting(offPage.module.key, true) -- UI.RefreshTabs then opens the real window
 	end)
-	offPage.settings = UI.CreateFlatButton(body, "Its settings", 22)
+	offPage.settings = UI.CreateFlatButton(body, "Its Settings", 22)
 	offPage.settings:SetPoint("TOP", offPage.turnOn, "BOTTOM", 0, -12)
 	offPage.settings:SetScript("OnClick", function()
 		ns:OpenSettings(offPage.module.name, offPage.module.key)

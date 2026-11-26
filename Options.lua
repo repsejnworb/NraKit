@@ -2,15 +2,15 @@ local addonName, ns = ...
 
 -- NraKit's own settings window (/nra), next to Blizzard's Options > AddOns page.
 --
--- Left: a search box, "What's new" (with a dot while there's something you haven't
+-- Left: a search box, "What's New" (with a dot while there's something you haven't
 -- seen), "All features" and one entry per section (with enabled/total counts), with its
 -- subsections indented under it (e.g. Classes > Warrior: just that one's features, options open). Right: a
 -- card per feature with its on/off switch and description; a card's options open inline
--- under it. What's new lists Changelog.lua by version, with an on/off switch and a
+-- under it. What's New lists Changelog.lua by version, with an on/off switch and a
 -- Settings link next to each new feature. Everything is built from the module definitions and
 -- changed through ns:SetSetting, so it stays in step with the Blizzard page.
 --
--- The look matches the Campfire timer bar: dark flat panel, hairline borders, orange accent.
+-- The look matches the Campfire Timer bar: dark flat panel, hairline borders, orange accent.
 
 local UI = ns.UI
 local WIDTH, HEIGHT = UI.WINDOW_WIDTH, UI.WINDOW_HEIGHT
@@ -123,7 +123,7 @@ local function AcquireTexture()
 end
 
 -- Checkboxes are pooled: the click area each use widens over its label is reset here, or a
--- reused one could cover whatever is next to it (it covered What's new's Settings buttons).
+-- reused one could cover whatever is next to it (it covered What's New's Settings buttons).
 local function AcquireCheck()
 	local check = Acquire("check", function()
 		local check = CreateFrame("CheckButton", nil, content, "UICheckButtonTemplate")
@@ -133,7 +133,7 @@ local function AcquireCheck()
 			if ns.settings[self.settingKey] then
 				ns:SetSetting(self.settingKey, self:GetChecked() and true or false)
 			else
-				-- Not a module option (e.g. What's new's chat line): just saved.
+				-- Not a module option (e.g. What's New's chat line): just saved.
 				NraKitDB[self.settingKey] = self:GetChecked() and true or false
 			end
 			Render()
@@ -416,7 +416,7 @@ local function AddCard(module, x, y, width, forceOpen)
 end
 
 ------------------------------------------------------------------------------
--- What's new
+-- What's New
 ------------------------------------------------------------------------------
 
 local KINDS = { { "new", "New" }, { "improved", "Improved" }, { "fixed", "Fixed" } }
@@ -633,7 +633,7 @@ end
 
 local function RenderWhatsNew(x, y, width)
 	local title = AcquireText("GameFontNormalLarge")
-	title:SetText("What's new")
+	title:SetText("What's New")
 	title:SetTextColor(1, 1, 1)
 	title:SetPoint("TOPLEFT", content, "TOPLEFT", x + 2, y)
 
@@ -698,7 +698,7 @@ local function RenderWhatsNew(x, y, width)
 
 		local unreleased = release.version == "Unreleased"
 		local name = AcquireText("GameFontNormalLarge")
-		name:SetText(unreleased and "Next version" or release.version)
+		name:SetText(unreleased and "Next Version" or release.version)
 		name:SetWordWrap(false)
 		name:SetTextColor(unpack(NAME_ON))
 		name:SetPoint("TOPLEFT", content, "TOPLEFT", x + 12, y - 10)
@@ -894,7 +894,7 @@ local function CreateWindow()
 	end)
 	searchBox:SetPoint("TOPLEFT", PAD + 6, -PAD)
 
-	whatsNewButton = UI.CreateNavButton(sidebar, SIDEBAR_WIDTH - 2 * PAD, 26, "What's new")
+	whatsNewButton = UI.CreateNavButton(sidebar, SIDEBAR_WIDTH - 2 * PAD, 26, "What's New")
 	whatsNewButton:SetPoint("TOPLEFT", PAD, -PAD - 34)
 	whatsNewButton.dot = whatsNewButton:CreateTexture(nil, "OVERLAY")
 	whatsNewButton.dot:SetColorTexture(unpack(ACCENT))
@@ -905,7 +905,7 @@ local function CreateWindow()
 		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
 	end)
 
-	local anchor = CreateNavButton(sidebar, "All features", nil, ns.moduleOrder)
+	local anchor = CreateNavButton(sidebar, "All Features", nil, ns.moduleOrder)
 	anchor:SetPoint("TOPLEFT", whatsNewButton, "BOTTOMLEFT", 0, -10)
 	for _, section in ipairs(ns:GetSections()) do
 		local button = CreateNavButton(sidebar, section.name, section.name, section.modules)
@@ -922,7 +922,7 @@ local function CreateWindow()
 	enabledOnlyCheck:SetSize(22, 22)
 	enabledOnlyCheck:SetPoint("BOTTOMLEFT", PAD, 44)
 	enabledOnlyCheck.Text:SetFontObject("GameFontHighlightSmall")
-	enabledOnlyCheck.Text:SetText("Enabled only")
+	enabledOnlyCheck.Text:SetText("Enabled Only")
 	enabledOnlyCheck:SetHitRectInsets(0, -80, 0, 0)
 	enabledOnlyCheck:SetScript("OnClick", function()
 		SetScroll(0)
@@ -932,7 +932,7 @@ local function CreateWindow()
 	local blizzard = CreateFrame("Button", nil, sidebar, "UIPanelButtonTemplate")
 	blizzard:SetSize(SIDEBAR_WIDTH - 2 * PAD, 22)
 	blizzard:SetPoint("BOTTOMLEFT", PAD, PAD)
-	blizzard:SetText("Blizzard settings")
+	blizzard:SetText("Blizzard Settings")
 	blizzard:SetScript("OnClick", function()
 		frame:Hide()
 		ns:OpenBlizzardSettings()
@@ -975,7 +975,7 @@ function ns:OpenSettings(search, expandKey)
 	end
 end
 
--- /nra new: the window on What's new (always shown, never toggled closed).
+-- /nra new: the window on What's New (always shown, never toggled closed).
 function ns:OpenWhatsNew()
 	if not frame then
 		CreateWindow()

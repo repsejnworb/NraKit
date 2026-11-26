@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Damage meter look: a clean, flat look for the game's own damage meter, like NraKit's
+-- Damage Meter Look: a clean, flat look for the game's own damage meter, like NraKit's
 -- windows and the Goal Tracker. The header becomes a thin dark strip with a small gold title
 -- and small grey buttons (optionally only while the mouse is over the meter); the bars get
 -- a flat fill in a toned-down class colour and outlined text.
@@ -17,7 +17,7 @@ local _, ns = ...
 local module = {
 	key = "damageMeterLook",
 	section = "Interface",
-	name = "Damage meter look",
+	name = "Damage Meter Look",
 	description = "A clean, flat look for the game's damage meter: a thin header with small buttons, flat bars and outlined text. Size, style and colours stay in Edit Mode.",
 	default = false,
 	options = {

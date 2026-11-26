@@ -15,20 +15,20 @@ local _, ns = ...
 local module = {
 	key = "knownRecipes",
 	section = "Professions",
-	name = "Known recipes",
+	name = "Known Recipes",
 	description = "Marks recipes you already know with a green check at vendors and in your bags, so you don't have to mouse over each one. Also works for anything else the game calls \"Already known\".",
 	default = false,
 	options = {
 		{
 			key = "knownRecipesLearnable",
-			header = "What to mark",
+			header = "What to Mark",
 			name = "Recipes you can learn",
 			description = "Mark recipes for your professions that you don't know yet: a green + if you can learn them now, a yellow + if your skill isn't high enough yet.",
 			default = true,
 		},
 		{
 			key = "knownRecipesMerchant",
-			header = "Where to show",
+			header = "Where to Show",
 			name = "Vendors",
 			description = "Mark items in vendor windows.",
 			default = true,
@@ -48,7 +48,7 @@ local module = {
 		},
 		{
 			key = "knownRecipesTithe",
-			name = "Known recipes are junk in Bag Tithe",
+			name = "Known Recipes are junk in Bag Tithe",
 			description = "Bag Tithe ranks recipes you already know as your least valuable items, whatever they sell for.",
 			default = false,
 		},

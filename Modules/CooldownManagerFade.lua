@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Cooldown Manager fade: the game's Cooldown Manager bars (Essential and Utility Cooldowns,
+-- Cooldown Manager Fade: the game's Cooldown Manager bars (Essential and Utility Cooldowns,
 -- Tracked Buffs, Tracked Bars) show in combat and fade out a while after it, instead of the
 -- game's on/off "In combat". Optionally also with a hostile target and while the mouse is
 -- over a bar. Every change is an animated fade.
@@ -13,7 +13,7 @@ local _, ns = ...
 local module = {
 	key = "cooldownManagerFade",
 	section = "Interface",
-	name = "Cooldown Manager fade",
+	name = "Cooldown Manager Fade",
 	description = "The game's Cooldown Manager bars show in combat and fade out a while after it (animated), instead of just vanishing. Set the bars to \"Always\" in Edit Mode: one set to \"In combat\" is hidden by the game before it can fade.",
 	default = false,
 	options = {
@@ -84,7 +84,7 @@ local module = {
 		},
 		{
 			key = "cooldownFadeTarget",
-			header = "Also show",
+			header = "Also Show",
 			name = "With a hostile target",
 			description = "Show the bars while you have a living enemy targeted, out of combat too (lining up a pull).",
 			default = true,

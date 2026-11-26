@@ -38,7 +38,7 @@ local HELP = reminders.Coloured("reminder", "Reminders") .. " pop up on a card w
 	.. "Shift-clicked items and quests work in chat."
 
 local WHEN = {
-	{ key = "login", label = "Next login" },
+	{ key = "login", label = "Next Login" },
 	{ key = "time", label = "After a time" },
 	{ key = "zone", label = "In a zone" },
 	{ key = "level", label = "At a level" },
@@ -444,7 +444,7 @@ local function RefreshForm()
 	local quiet = form.quiet
 	form.kindChips:Select(quiet)
 	-- A to-do for you with no trigger goes on the list now.
-	form.whenChips[1].text:SetText(quiet and not other and "Now" or "Next login")
+	form.whenChips[1].text:SetText(quiet and not other and "Now" or "Next Login")
 	form.loginNote:SetText(quiet and not other and "On your to-do list right away."
 		or other and "The next time they log in." or "The next time you log in.")
 	form.title:SetText((form.editing and "Edit " or "New ") .. (quiet and "to-do" or "reminder"))
@@ -452,7 +452,7 @@ local function RefreshForm()
 	local stayShown = quiet and ns:GetOption("remindersZoneLeave") == true
 	form.stay:SetShown(stayShown)
 	form.stayLabel:SetShown(stayShown)
-	form.addButton.text:SetText(form.editing and "Save changes" or quiet and "Add to-do" or "Add reminder")
+	form.addButton.text:SetText(form.editing and "Save Changes" or quiet and "Add To-Do" or "Add Reminder")
 
 	-- Zones: here, then the ones whose name has what you typed.
 	local zone, subzone = reminders.Here()
@@ -545,7 +545,7 @@ local function CreateForm()
 		RefreshForm()
 	end)
 	form.kindChips[1]:SetPoint("TOPLEFT", 180, -PAD - 1)
-	local back = UI.CreateFlatButton(form, "< Back to the list", 22)
+	local back = UI.CreateFlatButton(form, "< Back to the List", 22)
 	back:SetPoint("TOPRIGHT", -PAD, -PAD)
 	back:SetScript("OnClick", function()
 		form:Hide()
@@ -696,7 +696,7 @@ local function CreateForm()
 	})
 	form.characterSelect:SetPoint("TOPLEFT", LEFT, -242)
 
-	local add = UI.CreateFlatButton(form, "Add reminder", 26)
+	local add = UI.CreateFlatButton(form, "Add Reminder", 26)
 	add:SetWidth(120)
 	add:SetPoint("TOPLEFT", LEFT, -292)
 	form.addButton = add
@@ -771,7 +771,7 @@ end
 ------------------------------------------------------------------------------
 
 local function CreateWindow()
-	frame = UI.CreateWindow("NraKitRemindersFrame", "Reminders & To-do", WIDTH, HEIGHT, 0, "reminders")
+	frame = UI.CreateWindow("NraKitRemindersFrame", "Reminders & To-Do", WIDTH, HEIGHT, 0, "reminders")
 	local body = frame.body
 
 	addBox = CreateFrame("EditBox", nil, body, "InputBoxTemplate")
@@ -838,7 +838,7 @@ local function CreateWindow()
 	UI.AddLine(footer, "TOP")
 	footerLeft = MakeLabel(footer, "", "GameFontHighlightSmall")
 	footerLeft:SetPoint("LEFT", PAD, 0)
-	showButton = UI.CreateFlatButton(footer, "Show list", 20)
+	showButton = UI.CreateFlatButton(footer, "Show List", 20)
 	showButton:SetPoint("LEFT", footerLeft, "RIGHT", 12, 0)
 	showButton:SetScript("OnClick", function()
 		reminders.ShowTracker()
@@ -850,7 +850,7 @@ local function CreateWindow()
 	local settings = UI.CreateFlatButton(footer, "Settings", 20)
 	settings:SetPoint("RIGHT", -PAD + 4, 0)
 	settings:SetScript("OnClick", function()
-		ns:OpenSettings("Reminders & to-dos", "reminders")
+		ns:OpenSettings("Reminders & To-Dos", "reminders")
 	end)
 	settings:SetScript("OnEnter", function(self)
 		UI.ShowTooltip(self, "Settings", "Sound, and how the list on screen looks: size, opacity, background, hide in combat, lock...")
@@ -887,8 +887,8 @@ function ns:OpenReminders(editID)
 end
 
 UI.RegisterTab({
-	key = "reminders", label = "Reminders & To-do", menuLabel = "Reminders & To-do", order = 7, frameName = "NraKitRemindersFrame",
-	richLabel = reminders.Coloured("reminder", "Reminders") .. " & " .. reminders.Coloured("todo", "To-do"),
+	key = "reminders", label = "Reminders & To-Do", menuLabel = "Reminders & To-Do", order = 7, frameName = "NraKitRemindersFrame",
+	richLabel = reminders.Coloured("reminder", "Reminders") .. " & " .. reminders.Coloured("todo", "To-Do"),
 	open = function()
 		if not frame then
 			CreateWindow()
@@ -898,6 +898,6 @@ UI.RegisterTab({
 	module = "reminders",
 })
 
-ns:AddOptionsButton("reminders", "Open reminders & to-do", "Your reminders and to-dos (/nra remind).", function()
+ns:AddOptionsButton("reminders", "Open Reminders & To-Do", "Your reminders and to-dos (/nra remind).", function()
 	ns:OpenReminders()
 end)

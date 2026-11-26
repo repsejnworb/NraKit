@@ -4,7 +4,7 @@ local _, ns = ...
 --
 -- ns.toast.Show{
 --   style = "big" | "small",  big: a heading, a large line with an icon and a detail line, with a
---                             pop (Farm goals' "Goal complete"); small: quieter and lower (a
+--                             pop (Farm Goals' "Goal complete"); small: quieter and lower (a
 --                             milestone, "3 quests to turn in here")
 --   heading, text, detail,    the lines (each optional: without a heading the text is at the top,
 --                             without text the list follows the heading)

@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Inspect anything: one key (Key Bindings > NraKit) for your target, or the unit under
+-- Inspect Anything: one key (Key Bindings > NraKit) for your target, or the unit under
 -- the mouse when you have none, opens NraKit's inspect window: the frame, size and place of Blizzard's, with the
 -- 3D model to turn (drag), move (right-drag) and zoom (mouse wheel).
 --
@@ -35,7 +35,7 @@ local _, ns = ...
 local module = {
 	key = "inspectAnything",
 	section = "Social",
-	name = "Inspect anything",
+	name = "Inspect Anything",
 	description = "One key (Key Bindings > NraKit) inspects your target (or what's under the mouse when you have none), in a window like the inspect window that stays open until you close it: players with their gear (it loads after combat if needed), and NPCs as a 3D model you can turn, move and zoom.",
 	default = false,
 	options = {
@@ -895,7 +895,7 @@ local function OnUnitMenu(_, root, contextData)
 end
 
 -- Key binding (Bindings.xml).
-_G["BINDING_NAME_NRAKIT_INSPECT_ANYTHING"] = "Inspect anything (players with their gear, NPCs as a 3D model)"
+_G["BINDING_NAME_NRAKIT_INSPECT_ANYTHING"] = "Inspect Anything (players with their gear, NPCs as a 3D model)"
 function NraKit_InspectAnything()
 	inspect.Inspect()
 end

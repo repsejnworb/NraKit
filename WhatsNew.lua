@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- What's new: which changelog entries (Changelog.lua) you haven't seen, and the chat line
+-- What's New: which changelog entries (Changelog.lua) you haven't seen, and the chat line
 -- after an update. The page itself is in the NraKit window (Options.lua), opened with
 -- /nra new.
 --
@@ -110,7 +110,7 @@ function whatsNew.Announce()
 end
 
 local HELP = {
-	summary = "What's new in NraKit (the changelog)",
+	summary = "What's New in NraKit (the changelog)",
 	usage = { "/nra new - what's new in each version; turn new features on right there (also /nra changelog)" },
 }
 
