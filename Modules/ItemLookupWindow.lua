@@ -18,15 +18,29 @@ local PAD = UI.PAD
 local ROW_HEIGHT = 30
 local RECIPE_ROW_HEIGHT = 38
 local TOP_HEIGHT = 80
+local CHIP_HEIGHT = 20 -- the Recipes mode's profession chips, under the search box
 local FOOTER_HEIGHT = 28
 local MAX_SHOWN = 200
 local MAX_REAGENT_ICONS = 6
 
+local ICONS = "Interface\\Icons\\"
 local MODES = {
-	{ key = "items", label = "Items", empty = "Type part of an item's name above." },
-	{ key = "spells", label = "Spells", empty = "Type part of a spell's name above." },
-	{ key = "recipes", label = "Recipes" },
+	{ key = "items", label = "Items", icon = ICONS .. "INV_Misc_Bag_08", empty = "Type part of an item's name above." },
+	{ key = "spells", label = "Spells", icon = ICONS .. "INV_Misc_Book_09", empty = "Type part of a spell's name above." },
+	{ key = "recipes", label = "Recipes", icon = ICONS .. "INV_Scroll_03" },
 }
+
+-- Each profession's icon (the game's own); one not listed gets a recipe scroll.
+local PROFESSION_ICONS = {
+	Alchemy = "Trade_Alchemy", Blacksmithing = "Trade_BlackSmithing", Enchanting = "Trade_Engraving",
+	Engineering = "Trade_Engineering", Leatherworking = "Trade_LeatherWorking", Tailoring = "Trade_Tailoring",
+	Cooking = "INV_Misc_Food_15", ["First Aid"] = "Spell_Holy_SealOfSacrifice", Mining = "Trade_Mining",
+	Fishing = "Trade_Fishing", Jewelcrafting = "INV_Misc_Gem_01", Inscription = "INV_Inscription_Tradeskill01",
+	Herbalism = "Trade_Herbalism", Skinning = "INV_Misc_Pelt_Wolf_01",
+}
+local function ProfessionIcon(name)
+	return ICONS .. (PROFESSION_ICONS[name] or "INV_Scroll_03")
+end
 local HINTS = {
 	items = "Shift-click to link in chat, Ctrl-click to preview",
 	spells = "Shift-click to link in chat, right-click for more",
@@ -35,6 +49,8 @@ local HINTS = {
 
 local frame, searchBox, progressBar, progressButton, scroll, footerLeft, hint, sortLabel
 local modeButtons, sortButtons = {}, {}
+local professionChips = {} -- reused chip buttons
+local topLine
 local pool = UI.CreatePool()
 local query = ""
 local shownIDs = {} -- [id] = true for the item rows on screen
@@ -354,7 +370,7 @@ local function RenderSpells(content, width)
 end
 
 local function RenderRecipes(content, width)
-	local matches, total = ns.recipeLookup.Search(query, MAX_SHOWN, RecipeSort())
+	local matches, total = ns.recipeLookup.Search(query, MAX_SHOWN, RecipeSort(), NraKitDB.lookupRecipeProfession)
 	for index, recipe in ipairs(matches) do
 		local row = AcquireRecipeRow(content)
 		row.kind, row.id, row.recipeName = "recipes", recipe.id, recipe.name
@@ -392,12 +408,66 @@ local function RenderRecipes(content, width)
 	return #matches, total, RECIPE_ROW_HEIGHT
 end
 
+-- Recipes: [ All ][ Blacksmithing ][ ... ] chips under the search box (yours first), wrapping
+-- onto a second line if needed. Returns how much room they take (0 in other modes).
+local function LayoutProfessionChips(body, mode)
+	for _, chip in ipairs(professionChips) do
+		chip:Hide()
+	end
+	if mode ~= "recipes" then
+		return 0
+	end
+	local professions, mine = ns.recipeLookup.Professions()
+	if #professions == 0 then
+		return 0
+	end
+	local selected = NraKitDB.lookupRecipeProfession
+	local names = { "All" }
+	for _, name in ipairs(professions) do
+		table.insert(names, name)
+	end
+	local x, y, maxX = PAD, -PAD - 68, body:GetWidth() - PAD
+	for index, name in ipairs(names) do
+		local chip = professionChips[index]
+		if not chip then
+			chip = UI.CreateFlatButton(body, "", CHIP_HEIGHT)
+			chip:SetScript("OnClick", function(self)
+				PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+				NraKitDB.lookupRecipeProfession = self.profession
+				scroll:SetScroll(0)
+				Render()
+			end)
+			professionChips[index] = chip
+		end
+		chip.profession = index > 1 and name or nil
+		UI.SetButtonIcon(chip, index > 1 and ProfessionIcon(name) or (ICONS .. "INV_Misc_Book_11"), name, 14)
+		if x + chip:GetWidth() > maxX then
+			x, y = PAD, y - CHIP_HEIGHT - 4
+		end
+		chip:ClearAllPoints()
+		chip:SetPoint("TOPLEFT", x, y)
+		chip:SetSelected(chip.profession == selected)
+		-- Your professions in gold, when not selected.
+		if mine[name] and chip.profession ~= selected then
+			chip.text:SetTextColor(unpack(UI.GOLD))
+		end
+		chip:Show()
+		x = x + chip:GetWidth() + 4
+	end
+	return -y - (PAD + 68) + CHIP_HEIGHT + 8
+end
+
 local function Render()
 	renderPending = false
 	if not (frame and frame:IsShown()) then
 		return
 	end
 	local mode = Mode()
+	-- The list starts under the chips (Recipes) or right under the search box.
+	local top = TOP_HEIGHT + LayoutProfessionChips(frame.body, mode)
+	topLine:SetPoint("TOPLEFT", 0, -top)
+	topLine:SetPoint("TOPRIGHT", 0, -top)
+	scroll:SetPoint("TOPLEFT", 0, -top - 1)
 	for _, button in ipairs(modeButtons) do
 		button:SetSelected(button.mode == mode)
 	end
@@ -479,7 +549,8 @@ local function CreateWindow()
 	local anchor
 	for _, info in ipairs(MODES) do
 		local button = UI.CreateFlatButton(body, info.label, 24)
-		button:SetWidth(button.text:GetStringWidth() + 28)
+		UI.SetButtonIcon(button, info.icon, nil, 16)
+		button:SetWidth(button:GetWidth() + 6)
 		button.mode = info.key
 		if anchor then
 			button:SetPoint("LEFT", anchor, "RIGHT", 1, 0)
@@ -567,7 +638,7 @@ local function CreateWindow()
 		end
 	end)
 
-	local topLine = body:CreateTexture(nil, "BORDER")
+	topLine = body:CreateTexture(nil, "BORDER")
 	topLine:SetColorTexture(unpack(UI.EDGE))
 	topLine:SetPoint("TOPLEFT", 0, -TOP_HEIGHT)
 	topLine:SetPoint("TOPRIGHT", 0, -TOP_HEIGHT)

@@ -233,13 +233,44 @@ function recipes.Value(recipe)
 	return cost, sells, profit, missing
 end
 
--- Recipes whose name or profession contains query (lower-case; "" for all): their details,
--- sorted by `sort` ("name", or "profit": most first), at most `limit`; and how many matched.
-function recipes.Search(query, limit, sort)
+-- The professions that have recipes: your own first (as GetProfessions tells), then the rest
+-- by name.
+function recipes.Professions()
+	local seen, list = {}, {}
+	for _, id in ipairs(Data().ids or {}) do
+		local profession = recipes.Get(id).profession
+		if profession ~= "" and not seen[profession] then
+			seen[profession] = true
+			table.insert(list, profession)
+		end
+	end
+	local mine = {}
+	if GetProfessions and GetProfessionInfo then
+		for _, index in pairs({ GetProfessions() }) do
+			local name = index and GetProfessionInfo(index)
+			if name then
+				mine[name] = true
+			end
+		end
+	end
+	table.sort(list, function(a, b)
+		if (mine[a] == true) ~= (mine[b] == true) then
+			return mine[a] == true
+		end
+		return a < b
+	end)
+	return list, mine
+end
+
+-- Recipes whose name or profession contains query (lower-case; "" for all), of `profession`
+-- (nil for all): their details, sorted by `sort` ("name", or "profit": most first), at most
+-- `limit`; and how many matched.
+function recipes.Search(query, limit, sort, profession)
 	local matches = {}
 	for _, id in ipairs(Data().ids or {}) do
 		local recipe = recipes.Get(id)
-		if query == "" or recipe.lower:find(query, 1, true) or recipe.profession:lower():find(query, 1, true) then
+		if (not profession or recipe.profession == profession)
+			and (query == "" or recipe.lower:find(query, 1, true) or recipe.profession:lower():find(query, 1, true)) then
 			table.insert(matches, recipe)
 		end
 	end

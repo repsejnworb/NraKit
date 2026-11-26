@@ -100,6 +100,20 @@ return {
 			t.noErrors()
 		end)
 
+		t.test("Recipes: a chip per profession under the search box, with its icon", function()
+			t.ok(wow.click("Blacksmithing"), "a Blacksmithing chip")
+			t.equal(NraKitDB.lookupRecipeProfession, "Blacksmithing", "filtering on it, remembered")
+			t.equal(select(2, ns.recipeLookup.Search("", 10, "name", "Blacksmithing")), 1, "its recipes")
+			t.equal(select(2, ns.recipeLookup.Search("", 10, "name", "Alchemy")), 0, "not other professions'")
+			local chip = wow.findAll(function(frame)
+				local text = rawget(frame, "text")
+				return wow.visible(frame) and text and text.text == "Blacksmithing" and rawget(frame, "icon")
+			end)[1]
+			t.ok(chip and chip.icon:GetTexture():find("Trade_BlackSmithing", 1, true), "with the Blacksmithing icon")
+			t.ok(wow.click("All"), "All")
+			t.equal(NraKitDB.lookupRecipeProfession, nil, "no filter")
+		end)
+
 		t.test("sort recipes by profit, and search by profession", function()
 			t.ok(wow.click("Profit"), "the Profit sort")
 			t.equal(NraKitDB.lookupRecipeSort, "profit", "remembered")

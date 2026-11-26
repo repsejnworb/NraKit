@@ -526,6 +526,27 @@ function UI.CreateFlatButton(parent, label, height)
 	return button
 end
 
+-- Puts an icon before a flat button's text (a chip or tab with a picture), and sizes the
+-- button to fit both. Call again to change the icon or text.
+function UI.SetButtonIcon(button, texture, text, size)
+	size = size or 14
+	if not button.icon then
+		button.icon = button:CreateTexture(nil, "ARTWORK")
+		button.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+		button.text:ClearAllPoints()
+	end
+	button.icon:SetSize(size, size)
+	button.icon:ClearAllPoints()
+	button.icon:SetPoint("LEFT", 8, 0)
+	button.icon:SetTexture(texture)
+	button.text:ClearAllPoints()
+	button.text:SetPoint("LEFT", button.icon, "RIGHT", 5, 0)
+	if text then
+		button.text:SetText(text)
+	end
+	button:SetWidth(button.text:GetStringWidth() + size + 23)
+end
+
 -- Fading a frame in or out (e.g. hiding in combat), quickly.
 UI.FADE_SECONDS = 0.25
 local fading = {} -- frame -> { from, to, start, hide }

@@ -616,7 +616,8 @@ Type `/leave` (with nothing after it) or `/leavegroup` to leave your party, raid
 
 - **Spells:** every spell, yours first and marked **Known**, with its rank. Hover for its tooltip,
   **Shift+click** to link it in chat.
-- **Recipes:** every profession recipe with its profession, what it makes and its reagents. With
+- **Recipes:** every profession recipe with its profession, what it makes and its reagents. Buttons
+  under the search box pick a **profession** (yours first). With
   prices (Auctionator, else vendors): what one craft **costs**, what it **sells for** and the
   **profit**; sort by **Profit** to see what's worth crafting. Hover for the recipe's tooltip with
   what you have and where; right-click for the shopping-list menu. Found once per game version.

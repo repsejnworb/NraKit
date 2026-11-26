@@ -348,7 +348,7 @@ Type **/leave** (with nothing after it) or **/leavegroup** to leave your party, 
 ### Lookup
 **Look up every item, spell and profession recipe by name**, in the **Lookup** tab: **[ Items ][ Spells ][ Recipes ]** at its top, and **/nra item**, **/nra spell**, **/nra recipe** to open it in that mode.
 - **Spells:** every spell, yours first and marked **Known**; **Shift+click** links it in chat.
-- **Recipes:** every profession recipe with what it makes and needs, and with prices what a craft **costs**, **sells for** and the **profit** (sort by Profit to see what's worth crafting). Right-click for the shopping-list menu.
+- **Recipes:** every profession recipe (pick a **profession** with its button) with what it makes and needs, and with prices what a craft **costs**, **sells for** and the **profit** (sort by Profit to see what's worth crafting). Right-click for the shopping-list menu.
 
 **Items:** **/nra item nightbl** lists every item whose name contains it, best matches first, with icon, type, required level and how many your characters have (with Inventory Tracker).
 - Hover for the tooltip, **Shift+click** to link it in chat, **Ctrl+click** to preview it, **right-click** to add it to your **Wishlist** (while that's on).
