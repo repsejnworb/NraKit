@@ -67,6 +67,24 @@ local renderPending = false
 local Render, UpdatePager -- (defined below; clicks call them)
 local page = 1 -- the page shown; back to 1 whenever what's listed changes
 
+-- The last search's results, kept while you page through them (a page click shouldn't search
+-- again and make tens of thousands of new tables); dropped when what's listed changes, new
+-- data arrives, or Lookup closes.
+local results -- { key, all, total }
+
+local function Results(key, search)
+	if results and results.key == key then
+		return results.all, results.total
+	end
+	local all, total = search()
+	results = { key = key, all = all, total = total }
+	return all, total
+end
+
+local function Forget()
+	results = nil
+end
+
 -- The page's part of all the matches (clamping the page to the last one).
 local function PageOf(matches)
 	local pages = math.max(1, math.ceil(#matches / PAGE_SIZE))
@@ -347,7 +365,9 @@ local function Message(content, text)
 end
 
 local function RenderItems(content, width)
-	local all, total = ns.itemLookup.Search(query, math.huge)
+	local all, total = Results("items\0" .. query, function()
+		return ns.itemLookup.Search(query, math.huge)
+	end)
 	local matches = PageOf(all)
 	for index, match in ipairs(matches) do
 		shownIDs[match.id] = true
@@ -375,7 +395,10 @@ local function RenderItems(content, width)
 end
 
 local function RenderSpells(content, width)
-	local all, total = ns.spellLookup.Search(query, math.huge, NraKitDB.lookupSpellFilter)
+	local filter = NraKitDB.lookupSpellFilter
+	local all, total = Results("spells\0" .. query .. "\0" .. tostring(filter), function()
+		return ns.spellLookup.Search(query, math.huge, filter)
+	end)
 	local matches = PageOf(all)
 	for index, match in ipairs(matches) do
 		local row = AcquireSpellRow(content)
@@ -404,7 +427,10 @@ local function RenderSpells(content, width)
 end
 
 local function RenderRecipes(content, width)
-	local all, total = ns.recipeLookup.Search(query, math.huge, RecipeSort(), NraKitDB.lookupRecipeProfession)
+	local sort, profession = RecipeSort(), NraKitDB.lookupRecipeProfession
+	local all, total = Results("recipes\0" .. query .. "\0" .. sort .. "\0" .. tostring(profession), function()
+		return ns.recipeLookup.Search(query, math.huge, sort, profession)
+	end)
 	local matches = PageOf(all)
 	for index, recipe in ipairs(matches) do
 		local row = AcquireRecipeRow(content)
@@ -444,9 +470,11 @@ local function RenderRecipes(content, width)
 end
 
 -- The pages, in the footer: [ < ] [ 1 ] ... [ 4 ] [ 5 ] [ 6 ] ... [ 28 ] [ > ] (the first, the
--- ones around this one, the last). The hint shows instead while it all fits on one page.
-local pager -- { frame, buttons = {}, gaps = {} }
-local PAGE_BUTTON = 22
+-- ones around this one, the last). < and > stay put: the numbers sit in fixed slots between
+-- them, wide enough for four digits. The hint shows instead while it all fits on one page.
+local pager -- { frame, prev, next, slots = { button or gap ... } }
+local PAGE_SLOTS = 9 -- 1, ..., 4 5 6 7 8, ..., 28
+local SLOT_WIDTH, ARROW_WIDTH, SLOT_GAP = 34, 24, 2
 
 local function PageNumbers(pages)
 	local numbers, last = {}, 0
@@ -462,68 +490,61 @@ local function PageNumbers(pages)
 	return numbers
 end
 
+local function PageButton(label, width)
+	local button = UI.CreateFlatButton(pager.frame, label, 20)
+	button:SetWidth(width)
+	button:SetScript("OnClick", function(self)
+		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+		page = self.target
+		scroll:SetScroll(0)
+		Render()
+	end)
+	return button
+end
+
+local function CreatePager(footer)
+	pager = { frame = CreateFrame("Frame", nil, footer), slots = {} }
+	pager.frame:SetSize(ARROW_WIDTH * 2 + PAGE_SLOTS * (SLOT_WIDTH + SLOT_GAP) + SLOT_GAP, 20)
+	pager.frame:SetPoint("RIGHT", -PAD, 0)
+	pager.frame:Hide()
+	pager.prev = PageButton("<", ARROW_WIDTH)
+	pager.prev:SetPoint("LEFT", pager.frame, "LEFT")
+	pager.next = PageButton(">", ARROW_WIDTH)
+	pager.next:SetPoint("RIGHT", pager.frame, "RIGHT")
+	for slot = 1, PAGE_SLOTS do
+		local button = PageButton("", SLOT_WIDTH)
+		button:SetPoint("LEFT", pager.frame, "LEFT", ARROW_WIDTH + SLOT_GAP + (slot - 1) * (SLOT_WIDTH + SLOT_GAP), 0)
+		button.gap = pager.frame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+		button.gap:SetPoint("CENTER", button)
+		button.gap:SetText("...")
+		pager.slots[slot] = button
+	end
+end
+
 function UpdatePager(pages)
 	pager.frame:SetShown(pages > 1)
 	hint:SetShown(pages <= 1)
-	for _, button in ipairs(pager.buttons) do
-		button:Hide()
-	end
-	for _, gap in ipairs(pager.gaps) do
-		gap:Hide()
-	end
 	if pages <= 1 then
 		return
 	end
-	local items = { "<" }
-	for _, number in ipairs(PageNumbers(pages)) do
-		table.insert(items, number)
-	end
-	table.insert(items, ">")
-	local anchor
-	local buttonIndex, gapIndex, width = 0, 0, 0
-	for _, item in ipairs(items) do
-		local widget
-		if item == false then
-			gapIndex = gapIndex + 1
-			widget = pager.gaps[gapIndex]
-			if not widget then
-				widget = pager.frame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-				widget:SetText("...")
-				pager.gaps[gapIndex] = widget
-			end
+	pager.prev.target, pager.next.target = math.max(1, page - 1), math.min(pages, page + 1)
+	pager.prev:SetEnabled(page > 1)
+	pager.prev:SetAlpha(page > 1 and 1 or 0.4)
+	pager.next:SetEnabled(page < pages)
+	pager.next:SetAlpha(page < pages and 1 or 0.4)
+	local numbers = PageNumbers(pages)
+	for slot, button in ipairs(pager.slots) do
+		local number = numbers[slot]
+		button.gap:SetShown(number == false)
+		if number then
+			button.text:SetText(tostring(number))
+			button.target = number
+			button:SetSelected(number == page)
+			button:Show()
 		else
-			buttonIndex = buttonIndex + 1
-			widget = pager.buttons[buttonIndex]
-			if not widget then
-				widget = UI.CreateFlatButton(pager.frame, "", 20)
-				widget:SetScript("OnClick", function(self)
-					PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
-					page = self.target
-					scroll:SetScroll(0)
-					Render()
-				end)
-				pager.buttons[buttonIndex] = widget
-			end
-			widget.text:SetText(item == "<" and "<" or item == ">" and ">" or tostring(item))
-			widget:SetWidth(math.max(PAGE_BUTTON, widget.text:GetStringWidth() + 14))
-			widget.target = item == "<" and math.max(1, page - 1) or item == ">" and math.min(pages, page + 1) or item
-			widget:SetSelected(item == page)
-			widget:SetEnabled(not ((item == "<" and page == 1) or (item == ">" and page == pages)))
-			widget:SetAlpha(widget:IsEnabled() and 1 or 0.4)
+			button:Hide()
 		end
-		widget:ClearAllPoints()
-		if anchor then
-			widget:SetPoint("LEFT", anchor, "RIGHT", 3, 0)
-			width = width + 3
-		else
-			widget:SetPoint("LEFT", pager.frame, "LEFT", 0, 0)
-		end
-		widget:Show()
-		width = width + (widget.GetStringWidth and widget:GetStringWidth() or widget:GetWidth())
-		anchor = widget
 	end
-	-- As wide as its buttons, so it ends at the footer's right edge.
-	pager.frame:SetWidth(width)
 end
 
 -- The chips under the search box: what each mode can be narrowed to, as { value, label,
@@ -827,11 +848,7 @@ local function CreateWindow()
 	footerLeft:SetPoint("LEFT", PAD, 0)
 	hint = footer:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	hint:SetPoint("RIGHT", -PAD, 0)
-	-- The pages, right-aligned (sized to its buttons as it's filled).
-	pager = { frame = CreateFrame("Frame", nil, footer), buttons = {}, gaps = {} }
-	pager.frame:SetSize(1, 20)
-	pager.frame:SetPoint("RIGHT", -PAD, 0)
-	pager.frame:Hide()
+	CreatePager(footer)
 
 	-- The search box never takes the keyboard by itself (you may be moving or fighting):
 	-- click it to type. Enter (like Esc) gives the keys back to the game.
@@ -847,12 +864,25 @@ local function CreateWindow()
 			return
 		end
 		if not itemID or shownIDs[itemID] or (name and name:lower():find(query, 1, true)) then
+			Forget() -- a new match: search again
 			RequestRender()
 		end
 	end
 	-- Spells read, recipes found (once each): show them.
-	ns.spellLookup.onReady = Render
-	ns.recipeLookup.onReady = Render
+	ns.spellLookup.onReady = function()
+		Forget()
+		Render()
+	end
+	ns.recipeLookup.onReady = function()
+		Forget()
+		Render()
+	end
+	-- Closed: let go of what searching built; it's built again, quickly, next time.
+	frame:HookScript("OnHide", function()
+		Forget()
+		ns.itemLookup.Release()
+		ns.spellLookup.Release()
+	end)
 end
 
 -- Opens the window in `mode` ("items", "spells", "recipes"; default: the last one), searching

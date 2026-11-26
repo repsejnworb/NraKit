@@ -168,6 +168,17 @@ return {
 			t.equal(#Rows("spells"), 52, "the last 52 (252 Charges)")
 			t.ok(wow.click("<"), "back a page")
 			t.equal(#Rows("spells"), 100, "page 2")
+			-- Regression: every page click searched again (memory climbing as you paged).
+			local searches = 0
+			local search = ns.spellLookup.Search
+			ns.spellLookup.Search = function(...)
+				searches = searches + 1
+				return search(...)
+			end
+			t.ok(wow.click(">"), "next page")
+			t.ok(wow.click("1"), "page 1")
+			ns.spellLookup.Search = search
+			t.equal(searches, 0, "paging reuses the search")
 			local box = wow.findAll(function(frame)
 				return frame.kind == "EditBox" and wow.visible(frame) and rawget(frame, "parent") == _G.NraKitItemLookupFrame.body
 			end)[1]
@@ -181,6 +192,17 @@ return {
 			for _ = 1, 40 do
 				wow.advance(0.1)
 			end
+		end)
+
+		t.test("closing Lookup lets go of the spell list; it's read again when needed", function()
+			t.ok(ns.spellLookup.Count() > 0, "read")
+			_G.NraKitItemLookupFrame:Hide()
+			t.equal(ns.spellLookup.Count(), 0, "let go when closed")
+			ns:RunSlashCommand("spell charge")
+			for _ = 1, 40 do
+				wow.advance(0.1)
+			end
+			t.ok(ns.spellLookup.Count() > 0, "read again")
 		end)
 
 		t.test("Shift-click links a spell in chat", function()

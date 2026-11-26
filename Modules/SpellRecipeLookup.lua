@@ -36,6 +36,8 @@ end
 ---------------------------------------------------------------------------
 
 local spellList -- { { id, name, lower }, ... } once read
+local recipeIndex = 1 -- next spell (in spellList) to check, while finding recipes
+local found -- recipe IDs found this time (while finding them)
 local spellCursor = 1
 local spellReader = CreateFrame("Frame")
 spellReader:Hide()
@@ -83,6 +85,19 @@ end
 function spells.Reset()
 	spellList, spellCursor = nil, 1
 	spells.Start()
+end
+
+-- Lets go of the spell list and the recipes' details (Lookup closed: they're read again, quickly,
+-- next time). Not while recipes are being found: that walks the spell list.
+function spells.Release()
+	if found then
+		return
+	end
+	spellReader:Hide()
+	spellList, spellCursor = nil, 1
+	if recipes.Release then
+		recipes.Release()
+	end
 end
 
 -- { read, total } while reading, nil once done.
@@ -192,9 +207,11 @@ end
 -- Recipes
 ---------------------------------------------------------------------------
 
-local recipeIndex = 1 -- next spell (in spellList) to check, while finding recipes
-local found -- recipe IDs found this time
-local details = {} -- recipeID -> its details, read once
+local details = {} -- recipeID -> its details, read once (let go when Lookup closes)
+
+function recipes.Release()
+	details = {}
+end
 local recipeFinder = CreateFrame("Frame")
 recipeFinder:Hide()
 

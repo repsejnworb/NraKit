@@ -244,6 +244,11 @@ function lookup.CheckAgain()
 	lookup.SetPaused(false)
 end
 
+-- Lets go of what searching built (the lower-case names): Lookup closed.
+function lookup.Release()
+	lowerNames = {}
+end
+
 -- Items whose name contains query (lower-case): { { id, name, quality }, ... }, best
 -- first (names starting with it, then by quality and name), at most `limit`; and how
 -- many matched in all.
