@@ -22,7 +22,7 @@ local _, ns = ...
 -- notes) and /commands are coloured. Write short: no brackets-and-semicolon chains.
 
 ns.changelog = {
-	{ version = "Unreleased", entries = {
+	{ version = "0.34.0", date = "2026-11-26", entries = {
 		{ "improved", title = "Sell List", "**Automatically Open At** is per character: your bank alt can open it at the bank and mailbox, your main just at the auction house." },
 	} },
 	{ version = "0.33.0", date = "2026-11-26", entries = {
