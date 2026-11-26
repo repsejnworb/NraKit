@@ -36,13 +36,20 @@ local CHECK_SECONDS = 2 -- how often the shown prices are compared with Auctiona
 local GROUPS = {
 	ah = { key = "ah", label = "To Sell: Auction House" },
 	vendor = { key = "vendor", label = "To Sell: Vendor" },
-	bank = { key = "bank", label = "In Your Bank", note = "take them out to sell them" },
 	kept = { key = "kept", label = "Kept", note = "you keep these off the list: right-click one to list it again" },
 }
-local ORDER = { "ah", "vendor", "bank", "kept" }
-local MERCHANT_ORDER = { "vendor", "ah", "bank", "kept" }
+local ORDER = { "ah", "vendor", "kept" }
+local MERCHANT_ORDER = { "vendor", "ah", "kept" }
+
+-- Bank and mail items (the Bank and Mail switches): a badge on the icon, a cooler row.
+local PLACES = {
+	bank = { label = "Bank", icon = "Interface\\Minimap\\Tracking\\Banker", note = "in your bank: take it out to sell it" },
+	mail = { label = "Mail", icon = "Interface\\Minimap\\Tracking\\Mailbox", note = "in your mail: collect it first" },
+}
+local ELSEWHERE_TINT = { 0.35, 0.55, 1, 0.07 }
 
 local frame, scroll, footerText, footerNote, refreshButton, autoOpenCheck, merchantOpenCheck
+local placeChips = {} -- the Bank and Mail switches
 local sortTitles = {}
 local shownItems = {} -- the items on screen, to notice when their auction prices change
 local pricesChanged = false
@@ -131,6 +138,8 @@ local function OnRowEnter(self)
 		end
 	elseif item.bag and sell.IsMerchantOpen() then
 		GameTooltip:AddLine("Click to pick it up, then click the merchant's window to sell it.", 0.5, 0.5, 0.5, true)
+	elseif item.where then
+		GameTooltip:AddLine("In your " .. item.where .. ", as last seen: " .. PLACES[item.where].note:match(": (.+)$") .. ".", 0.4, 0.65, 1, true)
 	end
 	GameTooltip:AddLine("Shift-click to link, right-click to keep it off the list", 0.5, 0.5, 0.5)
 	GameTooltip:Show()
@@ -153,6 +162,9 @@ local function AcquireRow(content)
 		row.icon:SetSize(28, 28)
 		row.icon:SetPoint("LEFT", 8, 0)
 		row.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+		row.place = row:CreateTexture(nil, "OVERLAY")
+		row.place:SetSize(16, 16)
+		row.place:SetPoint("BOTTOMRIGHT", row.icon, "BOTTOMRIGHT", 4, -4)
 		local function Column(right, width, font)
 			local label = MakeLabel(row, "", font or "GameFontHighlight")
 			label:SetPoint("RIGHT", right, 0)
@@ -180,6 +192,9 @@ end
 -- The small line under an item's name: why its value is what it is.
 local function NoteText(item)
 	local parts = {}
+	if item.where then
+		table.insert(parts, "|cff66a6ff" .. PLACES[item.where].note .. "|r")
+	end
 	if item.best == "vendor" and item.ahTotal then
 		table.insert(parts, "|cffffd100a vendor pays more|r")
 	elseif item.best == "vendor" and sell.HasAuctionator() and not item.bound then
@@ -199,11 +214,20 @@ end
 
 local function FillRow(row, item, index)
 	row.item = item
-	row.bg:SetColorTexture(1, 1, 1, index % 2 == 0 and 0.03 or 0)
+	local place = item.where and PLACES[item.where]
+	if place then
+		row.bg:SetColorTexture(unpack(ELSEWHERE_TINT))
+	else
+		row.bg:SetColorTexture(1, 1, 1, index % 2 == 0 and 0.03 or 0)
+	end
+	row.place:SetShown(place ~= nil)
+	row.place:SetTexture(place and place.icon or nil)
 	row.icon:SetTexture(item.icon or 134400)
 	row.icon:SetDesaturated(sell.IsKept(item.id))
+	row.icon:SetAlpha(place and 0.75 or 1)
 	row.name:SetText(item.name or ("Item " .. item.id))
 	row.name:SetTextColor(QualityColor(item.quality))
+	row.name:SetAlpha(place and 0.8 or 1)
 	row.note:SetText(NoteText(item))
 	row.count:SetText(item.count > 1 and ("x" .. item.count) or "")
 	row.count:SetTextColor(unpack(UI.TEXT))
@@ -358,8 +382,26 @@ function Render()
 	content:SetHeight(-y + PAD)
 	scroll:SetScroll(scroll:GetVerticalScroll())
 
-	footerText:SetText(string.format("|cffffffff~%s|r at the auction house (%d)   ·   %s at vendors (%d)",
-		Money(groups.ahTotal), #groups.ah, Money(groups.vendorTotal), #groups.vendor))
+	-- What you can sell now, from your bags; your bank and mail apart.
+	local bagsAH, bagsVendor = 0, 0
+	for _, item in ipairs(groups.ah) do
+		bagsAH = bagsAH + (item.where and 0 or 1)
+	end
+	for _, item in ipairs(groups.vendor) do
+		bagsVendor = bagsVendor + (item.where and 0 or 1)
+	end
+	local text = string.format("|cffffffff~%s|r at the auction house (%d)   ·   %s at vendors (%d)",
+		Money(groups.ahTotal), bagsAH, Money(groups.vendorTotal), bagsVendor)
+	if groups.elsewhereTotal > 0 then
+		text = text .. "   ·   |cff66a6ff+" .. Money(groups.elsewhereTotal) .. " in bank & mail|r"
+	end
+	footerText:SetText(text)
+	for _, chip in ipairs(placeChips) do
+		chip:SetSelected(sell.Shows(chip.where))
+		local available = ns:IsModuleEnabled("inventoryTracker")
+		chip:SetEnabled(available)
+		chip:SetAlpha(available and 1 or 0.5)
+	end
 	UpdateFooterNote()
 end
 
@@ -426,6 +468,47 @@ local function CreateWindow()
 	end
 	autoOpenCheck = Switch("Open by itself at the auction house", "sellListAutoOpen")
 	merchantOpenCheck = Switch("At merchants", "sellListMerchantOpen", autoOpenCheck)
+
+	-- Bank and Mail: list those too (Inventory Tracker's data), right of the switches.
+	local anchor
+	for _, where in ipairs({ "mail", "bank" }) do
+		local place = PLACES[where]
+		local chip = UI.CreateFlatButton(toolbar, "", 22)
+		chip.where = where
+		chip.icon = chip:CreateTexture(nil, "ARTWORK")
+		chip.icon:SetSize(16, 16)
+		chip.icon:SetPoint("LEFT", 6, 0)
+		chip.icon:SetTexture(place.icon)
+		chip.text:ClearAllPoints()
+		chip.text:SetPoint("LEFT", chip.icon, "RIGHT", 4, 0)
+		chip.text:SetText(place.label)
+		chip:SetWidth(chip.text:GetStringWidth() + 34)
+		if anchor then
+			chip:SetPoint("RIGHT", anchor, "LEFT", -4, 0)
+		else
+			chip:SetPoint("RIGHT", -PAD, 0)
+		end
+		anchor = chip
+		chip:SetMotionScriptsWhileDisabled(true)
+		chip:SetScript("OnClick", function(self)
+			PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+			ns:SetSetting(self.where == "bank" and "sellListBank" or "sellListMail", not sell.Shows(self.where))
+		end)
+		chip:SetScript("OnEnter", function(self)
+			local title = "Show your " .. self.where
+			if not ns:IsModuleEnabled("inventoryTracker") then
+				UI.ShowTooltip(self, title, "Turn on Inventory Tracker to include your bank and mail.")
+				return
+			end
+			local seen = sell.LastSeen(self.where)
+			local age = seen and math.floor((time() - seen) / 86400)
+			local when = not seen and "Not seen yet: open it once on this character."
+				or age == 0 and "As last seen today." or string.format("As last seen %d day%s ago.", age, age == 1 and "" or "s")
+			UI.ShowTooltip(self, title, "List what's in your " .. self.where .. " too, marked: you can't sell it from there. " .. when)
+		end)
+		chip:SetScript("OnLeave", GameTooltip_Hide)
+		table.insert(placeChips, chip)
+	end
 
 	local top = CreateFrame("Frame", nil, body)
 	top:SetPoint("TOPLEFT", 0, -TOOLBAR_HEIGHT - 1)

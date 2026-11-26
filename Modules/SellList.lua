@@ -10,8 +10,8 @@ local _, ns = ...
 -- prices only. Groups, by where each item sells best:
 --   To Sell: Auction House   tradeable items the auction house pays more for
 --   To Sell: Vendor          the rest, soulbound ones too (folded at the auction house)
---   In Your Bank             your bank as Inventory Tracker last saw it (an option)
 --   Kept                     items you marked "Keep, don't list" (potions, food...), folded
+-- Your bank and mail can be listed too (switches at the top): mixed in, marked, not clickable.
 -- It can also open at merchants (an option), docked beside them, vendor group first.
 --
 -- Saved: NraKitDB.sellListKept = { [itemID] = true }, sellListSort = { key, ascending },
@@ -42,8 +42,15 @@ local module = {
 		},
 		{
 			key = "sellListBank",
-			name = "Also list your bank",
-			description = "A separate group with what's in your bank (as Inventory Tracker last saw it), so you know what to take out before you sell.",
+			name = "Show your bank",
+			description = "Also list what's in your bank (as Inventory Tracker last saw it), marked, so you know what to take out before you sell. The same as the Bank switch at the top of the list.",
+			default = false,
+			requires = "inventoryTracker",
+		},
+		{
+			key = "sellListMail",
+			name = "Show your mail",
+			description = "Also list what's waiting in your mailbox (as Inventory Tracker last saw it, with what you've bought at the auction house since), marked. The same as the Mail switch at the top of the list.",
 			default = false,
 			requires = "inventoryTracker",
 		},
@@ -199,16 +206,33 @@ local function BagItems()
 	return items
 end
 
--- Your bank as Inventory Tracker last saw it: { id, count } (no links: priced by ID).
-local function BankItems()
+-- Your saved inventory (Inventory Tracker's data), or nil.
+local function MyInventory()
 	local inventory = ns.inventory
 	local realm = inventory and inventory.GetRealm()
-	local me = realm and NraKitDB.inventory and NraKitDB.inventory[realm] and NraKitDB.inventory[realm][inventory.GetPlayer()]
+	return realm and NraKitDB.inventory and NraKitDB.inventory[realm] and NraKitDB.inventory[realm][inventory.GetPlayer()]
+end
+
+-- What's in your bank or mail ("bank", "mail") as Inventory Tracker last saw it:
+-- { id, count, where } (no links: priced by ID).
+local function ElsewhereItems(where)
+	local me = MyInventory()
 	local items = {}
-	for itemID, count in pairs(me and me.bank or {}) do
-		table.insert(items, { id = itemID, count = count, inBank = true })
+	for itemID, count in pairs(me and me[where] or {}) do
+		table.insert(items, { id = itemID, count = count, where = where })
 	end
 	return items
+end
+
+-- When the bank or mail ("bank", "mail") was last read, as time(), or nil.
+function sell.LastSeen(where)
+	local me = MyInventory()
+	return me and me.seen and me.seen[where]
+end
+
+-- Whether the bank or mail is listed (its switch is on, and Inventory Tracker with it).
+function sell.Shows(where)
+	return ns:IsModuleEnabled("inventoryTracker") and ns:GetOption(where == "bank" and "sellListBank" or "sellListMail") == true
 end
 
 local SORTS = {
@@ -272,15 +296,21 @@ local function SortItems(items)
 end
 
 -- Everything, grouped by where it sells best: { ah = {...}, vendor = {...} (soulbound ones
--- too: at a vendor that makes no difference), bank = {...}, kept = {...}, ahTotal, vendorTotal,
--- loading }. Each item gets groupEach: the price of one where its group sells it.
+-- too: at a vendor that makes no difference), kept = {...}, ahTotal, vendorTotal (of what's
+-- in your bags), elsewhereTotal (of what's in your bank and mail, when shown), loading }.
+-- Bank and mail items (item.where) are in the same groups as your bags', marked. Each item
+-- gets groupEach: the price of one where its group sells it.
 function sell.Collect()
 	local min = (ns:GetValue("sellListMinValue") or 5) * 100
-	local groups = { ah = {}, vendor = {}, bank = {}, kept = {}, ahTotal = 0, vendorTotal = 0, loading = false }
+	local groups = { ah = {}, vendor = {}, kept = {}, ahTotal = 0, vendorTotal = 0, elsewhereTotal = 0, loading = false }
 	local function Add(item)
 		if not Price(item) then
 			groups.loading = true
 			return
+		end
+		-- Whether a bank or mail item is soulbound isn't saved; one that binds when picked up is.
+		if item.where and item.bindType == 1 then
+			item.bound = true
 		end
 		if item.bound then
 			item.value, item.best = item.vendorTotal, "vendor"
@@ -290,28 +320,28 @@ function sell.Collect()
 			table.insert(groups.kept, item)
 		elseif item.value <= 0 or item.value < min then
 			return
-		elseif item.inBank then
-			-- Soulbound in the bank isn't known: a "binds when picked up" item can't be sold there.
-			if item.best == "vendor" or item.bindType ~= 1 then
-				table.insert(groups.bank, item)
-			end
-		elseif item.best == "ah" then
-			table.insert(groups.ah, item)
-			groups.ahTotal = groups.ahTotal + item.ahTotal
 		else
-			table.insert(groups.vendor, item)
-			groups.vendorTotal = groups.vendorTotal + item.vendorTotal
+			table.insert(item.best == "ah" and groups.ah or groups.vendor, item)
+			if item.where then
+				groups.elsewhereTotal = groups.elsewhereTotal + item.value
+			elseif item.best == "ah" then
+				groups.ahTotal = groups.ahTotal + item.ahTotal
+			else
+				groups.vendorTotal = groups.vendorTotal + item.vendorTotal
+			end
 		end
 	end
 	for _, item in ipairs(BagItems()) do
 		Add(item)
 	end
-	if ns:GetOption("sellListBank") and ns:IsModuleEnabled("inventoryTracker") then
-		for _, item in ipairs(BankItems()) do
-			Add(item)
+	for _, where in ipairs({ "bank", "mail" }) do
+		if sell.Shows(where) then
+			for _, item in ipairs(ElsewhereItems(where)) do
+				Add(item)
+			end
 		end
 	end
-	for _, list in ipairs({ groups.ah, groups.vendor, groups.bank, groups.kept }) do
+	for _, list in ipairs({ groups.ah, groups.vendor, groups.kept }) do
 		SortItems(list)
 	end
 	return groups

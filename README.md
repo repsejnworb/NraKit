@@ -296,8 +296,12 @@ item. A tab in the NraKit window (`/nra sell`).
   for **Keep, don't list** on potions, food and reagents you use.
 - Optionally it also **opens at merchants**, docked beside them with the vendor group first: click an
   item, then the merchant's window, to sell it.
-- Leaves out items worth less than a **minimum** (5 silver), optionally lists your **bank**, and
-  sorts by **any column**. The footer says what it's all worth.
+- **Bank** and **Mail** switches at the top list what's in your bank and mailbox too (as Inventory
+  Tracker last saw them), mixed in by value but **marked**: a bank or mailbox badge on the icon, a
+  bluish row, and a note on what to do ("take it out to sell it"). They can't be clicked into the
+  auction house, and the footer counts them apart: "+120g in bank & mail".
+- Leaves out items worth less than a **minimum** (5 silver) and sorts by **any column**. The footer
+  says what it's all worth.
 - Without Auctionator it still works, on vendor prices.
 
 <img width="1558" height="592" alt="sellListAH" src=".github/screenshots/sellListAH.png" />

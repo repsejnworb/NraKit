@@ -164,7 +164,8 @@ With a **fishing pole in your main hand**, **double right-click** the world to c
 - After a fresh scan it says **"Prices have changed"** by the **refresh** button.
 - Split into **To Sell: Auction House** and **To Sell: Vendor** (soulbound items too); right-click one for **Keep, don't list** on what you use.
 - Optionally also **opens at merchants**, docked beside them with the vendor group first.
-- Leaves out junk below a **minimum**, optionally lists your **bank**, sorts by **any column**.
+- **Bank** and **Mail** switches list what's in your bank and mailbox too, mixed in by value but **marked** (a badge and a bluish row), counted apart in the footer.
+- Leaves out junk below a **minimum**, sorts by **any column**.
 
 ![sellListAH](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/sellListAH.png)
 

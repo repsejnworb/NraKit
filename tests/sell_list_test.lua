@@ -44,6 +44,7 @@ end
 local ITEMS = {
 	[1001] = { "Black Lotus", 0 }, [1002] = { "Mithril Bar", 50 }, [1003] = { "Wolf Meat", 300 },
 	[1004] = { "Soulbound Ring", 5000, 1 }, [1005] = { "Broken Fang", 5 }, [1006] = { "Old Price", 100 },
+	[1007] = { "Banked Gem", 100 }, [1008] = { "Pickup Trinket", 2000, 1 },
 }
 C_Item.GetItemInfo = function(item)
 	local id = tonumber(tostring(item):match("%d+"))
@@ -53,7 +54,7 @@ C_Item.GetItemInfo = function(item)
 	end
 end
 
-local AH = { [1001] = 450000, [1002] = 12000, [1003] = 10, [1006] = 20000 }
+local AH = { [1001] = 450000, [1002] = 12000, [1003] = 10, [1006] = 20000, [1007] = 90000, [1008] = 70000 }
 local AGE = { [1006] = 6 }
 local function ID(link)
 	return tonumber(tostring(link):match("%d+"))
@@ -223,6 +224,53 @@ return {
 			t.ok(not ns.sellList.PricesChanged(), "refreshed")
 			AH[1001] = 450000
 			_G.NraKitSellListFrame:Hide()
+		end)
+
+		t.test("Bank and Mail switches mix those items in, marked, and not clickable", function()
+			local me = NraKitDB.inventory[ns.inventory.GetRealm()][ns.inventory.GetPlayer()]
+			me.bank = { [1007] = 2, [1008] = 1 } -- a gem, and a "binds when picked up" trinket
+			me.mail = { [1001] = 1 } -- a Black Lotus bought at the auction house
+			me.seen = me.seen or {}
+			me.seen.bank = time() - 2 * 86400
+			t.equal(#sell.Collect().ah, 3, "off by default: just your bags")
+
+			ns:OpenSellList()
+			t.ok(wow.click("Bank"), "the Bank switch")
+			t.equal(NraKitDB.sellListBank, true, "remembered")
+			local groups = sell.Collect()
+			local gem
+			for _, item in ipairs(groups.ah) do
+				if item.name == "Banked Gem" then
+					gem = item
+				end
+			end
+			t.ok(gem and gem.where == "bank", "the gem, among the auction house ones")
+			t.ok(Names(groups.vendor):find("Pickup Trinket", 1, true), "a binds-when-picked-up one only at a vendor")
+			t.equal(groups.elsewhereTotal, 2 * 90000 + 2000, "counted apart")
+			t.equal(groups.ahTotal, 3 * 450000 + 58 * 12000 + 2 * 20000, "the main total is still your bags'")
+
+			wow.click("Mail")
+			local lotus = 0
+			for _, item in ipairs(sell.Collect().ah) do
+				if item.name == "Black Lotus" then
+					lotus = lotus + 1
+				end
+			end
+			t.equal(lotus, 2, "Black Lotus twice: in your bags, and in your mail")
+
+			sell.onChanged()
+			local row = wow.findAll(function(frame)
+				local item = wow.visible(frame) and rawget(frame, "item")
+				return item and item.where == "bank"
+			end)[1]
+			t.ok(row and rawget(row, "place").shown, "a bank badge on its icon")
+			picked = nil
+			wow.fire("AUCTION_HOUSE_SHOW")
+			row.scripts.OnClick(row, "LeftButton")
+			t.equal(picked, nil, "a bank item can't be picked up from here")
+			wow.fire("AUCTION_HOUSE_CLOSED")
+			ns:SetSetting("sellListBank", false)
+			ns:SetSetting("sellListMail", false)
 		end)
 
 		t.test("the Inventory tab values everyone's items at auction prices", function()
