@@ -107,10 +107,15 @@ function sell.IsMerchantOpen()
 	return merchantOpen
 end
 
+-- The window that says you're at the bank or the mailbox.
+local PLACE_FRAMES = { bank = "BankFrame", mail = "MailFrame" }
+
 -- Whether you're at the bank or the mailbox ("bank", "mail"): then it's read live and you
--- can take from it.
+-- can take from it. Its window being shown is what counts: on Forever the mailbox opens and
+-- closes through the player interaction system, and MAIL_CLOSED can't be relied on.
 function sell.IsPlaceOpen(where)
-	return placeOpen[where] == true
+	local frame = _G[PLACE_FRAMES[where]]
+	return placeOpen[where] == true and type(frame) == "table" and frame:IsShown() == true
 end
 
 local function API()
@@ -288,7 +293,7 @@ sell.LiveMailItems = LiveMailItems
 -- What's in your bank or mail ("bank", "mail"): read live while you're there, else as
 -- Inventory Tracker last saw it ({ id, count, where }, no links: priced by ID).
 local function ElsewhereItems(where)
-	if placeOpen[where] then
+	if sell.IsPlaceOpen(where) then
 		return where == "bank" and LiveBankItems() or LiveMailItems()
 	end
 	local me = MyInventory()
@@ -308,7 +313,7 @@ end
 -- Whether the bank or mail is listed: always while you're there (read live, to take from),
 -- else when its switch is on and Inventory Tracker remembers it.
 function sell.Shows(where)
-	if placeOpen[where] then
+	if sell.IsPlaceOpen(where) then
 		return true
 	end
 	return ns:GetOption(where == "bank" and "sellListBank" or "sellListMail") == true
@@ -551,10 +556,49 @@ end
 local DOCKS = {
 	{ open = function() return auctionHouseOpen end, frame = function() return AuctionHouseFrame end },
 	{ open = function() return merchantOpen end, frame = function() return MerchantFrame end },
-	{ open = function() return placeOpen.bank end, frame = function() return BankFrame end,
+	{ open = function() return sell.IsPlaceOpen("bank") end, frame = function() return BankFrame end,
 		x = function() return BankTabsWidth() + 6 end },
-	{ open = function() return placeOpen.mail end, frame = MailDock },
+	{ open = function() return sell.IsPlaceOpen("mail") end, frame = MailDock },
 }
+
+-- Coming and going: the bank and mailbox windows showing or hiding (whatever events the client
+-- sends), so leaving can't be missed.
+local function Arrive(where)
+	placeOpen[where] = true
+	CreatePlaceButtons()
+	Changed()
+end
+
+local function Leave(where)
+	if not placeOpen[where] then
+		return
+	end
+	placeOpen[where] = false
+	local anchor = ns.UI.DockAnchor()
+	if anchor and (anchor == _G[PLACE_FRAMES[where]] or (where == "mail" and anchor == OpenMailFrame)) then
+		ns.UI.Undock()
+	end
+	Changed()
+end
+
+local placesHooked = {}
+
+local function HookPlaces()
+	for where, name in pairs(PLACE_FRAMES) do
+		local frame = _G[name]
+		if not placesHooked[where] and type(frame) == "table" and frame.HookScript then
+			placesHooked[where] = true
+			frame:HookScript("OnShow", function()
+				if ns:IsModuleEnabled(module.key) then
+					Arrive(where)
+				end
+			end)
+			frame:HookScript("OnHide", function()
+				Leave(where)
+			end)
+		end
+	end
+end
 
 local openMailHooked = false
 
@@ -603,6 +647,8 @@ eventFrame:SetScript("OnEvent", function(_, event, addonName)
 	if event == "ADDON_LOADED" then
 		if addonName == "Blizzard_AuctionHouseUI" or addonName == "Blizzard_MailFrame" then
 			CreatePlaceButtons()
+			HookPlaces()
+			HookOpenMail()
 		end
 	elseif event == "AUCTION_HOUSE_SHOW" then
 		auctionHouseOpen = true
@@ -613,21 +659,17 @@ eventFrame:SetScript("OnEvent", function(_, event, addonName)
 	elseif event == "MERCHANT_CLOSED" then
 		merchantOpen = false
 		ns.UI.Undock()
-	elseif event == "BANKFRAME_OPENED" or event == "BANKFRAME_CLOSED" then
-		placeOpen.bank = event == "BANKFRAME_OPENED"
-		CreatePlaceButtons()
-		if not placeOpen.bank then
-			ns.UI.Undock()
-		end
-		Changed()
-	elseif event == "MAIL_SHOW" or event == "MAIL_CLOSED" then
-		placeOpen.mail = event == "MAIL_SHOW"
-		CreatePlaceButtons()
+	elseif event == "BANKFRAME_OPENED" then
+		HookPlaces()
+		Arrive("bank")
+	elseif event == "BANKFRAME_CLOSED" then
+		Leave("bank")
+	elseif event == "MAIL_SHOW" then
+		HookPlaces()
 		HookOpenMail()
-		if not placeOpen.mail then
-			ns.UI.Undock()
-		end
-		Changed()
+		Arrive("mail")
+	elseif event == "MAIL_CLOSED" then
+		Leave("mail")
 	elseif event == "MAIL_INBOX_UPDATE" then
 		Changed()
 	end
@@ -655,6 +697,8 @@ function module:OnInitialize()
 	eventFrame:RegisterEvent("ADDON_LOADED")
 	CreatePlaceButtons()
 	HookMerchant()
+	HookPlaces()
+	HookOpenMail()
 	ns:RegisterSlashCommand("sell", function()
 		if not ns:IsModuleEnabled(module.key) then
 			ns:Print("Turn on Sell List first (/nra).")

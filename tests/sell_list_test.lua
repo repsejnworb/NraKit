@@ -350,6 +350,7 @@ return {
 				{ itemID = 1010, stackCount = 1 },
 			}
 			ns:SetSetting("sellListBank", true)
+			BankFrame:Show()
 			wow.fire("BANKFRAME_OPENED")
 			ns:OpenSellList()
 			local function Row(name)
@@ -392,6 +393,7 @@ return {
 			t.equal(CONTAINERS[1][4] and CONTAINERS[1][4].stackCount, 5, "Shift-click: the rest, without asking")
 			wow.advance(0.3)
 			wow.fire("BANKFRAME_CLOSED")
+			BankFrame:Hide()
 			ns:SetSetting("sellListBank", false)
 		end)
 
@@ -437,6 +439,7 @@ return {
 			CONTAINERS[1] = { { itemID = 1, stackCount = 1 }, { itemID = 1, stackCount = 1 }, { itemID = 1, stackCount = 1 } }
 			CONTAINERS[6] = { { itemID = 1009, stackCount = 20 }, { itemID = 1009, stackCount = 20 } }
 			ns:SetSetting("sellListBank", true)
+			BankFrame:Show()
 			wow.fire("BANKFRAME_OPENED")
 			local bars
 			for _, item in ipairs(sell.Collect().ah) do
@@ -450,6 +453,7 @@ return {
 			t.equal(sell.Prompt():GetFrameStrata(), "FULLSCREEN_DIALOG", "above the list")
 			sell.HidePrompt()
 			wow.fire("BANKFRAME_CLOSED")
+			BankFrame:Hide()
 			ns:SetSetting("sellListBank", false)
 			CONTAINERS[1] = {}
 		end)
@@ -460,6 +464,7 @@ return {
 				{ cod = 5000, items = { { itemID = 1009, stackCount = 20 } } },
 			}
 			ns:SetSetting("sellListMail", true)
+			MailFrame:Show()
 			wow.fire("MAIL_SHOW")
 			local bars
 			for _, item in ipairs(sell.Collect().ah) do
@@ -477,7 +482,19 @@ return {
 			t.equal(#INBOX[2].items, 1, "the C.O.D. one left alone")
 			t.equal(CONTAINERS[1][1].stackCount + CONTAINERS[1][2].stackCount, 40, "in your bags")
 			wow.fire("MAIL_CLOSED")
+			MailFrame:Hide()
 			ns:SetSetting("sellListMail", false)
+		end)
+
+		-- Regression: on Forever the mailbox closes without MAIL_CLOSED, and the list kept
+		-- thinking you were there: "click to take it" on mail, and the Mail switch stuck on.
+		t.test("closing the mailbox window is leaving it, whatever the events say", function()
+			MailFrame:Show()
+			wow.fire("MAIL_SHOW")
+			t.ok(sell.IsPlaceOpen("mail"), "at the mailbox")
+			MailFrame:Hide() -- no MAIL_CLOSED
+			t.ok(not sell.IsPlaceOpen("mail"), "left when its window closed")
+			t.ok(not sell.Shows("mail"), "the Mail switch (off) is in charge again")
 		end)
 
 		t.test("the Inventory tab values everyone's items at auction prices", function()
