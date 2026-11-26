@@ -6,8 +6,9 @@ local _, ns = ...
 --
 -- Bags and equipment are read whenever they change. The bank and the mailbox can
 -- only be read while they're open, so each character has to visit them once; after
--- that they're kept up to date while open. Items you mail to your own characters
--- are added to their mail right away.
+-- that they're kept up to date while open. Items you mail to your own characters,
+-- and what you buy at the Auction House (it's delivered by mail), are added to their
+-- mail right away.
 --
 -- Characters are saved by full name, "Firstname Surname" (ns:PlayerName), since two of
 -- them can share a first name. Older versions saved the first name alone; a character's
@@ -229,6 +230,18 @@ local function OnSendMail(recipient)
 		end
 	end
 	pendingMail = { realm = realm, name = storedName, items = items }
+end
+
+-- Bought at the Auction House: it comes by mail. An item (not a commodity) is one
+-- auction; the game doesn't say how many it held, so it counts as 1 until the mailbox is read.
+local function OnPurchased(itemID, quantity)
+	if not itemID then
+		return
+	end
+	local me = GetMe()
+	me.mail = me.mail or {}
+	me.mail[itemID] = (me.mail[itemID] or 0) + math.max(quantity or 1, 1)
+	Changed()
 end
 
 local function OnMailSent()
@@ -548,6 +561,8 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 		OnMailSent()
 	elseif event == "MAIL_FAILED" then
 		pendingMail = nil
+	elseif event == "COMMODITY_PURCHASED" or event == "ITEM_PURCHASED" then
+		OnPurchased(...)
 	elseif event == "PLAYER_MONEY" then
 		StoreMoney()
 	elseif event == "PLAYER_LEVEL_UP" then
@@ -560,6 +575,7 @@ local EVENTS = {
 	"BAG_UPDATE_DELAYED", "BANKFRAME_OPENED", "BANKFRAME_CLOSED", "PLAYERBANKSLOTS_CHANGED",
 	"PLAYERREAGENTBANKSLOTS_CHANGED", "PLAYER_EQUIPMENT_CHANGED", "MAIL_INBOX_UPDATE",
 	"MAIL_SEND_SUCCESS", "MAIL_FAILED", "PLAYER_MONEY", "PLAYER_LEVEL_UP",
+	"COMMODITY_PURCHASED", "ITEM_PURCHASED",
 }
 
 local function IsEventValid(event)

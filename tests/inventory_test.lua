@@ -100,6 +100,14 @@ return {
 			t.equal(characters["Nra Smith"].mail[LINEN], 3, "nor the other")
 		end)
 
+		t.test("what you buy at the Auction House is in your mail right away", function()
+			local before = (characters["Nra Kit"].mail or {})[LINEN] or 0
+			wow.fire("COMMODITY_PURCHASED", LINEN, 20)
+			t.equal(characters["Nra Kit"].mail[LINEN], before + 20, "a commodity, with its quantity")
+			wow.fire("ITEM_PURCHASED", 2589)
+			t.equal(characters["Nra Kit"].mail[LINEN], before + 21, "an item auction counts as one")
+		end)
+
 		t.test("mail finds a character still saved under its first name", function()
 			Mail("Bob Stone", 6)
 			t.equal(characters.Bob.mail[LINEN], 6, "old entry Bob")
