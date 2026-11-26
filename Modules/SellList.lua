@@ -41,6 +41,12 @@ local module = {
 			end,
 		},
 		{
+			key = "sellListBags",
+			name = "Show your bags",
+			description = "List what's in your bags (the Bags switch at the top of the list). At the bank or mailbox they're hidden, to see what to take out; click Bags there to show them for that visit.",
+			default = true,
+		},
+		{
 			key = "sellListBank",
 			name = "Show your bank",
 			description = "Also list what's in your bank (as Inventory Tracker last saw it), marked, so you know what to take out before you sell. The same as the Bank switch at the top of the list.",
@@ -323,6 +329,33 @@ function sell.LastSeen(where)
 	return me and me.seen and me.seen[where]
 end
 
+-- Whether your bags are listed: the Bags switch, but at the bank or mailbox they're hidden
+-- (you're there to take things out), unless you show them for that visit.
+local bagsThisVisit = false
+
+function sell.AtBankOrMailbox()
+	return sell.IsPlaceOpen("bank") or sell.IsPlaceOpen("mail")
+end
+
+function sell.ShowsBags()
+	if sell.AtBankOrMailbox() then
+		return bagsThisVisit
+	end
+	return ns:GetOption("sellListBags") ~= false
+end
+
+-- The Bags switch: for this visit at the bank or mailbox, else the setting.
+function sell.ToggleBags()
+	if sell.AtBankOrMailbox() then
+		bagsThisVisit = not bagsThisVisit
+		if sell.onChanged then
+			sell.onChanged()
+		end
+	else
+		ns:SetSetting("sellListBags", not sell.ShowsBags())
+	end
+end
+
 -- Whether the bank or mail is listed: always while you're there (read live, to take from),
 -- else when its switch is on and Inventory Tracker remembers it.
 function sell.Shows(where)
@@ -430,8 +463,10 @@ function sell.Collect()
 			end
 		end
 	end
-	for _, item in ipairs(BagItems()) do
-		Add(item)
+	if sell.ShowsBags() then
+		for _, item in ipairs(BagItems()) do
+			Add(item)
+		end
 	end
 	for _, where in ipairs({ "bank", "mail" }) do
 		if sell.Shows(where) then
@@ -599,6 +634,7 @@ local function Leave(where)
 		return
 	end
 	placeOpen[where] = false
+	bagsThisVisit = false
 	local anchor = ns.UI.DockAnchor()
 	if anchor and (anchor == _G[PLACE_FRAMES[where]] or (where == "mail" and anchor == OpenMailFrame)) then
 		ns.UI.Undock()

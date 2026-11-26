@@ -165,6 +165,7 @@ With a **fishing pole in your main hand**, **double right-click** the world to c
 - Split into **To Sell: Auction House** and **To Sell: Vendor** (soulbound items too); right-click one for **Keep, don't list** on what you use.
 - Optionally also **opens at merchants**, docked beside them with the vendor group first.
 - **Bank** and **Mail** switches list what's in your bank and mailbox too, mixed in by value but **marked** (a badge and a tint of their own), counted apart in the footer.
+- A **Bags** switch too: your bags are hidden while you're at the bank or mailbox, to see what to take out.
 - **At the bank or mailbox** (a **NraKit Sell List** button there opens it beside them), **click one to take it** into your bags; with more than one stack it asks how many (**Take All** takes what fits).
 - Leaves out junk below a **minimum**, sorts by **any column**.
 

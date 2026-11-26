@@ -301,6 +301,8 @@ item. A tab in the NraKit window (`/nra sell`).
   Tracker last saw them), mixed in by value but **marked**: a bank or mailbox badge on the icon, a
   row tint of their own (warm for the bank, blue for mail), and a note on what to do. The footer
   counts them apart: "+120g in bank & mail". Cash-on-delivery mail isn't listed: it isn't yours yet.
+- A **Bags** switch next to them: your bags are hidden while you're at the bank or mailbox (you're
+  there to take things out); click Bags there to show them for that visit.
 - **At the bank or mailbox** a **NraKit Sell List** button by the window's close button opens the
   list beside it, with that place always listed. **Click one to take it** into your bags. With more than one stack it asks
   how many (starting at what fits in your bags; **Take All**), Shift-click takes all that fits.

@@ -487,6 +487,36 @@ return {
 			CONTAINERS[1] = {}
 		end)
 
+		t.test("Bags: on away, hidden at the bank (show them for the visit), the setting away", function()
+			local function BagRows()
+				local count = 0
+				for _, list in ipairs({ sell.Collect().ah, sell.Collect().vendor }) do
+					for _, item in ipairs(list) do
+						count = count + (item.where and 0 or 1)
+					end
+				end
+				return count
+			end
+			t.ok(BagRows() > 0, "away: your bags")
+			BankFrame:Show()
+			wow.fire("BANKFRAME_OPENED")
+			t.equal(BagRows(), 0, "at the bank: hidden")
+			sell.ToggleBags()
+			t.ok(BagRows() > 0, "shown for this visit")
+			t.equal(NraKitDB.sellListBags, true, "the setting untouched")
+			wow.fire("BANKFRAME_CLOSED")
+			BankFrame:Hide()
+			BankFrame:Show()
+			wow.fire("BANKFRAME_OPENED")
+			t.equal(BagRows(), 0, "the next visit: hidden again")
+			wow.fire("BANKFRAME_CLOSED")
+			BankFrame:Hide()
+			sell.ToggleBags()
+			t.equal(NraKitDB.sellListBags, false, "away, the switch is the setting")
+			t.equal(BagRows(), 0, "bags off")
+			sell.ToggleBags()
+		end)
+
 		t.test("bags too full for it all: Take All says how many fit", function()
 			CONTAINERS[1] = { { itemID = 1, stackCount = 1 }, { itemID = 1, stackCount = 1 }, { itemID = 1, stackCount = 1 } }
 			CONTAINERS[6] = { { itemID = 1009, stackCount = 20 }, { itemID = 1009, stackCount = 20 } }
