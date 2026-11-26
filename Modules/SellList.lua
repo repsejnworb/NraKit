@@ -47,8 +47,14 @@ local module = {
 			requires = "inventoryTracker",
 		},
 		{
-			key = "sellListAHButton",
+			key = "sellListAutoOpen",
 			header = "At the auction house",
+			name = "Open the list at the auction house",
+			description = "The Sell list opens by itself, beside the auction house, when you open it. Also a switch at the top of the list.",
+			default = true,
+		},
+		{
+			key = "sellListAHButton",
 			name = "Button on the auction house",
 			description = "A \"Sell list\" button at the top of the auction house window.",
 			default = true,
@@ -350,6 +356,14 @@ local function CreateAHButton()
 		ns.UI.ShowTooltip(self, "Sell list", "What in your bags is worth selling, most valuable first.")
 	end)
 	ahButton:SetScript("OnLeave", GameTooltip_Hide)
+	-- Opening the auction house opens the list (an option). The window is shown by now, so the
+	-- list can dock beside it.
+	AuctionHouseFrame:HookScript("OnShow", function()
+		if ns:IsModuleEnabled(module.key) and ns:GetOption("sellListAutoOpen") then
+			auctionHouseOpen = true
+			ns:OpenSellList()
+		end
+	end)
 	UpdateAHButton()
 end
 

@@ -283,7 +283,9 @@ item. A tab in the NraKit window (`/nra sell`).
 - **Auction house and vendor prices side by side** (auction prices from Auctionator), for each item
   and the whole stack. The better of the two is bright; "a vendor pays more" says when to vendor.
 - An auction price **more than 3 days old** is marked, so you don't undercut yourself on old data.
-- A **button on the auction house** opens NraKit's window **right beside it**, whichever tab you go
+- It **opens by itself** beside the auction house when you open it (switch that off at the top of
+  the list, or in its settings), and a **button on the auction house** opens it too. NraKit's
+  window sits **right beside it**, whichever tab you go
   to, until the auction house closes. There, **Alt+click** an item to put it in **Auctionator's
   Selling tab** (Auctionator's own shortcut), or click it to pick it up and drop it in the sell
   slot. Also a **What can I sell?** button in the Inventory tab (on your own character).

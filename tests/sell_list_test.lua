@@ -158,6 +158,27 @@ return {
 			t.ok(not _G.NraKitOptionsFrame:IsShown(), "and the window closes with it")
 		end)
 
+		t.test("opening the auction house opens the list beside it, unless that's off", function()
+			AuctionHouseFrame:Hide()
+			AuctionHouseFrame:Show()
+			t.ok(_G.NraKitSellListFrame:IsShown(), "opened by itself")
+			t.ok(ns.UI.IsDocked(), "beside the auction house")
+			local check = wow.findAll(function(frame)
+				local label = rawget(frame, "Text")
+				return wow.visible(frame) and label and label.text == "Open this list by itself at the auction house"
+			end)[1]
+			t.ok(check and check:GetChecked(), "a switch at the top of the list, on")
+			check:SetChecked(false)
+			check.scripts.OnClick(check)
+			t.equal(NraKitDB.sellListAutoOpen, false, "turned off from the list")
+			wow.fire("AUCTION_HOUSE_CLOSED")
+			AuctionHouseFrame:Hide()
+			AuctionHouseFrame:Show()
+			t.ok(not _G.NraKitSellListFrame:IsShown(), "then it doesn't open by itself")
+			wow.fire("AUCTION_HOUSE_CLOSED")
+			ns:SetSetting("sellListAutoOpen", true)
+		end)
+
 		t.test("a fresh scan while it's open says prices have changed, until you refresh", function()
 			ns:OpenSellList()
 			t.ok(not ns.sellList.PricesChanged(), "the same as shown")

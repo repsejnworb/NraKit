@@ -41,6 +41,31 @@ return {
 			end
 		end)
 
+		-- Regression: a "→" showed as an empty box. The game font draws plain text, accented
+		-- letters (Latin-1) and "•", little else: no arrows, curly quotes, em dashes or "…".
+		t.test("entries only use characters the game font has", function()
+			local function Check(text, where)
+				local rest = text:gsub("[\32-\126]", ""):gsub("\194[\160-\191]", ""):gsub("\195[\128-\191]", "")
+					:gsub("\226\128\162", "")
+				t.ok(rest == "", "a character the game can't draw in " .. where .. ": " .. text)
+			end
+			for _, release in ipairs(ns.changelog) do
+				for _, entry in ipairs(release.entries) do
+					local where = release.version
+					Check(entry[2], where)
+					if entry.title then
+						Check(entry.title, where)
+					end
+					if entry.tip then
+						Check(entry.tip, where)
+					end
+					for _, point in ipairs(entry.points or {}) do
+						Check(point, where)
+					end
+				end
+			end
+		end)
+
 		t.test("every feature is announced as new somewhere", function()
 			local announced = {}
 			for _, entry in ipairs(whatsNew.Entries()) do

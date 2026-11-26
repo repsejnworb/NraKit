@@ -21,6 +21,7 @@ local WIDTH, HEIGHT = UI.WINDOW_WIDTH, UI.WINDOW_HEIGHT
 local PAD = UI.PAD
 local ROW_HEIGHT = 38
 local GROUP_HEIGHT = 28
+local TOOLBAR_HEIGHT = 30
 local TOP_HEIGHT = 30
 local FOOTER_HEIGHT = 36
 
@@ -38,7 +39,7 @@ local GROUPS = {
 	{ key = "kept", label = "Kept", note = "you keep these off the list: right-click one to list it again" },
 }
 
-local frame, scroll, footerText, footerNote, refreshButton
+local frame, scroll, footerText, footerNote, refreshButton, autoOpenCheck
 local sortTitles = {}
 local shownItems = {} -- the items on screen, to notice when their auction prices change
 local pricesChanged = false
@@ -299,6 +300,7 @@ function Render()
 	end
 	pool:ReleaseAll()
 	UpdateSortTitles()
+	autoOpenCheck:SetChecked(ns:GetOption("sellListAutoOpen"))
 	local content = scroll.content
 	local width = content:GetWidth() - 2 * PAD
 	local groups = sell.Collect()
@@ -389,9 +391,25 @@ local function CreateWindow()
 	frame = UI.CreateWindow("NraKitSellListFrame", "Sell list", WIDTH, HEIGHT, 0, "sell")
 	local body = frame.body
 
+	-- Toolbar: open the list by itself at the auction house (the same as the option).
+	local toolbar = CreateFrame("Frame", nil, body)
+	toolbar:SetPoint("TOPLEFT")
+	toolbar:SetPoint("TOPRIGHT")
+	toolbar:SetHeight(TOOLBAR_HEIGHT)
+	UI.AddLine(toolbar, "BOTTOM")
+	autoOpenCheck = CreateFrame("CheckButton", nil, toolbar, "UICheckButtonTemplate")
+	autoOpenCheck:SetSize(22, 22)
+	autoOpenCheck:SetPoint("LEFT", PAD, 0)
+	autoOpenCheck.Text:SetFontObject("GameFontHighlightSmall")
+	autoOpenCheck.Text:SetText("Open this list by itself at the auction house")
+	autoOpenCheck:SetHitRectInsets(0, -260, 0, 0)
+	autoOpenCheck:SetScript("OnClick", function(self)
+		ns:SetSetting("sellListAutoOpen", self:GetChecked() and true or false)
+	end)
+
 	local top = CreateFrame("Frame", nil, body)
-	top:SetPoint("TOPLEFT")
-	top:SetPoint("TOPRIGHT", -13, 0)
+	top:SetPoint("TOPLEFT", 0, -TOOLBAR_HEIGHT - 1)
+	top:SetPoint("TOPRIGHT", -13, -TOOLBAR_HEIGHT - 1)
 	top:SetHeight(TOP_HEIGHT)
 	UI.AddLine(top, "BOTTOM")
 	local itemTitle = SortTitle(top, "Item", "name", 0, 60, "LEFT")
@@ -406,7 +424,7 @@ local function CreateWindow()
 	valueTitle:SetPoint("LEFT", itemTitle.text, "RIGHT", 16, 0)
 
 	scroll = UI.CreateScrollArea(body)
-	scroll:SetPoint("TOPLEFT", 0, -TOP_HEIGHT - 1)
+	scroll:SetPoint("TOPLEFT", 0, -TOOLBAR_HEIGHT - TOP_HEIGHT - 2)
 	scroll:SetPoint("BOTTOMRIGHT", -13, FOOTER_HEIGHT + 1)
 	scroll.content:SetWidth(WIDTH - 15)
 
