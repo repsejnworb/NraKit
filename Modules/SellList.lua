@@ -10,6 +10,7 @@ local _, ns = ...
 -- prices only. Groups, by where each item sells best:
 --   To Sell: Auction House   tradeable items the auction house pays more for
 --   To Sell: Vendor          the rest, soulbound ones too (folded at the auction house)
+--   For Your Farm Goals      items you're still farming for a goal, until it's done, folded
 --   Kept                     items you marked "Keep, don't list" (potions, food...), folded
 -- Your bank and mail can be listed too (switches at the top): mixed in, marked, not clickable.
 -- It can also open at merchants (an option), docked beside them, vendor group first.
@@ -45,6 +46,13 @@ local module = {
 			name = "Show your bags",
 			description = "List what's in your bags (the Bags switch at the top of the list). At the bank or mailbox they're hidden, to see what to take out; click Bags there to show them for that visit.",
 			default = true,
+		},
+		{
+			key = "sellListGoalItems",
+			name = "Keep Farm Goal items apart",
+			description = "Items you're still farming for a Farm Goal (40 Mithril Ore...) go in their own folded group, not To Sell, until the goal is done, so you don't sell what you're collecting.",
+			default = true,
+			requires = "farmGoals",
 		},
 		{
 			key = "sellListBank",
@@ -445,7 +453,9 @@ end
 -- gets groupEach: the price of one where its group sells it.
 function sell.Collect()
 	local min = (ns:GetValue("sellListMinValue") or 5) * 100
-	local groups = { ah = {}, vendor = {}, kept = {}, ahTotal = 0, vendorTotal = 0, elsewhereTotal = 0, loading = false }
+	local groups = { ah = {}, vendor = {}, goals = {}, kept = {}, ahTotal = 0, vendorTotal = 0, elsewhereTotal = 0,
+		loading = false }
+	local goalItems = sell.GoalItems()
 	local function Add(item)
 		if not Price(item) then
 			groups.loading = true
@@ -460,7 +470,9 @@ function sell.Collect()
 			item.value, item.best = item.vendorTotal, "vendor"
 		end
 		item.groupEach = item.best == "ah" and item.each or item.vendorEach
-		if sell.IsKept(item.id) then
+		if goalItems[item.id] then
+			table.insert(groups.goals, item)
+		elseif sell.IsKept(item.id) then
 			table.insert(groups.kept, item)
 		elseif item.value <= 0 or item.value < min then
 			return
@@ -487,10 +499,24 @@ function sell.Collect()
 			end
 		end
 	end
-	for _, list in ipairs({ groups.ah, groups.vendor, groups.kept }) do
+	for _, list in ipairs({ groups.ah, groups.vendor, groups.goals, groups.kept }) do
 		SortItems(list)
 	end
 	return groups
+end
+
+-- Items of your unfinished Farm Goals ({ [itemID] = true }), kept apart (an option).
+function sell.GoalItems()
+	local items = {}
+	if not (ns:GetOption("sellListGoalItems") and ns:IsModuleEnabled("farmGoals") and ns.goals and ns.goals.GetData) then
+		return items
+	end
+	for _, goal in ipairs(ns.goals.GetData().goals or {}) do
+		if goal.type == "item" and goal.itemID and not goal.completed then
+			items[goal.itemID] = true
+		end
+	end
+	return items
 end
 
 -- Where you are: "ah", "merchant" or "away". Groups fold by it.
@@ -511,7 +537,7 @@ function sell.IsOpen(group)
 	if saved and saved[group] ~= nil then
 		return saved[group]
 	end
-	if group == "kept" then
+	if group == "kept" or group == "goals" then
 		return false
 	end
 	return not (context == "ah" and group == "vendor" or context == "merchant" and group == "ah")

@@ -167,6 +167,7 @@ With a **fishing pole in your main hand**, **double right-click** the world to c
 - **Bank** and **Mail** switches list what's in your bank and mailbox too, mixed in by value but **marked** (a badge and a tint of their own), counted apart in the footer.
 - A **Bags** switch too. At the bank or mailbox the list shows **just what's there**; the switches there are for that visit.
 - **At the bank or mailbox** (a **NraKit Sell List** button there opens it beside them), **click one to take it** into your bags; with more than one stack it asks how many (**Take All** takes what fits).
+- Items you're still farming for a **Farm Goal** stay apart until the goal is done.
 - Leaves out junk below a **minimum**, sorts by **any column**.
 
 ![sellListAH](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/sellListAH.png)
@@ -247,7 +248,7 @@ A **progress bar in the middle of the screen** while you rest at a Welcoming Cam
 ![welcomingCampfire](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/welcomingCampfire.png)
 
 ### Farm Goals
-Just want to farm something? Set a goal and a small **movable tracker** shows the progress, how much you've gained, your **rate per hour** and **time left**.
+Just want to farm something? Set a goal and a small **movable tracker** shows the progress, how much you've gained, your **rate per hour** and **time left**. Item goals also show what they're **worth** and your **gold per hour** (auction house prices with Auctionator, else vendor).
 
 **Goals like:** **loot 4000 Silk Cloth**, **reach level 40**, **gain 50,000 XP**, **earn 100 gold**, **reach Revered with a faction**, **get Swords to 300** (or to whatever your cap is) or **collect a currency**.
 

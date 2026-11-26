@@ -11,6 +11,8 @@ local _, ns = ...
 -- A movable tracker shows each goal's progress, rate per hour and time left (based on
 -- the time the goal has been running while you're online). Milestones (25/50/75%) chime,
 -- and finishing one plays a fanfare and shows a message in the middle of the screen.
+-- Item goals also show what they're worth (an option): at the auction house with Auctionator
+-- (the same prices as the Sell List), else at a vendor, and gold per hour.
 -- The Goals window (FarmGoalsWindow.lua) adds goals and shows the history.
 --
 -- Saved per character in NraKitDB.farmGoalsData["Name-Realm"] (not "farmGoals": that's the
@@ -96,6 +98,12 @@ local module = {
 			name = "Count crafted items",
 			description = "Items you make (\"You create: ...\") count towards item goals, not just looted ones.",
 			default = false,
+		},
+		{
+			key = "farmGoalsValue",
+			name = "Show what item goals are worth",
+			description = "Item goals show what you've farmed is worth and gold per hour (\"18/h · ~38g/h\"), and the finished message what the goal is worth: at the auction house (with Auctionator), else at a vendor. The tooltip has the price of one and how old it is.",
+			default = true,
 		},
 		{
 			key = "farmGoalsAutoClear",
@@ -279,6 +287,35 @@ local function FormatGold(copper)
 		return rest > 0 and string.format("%ds %dc", silver, rest) or silver .. "s"
 	end
 	return rest .. "c"
+end
+
+-- "~68g", "~4s": a rough worth.
+local function RoughMoney(copper)
+	local gold = math.floor(copper / 10000 + 0.5)
+	if gold >= 1 then
+		return "~" .. FormatNumber(gold) .. "g"
+	end
+	return "~" .. math.max(math.floor(copper / 100 + 0.5), 1) .. "s"
+end
+
+-- What one of an item goal's items is worth: the auction house price (Auctionator, as the Sell
+-- List reads it), else the vendor's; and where ("ah" / "vendor"), and the price's age in days.
+-- nil with the option off, or nothing known.
+local function ItemWorth(goal)
+	if goal.type ~= "item" or not goal.itemID or not ns:GetOption("farmGoalsValue") then
+		return nil
+	end
+	local auction, age
+	if ns.sellList and ns.sellList.AuctionPrice then
+		auction, age = ns.sellList.AuctionPrice(goal.itemID)
+	end
+	if auction and auction > 0 then
+		return auction, "ah", age
+	end
+	local vendor = select(11, C_Item.GetItemInfo(goal.itemID))
+	if vendor and vendor > 0 then
+		return vendor, "vendor"
+	end
 end
 
 -- "100" (gold), "100g", "50s", "1g 50s", "1g50s20c", "75c", "1,234g" -> copper, or nil.
@@ -521,6 +558,10 @@ local function DescribeRate(goal)
 	if active >= 60 and gained > 0 then
 		local perHour = gained / active * 3600
 		table.insert(parts, format(perHour) .. "/h")
+		local each = ItemWorth(goal)
+		if each then
+			table.insert(parts, RoughMoney(perHour * each) .. "/h")
+		end
 		local _, _, remaining = GetProgress(goal)
 		if remaining > 0 then
 			table.insert(parts, "~" .. FormatDuration(remaining / perHour * 3600) .. " left")
@@ -544,6 +585,13 @@ local function ShowToast(goal, detail, count)
 	local name, icon = Describe(goal)
 	if goal.type == "item" then
 		name = FormatNumber(goal.target) .. " " .. name
+	end
+	if not detail then
+		detail = "in " .. FormatDuration(goal.active or 0)
+		local each = ItemWorth(goal)
+		if each then
+			detail = detail .. "  ·  worth " .. RoughMoney(each * goal.target)
+		end
 	end
 	ns.toast.Show({
 		style = "big",
@@ -1000,6 +1048,16 @@ local function ShowGoalTooltip(widget)
 		GameTooltip:AddDoubleLine("Started from", TYPES[goal.type].format(goal.start), 1, 0.82, 0, 1, 1, 1)
 	end
 	GameTooltip:AddDoubleLine("Running for", FormatDuration(goal.active or 0), 1, 0.82, 0, 1, 1, 1)
+	local each, where, age = ItemWorth(goal)
+	if each then
+		local have = (goal.start or 0) + (goal.gained or 0)
+		GameTooltip:AddDoubleLine("Worth", string.format("%s now  ·  %s at %s", RoughMoney(each * have),
+			RoughMoney(each * goal.target), FormatNumber(goal.target)), 1, 0.82, 0, 1, 1, 1)
+		local stale = age and age > 3
+		GameTooltip:AddDoubleLine(where == "ah" and "Auction house, each" or "Vendor, each",
+			FormatGold(each) .. (stale and string.format("  (price %d days old)", age) or ""),
+			1, 0.82, 0, stale and 1 or 1, stale and 0.6 or 1, stale and 0.2 or 1)
+	end
 	if goal.completed then
 		GameTooltip:AddLine("Click to clear it (it goes to the history). Right-click to go again.", 0.3, 0.85, 0.3, true)
 	else
@@ -1213,6 +1271,10 @@ function LAYOUT.full(goals, top)
 		row:SetPoint("TOPRIGHT", 0, -top - (index - 1) * ROW_HEIGHT)
 		local name, icon = Describe(goal)
 		local _, value = GetProgress(goal)
+		local each = ItemWorth(goal)
+		if each then
+			value = value .. "  |cffffd100" .. RoughMoney(each * ((goal.start or 0) + (goal.gained or 0))) .. "|r"
+		end
 		row.icon:SetTexture(icon)
 		row.name:SetText(name)
 		row.value:SetText(value)

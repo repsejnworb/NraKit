@@ -311,6 +311,7 @@ item. A tab in the NraKit window (`/nra sell`).
   list beside it, with that place always listed. **Click one to take it** into your bags. With more than one stack it asks
   how many (starting at what fits in your bags; **Take All**), Shift-click takes all that fits.
   From the bank it can take part of a stack; a mail's attachments come one at a time.
+- Items you're still farming for a **Farm Goal** stay in their own folded group until the goal is done.
 - Leaves out items worth less than a **minimum** (5 silver) and sorts by **any column**. The footer
   says what it's all worth.
 - Without Auctionator it still works, on vendor prices.
@@ -476,7 +477,8 @@ left. It turns green (with a sound) when Camp Benefits is ready.
 #### Farm Goals
 
 Set goals and track them in a small movable window: progress bar, amount gained, **rate per hour** and
-**time left**.
+**time left**. Item goals also show what they're **worth** and your **gold per hour** ("18/h · ~38g/h"),
+at the auction house with Auctionator, else at a vendor.
 
 **Goals you can set:** "loot 4000 Silk Cloth", "reach level 40", "gain 50,000 XP", "earn 100 gold",
 "reach Revered with Timbermaw Hold", "Swords to 300 (or to its cap)", or a currency amount (reach a

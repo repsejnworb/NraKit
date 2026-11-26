@@ -36,10 +36,11 @@ local CHECK_SECONDS = 2 -- how often the shown prices are compared with Auctiona
 local GROUPS = {
 	ah = { key = "ah", label = "To Sell: Auction House" },
 	vendor = { key = "vendor", label = "To Sell: Vendor" },
+	goals = { key = "goals", label = "For Your Farm Goals", note = "still farming these: they move to To Sell when the goal is done" },
 	kept = { key = "kept", label = "Kept", note = "you keep these off the list: right-click one to list it again" },
 }
-local ORDER = { "ah", "vendor", "kept" }
-local MERCHANT_ORDER = { "vendor", "ah", "kept" }
+local ORDER = { "ah", "vendor", "goals", "kept" }
+local MERCHANT_ORDER = { "vendor", "ah", "goals", "kept" }
 
 -- Bank and mail items (the Bank and Mail switches): a badge on the icon and a row tint of
 -- their own (the bank warm, like a vault; mail cool blue). At the bank or mailbox: click to take.

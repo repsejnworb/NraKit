@@ -22,6 +22,10 @@ local _, ns = ...
 -- notes) and /commands are coloured. Write short: no brackets-and-semicolon chains.
 
 ns.changelog = {
+	{ version = "Unreleased", entries = {
+		{ "improved", title = "Farm Goals", "Item goals show what they're worth at the auction house (Auctionator, else a vendor) and **gold per hour**: \"18/h · ~38g/h\". The finished message says what the goal is worth." },
+		{ "improved", title = "Sell List", "Items you're still farming for a Farm Goal stay in their own folded group until the goal is done, so you don't sell what you're collecting." },
+	} },
 	{ version = "0.34.0", date = "2026-11-26", entries = {
 		{ "improved", title = "Sell List", "**Automatically Open At** is per character: your bank alt can open it at the bank and mailbox, your main just at the auction house." },
 	} },
