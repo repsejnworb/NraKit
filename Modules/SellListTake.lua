@@ -8,6 +8,8 @@ local _, ns = ...
 --   Bank   the same as by hand: pick up from the bank slot, put it in a free bag slot that can
 --          hold it (C_Container.PickupContainerItem, SplitContainerItem for part of a stack).
 --          Nothing protected: "using" the item (Blizzard's right-click) would be, for potions.
+--          All of it right in your click: done later (from a timer) the game picks the item up
+--          but quietly won't put it down (seen in game). Whole stacks first, then one split.
 --   Mail   TakeInboxItem, one attachment at a time (an attachment is a stack: it can't be
 --          split), waiting for each to arrive; mail numbers shift as mails empty, so the
 --          inbox is read again before each. C.O.D. mail is never listed (SellList.lua).
@@ -17,7 +19,6 @@ local _, ns = ...
 local UI = ns.UI
 local sell = ns.sellList
 
-local STEP_SECONDS = 0.2 -- between bank moves
 local MAIL_WAIT_SECONDS = 0.5 -- at least this between mail takes, and until the inbox updates
 
 local job -- { item, where, want (items or attachments), done, maxStack, targets = { "bag:slot" = true } }
@@ -93,41 +94,42 @@ local function Plural(count, one, many)
 	return count .. " " .. (count == 1 and one or many)
 end
 
--- The bank: moves the next part (a whole slot, or a split) into a free bag slot.
-local function BankStep()
-	local remaining = job.want - job.done
-	if remaining <= 0 then
-		return Finish("Took " .. Plural(job.done, "item", "items") .. " from your bank.")
-	end
+-- The bank: moves `want` items into free bag slots, now (in your click): whole stacks into
+-- free slots, then the rest split off one stack. Returns the line to show.
+local function TakeFromBank(item, want)
 	if GetCursorInfo() then
-		return Finish("Stopped: you have something on your cursor.")
+		return "Stopped: you have something on your cursor."
 	end
-	-- The source: a slot that still holds the item (it may have moved meanwhile).
-	local source
-	for _, place in ipairs(job.item.slots) do
-		local info = C_Container.GetContainerItemInfo(place.bag, place.slot)
-		if info and info.itemID == job.item.id and not info.isLocked and (info.stackCount or 0) > 0 then
-			source = { bag = place.bag, slot = place.slot, count = info.stackCount }
+	local maxStack, done, targets = MaxStack(item), 0, {}
+	local split = false
+	for _, place in ipairs(item.slots) do
+		local remaining = want - done
+		if remaining <= 0 then
 			break
 		end
+		local info = C_Container.GetContainerItemInfo(place.bag, place.slot)
+		if info and info.itemID == item.id and not info.isLocked and (info.stackCount or 0) > 0 then
+			local amount = math.min(remaining, info.stackCount, maxStack)
+			-- Part of a stack: only once (the stack is locked until the server has split it).
+			if amount < info.stackCount and split then
+				break
+			end
+			local bag, slot = FreeBagSlot(item.id, targets)
+			if not bag then
+				return string.format("Bags full: took %d of %d.", done, want)
+			end
+			if amount < info.stackCount then
+				C_Container.SplitContainerItem(place.bag, place.slot, amount)
+				split = true
+			else
+				C_Container.PickupContainerItem(place.bag, place.slot)
+			end
+			C_Container.PickupContainerItem(bag, slot)
+			targets[bag .. ":" .. slot] = true
+			done = done + amount
+		end
 	end
-	if not source then
-		return Finish("Took " .. Plural(job.done, "item", "items") .. " from your bank.")
-	end
-	local bag, slot = FreeBagSlot(job.item.id, job.targets)
-	if not bag then
-		return Finish(string.format("Bags full: took %d of %d.", job.done, job.want))
-	end
-	local amount = math.min(remaining, source.count, job.maxStack)
-	if amount < source.count then
-		C_Container.SplitContainerItem(source.bag, source.slot, amount)
-	else
-		C_Container.PickupContainerItem(source.bag, source.slot)
-	end
-	C_Container.PickupContainerItem(bag, slot)
-	job.targets[bag .. ":" .. slot] = true
-	job.done = job.done + amount
-	SetStatus(string.format("Taking %d of %d...", job.done, job.want))
+	return "Took " .. Plural(done, "item", "items") .. " from your bank."
 end
 
 -- The mail: takes the next attachment of the item, then waits for it to arrive.
@@ -161,22 +163,12 @@ runner:SetScript("OnUpdate", function(_, elapsed)
 		runner:Hide()
 		return
 	end
-	if job.where == "bank" then
-		if not sell.IsPlaceOpen("bank") then
-			return Finish("Stopped: the bank closed.")
-		end
-		if sinceStep >= STEP_SECONDS then
-			sinceStep = 0
-			BankStep()
-		end
-	else
-		if not sell.IsPlaceOpen("mail") then
-			return Finish("Stopped: the mailbox closed.")
-		end
-		if sinceStep >= MAIL_WAIT_SECONDS and not job.waiting then
-			sinceStep = 0
-			MailStep()
-		end
+	if not sell.IsPlaceOpen("mail") then
+		return Finish("Stopped: the mailbox closed.")
+	end
+	if sinceStep >= MAIL_WAIT_SECONDS and not job.waiting then
+		sinceStep = 0
+		MailStep()
 	end
 end)
 runner:SetScript("OnEvent", function()
@@ -188,19 +180,21 @@ end)
 runner:RegisterEvent("MAIL_INBOX_UPDATE")
 runner:RegisterEvent("BAG_UPDATE_DELAYED")
 
--- Takes `stacks` stacks of the item (nil: all of it) from where it is, as much as fits.
-function sell.Take(item, stacks)
+-- Takes from where the item is, as much as fits: `stacks` stacks (nil: all of it), or with
+-- `items`, that many items (the bank only: mail comes a whole attachment at a time).
+-- Call it from a click: the bank's moves happen right then.
+function sell.Take(item, stacks, items)
 	if job or not (item.where and sell.IsPlaceOpen(item.where)) or InCombatLockdown() then
 		return false
 	end
 	local maxStack = MaxStack(item)
-	local want
-	if item.where == "mail" then
-		want = math.min(stacks or math.huge, #item.attachments)
-	else
-		want = math.min((stacks or math.huge) * maxStack, item.count)
+	if item.where == "bank" then
+		local want = items or (stacks or math.huge) * maxStack
+		SetStatus(TakeFromBank(item, math.min(want, item.count)))
+		return true
 	end
-	job = { item = item, where = item.where, want = want, done = 0, maxStack = maxStack, targets = {} }
+	local want = math.min(stacks or math.huge, #item.attachments)
+	job = { item = item, where = item.where, want = want, done = 0, maxStack = maxStack }
 	sinceStep = math.huge
 	SetStatus(string.format("Taking 0 of %d...", want))
 	runner:Show()
@@ -215,90 +209,152 @@ end
 -- How many? A small panel by the row
 ---------------------------------------------------------------------------
 
+-- The panel stands out from the list: darker, an orange line on top, a shadow around it.
+local PROMPT_BG = { 0.04, 0.04, 0.05, 0.98 }
+local PROMPT_WIDTH, PROMPT_HEIGHT = 360, 150
+
 local prompt
 
-local function UpdatePrompt()
-	local item, stacks, total = prompt.item, prompt.stacks, prompt.total
-	prompt.amount:SetText(tostring(stacks))
-	local items
+-- How much the panel's amount is in stacks, and in items (bank stacks are full ones; mail's are
+-- attachments).
+local function Amounts()
+	local item, amount = prompt.item, prompt.amount
+	if prompt.unit == "items" then
+		return math.ceil(amount / prompt.maxStack), amount
+	end
 	if item.where == "mail" then
-		items = 0
-		for index = 1, stacks do
+		local items = 0
+		for index = 1, amount do
 			items = items + item.attachments[index].count
 		end
-	else
-		items = math.min(stacks * MaxStack(item), item.count)
+		return amount, items
 	end
-	prompt.items:SetText(string.format("%s  (%d %s)", stacks == 1 and "stack" or "stacks", items, items == 1 and "item" or "items"))
-	local fits = math.min(prompt.room, total)
-	prompt.roomText:SetText(string.format("Room in your bags: %s", Plural(prompt.room, "stack", "stacks")))
-	prompt.roomText:SetTextColor(unpack(prompt.room < total and UI.ACCENT or UI.TEXT_DIM))
-	prompt.all.text:SetText(fits < total and string.format("Take %d (All That Fit)", fits) or "Take All")
-	prompt.all:SetWidth(prompt.all.text:GetStringWidth() + 20)
-	prompt.all:SetEnabled(fits > 0)
-	prompt.take:SetEnabled(stacks > 0 and stacks <= fits)
+	return amount, math.min(amount * prompt.maxStack, item.count)
 end
 
-local function SetStacks(stacks)
-	prompt.stacks = math.max(1, math.min(stacks, prompt.total))
+local function UpdatePrompt()
+	local item = prompt.item
+	local stacks, items = Amounts()
+	prompt.amountText:SetText(tostring(prompt.amount))
+	prompt.unitButton.text:SetText(prompt.unit == "items" and "Items" or "Stacks")
+	prompt.unitButton:SetShown(item.where == "bank") -- mail can't be split: stacks only
+	if prompt.unit == "items" then
+		prompt.detail:SetText(string.format("(%s)", Plural(stacks, "stack", "stacks")))
+	else
+		prompt.detail:SetText(string.format("(%s)", Plural(items, "item", "items")))
+	end
+	local fits = math.min(prompt.room, prompt.total)
+	prompt.roomText:SetText("Room in your bags: " .. Plural(prompt.room, "stack", "stacks"))
+	prompt.roomText:SetTextColor(unpack(prompt.room < prompt.total and UI.ACCENT or UI.TEXT_DIM))
+	prompt.all.text:SetText(fits < prompt.total and string.format("Take %d (All That Fit)", fits) or "Take All")
+	prompt.all:SetWidth(prompt.all.text:GetStringWidth() + 20)
+	prompt.all:SetEnabled(fits > 0)
+	prompt.take:SetEnabled(prompt.amount > 0 and stacks <= prompt.room)
+end
+
+-- The amount, kept between 1 and the most there is (in the unit shown).
+local function SetAmount(amount)
+	local most = prompt.unit == "items" and prompt.item.count or prompt.total
+	prompt.amount = math.max(1, math.min(amount, most))
 	UpdatePrompt()
+end
+
+-- Switches between stacks and items, keeping about the same amount.
+local function ToggleUnit()
+	local stacks, items = Amounts()
+	if prompt.unit == "items" then
+		prompt.unit = "stacks"
+		prompt.amount = stacks
+	else
+		prompt.unit = "items"
+		prompt.amount = items
+	end
+	SetAmount(prompt.amount)
+end
+
+local function TakeChosen()
+	if prompt.unit == "items" then
+		sell.Take(prompt.item, nil, prompt.amount)
+	else
+		sell.Take(prompt.item, prompt.amount)
+	end
+	prompt:Hide()
 end
 
 local function CreatePrompt()
 	prompt = CreateFrame("Frame", "NraKitSellTakePrompt", UIParent)
-	prompt:SetSize(300, 118)
+	prompt:SetSize(PROMPT_WIDTH, PROMPT_HEIGHT)
 	-- Above the list (both would be DIALOG, and the list comes to the front when clicked).
 	prompt:SetFrameStrata("FULLSCREEN_DIALOG")
 	prompt:SetToplevel(true)
 	prompt:EnableMouse(true)
 	prompt:EnableKeyboard(true)
+	local shadow = prompt:CreateTexture(nil, "BACKGROUND", nil, -1)
+	shadow:SetPoint("TOPLEFT", -6, 6)
+	shadow:SetPoint("BOTTOMRIGHT", 6, -6)
+	shadow:SetColorTexture(0, 0, 0, 0.55)
 	local bg = prompt:CreateTexture(nil, "BACKGROUND")
 	bg:SetAllPoints()
-	bg:SetColorTexture(unpack(UI.BG))
+	bg:SetColorTexture(unpack(PROMPT_BG))
 	UI.AddBorder(prompt)
+	local accent = prompt:CreateTexture(nil, "ARTWORK")
+	accent:SetPoint("TOPLEFT")
+	accent:SetPoint("TOPRIGHT")
+	accent:SetHeight(2)
+	accent:SetColorTexture(unpack(UI.ACCENT))
 
 	prompt.title = prompt:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-	prompt.title:SetPoint("TOPLEFT", 12, -10)
-	prompt.title:SetPoint("RIGHT", -12, 0)
+	prompt.title:SetPoint("TOPLEFT", 14, -14)
+	prompt.title:SetPoint("RIGHT", -14, 0)
 	prompt.title:SetJustifyH("LEFT")
 	prompt.title:SetWordWrap(false)
+	prompt.where = prompt:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	prompt.where:SetPoint("TOPLEFT", prompt.title, "BOTTOMLEFT", 0, -3)
+	prompt.where:SetTextColor(unpack(UI.TEXT_DIM))
 
 	local label = prompt:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-	label:SetPoint("TOPLEFT", 12, -36)
+	label:SetPoint("TOPLEFT", 14, -58)
 	label:SetText("Take")
-	prompt.minus = UI.CreateFlatButton(prompt, "-", 20)
-	prompt.minus:SetWidth(20)
-	prompt.minus:SetPoint("LEFT", label, "RIGHT", 8, 0)
+	prompt.minus = UI.CreateFlatButton(prompt, "-", 22)
+	prompt.minus:SetWidth(22)
+	prompt.minus:SetPoint("LEFT", label, "RIGHT", 10, 0)
 	prompt.minus:SetScript("OnClick", function()
-		SetStacks(prompt.stacks - 1)
+		SetAmount(prompt.amount - (IsShiftKeyDown() and 10 or 1))
 	end)
-	prompt.amount = prompt:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-	prompt.amount:SetPoint("LEFT", prompt.minus, "RIGHT", 6, 0)
-	prompt.amount:SetWidth(24)
-	prompt.plus = UI.CreateFlatButton(prompt, "+", 20)
-	prompt.plus:SetWidth(20)
-	prompt.plus:SetPoint("LEFT", prompt.amount, "RIGHT", 6, 0)
+	prompt.amountText = prompt:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
+	prompt.amountText:SetPoint("LEFT", prompt.minus, "RIGHT", 4, 0)
+	prompt.amountText:SetWidth(36)
+	prompt.plus = UI.CreateFlatButton(prompt, "+", 22)
+	prompt.plus:SetWidth(22)
+	prompt.plus:SetPoint("LEFT", prompt.amountText, "RIGHT", 4, 0)
 	prompt.plus:SetScript("OnClick", function()
-		SetStacks(prompt.stacks + 1)
+		SetAmount(prompt.amount + (IsShiftKeyDown() and 10 or 1))
 	end)
-	prompt.items = prompt:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-	prompt.items:SetPoint("LEFT", prompt.plus, "RIGHT", 8, 0)
+	-- Stacks or Items: click to switch.
+	prompt.unitButton = UI.CreateFlatButton(prompt, "Stacks", 22)
+	prompt.unitButton:SetWidth(64)
+	prompt.unitButton:SetPoint("LEFT", prompt.plus, "RIGHT", 8, 0)
+	prompt.unitButton:SetScript("OnClick", ToggleUnit)
+	prompt.unitButton:SetScript("OnEnter", function(self)
+		UI.ShowTooltip(self, "Stacks or items", "Click to count in the other.")
+	end)
+	prompt.unitButton:SetScript("OnLeave", GameTooltip_Hide)
+	prompt.detail = prompt:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	prompt.detail:SetPoint("LEFT", prompt.unitButton, "RIGHT", 8, 0)
+	prompt.detail:SetTextColor(unpack(UI.TEXT_DIM))
 
 	prompt.roomText = prompt:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	prompt.roomText:SetPoint("TOPLEFT", 12, -62)
+	prompt.roomText:SetPoint("TOPLEFT", 14, -86)
 
-	prompt.cancel = UI.CreateFlatButton(prompt, "Cancel", 22)
-	prompt.cancel:SetPoint("BOTTOMRIGHT", -10, 10)
+	prompt.cancel = UI.CreateFlatButton(prompt, "Cancel", 24)
+	prompt.cancel:SetPoint("BOTTOMRIGHT", -12, 12)
 	prompt.cancel:SetScript("OnClick", function()
 		prompt:Hide()
 	end)
-	prompt.take = UI.CreateFlatButton(prompt, "Take", 22)
+	prompt.take = UI.CreateFlatButton(prompt, "Take", 24)
 	prompt.take:SetPoint("RIGHT", prompt.cancel, "LEFT", -6, 0)
-	prompt.take:SetScript("OnClick", function()
-		sell.Take(prompt.item, prompt.stacks)
-		prompt:Hide()
-	end)
-	prompt.all = UI.CreateFlatButton(prompt, "Take All", 22)
+	prompt.take:SetScript("OnClick", TakeChosen)
+	prompt.all = UI.CreateFlatButton(prompt, "Take All", 24)
 	prompt.all:SetPoint("RIGHT", prompt.take, "LEFT", -6, 0)
 	prompt.all:SetScript("OnClick", function()
 		sell.Take(prompt.item, math.min(prompt.room, prompt.total))
@@ -310,7 +366,7 @@ local function CreatePrompt()
 		if key == "ENTER" then
 			self:SetPropagateKeyboardInput(false)
 			if prompt.take:IsEnabled() then
-				prompt.take:Click()
+				TakeChosen()
 			end
 		elseif key == "ESCAPE" then
 			self:SetPropagateKeyboardInput(false)
@@ -321,7 +377,7 @@ local function CreatePrompt()
 	end)
 end
 
--- Asks how many stacks to take (by `row`); with one stack there's nothing to ask.
+-- Asks how much to take (by `row`); with one stack there's nothing to ask.
 function sell.AskTake(item, row)
 	local total = sell.Stacks(item)
 	if total <= 1 then
@@ -331,11 +387,12 @@ function sell.AskTake(item, row)
 	if not prompt then
 		CreatePrompt()
 	end
-	prompt.item, prompt.total = item, total
+	prompt.item, prompt.total, prompt.maxStack = item, total, MaxStack(item)
 	prompt.room = sell.Room(item)
-	local where = item.where == "mail" and "your mail" or "your bank"
-	prompt.title:SetText(string.format("%s  |cff999999%d in %s|r", item.name or ("Item " .. item.id), item.count, where))
-	SetStacks(math.min(prompt.room, total)) -- as much as fits
+	prompt.unit = "stacks"
+	prompt.title:SetText(item.name or ("Item " .. item.id))
+	prompt.where:SetText(string.format("%d in %s", item.count, item.where == "mail" and "your mail" or "your bank"))
+	SetAmount(math.min(prompt.room, total)) -- as much as fits
 	prompt:ClearAllPoints()
 	prompt:SetPoint("TOPRIGHT", row, "BOTTOMRIGHT", 0, -2)
 	prompt:Show()

@@ -392,7 +392,7 @@ return {
 			bars.scripts.OnClick(bars, "LeftButton")
 			local prompt = sell.Prompt()
 			t.ok(prompt and prompt:IsShown(), "three stacks: it asks")
-			t.equal(prompt.stacks, 3, "starting at all that fits (3 free slots)")
+			t.equal(prompt.amount, 3, "starting at all that fits (3 free slots), in stacks")
 			prompt.minus.scripts.OnClick(prompt.minus)
 			prompt.take.scripts.OnClick(prompt.take)
 			for _ = 1, 5 do
@@ -453,6 +453,38 @@ return {
 			wow.fire("MAIL_CLOSED")
 			MailFrame:Hide()
 			CONTAINERS[6] = {}
+		end)
+
+		t.test("the prompt counts in stacks or items; items takes whole stacks, then splits the rest", function()
+			cursor = nil
+			CONTAINERS[1] = {}
+			CONTAINERS[6] = { { itemID = 1009, stackCount = 20 }, { itemID = 1009, stackCount = 20 } }
+			ns:SetSetting("sellListBank", true)
+			BankFrame:Show()
+			wow.fire("BANKFRAME_OPENED")
+			local bars
+			for _, item in ipairs(sell.Collect().ah) do
+				if item.where == "bank" then
+					bars = item
+				end
+			end
+			sell.AskTake(bars, UIParent)
+			local prompt = sell.Prompt()
+			prompt.unitButton.scripts.OnClick(prompt.unitButton)
+			t.equal(prompt.unit, "items", "switched to items")
+			t.equal(prompt.amount, 40, "the same amount: 2 stacks = 40 items")
+			for _ = 1, 15 do
+				prompt.minus.scripts.OnClick(prompt.minus)
+			end
+			t.equal(prompt.amount, 25, "25 items")
+			prompt.take.scripts.OnClick(prompt.take)
+			t.equal(CONTAINERS[1][1].stackCount + CONTAINERS[1][2].stackCount, 25, "a stack of 20 and 5 split off")
+			t.equal(CONTAINERS[6][2].stackCount, 15, "15 left in the bank")
+			t.ok(sell.TakeStatus():find("Took 25", 1, true), "says so")
+			wow.fire("BANKFRAME_CLOSED")
+			BankFrame:Hide()
+			ns:SetSetting("sellListBank", false)
+			CONTAINERS[1] = {}
 		end)
 
 		t.test("bags too full for it all: Take All says how many fit", function()
