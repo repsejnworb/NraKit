@@ -1,8 +1,9 @@
 local _, ns = ...
 
 -- Bag Tithe: a button next to the bag sort button that highlights the bag slots
--- worth the least when sold (vendor price x stack size), so you know what to sell
--- or destroy when your bags are full.
+-- worth the least when sold (price x stack size), so you know what to sell or destroy
+-- when your bags are full. The price is the vendor's, or the auction house's when that's
+-- more (Auctionator, an option; never for soulbound items, which can't be auctioned).
 --
 -- Purely an overlay: we add non-interactive textures/text on top of Blizzard's
 -- item buttons and never change how they behave, so clicking, dragging, using
@@ -13,7 +14,7 @@ local module = {
 	key = "bagTithe",
 	section = "Bags & Items",
 	name = "Bag Tithe",
-	description = "Adds a button next to the bag sort button that highlights your least valuable bag slots (vendor price times stack size), so you know what to sell or destroy when your bags are full. Alt+click an item while it's active to leave it out of the ranking.",
+	description = "Adds a button next to the bag sort button that highlights your least valuable bag slots (price times stack size: the vendor's, or the auction house's with Auctionator), so you know what to sell or destroy when your bags are full. Alt+click an item while it's active to leave it out of the ranking.",
 	default = false,
 	options = {
 		{
@@ -62,7 +63,13 @@ local module = {
 		{
 			key = "bagTitheShowValue",
 			name = "Show sell value",
-			description = "Show what the whole slot sells for (vendor price times stack size).",
+			description = "Show what the whole slot sells for (price times stack size).",
+			default = true,
+		},
+		{
+			key = "bagTitheAuction",
+			name = "Use auction house prices",
+			description = "With Auctionator, a slot is worth what it sells for at the auction house when that's more than a vendor pays, so valuable trade goods aren't ranked as junk. Soulbound items always count at vendor price.",
 			default = true,
 		},
 		{
@@ -158,8 +165,20 @@ local function FormatValue(copper)
 	return string.format("%d%s", copper, COPPER_ICON)
 end
 
+local AuctionPrice
+
 local function SlotKey(bag, slot)
 	return bag * 1000 + slot
+end
+
+-- A bag item's auction price of one (Auctionator, as the Sell List reads it), or nil: with the
+-- option off, without Auctionator, or for a soulbound item (it can't be auctioned).
+function AuctionPrice(info)
+	if info.isBound or not ns:GetOption("bagTitheAuction") or not (ns.sellList and ns.sellList.AuctionPrice) then
+		return nil
+	end
+	local price = ns.sellList.AuctionPrice(info.itemID, info.hyperlink)
+	return price and price > 0 and price or nil
 end
 
 -- Returns slot key -> { rank, value }, and whether some prices are still loading.
@@ -173,16 +192,22 @@ local function RankSlots()
 				and ns:KnownRecipeIsJunk(bag, slot, info.itemID) then
 				-- Known Recipes (Known Recipes module option) rank first, whatever they sell for.
 				table.insert(candidates, { key = SlotKey(bag, slot), value = 0, known = true })
-			elseif info and not info.hasNoValue and not tithe:IsIgnored(info.itemID) then
+			elseif info and not tithe:IsIgnored(info.itemID) then
 				local sellPrice = select(11, C_Item.GetItemInfo(info.hyperlink or info.itemID))
 				if sellPrice == nil then
 					pending = true
 					C_Item.RequestLoadItemDataByID(info.itemID)
-				elseif sellPrice > 0 then
-					table.insert(candidates, {
-						key = SlotKey(bag, slot),
-						value = sellPrice * math.max(info.stackCount or 1, 1),
-					})
+				else
+					local count = math.max(info.stackCount or 1, 1)
+					local value = info.hasNoValue and 0 or sellPrice * count
+					-- The auction house's price when it's more (not for soulbound items).
+					local auction = AuctionPrice(info)
+					if auction and auction * count > value then
+						value = auction * count
+					end
+					if value > 0 then
+						table.insert(candidates, { key = SlotKey(bag, slot), value = value })
+					end
 				end
 			end
 		end
@@ -201,6 +226,7 @@ local function RankSlots()
 	end
 	return ranked, pending
 end
+tithe.RankSlots = RankSlots -- (for tests)
 
 ---------------------------------------------------------------------------
 -- Overlays

@@ -155,7 +155,8 @@ Fleet, ...").
   waypoint.
 - **Shift+click** to link it.
 - Entering a zone where you have quests to turn in shows a **small message** (click it to open the
-  list; a chat line is optional), and can open the window (off by default).
+  list; a chat line is optional), and can open the window (off by default). The message lists them
+  one per line (click one to open the list), together with your **to-dos** there (Reminders & To-Dos).
 
 <img width="293" height="409" alt="questsDoneList" src=".github/screenshots/questsDoneList.png" />
 <img width="301" height="101" alt="questTurninReminderToast" src=".github/screenshots/questTurninReminderToast.png" />
@@ -165,10 +166,9 @@ Fleet, ...").
 #### Bag Tithe
 
 A button next to the bag sort button (separate or combined bags) **highlights your least valuable bag
-slots** (vendor price × stack size).
+slots** (price × stack size: the vendor's, or with Auctionator the auction house's when that's more,
+so valuable trade goods aren't ranked as junk; soulbound items stay at vendor price).
 
-  The message lists them one per line (click one to open the list), together with your **to-dos**
-  there (Reminders & To-Dos).
 - Ranked from red to yellow, with rank numbers and sell values.
 - Everything else is dimmed; the bags work as normal underneath.
 - **Alt+click** an item to leave it out of the ranking; the ignore list is editable in the options.

@@ -32,6 +32,7 @@ ns.changelog = {
 				"With prices: what a craft **costs**, what it **sells for** and the **profit**; sort by profit to see what's worth crafting.",
 				"Right-click a recipe for the shopping-list menu; hover for its tooltip with what you have.",
 			} },
+		{ "improved", title = "Bag Tithe", "With Auctionator, a slot is worth its **auction house** price when that's more than a vendor pays, so valuable trade goods aren't ranked as junk (soulbound items stay at vendor price)." },
 		{ "improved", title = "Sell List", "Items you're still farming for a Farm Goal stay in their own folded group until the goal is done, so you don't sell what you're collecting." },
 	} },
 	{ version = "0.34.0", date = "2026-11-26", entries = {

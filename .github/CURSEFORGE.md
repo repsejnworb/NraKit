@@ -89,7 +89,7 @@ Running around with finished quests you forgot about? **/nra done** (or a key un
 
 ### Bag Tithe
 Find out what to throw away when your bags are full.
-- A button next to the bag sort button **highlights your least valuable slots** (sell price × stack size), ranked from red to yellow, with rank numbers and sell values.
+- A button next to the bag sort button **highlights your least valuable slots** (price × stack size: the vendor's, or with **Auctionator** the auction house's when that's more), ranked from red to yellow, with rank numbers and sell values.
 - Everything else is dimmed; your bags work as normal underneath.
 - **Alt+click** an item to leave it out of the ranking. The ignore list can be edited in the options.
 
