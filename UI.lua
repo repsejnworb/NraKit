@@ -168,14 +168,31 @@ function UI.RefreshTabs()
 	end
 end
 
+-- Docked: NraKit's windows open beside another frame (the auction house) instead of where
+-- they usually are, whichever tab; dragging one while docked moves them for that visit only.
+local dock -- { anchor, position = { point, relativePoint, x, y } after a drag }
+
 local function SavePosition(frame)
 	local point, _, relativePoint, x, y = frame:GetPoint()
+	if dock then
+		dock.position = point and { point, relativePoint, x, y }
+		return
+	end
 	if point then
 		NraKitDB.windowPosition = { point, relativePoint, x, y }
 	end
 end
 
 local function ApplyPosition(frame)
+	if dock then
+		frame:ClearAllPoints()
+		if dock.position then
+			frame:SetPoint(dock.position[1], UIParent, dock.position[2], dock.position[3], dock.position[4])
+		else
+			frame:SetPoint("TOPLEFT", dock.anchor, "TOPRIGHT", 4, 0)
+		end
+		return
+	end
 	local position = NraKitDB.windowPosition
 	if position then
 		frame:ClearAllPoints()
@@ -183,14 +200,32 @@ local function ApplyPosition(frame)
 	end
 end
 
--- Puts a tab window back where NraKit's windows are (e.g. after it was shown beside the
--- auction house).
-function UI.RestorePosition(frame)
-	if NraKitDB.windowPosition then
-		ApplyPosition(frame)
-	else
-		frame:ClearAllPoints()
-		frame:SetPoint("CENTER")
+-- Docks NraKit's windows beside `anchor` (see dock above).
+function UI.Dock(anchor)
+	dock = { anchor = anchor }
+end
+
+function UI.IsDocked()
+	return dock ~= nil
+end
+
+-- Undocks: the open window closes (it went with what it was docked to), and the next one
+-- opens where NraKit's windows usually are.
+function UI.Undock()
+	if not dock then
+		return
+	end
+	dock = nil
+	for _, frame in pairs(tabWindows) do
+		if frame:IsShown() then
+			frame:Hide()
+		end
+		if NraKitDB.windowPosition then
+			ApplyPosition(frame)
+		else
+			frame:ClearAllPoints()
+			frame:SetPoint("CENTER")
+		end
 	end
 end
 

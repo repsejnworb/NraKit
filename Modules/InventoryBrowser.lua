@@ -123,14 +123,16 @@ local function RoughGold(copper)
 	return "~" .. (BreakUpLargeNumbers and BreakUpLargeNumbers(gold) or tostring(gold)) .. "|cffffd100g|r"
 end
 
--- "12g 30s  ·  ~2,345g in items" with item values (Auctionator prices), else just the gold.
+-- Gold, and on a line of its own what the items are worth (Auctionator prices), if known.
 local function WorthText(money, itemsValue)
 	local text = money and Money(money) or ""
 	if itemsValue and itemsValue > 0 then
-		text = text .. (text ~= "" and "  |cff999999·|r  " or "") .. "|cffcccccc" .. RoughGold(itemsValue) .. " in items|r"
+		text = text .. (text ~= "" and "\n" or "") .. "|cffaaaaaa" .. RoughGold(itemsValue) .. " in items|r"
 	end
 	return text
 end
+
+local NAV_HEIGHT, NAV_HEIGHT_VALUED = 38, 50
 
 function Money(copper)
 	if not copper then
@@ -440,6 +442,7 @@ local function RenderSidebar(characters)
 	local width = SIDEBAR_WIDTH - 2 * PAD
 	local y = 0
 
+	local valued = false -- item values shown: taller entries, for their own line
 	local function AddButton(label, character)
 		local button = sidebarPool:Acquire("nav", function()
 			local nav = UI.CreateNavButton(content, width, 38, "")
@@ -455,12 +458,16 @@ local function RenderSidebar(characters)
 				scroll:SetScroll(0)
 				Render()
 			end)
+			nav.subtext:SetWordWrap(true)
+			nav.subtext:SetSpacing(2)
 			return nav
 		end)
 		button.character = character
 		button.text:SetText(label)
 		button:SetPoint("TOPLEFT", content, "TOPLEFT", 0, y)
-		y = y - 40
+		local height = valued and NAV_HEIGHT_VALUED or NAV_HEIGHT
+		button:SetHeight(height)
+		y = y - height - 2
 		return button
 	end
 
@@ -477,6 +484,7 @@ local function RenderSidebar(characters)
 			totalItems = (totalItems or 0) + value
 		end
 	end
+	valued = totalItems ~= nil
 	local all = AddButton("All characters", nil)
 	all:SetSubtext(WorthText(totalMoney, totalItems))
 	all.count:SetText(#characters)
@@ -581,7 +589,10 @@ function Render()
 		button:SetSelected(button.key == view)
 	end
 	infoText:SetText(DescribeFreshness(characters))
-	sellButton:SetShown(ns:IsModuleEnabled("sellList"))
+	-- Only for your own bags: the Sell list is what you can sell now, here.
+	local viewingMe = not selected
+		or (selected.realm == ns.inventory.GetRealm() and selected.name == ns.inventory.GetPlayer())
+	sellButton:SetShown(ns:IsModuleEnabled("sellList") and viewingMe)
 
 	local items = CollectItems(characters)
 	local shown = Filter(items)

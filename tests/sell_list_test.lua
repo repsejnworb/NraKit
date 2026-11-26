@@ -29,6 +29,14 @@ local picked
 C_Container.PickupContainerItem = function(bag, slot)
 	picked = { bag, slot }
 end
+-- Alt+click hands the item, with its bag slot, to HandleModifiedItemClick (Auctionator hooks it).
+ItemLocation = { CreateFromBagAndSlot = function(_, bag, slot)
+	return { bag = bag, slot = slot }
+end }
+local handed
+HandleModifiedItemClick = function(link, location)
+	handed = { link = link, location = location }
+end
 
 -- name, sell price, bind type
 local ITEMS = {
@@ -130,14 +138,40 @@ return {
 			local ok = wow.click("NraKit Sell list")
 			t.ok(ok, "a button on the auction house")
 			t.ok(_G.NraKitSellListFrame:IsShown(), "opens the list")
-			t.equal(rawget(_G.NraKitSellListFrame, "docked"), true, "beside the auction house")
+			t.ok(ns.UI.IsDocked(), "NraKit's window docks beside the auction house")
 			local row = wow.findAll(function(frame)
 				return wow.visible(frame) and rawget(frame, "item") ~= nil
 			end)[1]
 			row.scripts.OnClick(row, "LeftButton")
 			t.equal(picked and picked[1], 0, "clicking an item picks it up, to drop in the sell slot")
+			IsModifiedClick = function()
+				return true
+			end
+			row.scripts.OnClick(row, "LeftButton")
+			IsModifiedClick = function() end
+			t.equal(handed and handed.location and handed.location.bag, 0,
+				"Alt+click hands it on with its bag slot, for Auctionator's Selling tab")
+			ns.UI.ShowTab("settings")
+			t.ok(ns.UI.IsDocked(), "another tab stays docked")
 			wow.fire("AUCTION_HOUSE_CLOSED")
-			t.ok(not _G.NraKitSellListFrame:IsShown(), "closes with the auction house")
+			t.ok(not ns.UI.IsDocked(), "undocked when the auction house closes")
+			t.ok(not _G.NraKitOptionsFrame:IsShown(), "and the window closes with it")
+		end)
+
+		t.test("a fresh scan while it's open says prices have changed, until you refresh", function()
+			ns:OpenSellList()
+			t.ok(not ns.sellList.PricesChanged(), "the same as shown")
+			AH[1001] = 470000
+			t.ok(ns.sellList.PricesChanged(), "Black Lotus changed")
+			wow.advance(2.5)
+			local notice = wow.findAll(function(frame)
+				return wow.visible(frame) and frame.text == "Prices have changed: refresh"
+			end)
+			t.equal(#notice, 1, "the notice by the refresh button")
+			ns.sellList.onChanged() -- what the refresh button does
+			t.ok(not ns.sellList.PricesChanged(), "refreshed")
+			AH[1001] = 450000
+			_G.NraKitSellListFrame:Hide()
 		end)
 
 		t.test("the Inventory tab values everyone's items at auction prices", function()

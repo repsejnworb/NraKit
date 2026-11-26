@@ -37,8 +37,9 @@ ns.changelog = {
 			points = {
 				"**Auction house and vendor prices** side by side; the better one is bright, and a stale auction price is marked.",
 				"A **button on the auction house** opens it right beside it; also in the Inventory tab, and /nra sell.",
+				"There, **Alt+click** an item to put it in Auctionator's Selling tab, or click to pick it up.",
 				"Soulbound items are apart (vendor only), and right-click → **Keep, don't list** for what you use.",
-				"Leaves out junk below a minimum, optionally lists your bank, and sorts by any column.",
+				"Says when a fresh scan **changed the prices**, with a refresh button; sorts by any column.",
 			},
 			tip = "Auction prices come from **Auctionator**; without it, it's vendor prices." },
 		{ "improved", title = "Auctionator prices", "Now in the new **Auction House** section, and the Inventory tab shows what each character's items are worth at the auction house." },

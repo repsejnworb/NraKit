@@ -160,7 +160,8 @@ With a **fishing pole in your main hand**, **double right-click** the world to c
 ### Sell list
 **What in your bags is worth selling**, the most valuable first, so you don't have to hover every item.
 - **Auction house and vendor prices side by side** (auction prices from Auctionator); the better one is bright, and a **stale** auction price is marked.
-- A **button on the auction house** opens it **right beside it**; click an item there to pick it up for the sell slot. Also in the Inventory tab, and `/nra sell`.
+- A **button on the auction house** opens it **right beside it**. There, **Alt+click** an item to put it in **Auctionator's Selling tab**, or click to pick it up for the sell slot. Also in the Inventory tab, and `/nra sell`.
+- After a fresh scan it says **"Prices have changed"** by the **refresh** button.
 - **Soulbound** items are apart (vendor only); right-click → **Keep, don't list** for what you use.
 - Leaves out junk below a **minimum**, optionally lists your **bank**, sorts by **any column**.
 

@@ -1,12 +1,19 @@
 local _, ns = ...
 
 -- The Sell list tab (SellList.lua has the data): your bags' items worth selling, the most
--- valuable first. Columns: count, auction price of one, at the auction house (all of them)
--- and at a vendor; the better of the two is bright. Click a column title to sort by it.
--- Groups below "To sell" fold: soulbound (vendor only), your bank, and what you keep.
+-- valuable first. Columns: count, at a vendor, the auction price of one and at the auction
+-- house (all of them, last: it's the one you look for); the better of vendor and auction is
+-- bright. Click a column title to sort by it. Groups below "To sell" fold: soulbound (vendor
+-- only), your bank, and what you keep.
 --
--- Click an item at the auction house to pick it up (then drop it in the sell slot),
--- shift-click to link it, right-click to keep it off the list.
+-- At the auction house: click an item to pick it up (then drop it in the sell slot), or
+-- Alt+click (Auctionator's own shortcut) to put it in Auctionator's Selling tab: the row hands
+-- the click to HandleModifiedItemClick with the item's bag slot, the same as a click in your
+-- bags, and Auctionator's own hook does the rest. Shift-click links, right-click keeps it off.
+--
+-- Prices aren't redrawn by themselves (rows would jump under the mouse): while it's open, the
+-- shown items' auction prices are checked now and then, and a fresh scan says "prices have
+-- changed" by the refresh button.
 
 local UI = ns.UI
 local sell = ns.sellList
@@ -18,10 +25,11 @@ local TOP_HEIGHT = 30
 local FOOTER_HEIGHT = 36
 
 -- Columns, from the right edge of a row: { right offset, width }.
-local VENDOR_RIGHT, VENDOR_WIDTH = -8, 96
-local AH_RIGHT, AH_WIDTH = -112, 110
-local EACH_RIGHT, EACH_WIDTH = -230, 96
+local AH_RIGHT, AH_WIDTH = -8, 110
+local EACH_RIGHT, EACH_WIDTH = -126, 96
+local VENDOR_RIGHT, VENDOR_WIDTH = -230, 96
 local COUNT_RIGHT, COUNT_WIDTH = -334, 50
+local CHECK_SECONDS = 2 -- how often the shown prices are compared with Auctionator's
 
 local GROUPS = {
 	{ key = "sell", label = "To sell" },
@@ -30,12 +38,14 @@ local GROUPS = {
 	{ key = "kept", label = "Kept", note = "you keep these off the list: right-click one to list it again" },
 }
 
-local frame, scroll, footerText, footerNote
+local frame, scroll, footerText, footerNote, refreshButton
 local sortTitles = {}
+local shownItems = {} -- the items on screen, to notice when their auction prices change
+local pricesChanged = false
 local pool = UI.CreatePool()
 local renderPending = false
 
-local Render
+local Render, UpdateFooterNote
 
 local function MakeLabel(parent, text, font)
 	local label = parent:CreateFontString(nil, "OVERLAY", font or "GameFontHighlight")
@@ -86,7 +96,11 @@ local function OnRowClick(self, button)
 	elseif IsModifiedClick() then
 		local link = item.link or select(2, C_Item.GetItemInfo(item.id))
 		if link then
-			HandleModifiedItemClick(link)
+			-- With its bag slot, like a click in your bags: Auctionator's Alt+click hook
+			-- puts it in its Selling tab.
+			local location = item.bag and type(ItemLocation) == "table"
+				and ItemLocation:CreateFromBagAndSlot(item.bag, item.slot) or nil
+			HandleModifiedItemClick(link, location)
 		end
 	elseif sell.IsAuctionHouseOpen() and item.bag and not InCombatLockdown() then
 		C_Container.PickupContainerItem(item.bag, item.slot)
@@ -108,6 +122,9 @@ local function OnRowEnter(self)
 	end
 	if item.bag and sell.IsAuctionHouseOpen() then
 		GameTooltip:AddLine("Click to pick it up, then drop it in the auction house's sell slot.", 0.5, 0.5, 0.5, true)
+		if sell.HasAuctionator() then
+			GameTooltip:AddLine("Alt-click to put it in Auctionator's Selling tab.", 0.5, 0.5, 0.5, true)
+		end
 	end
 	GameTooltip:AddLine("Shift-click to link, right-click to keep it off the list", 0.5, 0.5, 0.5)
 	GameTooltip:Show()
@@ -252,6 +269,29 @@ local function UpdateSortTitles()
 	end
 end
 
+-- The note by the refresh button: prices have changed, or there are no auction prices.
+function UpdateFooterNote()
+	if pricesChanged then
+		footerNote:SetText("Prices have changed: refresh")
+		footerNote:SetTextColor(unpack(UI.ACCENT))
+	else
+		footerNote:SetText(sell.HasAuctionator() and "" or "Vendor prices only: Auctionator adds auction house prices")
+		footerNote:SetTextColor(unpack(UI.TEXT_DIM))
+	end
+	refreshButton.icon:SetVertexColor(unpack(pricesChanged and UI.ACCENT or { 1, 1, 1 }))
+end
+
+-- Whether any shown item's auction price differs from Auctionator's now.
+function sell.PricesChanged()
+	for _, item in ipairs(shownItems) do
+		local each = sell.AuctionPrice(item.id, item.link)
+		if each ~= item.each then
+			return true
+		end
+	end
+	return false
+end
+
 function Render()
 	renderPending = false
 	if not (frame and frame:IsShown()) then
@@ -263,6 +303,8 @@ function Render()
 	local width = content:GetWidth() - 2 * PAD
 	local groups = sell.Collect()
 	local y = -6
+	wipe(shownItems)
+	pricesChanged = false
 
 	for _, group in ipairs(GROUPS) do
 		local items = groups[group.key]
@@ -293,6 +335,7 @@ function Render()
 					row:SetWidth(width)
 					row:SetPoint("TOPLEFT", content, "TOPLEFT", PAD, y)
 					FillRow(row, item, index)
+					table.insert(shownItems, item)
 					y = y - ROW_HEIGHT
 				end
 				y = y - 8
@@ -304,7 +347,7 @@ function Render()
 
 	footerText:SetText(string.format("|cffffffff~%s|r at the auction house (%d items)   ·   %s at vendors",
 		Money(groups.sellTotal), #groups.sell, Money(groups.vendorTotal)))
-	footerNote:SetText(sell.HasAuctionator() and "" or "Vendor prices only: Auctionator adds auction house prices")
+	UpdateFooterNote()
 end
 
 local function RequestRender()
@@ -374,8 +417,23 @@ local function CreateWindow()
 	UI.AddLine(footer, "TOP")
 	footerText = MakeLabel(footer, "", "GameFontHighlight")
 	footerText:SetPoint("LEFT", PAD, 0)
-	footerNote = MakeLabel(footer, "", "GameFontDisableSmall")
-	footerNote:SetPoint("RIGHT", -PAD, 0)
+	refreshButton = UI.CreateFlatButton(footer, "", 24)
+	refreshButton:SetWidth(24)
+	refreshButton:SetPoint("RIGHT", -PAD, 0)
+	refreshButton.icon = refreshButton:CreateTexture(nil, "ARTWORK")
+	refreshButton.icon:SetAtlas("UI-RefreshButton")
+	refreshButton.icon:SetSize(16, 16)
+	refreshButton.icon:SetPoint("CENTER")
+	refreshButton:SetScript("OnClick", function()
+		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+		Render()
+	end)
+	refreshButton:SetScript("OnEnter", function(self)
+		UI.ShowTooltip(self, "Refresh", "Price and sort the list again, with Auctionator's latest prices.")
+	end)
+	refreshButton:SetScript("OnLeave", GameTooltip_Hide)
+	footerNote = MakeLabel(footer, "", "GameFontNormalSmall")
+	footerNote:SetPoint("RIGHT", refreshButton, "LEFT", -8, 0)
 	footerNote:SetJustifyH("RIGHT")
 
 	local events = CreateFrame("Frame", nil, frame)
@@ -388,22 +446,28 @@ local function CreateWindow()
 	end)
 	frame:HookScript("OnHide", function()
 		events:UnregisterAllEvents()
-		frame.docked = nil
+	end)
+	-- Now and then: have the auction prices of what's shown changed (a fresh scan)?
+	local sinceCheck = 0
+	events:SetScript("OnUpdate", function(_, elapsed)
+		sinceCheck = sinceCheck + elapsed
+		if sinceCheck < CHECK_SECONDS or pricesChanged or not sell.HasAuctionator() then
+			return
+		end
+		sinceCheck = 0
+		if sell.PricesChanged() then
+			pricesChanged = true
+			UpdateFooterNote()
+		end
 	end)
 	sell.onChanged = Render
 end
 
--- Shows the list; beside `dockTo` (the auction house) if given.
-function sell.ShowWindow(dockTo)
+function sell.ShowWindow()
 	if not frame then
 		CreateWindow()
 	end
 	frame:Show()
-	if dockTo then
-		frame:ClearAllPoints()
-		frame:SetPoint("TOPLEFT", dockTo, "TOPRIGHT", 4, 0)
-		frame.docked = true
-	end
 	Render()
 end
 
@@ -415,14 +479,6 @@ end
 
 function sell.IsWindowShown()
 	return frame ~= nil and frame:IsShown()
-end
-
--- The auction house closed: a list opened beside it closes with it.
-function sell.Undock()
-	if frame and frame.docked then
-		frame:Hide()
-		UI.RestorePosition(frame)
-	end
 end
 
 UI.RegisterTab({

@@ -283,12 +283,15 @@ item. A tab in the NraKit window (`/nra sell`).
 - **Auction house and vendor prices side by side** (auction prices from Auctionator), for each item
   and the whole stack. The better of the two is bright; "a vendor pays more" says when to vendor.
 - An auction price **more than 3 days old** is marked, so you don't undercut yourself on old data.
-- A **button on the auction house** opens it **right beside it** (it closes with it). Click an item
-  there to pick it up and drop it in the sell slot. Also a **What can I sell?** button in the
-  Inventory tab.
+- A **button on the auction house** opens NraKit's window **right beside it**, whichever tab you go
+  to, until the auction house closes. There, **Alt+click** an item to put it in **Auctionator's
+  Selling tab** (Auctionator's own shortcut), or click it to pick it up and drop it in the sell
+  slot. Also a **What can I sell?** button in the Inventory tab (on your own character).
+- After a fresh scan it says **"Prices have changed"** by the **refresh** button, rather than
+  reshuffling the list under your mouse.
 - **Soulbound** items are apart, under "Vendor only". Right-click an item → **Keep, don't list** for
   potions, food and reagents you use.
-- Leaves out items worth less than a **minimum** (10 silver), optionally lists your **bank**, and
+- Leaves out items worth less than a **minimum** (5 silver), optionally lists your **bank**, and
   sorts by **any column**. The footer says what it's all worth.
 - Without Auctionator it still works, on vendor prices.
 

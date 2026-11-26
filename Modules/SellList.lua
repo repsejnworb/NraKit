@@ -2,7 +2,8 @@ local _, ns = ...
 
 -- Sell list: what in your bags is worth selling, most valuable first, so you don't have to
 -- hover every item. A tab in the NraKit window (SellListWindow.lua), opened from a button on
--- the auction house (it then opens beside it), from the Inventory tab, or with /nra sell.
+-- the auction house (NraKit's window then docks beside it), from the Inventory tab, or with
+-- /nra sell.
 --
 -- Each item is priced at the auction house (Auctionator's last scan, with how old that is)
 -- and at a vendor; the better of the two is its value. Without Auctionator it's vendor
@@ -27,7 +28,7 @@ local module = {
 			type = "number",
 			name = "Leave out items worth less than",
 			description = "Items worth less than this (the whole stack, at the auction house or a vendor, whichever is more) aren't listed, so grey junk doesn't crowd the list.",
-			default = 10,
+			default = 5,
 			min = 0,
 			max = 500,
 			step = 5,
@@ -255,7 +256,7 @@ end
 -- Everything, grouped: { sell = {...}, vendor = {...}, bank = {...}, kept = {...},
 -- sellTotal (auction), vendorTotal (vendor, of the sell group), loading }.
 function sell.Collect()
-	local min = (ns:GetValue("sellListMinValue") or 10) * 100
+	local min = (ns:GetValue("sellListMinValue") or 5) * 100
 	local groups = { sell = {}, vendor = {}, bank = {}, kept = {}, sellTotal = 0, vendorTotal = 0, loading = false }
 	local function Add(item)
 		if not Price(item) then
@@ -334,7 +335,9 @@ local function CreateAHButton()
 		return
 	end
 	ahButton = ns.UI.CreateFlatButton(AuctionHouseFrame, "NraKit Sell list", 20)
-	ahButton:SetFrameLevel(AuctionHouseFrame:GetFrameLevel() + 20)
+	-- Above the window's border and title, which are drawn far above the window itself.
+	local title = AuctionHouseFrame.TitleContainer
+	ahButton:SetFrameLevel((title and title:GetFrameLevel() or AuctionHouseFrame:GetFrameLevel() + 500) + 5)
 	ahButton:SetPoint("TOPRIGHT", AuctionHouseFrame, "TOPRIGHT", -30, -1)
 	ahButton:SetScript("OnClick", function()
 		if sell.IsWindowShown and sell.IsWindowShown() then
@@ -350,11 +353,15 @@ local function CreateAHButton()
 	UpdateAHButton()
 end
 
--- Opens the list (beside the auction house when it's open and that's the option).
+-- Opens the list; at the auction house (if that's the option) NraKit's window docks beside
+-- it, whichever tab you go to next, until the auction house closes.
 function ns:OpenSellList()
+	if auctionHouseOpen and ns:GetOption("sellListDock") and type(AuctionHouseFrame) == "table"
+		and AuctionHouseFrame:IsShown() and not ns.UI.IsDocked() then
+		ns.UI.Dock(AuctionHouseFrame)
+	end
 	if sell.ShowWindow then
-		sell.ShowWindow(auctionHouseOpen and ns:GetOption("sellListDock") and type(AuctionHouseFrame) == "table"
-			and AuctionHouseFrame:IsShown() and AuctionHouseFrame or nil)
+		sell.ShowWindow()
 	end
 end
 
@@ -369,9 +376,7 @@ eventFrame:SetScript("OnEvent", function(_, event, addonName)
 		CreateAHButton()
 	elseif event == "AUCTION_HOUSE_CLOSED" then
 		auctionHouseOpen = false
-		if sell.Undock then
-			sell.Undock()
-		end
+		ns.UI.Undock()
 	end
 end)
 
