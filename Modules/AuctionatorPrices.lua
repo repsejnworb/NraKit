@@ -61,6 +61,12 @@ local module = {
 			default = false,
 		},
 		{
+			key = "auctionatorHave",
+			name = "Show how many you have",
+			description = "In tooltips, how many of each reagent you have on all your characters (with Inventory Tracker on; else in your bags and bank): green if your bags hold enough, yellow if you have enough elsewhere (bank, other characters), grey if not. A recipe also shows what's left to buy.",
+			default = true,
+		},
+		{
 			key = "auctionatorSkipVendor",
 			name = "Leave vendor items out of Auctionator lists",
 			description = "Reagents sold by a vendor (thread, dye, vials...) aren't searched for at the auction house. They still show in tooltips and the NraKit Shopping List.",
@@ -73,6 +79,7 @@ local CALLER = "NraKit"
 local CRATES_LIST = "Waylaid Crates"
 local SHOPPING_LIST = "NraKit Shopping List"
 local VENDOR_TAG = " |cff999999vendor|r"
+local HAVE_HERE, HAVE_ELSEWHERE, HAVE_SHORT = "ff4cff4c", "ffffd100", "ff999999"
 
 
 -- Crate item ID -> its bundles, { count, reagent item ID }, in the order the tooltip lists them.
@@ -212,12 +219,30 @@ end
 
 -- Tooltip lines for priced reagents: "6 Iron Bar   1g 20s" (the cheapest in green, when
 -- `cheapest` is given).
+-- "have 9" after a reagent: green if this character's bags hold enough, yellow if your
+-- characters do (in the bank, on others), grey if not.
+function prices.HaveText(itemID, need)
+	local have = prices.Have(itemID)
+	local colour = HAVE_SHORT
+	if (C_Item.GetItemCount(itemID) or 0) >= need then
+		colour = HAVE_HERE
+	elseif have >= need then
+		colour = HAVE_ELSEWHERE
+	end
+	return string.format("  |c%shave %d|r", colour, have), have
+end
+
 local function AddPriceLines(tooltip, priced, cheapest)
 	local unitPrice = ns:GetOption("auctionatorUnitPrice")
+	local showHave = ns:GetOption("auctionatorHave")
 	for index, entry in ipairs(priced) do
 		local left = entry.count .. " " .. (ItemName(entry.itemID) or ("item " .. entry.itemID))
 		if entry.vendor then
 			left = left .. VENDOR_TAG
+		end
+		if showHave then
+			local text, have = prices.HaveText(entry.itemID, entry.count)
+			left, entry.have = left .. text, have
 		end
 		if not entry.total then
 			tooltip:AddDoubleLine(left, "no price", 0.6, 0.6, 0.6, 0.6, 0.6, 0.6)
@@ -439,6 +464,27 @@ local function OnAnyTooltip(tooltip)
 		return
 	end
 	tooltip:AddDoubleLine("Total", MoneyText(total) .. (unpriced > 0 and "+" or ""), 1, 0.82, 0, 1, 1, 1)
+	if not ns:GetOption("auctionatorHave") then
+		return
+	end
+	-- What's missing, at its price: only when you have some of it.
+	local toBuy, toBuyUnpriced, short = 0, false, false
+	for _, entry in ipairs(priced) do
+		local missing = math.max(0, entry.count - (entry.have or 0))
+		if missing > 0 then
+			short = true
+			if entry.unit then
+				toBuy = toBuy + missing * entry.unit
+			else
+				toBuyUnpriced = true
+			end
+		end
+	end
+	if not short then
+		tooltip:AddDoubleLine("To buy", "nothing, you have it all", 1, 0.82, 0, 0.3, 1, 0.3)
+	elseif toBuy ~= total or toBuyUnpriced ~= (unpriced > 0) then
+		tooltip:AddDoubleLine("To buy", MoneyText(toBuy) .. (toBuyUnpriced and "+" or ""), 1, 0.82, 0, 1, 1, 1)
+	end
 end
 
 ---------------------------------------------------------------------------

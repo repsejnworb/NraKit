@@ -249,6 +249,10 @@ the auction house, from Auctionator's last scan.
   NraKit's crate list with the game's own tooltips (after a patch, say).
 - **Recipes:** a recipe's tooltip (click a recipe link in chat) shows **what one craft costs**:
   each reagent and the total.
+- **How many you have** of each reagent, on recipes and crates: on all your characters (with
+  Inventory Tracker; else your bags and bank), **green** when your bags hold enough, **yellow** when
+  you have enough elsewhere (bank, other characters), grey if not. A recipe also says what's left
+  **to buy**.
 - **Shopping lists:** right-click a recipe link in chat or a recipe in your profession window (or
   use the **Shopping list** button by its reagents) for:
   - **Create shopping list for this recipe**: an Auctionator list named after the recipe, with one

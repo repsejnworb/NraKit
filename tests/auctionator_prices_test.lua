@@ -80,10 +80,10 @@ return {
 			ahPrices[MITHRIL_CASING] = nil
 			local lines = Tooltip(EXPERT_PARTS)
 			t.equal(lines[2], "Cost at the Auction House", "heading")
-			t.equal(lines[3], "8 Iron Strut: 0g 80s 0c", "bundle total")
-			t.equal(lines[4], "5 Mithril Tube: 0g 75s 0c (cheapest)", "the cheapest in green")
-			t.equal(lines[5], "12 Unstable Trigger: 1g 8s 0c", "dearer")
-			t.equal(lines[6], "5 Mithril Casing: no price", "unscanned")
+			t.equal(lines[3], "8 Iron Strut  |cff999999have 0|r: 0g 80s 0c", "bundle total, and how many you have")
+			t.equal(lines[4], "5 Mithril Tube  |cff999999have 0|r: 0g 75s 0c (cheapest)", "the cheapest in green")
+			t.equal(lines[5], "12 Unstable Trigger  |cff999999have 0|r: 1g 8s 0c", "dearer")
+			t.equal(lines[6], "5 Mithril Casing  |cff999999have 0|r: no price", "unscanned")
 		end)
 
 		t.test("the price of one, as an option", function()
@@ -292,7 +292,7 @@ return {
 			t.equal(unit, 300, "Auctionator's")
 			t.ok(vendor, "a vendor's")
 			local lines = Tooltip(EXPERT_PARTS)
-			t.ok(lines[6]:find("Mithril Casing |cff999999vendor|r: 0g 15s 0c", 1, true), "tagged on the crate: " .. lines[6])
+			t.ok(lines[6]:find("Mithril Casing |cff999999vendor|r  |cff999999have 0|r: 0g 15s 0c", 1, true), "tagged on the crate: " .. lines[6])
 			Auctionator.API.v1.GetVendorPriceByItemID = nil
 		end)
 
@@ -321,19 +321,37 @@ return {
 		t.test("a recipe's tooltip shows what one craft costs", function()
 			local lines = RecipeTooltip("enchant:" .. RECIPE)
 			t.equal(lines[2], "Cost of one craft", "heading")
-			t.equal(lines[3], "6 Iron Bar: 1g 20s 0c", "6 Iron Bar")
-			t.equal(lines[4], "1 Green Dye |cff999999vendor|r: 0g 0s 50c", "the vendor's price, tagged")
+			t.equal(lines[3], "6 Iron Bar  |cff999999have 3|r: 1g 20s 0c", "6 Iron Bar, 3 of them yours (not enough: grey)")
+			t.equal(lines[4], "1 Green Dye |cff999999vendor|r  |cff999999have 0|r: 0g 0s 50c", "the vendor's price, tagged")
 			t.equal(lines[5], "Total: 1g 20s 50c", "total")
-			t.equal(#lines, 5, "the optional reagent left out")
+			t.equal(lines[6], "To buy: 0g 60s 50c", "what's missing: 3 bars and the dye")
+			t.equal(#lines, 6, "the optional reagent left out")
 			ahPrices[IRON_BAR] = nil
 			lines = RecipeTooltip("enchant:" .. RECIPE)
-			t.equal(lines[3], "6 Iron Bar: no price", "unscanned")
+			t.equal(lines[3], "6 Iron Bar  |cff999999have 3|r: no price", "unscanned")
 			t.equal(lines[5], "Total: 0g 0s 50c+", "a total that's missing something says so")
 			ahPrices[IRON_BAR] = 2000
 			t.equal(#RecipeTooltip("item:" .. IRON_BAR), 0, "not a recipe: nothing")
 			ns:SetSetting("auctionatorRecipes", false)
 			t.equal(#RecipeTooltip("enchant:" .. RECIPE), 0, "option off")
 			ns:SetSetting("auctionatorRecipes", true)
+		end)
+
+		t.test("have: green in your bags, yellow elsewhere; nothing to buy once you have it all", function()
+			items[IRON_BAR].bags, items[IRON_BAR].bank = 2, 4
+			local lines = RecipeTooltip("enchant:" .. RECIPE)
+			t.ok(lines[3]:find("|cffffd100have 6|r", 1, true), "enough, some in the bank: yellow: " .. lines[3])
+			items[IRON_BAR].bags = 6
+			items[GREEN_DYE].bags = 1
+			lines = RecipeTooltip("enchant:" .. RECIPE)
+			t.ok(lines[3]:find("|cff4cff4chave 10|r", 1, true), "enough in your bags: green: " .. lines[3])
+			t.equal(lines[6], "To buy: nothing, you have it all", "nothing to buy")
+			ns:SetSetting("auctionatorHave", false)
+			lines = RecipeTooltip("enchant:" .. RECIPE)
+			t.equal(lines[3], "6 Iron Bar: 1g 20s 0c", "option off: no counts")
+			t.equal(#lines, 5, "and no To buy")
+			ns:SetSetting("auctionatorHave", true)
+			items[IRON_BAR].bags, items[IRON_BAR].bank, items[GREEN_DYE].bags = 2, 1, 0
 		end)
 
 		local function RightClickLink(link, button)
