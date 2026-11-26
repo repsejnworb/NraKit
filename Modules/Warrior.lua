@@ -1,0 +1,223 @@
+local _, ns = ...
+
+-- Warrior: QoL for warriors (the Classes section has one module per class).
+--
+-- Tactical Mastery mark: the rage bar in the Personal Resource Display gets a tick where
+-- the rage you keep when changing stance ends.
+--
+-- On Forever, the Tactical Mastery passive (1310185, "You retain up to 10 Rage when you
+-- change Stances") keeps 10, and the Improved Tactical Mastery talent (12295, "an
+-- additional 15") adds 5 per rank (Wowhead: 5/10/15). The rank is read from the active
+-- talent loadout, so learning the passive, respeccing or switching loadouts moves the tick.
+--
+-- The tick is NraKit's own frame on top of the bar; the bar itself is never changed.
+
+local module = {
+	key = "warrior",
+	section = "Classes",
+	name = "Warrior",
+	description = "Small things for warriors: a mark on your rage bar where the rage you keep on changing stance ends.",
+	default = false,
+	options = {
+		{
+			key = "warriorTacticalMastery",
+			name = "Tactical Mastery mark",
+			description = "The rage bar of the Personal Resource Display shows a mark at how much rage you keep when you change stance (Tactical Mastery, plus Improved Tactical Mastery's ranks). It follows what you've learned and your talents by itself.",
+			default = true,
+		},
+		{
+			key = "warriorTacticalMasteryShade",
+			parent = "warriorTacticalMastery",
+			name = "Shade the rage you keep",
+			description = "Also lightly shade the bar up to the mark, not just the mark itself.",
+			default = false,
+		},
+	},
+}
+
+local PASSIVE_SPELL = 1310185 -- Tactical Mastery: keep 10
+local PASSIVE_RAGE = 10
+local TALENT_SPELL = 12295 -- Improved Tactical Mastery: 5 more per rank
+local TALENT_RAGE_PER_RANK = 5
+local SLIDE_SECONDS = 0.4
+local FADE_SECONDS = 0.4
+
+local mark = {}
+ns.tacticalMastery = mark
+
+-- The talent's rank in the active loadout (0 if not taken).
+function mark.TalentRank()
+	if type(C_ClassTalents) ~= "table" or type(C_Traits) ~= "table" then
+		return 0
+	end
+	local configID = C_ClassTalents.GetActiveConfigID()
+	local config = configID and C_Traits.GetConfigInfo(configID)
+	for _, treeID in ipairs(config and config.treeIDs or {}) do
+		for _, nodeID in ipairs(C_Traits.GetTreeNodes(treeID) or {}) do
+			local node = C_Traits.GetNodeInfo(configID, nodeID)
+			for _, entryID in ipairs(node and node.entryIDs or {}) do
+				local entry = C_Traits.GetEntryInfo(configID, entryID)
+				local definition = entry and entry.definitionID and C_Traits.GetDefinitionInfo(entry.definitionID)
+				if definition and definition.spellID == TALENT_SPELL then
+					return node.activeRank or node.currentRank or 0
+				end
+			end
+		end
+	end
+	return 0
+end
+
+-- The rage kept when changing stance.
+function mark.Retained()
+	if not IsPlayerSpell(PASSIVE_SPELL) then
+		return 0
+	end
+	return PASSIVE_RAGE + TALENT_RAGE_PER_RANK * mark.TalentRank()
+end
+
+local overlay -- on the rage bar: { tick, shade }
+local retained = 0
+local shownX -- where the tick is drawn now (slides to the target)
+
+local function PowerBar()
+	local frame = PersonalResourceDisplayFrame
+	return type(frame) == "table" and frame.PowerBar or nil
+end
+
+local function IsWarriorRage()
+	local _, class = UnitClass("player")
+	return class == "WARRIOR" and UnitPowerType("player") == Enum.PowerType.Rage
+end
+
+-- Where the mark should be, in pixels from the bar's left, or nil for no mark.
+local function TargetX()
+	local bar = PowerBar()
+	if not bar or retained <= 0 or not IsWarriorRage() then
+		return nil
+	end
+	local _, max = bar:GetMinMaxValues()
+	if not max or (issecretvalue and issecretvalue(max)) or max <= 0 then
+		return nil
+	end
+	return bar:GetWidth() * math.min(retained / max, 1)
+end
+
+local function Draw(x)
+	overlay.tick:SetPoint("CENTER", overlay, "LEFT", x, 0)
+	overlay.shade:SetWidth(math.max(x, 0.01))
+	overlay.shade:SetShown(ns:GetOption("warriorTacticalMasteryShade"))
+end
+
+local function EnsureOverlay()
+	local bar = PowerBar()
+	if overlay or not bar then
+		return overlay
+	end
+	overlay = CreateFrame("Frame", nil, bar)
+	overlay:SetAllPoints(bar)
+	overlay:SetFrameLevel(bar:GetFrameLevel() + 5)
+	overlay:SetAlpha(0)
+	overlay:Hide()
+
+	overlay.shade = overlay:CreateTexture(nil, "ARTWORK")
+	overlay.shade:SetColorTexture(1, 1, 1, 0.12)
+	overlay.shade:SetPoint("TOPLEFT")
+	overlay.shade:SetPoint("BOTTOMLEFT")
+
+	overlay.tick = overlay:CreateTexture(nil, "OVERLAY")
+	overlay.tick:SetColorTexture(1, 0.95, 0.75, 0.95)
+	overlay.tick:SetWidth(2)
+	overlay.tick:SetPoint("TOP")
+	overlay.tick:SetPoint("BOTTOM")
+
+	overlay.glow = overlay:CreateTexture(nil, "ARTWORK")
+	overlay.glow:SetColorTexture(1, 0.85, 0.4, 0.3)
+	overlay.glow:SetWidth(6)
+	overlay.glow:SetPoint("TOP", overlay.tick, "TOP")
+	overlay.glow:SetPoint("BOTTOM", overlay.tick, "BOTTOM")
+
+	-- Slides when the amount changes, fades in and out when the mark comes and goes.
+	overlay:SetScript("OnUpdate", function(self, elapsed)
+		local target = TargetX()
+		local alpha = self:GetAlpha()
+		if target then
+			if not shownX then
+				shownX = target
+			end
+			local step = math.max(math.abs(target - shownX), 1) * elapsed / SLIDE_SECONDS
+			if math.abs(target - shownX) <= step then
+				shownX = target
+			else
+				shownX = shownX + (target > shownX and step or -step)
+			end
+			Draw(shownX)
+			self:SetAlpha(math.min(1, alpha + elapsed / FADE_SECONDS))
+		else
+			alpha = math.max(0, alpha - elapsed / FADE_SECONDS)
+			self:SetAlpha(alpha)
+			if alpha == 0 then
+				shownX = nil
+				self:Hide()
+			end
+		end
+	end)
+	return overlay
+end
+
+local function Update()
+	if not ns:IsModuleEnabled(module.key) or not ns:GetOption("warriorTacticalMastery") then
+		retained = 0
+	else
+		retained = mark.Retained()
+	end
+	if EnsureOverlay() and (TargetX() or overlay:IsShown()) then
+		overlay:Show()
+	end
+end
+mark.Update = Update
+
+-- Where the mark is drawn now, and how visible (for tests).
+function mark.Shown()
+	return shownX, overlay and overlay:IsShown() and overlay:GetAlpha() or 0
+end
+
+local eventFrame = CreateFrame("Frame")
+eventFrame:SetScript("OnEvent", function(_, event, addonName)
+	if event == "ADDON_LOADED" and addonName ~= "Blizzard_PersonalResourceDisplay" then
+		return
+	end
+	Update()
+end)
+
+local EVENTS = {
+	"ADDON_LOADED", "PLAYER_ENTERING_WORLD", "SPELLS_CHANGED", "TRAIT_CONFIG_UPDATED",
+	"ACTIVE_PLAYER_SPECIALIZATION_CHANGED", "UPDATE_SHAPESHIFT_FORM",
+}
+
+function module:OnInitialize()
+	self:OnEnabledChanged(ns:IsModuleEnabled(self.key))
+end
+
+function module:OnEnabledChanged(enabled)
+	for _, event in ipairs(EVENTS) do
+		if enabled then
+			eventFrame:RegisterEvent(event)
+		else
+			eventFrame:UnregisterEvent(event)
+		end
+	end
+	if enabled then
+		eventFrame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
+		eventFrame:RegisterUnitEvent("UNIT_DISPLAYPOWER", "player")
+	else
+		eventFrame:UnregisterEvent("UNIT_MAXPOWER")
+		eventFrame:UnregisterEvent("UNIT_DISPLAYPOWER")
+	end
+	Update()
+end
+
+function module:OnOptionChanged()
+	Update()
+end
+
+ns:RegisterModule(module)

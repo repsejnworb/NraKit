@@ -47,6 +47,11 @@ Get alerted when a **mob or player from your own list** shows up.
 - Addons can only see units the game already shows you, so keep enemy nameplates on (with Engaged-only nameplates, the scanner keeps them on for you).
 - With **Player notes**, it also alerts you when a player you've labelled **Kill on sight** shows up (optional, on by default).
 
+## Classes
+
+### Warrior
+**Tactical Mastery mark:** the rage bar of the **Personal Resource Display** shows a mark at how much rage you **keep when you change stance**: 10 from Tactical Mastery, plus 5 per rank of Improved Tactical Mastery. It follows what you've learned and your talents by itself. Optionally shade the bar up to the mark.
+
 ## Quests
 
 ### Most valuable quest reward
