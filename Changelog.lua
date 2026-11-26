@@ -17,6 +17,7 @@ local _, ns = ...
 
 ns.changelog = {
 	{ version = "Unreleased", entries = {
+		{ "new", "Waylaid Crate prices (needs Auctionator): a Waylaid Crate's tooltip shows what each bundle it takes costs at the auction house, with the cheapest in green. An Auctionator shopping list, \"Waylaid Crates\", holds every bundle of the crates in your bags in the amounts they need, ready to search at the auction house.", module = "waylaidCrates" },
 		{ "fixed", "NraKit's messages in the middle of the screen are only as wide as what they show, so the mouse no longer holds one up (or clicks it) from far beside its text." },
 	} },
 	{ version = "0.28.0", date = "2026-11-25", entries = {

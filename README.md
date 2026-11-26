@@ -237,6 +237,17 @@ rank).
 - Right-clicking NPCs and players, and holding right-click to turn the camera, work as normal.
 - The double-click time is adjustable.
 
+#### Waylaid Crate prices
+
+Needs **[Auctionator](https://www.curseforge.com/wow/addons/auctionator)**. A Waylaid Crate's
+tooltip shows **what each bundle it takes costs** at the auction house, from Auctionator's last
+scan, with the **cheapest in green**.
+
+- An Auctionator shopping list, **"Waylaid Crates"**, holds every bundle of the crates in your bags,
+  in the amounts they need (two crates, twice the amount). Open it in Auctionator's Shopping tab to
+  look them all up. It's rewritten when your crates change, but not while the auction house is open.
+- Optionally shows the price of one of each reagent too.
+
 ### Trackers & Reminders
 
 #### Unspent talent points
