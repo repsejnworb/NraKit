@@ -10,7 +10,7 @@ local _, ns = ...
 -- additional 15") adds 5 per rank (Wowhead: 5/10/15). The rank is read from the active
 -- talent loadout, so learning the passive, respeccing or switching loadouts moves the arrow.
 --
--- The mark is NraKit's own bar on top of the rage bar; the rage bar itself is never changed.
+-- The mark is NraKit's own bar over the rage bar; the rage bar itself is never changed.
 
 local module = {
 	key = "warrior",
@@ -42,6 +42,7 @@ local TALENT_RAGE_PER_RANK = 5
 local SLIDE_SECONDS = 0.4
 local FADE_SECONDS = 0.4
 local ARROW_SIZE = 10
+local ARROW_OFFSET_Y = -9.5
 
 local mark = {}
 ns.tacticalMastery = mark
@@ -116,11 +117,12 @@ local function EnsureOverlay()
 	overlay:Hide()
 	local fill = overlay:GetStatusBarTexture()
 
-	-- A small metal arrow on the bar's top edge, pointing down at the mark.
+	-- A small metal arrow inside the bar, at its top, pointing down at the mark. The arrow is
+	-- drawn in the upper part of its picture, hence the offset (measured in game).
 	overlay.arrow = overlay:CreateTexture(nil, "OVERLAY")
 	overlay.arrow:SetTexture("Interface\\Buttons\\Arrow-Down-Up")
 	overlay.arrow:SetSize(ARROW_SIZE, ARROW_SIZE)
-	overlay.arrow:SetPoint("CENTER", fill, "TOPRIGHT", 0, ARROW_SIZE / 4)
+	overlay.arrow:SetPoint("CENTER", fill, "TOPRIGHT", 0, ARROW_OFFSET_Y)
 
 	-- Slides when the amount changes, fades in and out when the mark comes and goes.
 	overlay:SetScript("OnUpdate", function(self, elapsed)
