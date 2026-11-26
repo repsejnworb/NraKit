@@ -16,7 +16,7 @@ local _, ns = ...
 --           "new" entry with its module (tests/changelog_test.lua checks).
 
 ns.changelog = {
-	{ version = "Unreleased", entries = {
+	{ version = "0.30.0", date = "2026-11-26", entries = {
 		{ "new", "/nra dps shows or hides the game's damage meter (the same as its setting in the options), with or without Damage meter look." },
 	} },
 	{ version = "0.29.0", date = "2026-11-26", entries = {
