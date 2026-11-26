@@ -15,6 +15,7 @@
 Core.lua
 UI.lua
 Toast.lua
+ProcAlerts.lua
 Preview.lua
 Sounds.lua
 Settings.lua
@@ -62,7 +63,6 @@ Modules\ItemLookupWindow.lua
 Modules\DamageMeterLook.lua
 Modules\CooldownManagerFade.lua
 Modules\Warrior.lua
-Modules\WarriorProcs.lua
 Modules\UnlearnedAbilities.lua
 Modules\Wishlist.lua
 Modules\WishlistWindow.lua

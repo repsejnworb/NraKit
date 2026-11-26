@@ -58,6 +58,11 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   icon/atlas, detail, lines, duration, onClick, skipIfBusy }`); they stack, up to three at once (the newest at the top, pushing the others down), and more
   wait their turn (a big one first in line). `ns.arrival.Add{...}` adds a feature's part to the one message for
   entering a zone. Use it for any feature's on-screen message.
+- `ProcAlerts.lua` – proc alerts for any class (`ns.procAlerts`): spells usable for a moment that the game shows no glow for
+  (Overpower, ...). A feature calls `ns.procAlerts.Register{ key, IsEnabled, spells = { { name, option } }, options = { countdown,
+  icon, sound, soundChoice } }` and `ns.procAlerts.Refresh()` when its module or options change. Glows action buttons with
+  Blizzard's proc-glow animation (in NraKit's own frames), dims while short of power, measures each proc's duration for the
+  countdown ring. See the Warrior module.
 - `Preview.lua` – `/nra preview <name>` (also `/nra test`): shows a feature's on-screen message or bar with made-up
   content. Anything a feature pops up on screen gets one: `ns:RegisterPreview(name, description, show)`.
 - `Changelog.lua` – what's new per version, for players (see the changelog rule above). `WhatsNew.lua` tracks what

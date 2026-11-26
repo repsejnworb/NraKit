@@ -130,7 +130,7 @@ return {
 			ns:SetSetting("warriorTacticalMasteryPosition", "top")
 		end)
 
-		local procs = ns.warriorProcs
+		local procs = ns.procAlerts
 		local function Glow()
 			for _, frame in ipairs(wow.frames) do
 				if rawget(frame, "parent") == button and frame.alert then

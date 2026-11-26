@@ -12,7 +12,8 @@ local _, ns = ...
 --
 -- The mark is NraKit's own bar over the rage bar; the rage bar itself is never changed.
 --
--- Proc alerts (Overpower, Revenge, Victory Rush) are in WarriorProcs.lua.
+-- Proc alerts: the game shows no proc glow on Forever for Overpower, Revenge and Victory
+-- Rush, so they're registered with NraKit's shared proc alerts (ProcAlerts.lua).
 
 local module = {
 	key = "warrior",
@@ -256,6 +257,32 @@ local function EnsureOverlay()
 	return overlay
 end
 
+---------------------------------------------------------------------------
+-- Proc alerts
+---------------------------------------------------------------------------
+
+ns.procAlerts.Register({
+	key = "warrior",
+	IsEnabled = function()
+		return ns:IsModuleEnabled(module.key) and ns:GetOption("warriorProcs") and select(2, UnitClass("player")) == "WARRIOR"
+	end,
+	spells = {
+		{ name = "Overpower", option = "warriorProcOverpower" },
+		{ name = "Revenge", option = "warriorProcRevenge" },
+		{ name = "Victory Rush", option = "warriorProcVictoryRush" },
+	},
+	options = {
+		countdown = "warriorProcCountdown",
+		icon = "warriorProcIcon",
+		sound = "warriorProcSound",
+		soundChoice = "warriorProcSoundChoice",
+	},
+})
+
+---------------------------------------------------------------------------
+-- Tactical Mastery mark
+---------------------------------------------------------------------------
+
 local function Update()
 	if not ns:IsModuleEnabled(module.key) or not ns:GetOption("warriorTacticalMastery") then
 		retained = 0
@@ -314,12 +341,12 @@ function module:OnEnabledChanged(enabled)
 		eventFrame:UnregisterEvent("UNIT_DISPLAYPOWER")
 	end
 	Update()
-	ns.warriorProcs.SetEnabled(enabled)
+	ns.procAlerts.Refresh()
 end
 
 function module:OnOptionChanged()
 	Update()
-	ns.warriorProcs.Refresh()
+	ns.procAlerts.Refresh()
 end
 
 ns:RegisterModule(module)
