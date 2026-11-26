@@ -303,6 +303,24 @@ return {
 			wow.fire("AUCTION_HOUSE_CLOSED")
 		end)
 
+		t.test("Automatically Open At is per character", function()
+			ns:SetSetting("sellListBankOpen", true)
+			local me = ns:PlayerName()
+			t.equal(NraKitDB.sellListAutoOpenChars[me].sellListBankOpen, true, "saved for this character")
+			-- Another character: its own ticks (the defaults: just the auction house).
+			NraKitDB.sellListAutoOpenChars[me] = nil
+			NraKitDB.sellListAutoOpenChars["Banker Nra"] = { sellListBankOpen = true, sellListMailOpen = true }
+			ns.sellList.LoadAutoOpen()
+			t.equal(NraKitDB.sellListBankOpen, false, "a character that hasn't set them: defaults, not another's")
+			t.equal(NraKitDB.sellListAutoOpen, true, "the auction house on")
+			NraKitDB.sellListAutoOpenChars[me] = { sellListBankOpen = true, sellListAutoOpen = false }
+			ns.sellList.LoadAutoOpen()
+			t.ok(NraKitDB.sellListBankOpen and not NraKitDB.sellListAutoOpen, "and its own when it has")
+			t.equal(NraKitDB.sellListAutoOpenChars["Banker Nra"].sellListMailOpen, true, "the bank alt's kept")
+			ns:SetSetting("sellListBankOpen", false)
+			ns:SetSetting("sellListAutoOpen", true)
+		end)
+
 		t.test("ticking the bank opens it there by itself", function()
 			ns:SetSetting("sellListBankOpen", true)
 			_G.NraKitSellListFrame:Hide()

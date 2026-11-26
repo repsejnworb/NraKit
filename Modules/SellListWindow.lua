@@ -488,7 +488,7 @@ local function CreateWindow()
 	autoOpenButton.arrow:SetPoint("LEFT", autoOpenButton.text, "RIGHT", 4, -2)
 	autoOpenButton:SetScript("OnClick", function(self)
 		MenuUtil.CreateContextMenu(self, function(_, root)
-			root:CreateTitle("Automatically Open At")
+			root:CreateTitle("Automatically Open At (This Character)")
 			for _, place in ipairs(sell.AUTO_OPEN) do
 				root:CreateCheckbox(place.label, function()
 					return ns:GetOption(place.option) == true
@@ -499,7 +499,7 @@ local function CreateWindow()
 		end)
 	end)
 	autoOpenButton:SetScript("OnEnter", function(self)
-		UI.ShowTooltip(self, "Automatically Open At", "Where the Sell List opens by itself, beside the window there.")
+		UI.ShowTooltip(self, "Automatically Open At", "Where the Sell List opens by itself, beside the window there. Each character has its own: your bank alt can open it at the bank, your main not.")
 	end)
 	autoOpenButton:SetScript("OnLeave", GameTooltip_Hide)
 

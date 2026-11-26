@@ -287,7 +287,8 @@ item. A tab in the NraKit window (`/nra sell`).
 - An auction price **more than 3 days old** is marked, so you don't undercut yourself on old data.
 - It **opens by itself** beside the auction house when you open it. Pick where in the **Automatically
   Open At** menu at the top of the list (or its settings): the auction house (on by default),
-  merchants, the bank and the mailbox. A **button on the auction house** opens it too. NraKit's
+  merchants, the bank and the mailbox. **Per character**: your bank alt can open it at the bank,
+  your main not. A **button on the auction house** opens it too. NraKit's
   window sits **right beside it**, whichever tab you go
   to, until the auction house closes. There, **Alt+click** an item to put it in **Auctionator's
   Selling tab** (Auctionator's own shortcut), or click it to pick it up and drop it in the sell

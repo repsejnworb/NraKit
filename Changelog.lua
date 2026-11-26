@@ -22,6 +22,9 @@ local _, ns = ...
 -- notes) and /commands are coloured. Write short: no brackets-and-semicolon chains.
 
 ns.changelog = {
+	{ version = "Unreleased", entries = {
+		{ "improved", title = "Sell List", "**Automatically Open At** is per character: your bank alt can open it at the bank and mailbox, your main just at the auction house." },
+	} },
 	{ version = "0.33.0", date = "2026-11-26", entries = {
 		{ "improved", title = "Sell List", "**Bank** and **Mail** switches at its top list what's in your bank and mailbox too, mixed in by value but marked (and a **Bags** switch). At the bank or mailbox it lists **just what's there**; the switches are for that visit. At the bank or mailbox (a **NraKit Sell List** button there opens it beside them), **click one to take it** into your bags; it asks how many stacks. Pick where it opens by itself in its **Automatically Open At** menu: the auction house, merchants, the bank and the mailbox." },
 		{ "fixed", title = "Inventory Tracker", "Items in a cash-on-delivery mail no longer count as yours before you've paid for them." },

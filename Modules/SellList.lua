@@ -62,27 +62,27 @@ local module = {
 		},
 		{
 			key = "sellListAutoOpen",
-			header = "Automatically Open At",
+			header = "Automatically Open At (This Character)",
 			name = "The auction house",
-			description = "The Sell List opens by itself beside the auction house when you open it. (Also in the list's \"Automatically Open At\" menu.)",
+			description = "The Sell List opens by itself beside the auction house when you open it. Per character (also in the list's \"Automatically Open At\" menu).",
 			default = true,
 		},
 		{
 			key = "sellListMerchantOpen",
 			name = "Merchants",
-			description = "The Sell List opens by itself beside a merchant's window, with what sells best to a vendor first. Click an item, then click the merchant's window to sell it.",
+			description = "The Sell List opens by itself beside a merchant's window, with what sells best to a vendor first. Click an item, then click the merchant's window to sell it. Per character.",
 			default = false,
 		},
 		{
 			key = "sellListBankOpen",
 			name = "The bank",
-			description = "The Sell List opens by itself beside your bank, with what's in it listed to take out.",
+			description = "The Sell List opens by itself beside your bank, with what's in it listed to take out. Per character (say, your bank alt).",
 			default = false,
 		},
 		{
 			key = "sellListMailOpen",
 			name = "The mailbox",
-			description = "The Sell List opens by itself beside the mailbox, with what's in your mail listed to take.",
+			description = "The Sell List opens by itself beside the mailbox, with what's in your mail listed to take. Per character.",
 			default = false,
 		},
 		{
@@ -773,6 +773,7 @@ local function HookMerchant()
 end
 
 function module:OnInitialize()
+	sell.LoadAutoOpen()
 	eventFrame:RegisterEvent("ADDON_LOADED")
 	CreatePlaceButtons()
 	HookMerchant()
@@ -807,7 +808,38 @@ function module:OnEnabledChanged(enabled)
 	UpdatePlaceButtons()
 end
 
-function module:OnOptionChanged()
+-- "Automatically Open At" is per character (a bank alt opens it at the bank, your main not):
+-- each character's ticks are saved by name (NraKitDB.sellListAutoOpenChars), and the four
+-- options show the character you're on. One that hasn't set them gets the defaults.
+local AUTO_OPEN_DEFAULTS = { sellListAutoOpen = true, sellListMerchantOpen = false, sellListBankOpen = false,
+	sellListMailOpen = false }
+
+local function CharacterAutoOpen()
+	NraKitDB.sellListAutoOpenChars = NraKitDB.sellListAutoOpenChars or {}
+	local name = ns:PlayerName()
+	NraKitDB.sellListAutoOpenChars[name] = NraKitDB.sellListAutoOpenChars[name] or {}
+	return NraKitDB.sellListAutoOpenChars[name]
+end
+
+-- Puts this character's ticks into the options (at login).
+function sell.LoadAutoOpen()
+	local mine = CharacterAutoOpen()
+	for key, default in pairs(AUTO_OPEN_DEFAULTS) do
+		local value = mine[key]
+		if value == nil then
+			value = default
+		end
+		NraKitDB[key] = value
+		if ns.settings[key] then
+			ns.settings[key]:SetValue(value)
+		end
+	end
+end
+
+function module:OnOptionChanged(key, value)
+	if AUTO_OPEN_DEFAULTS[key] ~= nil then
+		CharacterAutoOpen()[key] = value == true
+	end
 	UpdatePlaceButtons()
 	if sell.onChanged then
 		sell.onChanged()
