@@ -1,7 +1,7 @@
 -- Sell List: what in your bags is worth selling, the most valuable first, at the auction house
 -- (Auctionator) and at a vendor; soulbound ones apart, kept ones off the list.
 
-Enum.BagIndex = { Backpack = 0, Bag_1 = 1, CharacterBankTab_1 = 6 }
+Enum.BagIndex = { Backpack = 0, Bag_1 = 1, ReagentBag = 5, CharacterBankTab_1 = 6 }
 -- The auction house window (its addon already loaded), and a merchant's.
 CreateFrame("Frame", "AuctionHouseFrame")
 CreateFrame("Frame", "MerchantFrame"):Hide()
@@ -33,8 +33,8 @@ local BAG = {
 	{ itemID = 1006, stackCount = 2 }, -- an old auction price: 2g, 6 days old
 }
 -- A second bag with 4 empty slots, and the bank's first tab (bag 6).
-local BAG_SIZE = { [0] = #BAG, [1] = 4, [6] = 4 }
-local CONTAINERS = { [0] = BAG, [1] = {}, [6] = {} }
+local BAG_SIZE = { [0] = #BAG, [1] = 4, [5] = 0, [6] = 4 }
+local CONTAINERS = { [0] = BAG, [1] = {}, [5] = {}, [6] = {} }
 C_Container.GetContainerNumSlots = function(bag)
 	return BAG_SIZE[bag] or 0
 end
@@ -112,13 +112,13 @@ local ITEMS = {
 	[1001] = { "Black Lotus", 0 }, [1002] = { "Mithril Bar", 50 }, [1003] = { "Wolf Meat", 300 },
 	[1004] = { "Soulbound Ring", 5000, 1 }, [1005] = { "Broken Fang", 5 }, [1006] = { "Old Price", 100 },
 	[1007] = { "Banked Gem", 100 }, [1008] = { "Pickup Trinket", 2000, 1 },
-	[1009] = { "Thorium Bar", 100 }, [1010] = { "Arcane Crystal", 1000 },
+	[1009] = { "Thorium Bar", 100, 0, true }, [1010] = { "Arcane Crystal", 1000 },
 }
 C_Item.GetItemInfo = function(item)
 	local id = tonumber(tostring(item):match("%d+"))
 	local info = ITEMS[id]
 	if info then
-		return info[1], "item:" .. id, 1, 1, 1, "", "", 20, "", 1, info[2], 0, 0, info[3] or 0
+		return info[1], "item:" .. id, 1, 1, 1, "", "", 20, "", 1, info[2], 0, 0, info[3] or 0, 0, nil, info[4] == true
 	end
 end
 
@@ -551,6 +551,41 @@ return {
 			t.ok(at.bags, "away: your settings again (bags on)")
 			ns:SetSetting("sellListMail", false)
 			CONTAINERS[6], INBOX = {}, {}
+		end)
+
+		-- Regression: a non-reagent was sent to the reagent bag ("The item doesn't go into that
+		-- container") and nothing was taken.
+		t.test("the reagent bag only takes crafting reagents", function()
+			BAG_SIZE[5] = 2
+			CONTAINERS[1] = { { itemID = 1, stackCount = 1 }, { itemID = 1, stackCount = 1 }, { itemID = 1, stackCount = 1 },
+				{ itemID = 1, stackCount = 1 } } -- the ordinary bags full, the reagent bag empty
+			local function Has(list, bag)
+				for _, each in ipairs(list) do
+					if each == bag then
+						return true
+					end
+				end
+				return false
+			end
+			t.ok(not Has(sell.BagsFor(1010), 5), "Arcane Crystal (not a reagent): never the reagent bag")
+			t.ok(Has(sell.BagsFor(1009), 5), "Thorium Bar (a reagent): the reagent bag")
+			t.equal(sell.BagsFor(1009)[1], 5, "and first")
+			cursor = nil
+			CONTAINERS[6] = { { itemID = 1010, stackCount = 1 } }
+			BankFrame:Show()
+			wow.fire("BANKFRAME_OPENED")
+			local crystal
+			for _, item in ipairs(sell.Collect().ah) do
+				if item.where == "bank" then
+					crystal = item
+				end
+			end
+			sell.Take(crystal)
+			t.equal(CONTAINERS[5][1], nil, "not put in the reagent bag")
+			t.ok(sell.TakeStatus():find("Bags full", 1, true), "your bags are full for it")
+			wow.fire("BANKFRAME_CLOSED")
+			BankFrame:Hide()
+			BAG_SIZE[5], CONTAINERS[1], CONTAINERS[6] = 0, {}, {}
 		end)
 
 		t.test("bags too full for it all: Take All says how many fit", function()

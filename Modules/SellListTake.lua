@@ -40,21 +40,48 @@ local function MaxStack(item)
 	return math.max(stack or 1, 1)
 end
 
--- A free bag slot that can hold the item (profession bags only take their kind), not one
--- already used by this job; nil if your bags are full.
-local function FreeBagSlot(itemID, skip)
+local REAGENT_BAG = Enum.BagIndex and Enum.BagIndex.ReagentBag or 5
+
+-- The bags an item can go in, the way the game fills them: the reagent bag first for crafting
+-- reagents (it takes nothing else: "The item doesn't go into that container"), then profession
+-- bags of its kind (herbs, ore...), then ordinary bags.
+local function BagsFor(itemID)
 	local family = C_Item.GetItemFamily and C_Item.GetItemFamily(itemID) or 0
+	local isReagent = select(17, C_Item.GetItemInfo(itemID)) == true
+	local first, ordinary = {}, {}
 	for _, bag in ipairs(ns.inventory.BagsAt("bags")) do
 		local _, bagFamily = C_Container.GetContainerNumFreeSlots(bag)
-		if (bagFamily or 0) == 0 or bit.band(family or 0, bagFamily) ~= 0 then
-			for slot = 1, C_Container.GetContainerNumSlots(bag) do
-				if not C_Container.GetContainerItemID(bag, slot) and not (skip and skip[bag .. ":" .. slot]) then
-					return bag, slot
-				end
+		bagFamily = bagFamily or 0
+		if bag == REAGENT_BAG then
+			if isReagent then
+				table.insert(first, bag)
+			end
+		elseif bagFamily ~= 0 then
+			if bit.band(family or 0, bagFamily) ~= 0 then
+				table.insert(first, bag)
+			end
+		else
+			table.insert(ordinary, bag)
+		end
+	end
+	for _, bag in ipairs(ordinary) do
+		table.insert(first, bag)
+	end
+	return first
+end
+
+-- A free bag slot that can hold the item, not one already used by this take; nil if your bags
+-- are full (for it).
+local function FreeBagSlot(itemID, skip)
+	for _, bag in ipairs(BagsFor(itemID)) do
+		for slot = 1, C_Container.GetContainerNumSlots(bag) do
+			if not C_Container.GetContainerItemID(bag, slot) and not (skip and skip[bag .. ":" .. slot]) then
+				return bag, slot
 			end
 		end
 	end
 end
+sell.BagsFor = BagsFor
 
 -- How many free bag slots can hold the item: room, in stacks.
 function sell.Room(item)
