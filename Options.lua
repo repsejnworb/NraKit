@@ -535,6 +535,96 @@ local function AddFeatureControls(module, x, y)
 	link:SetPoint("TOPLEFT", content, "TOPLEFT", x + 62, y + 1)
 end
 
+-- Shades for an entry: the summary near white, points a step down, a tip warm.
+local SUMMARY_COLOR = { 0.93, 0.93, 0.93 }
+local POINT_COLOR = { 0.74, 0.74, 0.74 }
+local TIP_COLOR = { 0.95, 0.82, 0.5 }
+local TIP_ICON = "|TInterface\\Common\\help-i:16:16:0:-1|t "
+local SEEN_BAR = { 1, 1, 1, 0.12 }
+
+-- One changelog entry; returns the y below it. A feature with points (or a tip) is a block:
+-- its title with its switch, a summary, bullet points with a hanging indent and a tip, with
+-- a bar down its left (orange while it's new to you). Anything else is one line: its title
+-- in gold (if it has one), then what changed.
+local function AddEntry(entry, x, y, width)
+	local markup = ns.whatsNew.Markup
+	local module = entry.kind == "new" and entry.module and ns.modules[entry.module]
+	local unseen = unseenEntries[entry] == true
+	local controls = module and CONTROLS_WIDTH or 0
+
+	if not (entry.points or entry.tip) then
+		if unseen then
+			local dot = AcquireTexture()
+			dot:SetDrawLayer("ARTWORK")
+			dot:SetColorTexture(unpack(ACCENT))
+			dot:SetSize(6, 6)
+			dot:SetPoint("TOPLEFT", content, "TOPLEFT", x + 14, y - 5)
+		end
+		local text = AcquireText("GameFontHighlight")
+		text:SetWidth(width - 40 - controls)
+		text:SetText((entry.title and ("|cffffd100" .. entry.title .. "|r   ") or "") .. markup(entry.text))
+		text:SetTextColor(unpack(unseen and { 1, 1, 1 } or TEXT))
+		text:SetPoint("TOPLEFT", content, "TOPLEFT", x + 26, y)
+		local height = text:GetStringHeight()
+		if module then
+			AddFeatureControls(module, x + width - CONTROLS_WIDTH + 4, y)
+			height = math.max(height, 20)
+		end
+		return y - height - 8
+	end
+
+	local top = y
+	local textX, textWidth = x + 26, width - 40
+	local title = AcquireText("GameFontNormalMed3")
+	title:SetWordWrap(false)
+	title:SetWidth(textWidth - controls)
+	title:SetText(entry.title or (module and module.name) or "")
+	title:SetTextColor(unpack(NAME_ON))
+	title:SetPoint("TOPLEFT", content, "TOPLEFT", textX, y)
+	if module then
+		AddFeatureControls(module, x + width - CONTROLS_WIDTH + 4, y + 1)
+	end
+	y = y - 24
+
+	if entry.text and entry.text ~= "" then
+		local summary = AcquireText("GameFontHighlight")
+		summary:SetWidth(textWidth)
+		summary:SetText(markup(entry.text))
+		summary:SetTextColor(unpack(SUMMARY_COLOR))
+		summary:SetPoint("TOPLEFT", content, "TOPLEFT", textX, y)
+		y = y - summary:GetStringHeight() - 7
+	end
+
+	for _, point in ipairs(entry.points or {}) do
+		local bullet = AcquireText("GameFontHighlight")
+		bullet:SetText("•")
+		bullet:SetTextColor(unpack(ACCENT))
+		bullet:SetPoint("TOPLEFT", content, "TOPLEFT", textX + 4, y)
+		local text = AcquireText("GameFontHighlight")
+		text:SetWidth(textWidth - 18)
+		text:SetText(markup(point))
+		text:SetTextColor(unpack(POINT_COLOR))
+		text:SetPoint("TOPLEFT", content, "TOPLEFT", textX + 18, y)
+		y = y - text:GetStringHeight() - 5
+	end
+
+	if entry.tip then
+		local tip = AcquireText("GameFontHighlight")
+		tip:SetWidth(textWidth)
+		tip:SetText(TIP_ICON .. markup(entry.tip))
+		tip:SetTextColor(unpack(TIP_COLOR))
+		tip:SetPoint("TOPLEFT", content, "TOPLEFT", textX, y - 2)
+		y = y - tip:GetStringHeight() - 7
+	end
+
+	local bar = AcquireTexture()
+	bar:SetDrawLayer("ARTWORK")
+	bar:SetColorTexture(unpack(unseen and { ACCENT[1], ACCENT[2], ACCENT[3], 0.9 } or SEEN_BAR))
+	bar:SetPoint("TOPLEFT", content, "TOPLEFT", x + 14, top + 1)
+	bar:SetPoint("BOTTOMRIGHT", content, "TOPLEFT", x + 16, y + 4)
+	return y - 10
+end
+
 local function RenderWhatsNew(x, y, width)
 	local title = AcquireText("GameFontNormalLarge")
 	title:SetText("What's new")
@@ -639,25 +729,7 @@ local function RenderWhatsNew(x, y, width)
 							heading:SetPoint("TOPLEFT", content, "TOPLEFT", x + 12, y - 2)
 							y = y - 20
 						end
-						local module = entry.kind == "new" and entry.module and ns.modules[entry.module]
-						if unseenEntries[entry] then
-							local dot = AcquireTexture()
-							dot:SetDrawLayer("ARTWORK")
-							dot:SetColorTexture(unpack(ACCENT))
-							dot:SetSize(6, 6)
-							dot:SetPoint("TOPLEFT", content, "TOPLEFT", x + 14, y - 5)
-						end
-						local text = AcquireText("GameFontHighlight")
-						text:SetWidth(width - 40 - (module and CONTROLS_WIDTH or 0))
-						text:SetText(entry.text)
-						text:SetTextColor(unpack(unseenEntries[entry] and { 1, 1, 1 } or TEXT))
-						text:SetPoint("TOPLEFT", content, "TOPLEFT", x + 26, y)
-						local height = text:GetStringHeight()
-						if module then
-							AddFeatureControls(module, x + width - CONTROLS_WIDTH + 4, y)
-							height = math.max(height, 20)
-						end
-						y = y - height - 8
+						y = AddEntry(entry, x, y, width)
 					end
 				end
 			end

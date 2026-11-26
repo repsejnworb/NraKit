@@ -26,6 +26,14 @@ return {
 				for _, entry in ipairs(release.entries) do
 					t.ok(kinds[entry[1]], "kind in " .. release.version .. ": " .. tostring(entry[1]))
 					t.ok(type(entry[2]) == "string" and entry[2] ~= "", "text in " .. release.version)
+					t.ok(entry.title == nil or type(entry.title) == "string", "title is text in " .. release.version)
+					t.ok(entry.tip == nil or type(entry.tip) == "string", "tip is text in " .. release.version)
+					if entry.points then
+						t.ok(#entry.points >= 1 and #entry.points <= 5, "1 to 5 points in " .. release.version)
+						for _, point in ipairs(entry.points) do
+							t.ok(type(point) == "string" and point ~= "", "a point is text in " .. release.version)
+						end
+					end
 					if entry.module then
 						t.ok(ns.modules[entry.module], "module exists: " .. entry.module)
 					end
@@ -83,6 +91,25 @@ return {
 				return frame.shown and rawget(frame, "text") == "NEW TO YOU"
 			end)
 			t.ok(#badges >= 1, "the new version stays marked while the window is open")
+		end)
+
+		t.test("**words** stand out and /commands are gold", function()
+			t.equal(whatsNew.Markup("Type **this** or /nra new (or /goal)."),
+				"Type |cffffffffthis|r or |cffffd100/nra|r new (or |cffffd100/goal|r).", "marked up")
+			t.equal(whatsNew.Markup("and/or"), "and/or", "a slash inside a word is left alone")
+		end)
+
+		t.test("a feature with points is a title, summary, bullets and tip", function()
+			ns:OpenWhatsNew()
+			local function Visible(match)
+				return wow.findAll(function(frame)
+					return wow.visible(frame) and type(frame.text) == "string" and frame.text:find(match, 1, true)
+				end)
+			end
+			t.ok(#Visible("•") >= 3, "bullets")
+			t.ok(#Visible("Cooldown Manager fade") >= 1, "the feature's title")
+			t.ok(#Visible("help-i") >= 1, "a tip, with its icon")
+			t.ok(#Visible("|cffffffffwhich bars|r") >= 1, "highlighted words")
 		end)
 
 		t.test("a new feature can be turned on from the page", function()

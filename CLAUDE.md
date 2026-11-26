@@ -12,7 +12,9 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   ("Player notes: ..."), not as the commit message; kinds are `new`, `improved`, `fixed`. A new feature's entry is
   `{ "new", "...", module = "<module key>" }` (the window shows its on/off switch there; a test fails if a module
   has none). Only ever add entries, never remove or reorder them (the game counts them to know what's new to someone).
-  Tests, refactors and docs need no entry. `just release` turns `Unreleased` into the version and writes `CHANGELOG.md`
+  Tests, refactors and docs need no entry. Write entries to be scanned, not read: a new feature gets
+  `title`, a one-sentence summary, up to 5 one-line `points` and a `tip` for "do this first"; small changes are one
+  line with a `title`. `**words**` stand out; no bracket-and-semicolon chains (format at the top of Changelog.lua). `just release` turns `Unreleased` into the version and writes `CHANGELOG.md`
   (the CurseForge/GitHub release notes); `just changelog-check` (run by release) fails on feat/fix commits with an
   empty `Unreleased`.
 - Each feature should be toggleable on the NraKit overview page; anything tunable goes in settings, not code constants.

@@ -22,6 +22,29 @@ local function Find(changelog, version)
 	end
 end
 
+-- Changelog text as Markdown: **words** stay bold, /commands become code.
+local function Markdown(text)
+	text = (" " .. (text or "")):gsub("([%s%(])(/%a[%w]*)", "%1`%2`")
+	return (text:sub(2))
+end
+
+-- An entry as Markdown list lines: "- **Title**: summary", with its points and tip under it.
+local function EntryLines(entry)
+	local lines = {}
+	local head = Markdown(entry[2])
+	if entry.title then
+		head = "**" .. entry.title .. "**" .. (head ~= "" and (": " .. head) or "")
+	end
+	table.insert(lines, "- " .. head)
+	for _, point in ipairs(entry.points or {}) do
+		table.insert(lines, "  - " .. Markdown(point))
+	end
+	if entry.tip then
+		table.insert(lines, "  - *Tip: " .. Markdown(entry.tip) .. "*")
+	end
+	return lines
+end
+
 local command = arg[1]
 
 if command == "count" then
@@ -66,7 +89,9 @@ elseif command == "markdown" then
 		local lines = {}
 		for _, entry in ipairs(release.entries) do
 			if entry[1] == kind[1] then
-				table.insert(lines, "- " .. entry[2])
+				for _, line in ipairs(EntryLines(entry)) do
+					table.insert(lines, line)
+				end
 			end
 		end
 		if #lines > 0 then

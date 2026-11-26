@@ -9,27 +9,66 @@ local _, ns = ...
 -- `just release` turns that block into the new version. Entries are only ever added,
 -- never removed or reordered: the window counts them to know what's new to someone.
 --
--- Entry: { kind, text, module = <module key>? }
+-- Entry: { kind, text, title = ?, points = ?, tip = ?, module = <module key>? }
 --   kind    "new" (a new feature, or something new a feature can do), "improved" or "fixed"
+--   text    one sentence: what it is or what changed (for a feature with points: the summary)
+--   title   the feature's name, shown in gold before it (rather than "Name: ..." in the text)
+--   points  a new feature's details as bullet points: at most 5, each about one line
+--   tip     a "do this first" note (e.g. "Set the bars to Always in Edit Mode"), set apart
 --   module  the feature it's about; a "new" entry with a module gets that feature's
 --           on/off switch and a Settings link in the window. Every feature needs one
 --           "new" entry with its module (tests/changelog_test.lua checks).
+-- In text, points and tip: **words** stand out (brighter in game, bold in the release
+-- notes) and /commands are coloured. Write short: no brackets-and-semicolon chains.
 
 ns.changelog = {
 	{ version = "Unreleased", entries = {
-		{ "new", "Shortcuts: short commands for NraKit's everyday ones: /remind, /todo, /item, /dps, /shop, /bank, /goal, /note, /wish, /scan and /done, each the same as its /nra command. NraKit only takes ones no other addon (or the game) uses, and hands a command over to an addon that takes it later; /nra shortcuts lists them and which are in use elsewhere. Turn each on or off; one whose feature is off isn't taken.", module = "shortcuts" },
+		{ "new", title = "Shortcuts", module = "shortcuts",
+			"Short commands for NraKit's everyday ones, each the same as its /nra command.",
+			points = {
+				"**/remind, /todo, /item, /dps, /shop, /bank, /goal, /note, /wish, /scan** and **/done**.",
+				"Only commands **no other addon or the game uses** are taken; an addon that takes one later gets it.",
+				"/nra shortcuts lists them, and which are in use elsewhere.",
+				"Turn each on or off. One whose feature is off isn't taken.",
+			} },
+		{ "improved", title = "What's new", "Easier to read: each new feature has its name, a one-line summary and bullet points, with key words picked out." },
 	} },
 	{ version = "0.31.0", date = "2026-11-26", entries = {
-		{ "new", "Cooldown Manager fade: the game's Cooldown Manager bars show in combat and fade out, animated, a while after it instead of just vanishing. Pick which bars, how long they stay and fade, and how faint they fade to; they also come back with a hostile target (fading right away when you drop it) and while the mouse is over one. Set the bars to Always in Edit Mode.", module = "cooldownManagerFade" },
-		{ "new", "Warrior, in the new Classes section (Classes > Warrior in the NraKit window's sidebar shows just its settings). The rage bar of the Personal Resource Display shows a small arrow at how much rage you keep when you change stance, from Tactical Mastery and your ranks of Improved Tactical Mastery; it moves by itself when you learn it or change talents (arrow at the top, bottom or both, its size, and optionally shade the rage you keep). Overpower, Revenge, Victory Rush and Execute make their action buttons glow while you can use them, which the game doesn't show: bright means press it now, dim means it's up but you're short of rage or it's on cooldown. A thin gold bar drains as a proc runs out, turning orange with the glow pulsing at the end, and Victory Rush also counts down its seconds (its time comes from its buff; NraKit learns the others' the first time one runs out). Optionally a sound and an icon by the rage bar.", module = "warrior" },
-		{ "improved", "Inventory Tracker: what you buy at the Auction House shows in your mail right away, before you visit the mailbox." },
+		{ "new", title = "Cooldown Manager fade", module = "cooldownManagerFade",
+			"The game's Cooldown Manager bars show in combat and **fade out**, animated, a while after it instead of just vanishing.",
+			points = {
+				"Pick **which bars**, how long they **stay** and **fade**, and how faint they fade to.",
+				"They come back with a **hostile target**, fading right away when you drop it.",
+				"And while the **mouse is over** one.",
+			},
+			tip = "Set the bars to **Always** in Edit Mode." },
+		{ "new", title = "Warrior", module = "warrior",
+			"Small things for warriors, in the new **Classes** section (Classes > Warrior in the sidebar shows just its settings).",
+			points = {
+				"A small **arrow on your rage bar** at the rage you keep when you change stance: Tactical Mastery plus your Improved Tactical Mastery ranks. It follows your talents by itself.",
+				"**Overpower, Revenge, Victory Rush and Execute glow** while you can use them, which the game doesn't show.",
+				"**Bright** means press it now; **dim** means it's up, but you're short of rage or it's on cooldown.",
+				"A thin gold bar shows the **time left**, turning orange at the end; Victory Rush also counts down its seconds.",
+				"Options: the arrow at the top, bottom or both and its size, a sound, and an icon by the rage bar.",
+			},
+			tip = "The arrow is on the **Personal Resource Display**'s rage bar." },
+		{ "improved", title = "Inventory Tracker", "What you buy at the Auction House shows in your mail right away, before you visit the mailbox." },
 	} },
 	{ version = "0.30.0", date = "2026-11-26", entries = {
-		{ "new", "/nra dps shows or hides the game's damage meter (the same as its setting in the options), with or without Damage meter look." },
+		{ "new", title = "/nra dps", "Shows or hides the game's damage meter (the same as its setting in the options), with or without Damage meter look." },
 	} },
 	{ version = "0.29.0", date = "2026-11-26", entries = {
-		{ "new", "Auctionator prices (needs Auctionator): what things cost at the auction house, from Auctionator's last scan. A Waylaid Crate's tooltip prices each bundle it takes, with the cheapest in green, and an Auctionator shopping list, \"Waylaid Crates\", holds every bundle of the crates in your bags. A recipe's tooltip shows what one craft costs, how many of each reagent you have (green in your bags, yellow elsewhere, with which of your characters has them) and what's left to buy; the crates show what you have too. Right-click a recipe link in chat or a recipe in your profession window to make an Auctionator shopping list of its reagents, or to add them to the NraKit Shopping List: a new tab (/nra shop) with everything you're crafting, its amounts (change them), prices, a total and how many you have on all your characters, which Auctionator gets a copy of. Reagents sold by vendors show the vendor's price (NraKit remembers them from merchants you visit) and are left out of the auction house search.", module = "auctionatorPrices" },
-		{ "fixed", "NraKit's messages in the middle of the screen are only as wide as what they show, so the mouse no longer holds one up (or clicks it) from far beside its text." },
+		{ "new", title = "Auctionator prices", module = "auctionatorPrices",
+			"What things cost at the auction house, from Auctionator's last scan.",
+			points = {
+				"**Waylaid Crates**: the tooltip prices each bundle, the cheapest in green, and an Auctionator shopping list holds every bundle of the crates in your bags.",
+				"**Recipes**: the tooltip shows what one craft costs, how many of each reagent you have (and on which character), and what's left to buy.",
+				"Right-click a recipe in chat or your profession window to make an **Auctionator shopping list** of its reagents, or add them to the NraKit Shopping List.",
+				"The **Shopping list** tab (/nra shop): everything you're crafting, amounts, prices, a total and what you have on all your characters.",
+				"Reagents sold by vendors show the **vendor's price** and are left out of the auction house search.",
+			},
+			tip = "Needs the **Auctionator** addon." },
+		{ "fixed", title = "Messages", "NraKit's messages in the middle of the screen are only as wide as what they show, so the mouse no longer holds one up (or clicks it) from far beside its text." },
 	} },
 	{ version = "0.28.0", date = "2026-11-25", entries = {
 		{ "improved", "Inventory Tracker: hover your gold at the bottom of your bags to see the gold of each of your characters, and the total (an option, on by default)." },

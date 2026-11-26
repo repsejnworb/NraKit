@@ -16,7 +16,8 @@ local ANNOUNCE_DELAY = 8 -- seconds after login, so it isn't lost in the login c
 
 local entries
 
--- Every entry, newest first, with its version: { kind, text, module, version, date }.
+-- Every entry, newest first, with its version: { kind, text, title, points, tip, module,
+-- version, date } (see Changelog.lua for what each is).
 function whatsNew.Entries()
 	if not entries then
 		entries = {}
@@ -24,12 +25,23 @@ function whatsNew.Entries()
 			for _, entry in ipairs(release.entries) do
 				table.insert(entries, {
 					kind = entry[1], text = entry[2], module = entry.module,
+					title = entry.title, points = entry.points, tip = entry.tip,
 					version = release.version, date = release.date,
 				})
 			end
 		end
 	end
 	return entries
+end
+
+-- Changelog text for the game: **words** brighter (lines can't switch font, but can switch
+-- colour), /commands gold.
+local BRIGHT, COMMAND = "|cffffffff", "|cffffd100"
+
+function whatsNew.Markup(text)
+	text = (text or ""):gsub("%*%*(.-)%*%*", BRIGHT .. "%1|r")
+	text = (" " .. text):gsub("([%s%(])(/%a[%w]*)", "%1" .. COMMAND .. "%2|r")
+	return (text:sub(2))
 end
 
 function whatsNew.UnseenCount()
