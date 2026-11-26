@@ -21,7 +21,8 @@ local _, ns = ...
 
 local module = {
 	key = "auctionatorPrices",
-	section = "Professions",
+	section = "Auction House",
+	subsection = "Auctionator",
 	name = "Auctionator prices",
 	description = "Needs the Auctionator addon. What Waylaid Crates and recipes cost at the auction house (from Auctionator's last scan, or the vendor's price), shopping lists for Auctionator from recipes, and the NraKit Shopping List for everything you're crafting.",
 	default = false,
@@ -71,6 +72,14 @@ local module = {
 			name = "Leave vendor items out of Auctionator lists",
 			description = "Reagents sold by a vendor (thread, dye, vials...) aren't searched for at the auction house. They still show in tooltips and the NraKit Shopping List.",
 			default = true,
+		},
+		{
+			key = "auctionatorInventoryValue",
+			header = "Inventory",
+			name = "Value your characters' items",
+			description = "The Inventory tab shows what each character's bags, bank and mail are worth at the auction house, and in all.",
+			default = true,
+			requires = "inventoryTracker",
 		},
 	},
 }
@@ -627,6 +636,35 @@ end
 
 -- How many you have: the total over your characters (Inventory tracker's data, with who has
 -- how many: { { label, class, total, where }, ... }), or your bags and bank without it.
+-- Whether inventories are valued at auction prices (the option, with Auctionator there).
+function prices.ValuesInventories()
+	return IsOn("auctionatorInventoryValue")
+end
+
+-- What one sells for at the auction house, for valuing inventories (nil without a price, or
+-- with that option off).
+function prices.AuctionValue(itemID)
+	if not IsOn("auctionatorInventoryValue") then
+		return nil
+	end
+	return API().GetAuctionPriceByItemID(CALLER, itemID)
+end
+
+-- A character's bags, bank and mail at auction house prices (Inventory tracker's data); nil
+-- with the option off.
+function prices.InventoryValue(data)
+	if not IsOn("auctionatorInventoryValue") then
+		return nil
+	end
+	local api, total = API(), 0
+	for _, where in ipairs({ "bags", "bank", "mail" }) do
+		for itemID, count in pairs(data[where] or {}) do
+			total = total + (api.GetAuctionPriceByItemID(CALLER, itemID) or 0) * count
+		end
+	end
+	return total
+end
+
 function prices.Have(itemID)
 	if ns.inventory and ns.inventory.Holders and ns:IsModuleEnabled("inventoryTracker") then
 		local holders = ns.inventory.Holders(itemID)

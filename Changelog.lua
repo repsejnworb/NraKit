@@ -32,7 +32,17 @@ ns.changelog = {
 				"Turn each on or off. One whose feature is off isn't taken.",
 			} },
 		{ "improved", title = "What's new", "Easier to read: each new feature has its name, a one-line summary and bullet points, with key words picked out." },
-		{ "improved", title = "Settings", "Features are sorted into clearer sections: **Interface**, Classes, Quests, Bags & Items, Professions, Mail, Trackers & Reminders, **Social** and **Tools**, and a few have shorter names." },
+		{ "new", title = "Sell list", module = "sellList",
+			"What in your bags is worth selling, the most valuable first, so you don't have to hover every item.",
+			points = {
+				"**Auction house and vendor prices** side by side; the better one is bright, and a stale auction price is marked.",
+				"A **button on the auction house** opens it right beside it; also in the Inventory tab, and /nra sell.",
+				"Soulbound items are apart (vendor only), and right-click → **Keep, don't list** for what you use.",
+				"Leaves out junk below a minimum, optionally lists your bank, and sorts by any column.",
+			},
+			tip = "Auction prices come from **Auctionator**; without it, it's vendor prices." },
+		{ "improved", title = "Auctionator prices", "Now in the new **Auction House** section, and the Inventory tab shows what each character's items are worth at the auction house." },
+		{ "improved", title = "Settings", "Features are sorted into clearer sections: **Interface**, Classes, Quests, Bags & Items, Professions, **Auction House**, Mail, Trackers & Reminders, **Social** and **Tools**, and a few have shorter names." },
 	} },
 	{ version = "0.31.0", date = "2026-11-26", entries = {
 		{ "new", title = "Cooldown Manager fade", module = "cooldownManagerFade",

@@ -12,7 +12,7 @@ local addonName, ns = ...
 -- OnOptionChanged, whichever UI did it.
 
 -- Section order, in both UIs. Sections not listed here go last.
-ns.sectionOrder = { "Interface", "Classes", "Quests", "Bags & Items", "Professions", "Mail", "Trackers & Reminders", "Social", "Tools" }
+ns.sectionOrder = { "Interface", "Classes", "Quests", "Bags & Items", "Professions", "Auction House", "Mail", "Trackers & Reminders", "Social", "Tools" }
 
 ns.settings = {}
 -- Functions called with (moduleKey, on) after any module is turned on or off (e.g. Shortcuts

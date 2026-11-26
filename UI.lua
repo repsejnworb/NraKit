@@ -183,6 +183,17 @@ local function ApplyPosition(frame)
 	end
 end
 
+-- Puts a tab window back where NraKit's windows are (e.g. after it was shown beside the
+-- auction house).
+function UI.RestorePosition(frame)
+	if NraKitDB.windowPosition then
+		ApplyPosition(frame)
+	else
+		frame:ClearAllPoints()
+		frame:SetPoint("CENTER")
+	end
+end
+
 function RefreshTabStrip(frame)
 	local strip = frame.tabStrip
 	for _, button in ipairs(strip.buttons) do

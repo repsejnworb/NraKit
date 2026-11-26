@@ -273,6 +273,25 @@ rank).
 - Right-clicking NPCs and players, and holding right-click to turn the camera, work as normal.
 - The double-click time is adjustable.
 
+### Auction House
+
+#### Sell list
+
+**What in your bags is worth selling**, the most valuable first, so you don't have to hover every
+item. A tab in the NraKit window (`/nra sell`).
+
+- **Auction house and vendor prices side by side** (auction prices from Auctionator), for each item
+  and the whole stack. The better of the two is bright; "a vendor pays more" says when to vendor.
+- An auction price **more than 3 days old** is marked, so you don't undercut yourself on old data.
+- A **button on the auction house** opens it **right beside it** (it closes with it). Click an item
+  there to pick it up and drop it in the sell slot. Also a **What can I sell?** button in the
+  Inventory tab.
+- **Soulbound** items are apart, under "Vendor only". Right-click an item → **Keep, don't list** for
+  potions, food and reagents you use.
+- Leaves out items worth less than a **minimum** (10 silver), optionally lists your **bank**, and
+  sorts by **any column**. The footer says what it's all worth.
+- Without Auctionator it still works, on vendor prices.
+
 #### Auctionator prices
 
 Needs **[Auctionator](https://www.curseforge.com/wow/addons/auctionator)**. What things cost at
@@ -304,6 +323,8 @@ the auction house, from Auctionator's last scan.
 - **Vendor items** (thread, dye, vials...) show the **vendor's price**, tagged "vendor": NraKit
   remembers what merchants you visit sell (Auctionator's vendor prices fill the gaps). They're left
   out of Auctionator lists (an option).
+- **Inventory value:** the Inventory tab shows what each character's bags, bank and mail are worth
+  at the auction house, and everyone's in all.
 - Optionally shows the price per item too.
 
 <img width="779" height="546" alt="auctionatorNraKitShoppingList" src=".github/screenshots/auctionatorNraKitShoppingList.png" />

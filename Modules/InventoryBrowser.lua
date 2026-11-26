@@ -54,7 +54,7 @@ local CLASS_CATEGORY = {
 	[Enum.ItemClass.Key] = "quest",
 }
 
-local frame, sidebarScroll, scroll, searchBox, infoText, footerLeft, footerRight
+local frame, sidebarScroll, scroll, searchBox, infoText, footerLeft, footerRight, sellButton
 local locationTabs, categoryChips, viewButtons = {}, {}, {}
 local sidebarPool, pool = UI.CreatePool(), UI.CreatePool()
 
@@ -115,7 +115,24 @@ local function ColorName(character)
 end
 
 -- Empty when unknown (characters not logged in since gold was first recorded).
-local function Money(copper)
+local Money
+
+-- "~2,345g": a rough value, whole gold.
+local function RoughGold(copper)
+	local gold = math.floor(copper / 10000 + 0.5)
+	return "~" .. (BreakUpLargeNumbers and BreakUpLargeNumbers(gold) or tostring(gold)) .. "|cffffd100g|r"
+end
+
+-- "12g 30s  ·  ~2,345g in items" with item values (Auctionator prices), else just the gold.
+local function WorthText(money, itemsValue)
+	local text = money and Money(money) or ""
+	if itemsValue and itemsValue > 0 then
+		text = text .. (text ~= "" and "  |cff999999·|r  " or "") .. "|cffcccccc" .. RoughGold(itemsValue) .. " in items|r"
+	end
+	return text
+end
+
+function Money(copper)
 	if not copper then
 		return ""
 	end
@@ -448,13 +465,20 @@ local function RenderSidebar(characters)
 	end
 
 	local totalMoney -- nil until some character's gold is known
+	local totalItems -- the auction value of everyone's items (Auctionator prices), nil without
+	local valueOf = {}
 	for _, character in ipairs(characters) do
 		if character.data.money then
 			totalMoney = (totalMoney or 0) + character.data.money
 		end
+		local value = ns.auctionator and ns.auctionator.InventoryValue and ns.auctionator.InventoryValue(character.data)
+		if value then
+			valueOf[character] = value
+			totalItems = (totalItems or 0) + value
+		end
 	end
 	local all = AddButton("All characters", nil)
-	all:SetSubtext(Money(totalMoney))
+	all:SetSubtext(WorthText(totalMoney, totalItems))
 	all.count:SetText(#characters)
 	all:SetSelected(selected == nil)
 
@@ -478,7 +502,7 @@ local function RenderSidebar(characters)
 			y = y - 24
 		end
 		local button = AddButton(character.name, character)
-		button:SetSubtext(Money(character.data.money))
+		button:SetSubtext(WorthText(character.data.money, valueOf[character]))
 		button.count:SetText(character.data.level and tostring(character.data.level) or "")
 		local isSelected = selected and selected.realm == character.realm and selected.name == character.name
 		button:SetSelected(isSelected, { ns.inventory.ClassColor(character.data.class) })
@@ -557,6 +581,7 @@ function Render()
 		button:SetSelected(button.key == view)
 	end
 	infoText:SetText(DescribeFreshness(characters))
+	sellButton:SetShown(ns:IsModuleEnabled("sellList"))
 
 	local items = CollectItems(characters)
 	local shown = Filter(items)
@@ -589,13 +614,22 @@ function Render()
 	content:SetHeight(height)
 	scroll:SetScroll(scroll:GetVerticalScroll())
 
-	local total, value = 0, 0
+	local prices = ns.auctionator
+	local valued = prices and prices.ValuesInventories and prices.ValuesInventories()
+	local total, value, auction = 0, 0, valued and 0 or nil
 	for _, item in ipairs(shown) do
 		total = total + item.count
 		value = value + (item.price or 0) * item.count
+		if valued then
+			auction = auction + (prices.AuctionValue(item.id) or 0) * item.count
+		end
 	end
 	footerLeft:SetText(string.format("%d items  ·  %s in total", #shown, BreakUpLargeNumbers and BreakUpLargeNumbers(total) or total))
-	footerRight:SetText("Vendor value  " .. Money(value))
+	if auction then
+		footerRight:SetText("Auction house  |cffffffff" .. RoughGold(auction) .. "|r   ·   Vendor  " .. Money(value))
+	else
+		footerRight:SetText("Vendor value  " .. Money(value))
+	end
 end
 
 -- Re-render once, soon: data and item info arrive in bursts.
@@ -677,6 +711,17 @@ local function CreateBrowser()
 		anchor = chip
 		table.insert(categoryChips, chip)
 	end
+
+	-- The Sell list (its own tab), while that feature is on.
+	sellButton = UI.CreateFlatButton(body, "What can I sell?", 20)
+	sellButton:SetPoint("TOPRIGHT", -PAD, -PAD - 32)
+	sellButton:SetScript("OnClick", function()
+		UI.ShowTab("sell")
+	end)
+	sellButton:SetScript("OnEnter", function(self)
+		UI.ShowTooltip(self, "Sell list", "What in your bags is worth selling, most valuable first.")
+	end)
+	sellButton:SetScript("OnLeave", GameTooltip_Hide)
 
 	infoText = body:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	infoText:SetPoint("TOPLEFT", PAD + 2, -PAD - 62)

@@ -1,0 +1,161 @@
+-- Sell list: what in your bags is worth selling, the most valuable first, at the auction house
+-- (Auctionator) and at a vendor; soulbound ones apart, kept ones off the list.
+
+Enum.BagIndex = { Backpack = 0 }
+-- The auction house window (its addon already loaded).
+CreateFrame("Frame", "AuctionHouseFrame")
+
+-- Your bags: one bag with these slots.
+local BAG = {
+	{ itemID = 1001, stackCount = 3 }, -- Black Lotus: 45g each at the AH
+	{ itemID = 1002, stackCount = 20 }, -- Mithril Bar: 1g20s at the AH, 50c at a vendor
+	{ itemID = 1002, stackCount = 38 }, -- (a second stack)
+	{ itemID = 1003, stackCount = 5 }, -- Wolf Meat: 3s at a vendor beats the AH's 10c
+	{ itemID = 1004, stackCount = 1, isBound = true }, -- a soulbound ring: 50s at a vendor
+	{ itemID = 1005, stackCount = 1 }, -- junk: 5c
+	{ itemID = 1006, stackCount = 2 }, -- an old auction price: 2g, 6 days old
+}
+C_Container.GetContainerNumSlots = function(bag)
+	return bag == 0 and #BAG or 0
+end
+C_Container.GetContainerItemInfo = function(bag, slot)
+	local item = bag == 0 and BAG[slot]
+	if item then
+		return { itemID = item.itemID, stackCount = item.stackCount, isBound = item.isBound,
+			hyperlink = "item:" .. item.itemID, iconFileID = 1, quality = 1 }
+	end
+end
+local picked
+C_Container.PickupContainerItem = function(bag, slot)
+	picked = { bag, slot }
+end
+
+-- name, sell price, bind type
+local ITEMS = {
+	[1001] = { "Black Lotus", 0 }, [1002] = { "Mithril Bar", 50 }, [1003] = { "Wolf Meat", 300 },
+	[1004] = { "Soulbound Ring", 5000, 1 }, [1005] = { "Broken Fang", 5 }, [1006] = { "Old Price", 100 },
+}
+C_Item.GetItemInfo = function(item)
+	local id = tonumber(tostring(item):match("%d+"))
+	local info = ITEMS[id]
+	if info then
+		return info[1], "item:" .. id, 1, 1, 1, "", "", 20, "", 1, info[2], 0, 0, info[3] or 0
+	end
+end
+
+local AH = { [1001] = 450000, [1002] = 12000, [1003] = 10, [1006] = 20000 }
+local AGE = { [1006] = 6 }
+local function ID(link)
+	return tonumber(tostring(link):match("%d+"))
+end
+Auctionator = { API = { v1 = {
+	GetAuctionPriceByItemID = function(_, id)
+		return AH[id]
+	end,
+	GetAuctionPriceByItemLink = function(_, link)
+		return AH[ID(link)]
+	end,
+	GetAuctionAgeByItemID = function(_, id)
+		return AGE[id] or 0
+	end,
+	GetAuctionAgeByItemLink = function(_, link)
+		return AGE[ID(link)] or 0
+	end,
+} } }
+
+return {
+	enable = { "sellList", "auctionatorPrices", "inventoryTracker" },
+	run = function(t, ns, wow)
+		local sell = ns.sellList
+		local function Names(list)
+			local names = {}
+			for _, item in ipairs(list) do
+				table.insert(names, item.name)
+			end
+			return table.concat(names, ", ")
+		end
+
+		t.test("the most valuable first, at the AH or a vendor, whichever pays more", function()
+			local groups = sell.Collect()
+			t.equal(Names(groups.sell), "Black Lotus, Mithril Bar, Old Price, Wolf Meat", "by value")
+			local bar = groups.sell[2]
+			t.equal(bar.count, 58, "both stacks of Mithril Bar")
+			t.equal(bar.ahTotal, 58 * 12000, "at the AH")
+			t.equal(groups.sell[4].best, "vendor", "Wolf Meat: the vendor pays more")
+			t.equal(groups.sell[3].age, 6, "how old the price is")
+			t.equal(groups.sellTotal, 3 * 450000 + 58 * 12000 + 2 * 20000, "auction total")
+			t.equal(groups.vendorTotal, 5 * 300, "vendor total")
+		end)
+
+		t.test("soulbound items are vendor only; junk below the minimum is left out", function()
+			local groups = sell.Collect()
+			t.equal(Names(groups.vendor), "Soulbound Ring", "soulbound apart")
+			t.ok(not Names(groups.sell):find("Broken Fang", 1, true), "5c is below 10s")
+			ns:SetSetting("sellListMinValue", 0)
+			t.ok(Names(sell.Collect().sell):find("Broken Fang", 1, true), "listed with no minimum")
+			ns:SetSetting("sellListMinValue", 10)
+		end)
+
+		t.test("kept items stay off the list", function()
+			sell.SetKept(1002, true)
+			local groups = sell.Collect()
+			t.ok(not Names(groups.sell):find("Mithril", 1, true), "not to sell")
+			t.equal(Names(groups.kept), "Mithril Bar", "but under Kept")
+			sell.SetKept(1002, false)
+			t.ok(Names(sell.Collect().sell):find("Mithril", 1, true), "listed again")
+		end)
+
+		t.test("click a column to sort by it, again to turn it around", function()
+			sell.SetSort("name")
+			t.equal(Names(sell.Collect().sell), "Black Lotus, Mithril Bar, Old Price, Wolf Meat", "A to Z")
+			sell.SetSort("name")
+			t.equal(Names(sell.Collect().sell), "Wolf Meat, Old Price, Mithril Bar, Black Lotus", "Z to A")
+			sell.SetSort("vendor")
+			t.equal(sell.Collect().sell[1].name, "Mithril Bar", "money columns start high (29s at a vendor)")
+			sell.SetSort("value")
+		end)
+
+		t.test("the window lists them, with totals", function()
+			ns:OpenSellList()
+			t.ok(_G.NraKitSellListFrame:IsShown(), "open")
+			local rows = wow.findAll(function(frame)
+				return wow.visible(frame) and rawget(frame, "item") ~= nil
+			end)
+			t.equal(#rows, 4, "a row for each item to sell (the folded groups closed)")
+		end)
+
+		t.test("at the auction house: a button, the list beside it, closing with it", function()
+			_G.NraKitSellListFrame:Hide()
+			wow.fire("AUCTION_HOUSE_SHOW")
+			local ok = wow.click("NraKit Sell list")
+			t.ok(ok, "a button on the auction house")
+			t.ok(_G.NraKitSellListFrame:IsShown(), "opens the list")
+			t.equal(rawget(_G.NraKitSellListFrame, "docked"), true, "beside the auction house")
+			local row = wow.findAll(function(frame)
+				return wow.visible(frame) and rawget(frame, "item") ~= nil
+			end)[1]
+			row.scripts.OnClick(row, "LeftButton")
+			t.equal(picked and picked[1], 0, "clicking an item picks it up, to drop in the sell slot")
+			wow.fire("AUCTION_HOUSE_CLOSED")
+			t.ok(not _G.NraKitSellListFrame:IsShown(), "closes with the auction house")
+		end)
+
+		t.test("the Inventory tab values everyone's items at auction prices", function()
+			local value = ns.auctionator.InventoryValue({ bags = { [1001] = 2 }, bank = { [1002] = 10 }, mail = { [1006] = 1 } })
+			t.equal(value, 2 * 450000 + 10 * 12000 + 20000, "bags, bank and mail")
+			ns:SetSetting("auctionatorInventoryValue", false)
+			t.equal(ns.auctionator.InventoryValue({ bags = { [1001] = 2 } }), nil, "not with the option off")
+			ns:SetSetting("auctionatorInventoryValue", true)
+		end)
+
+		t.test("without Auctionator it's vendor prices", function()
+			local saved = Auctionator
+			Auctionator = nil
+			local groups = sell.Collect()
+			t.equal(groups.sell[1].best, "vendor", "vendor prices only")
+			t.equal(groups.sellTotal, 0, "nothing at the auction house")
+			Auctionator = saved
+			t.noErrors()
+		end)
+	end,
+}
