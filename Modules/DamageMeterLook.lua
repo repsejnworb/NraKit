@@ -346,7 +346,59 @@ eventFrame:SetScript("OnEvent", function(_, _, addon)
 	end
 end)
 
+---------------------------------------------------------------------------
+-- /nra dps: show or hide the meter, whether or not the look is on. It flips the game's own
+-- setting (the damageMeterEnabled CVar, Options > Gameplay); the meter follows it by itself,
+-- so its frames are never touched.
+---------------------------------------------------------------------------
+
+local ENABLED_CVAR = "damageMeterEnabled"
+
+-- Why the meter may still not show once it's on: its Edit Mode visibility.
+local function VisibilityNote()
+	local visibility = DamageMeter and DamageMeter.visibility
+	local values = Enum.DamageMeterVisibility
+	if not visibility or not values then
+		return ""
+	elseif visibility == values.InCombat then
+		return " It shows in combat only (Edit Mode)."
+	elseif visibility == values.InGroup then
+		return " It shows in a group only (Edit Mode)."
+	elseif visibility == values.Hidden then
+		return " Edit Mode has it set to hidden, though."
+	end
+	return ""
+end
+
+local function OnDpsCommand(rest)
+	if type(C_DamageMeter) == "table" and C_DamageMeter.IsDamageMeterAvailable and not C_DamageMeter.IsDamageMeterAvailable() then
+		ns:Print("The damage meter isn't available here.")
+		return
+	end
+	rest = rest:lower()
+	local on
+	if rest == "show" or rest == "on" then
+		on = true
+	elseif rest == "hide" or rest == "off" then
+		on = false
+	elseif rest == "" then
+		on = not C_CVar.GetCVarBool(ENABLED_CVAR)
+	else
+		ns:PrintCommandHelp("dps")
+		return
+	end
+	C_CVar.SetCVar(ENABLED_CVAR, on and "1" or "0")
+	ns:Print(on and ("Damage meter shown." .. VisibilityNote()) or "Damage meter hidden (/nra dps shows it again).")
+end
+
 function module:OnInitialize()
+	ns:RegisterSlashCommand("dps", OnDpsCommand, {
+		summary = "Show or hide the game's damage meter",
+		usage = {
+			"/nra dps - show or hide it",
+			"/nra dps show, /nra dps hide - one or the other",
+		},
+	})
 	eventFrame:RegisterEvent("ADDON_LOADED") -- in case the meter loads after us
 	if ns:IsModuleEnabled(module.key) then
 		Apply()

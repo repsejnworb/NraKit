@@ -516,6 +516,8 @@ A **clean, flat look** for the game's own damage meter.
 - The bars get a flat fill in a softer class colour, with outlined text.
 - Size, style, icons and class colours are still set in Edit Mode.
 - Turning it off asks for a reload to bring back the game's look.
+- `/nra dps` shows or hides the damage meter (the game's own setting), whether or not the look is on.
+  `/nra dps show` and `/nra dps hide` do one or the other.
 
 <img width="336" height="145" alt="damageMeterLook" src=".github/screenshots/damageMeterLook.png" />
 

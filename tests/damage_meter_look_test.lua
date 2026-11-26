@@ -123,5 +123,31 @@ return {
 			t.equal(popup, "NRAKIT_DAMAGE_METER_RELOAD", "reload prompt")
 			t.noErrors()
 		end)
+
+		t.test("/nra dps flips the game's damage meter setting (the look on or off)", function()
+			local cvars = { damageMeterEnabled = "1" }
+			C_CVar.GetCVarBool = function(name) return cvars[name] == "1" end
+			C_CVar.SetCVar = function(name, value) cvars[name] = value end
+			SlashCmdList.NRAKIT("dps")
+			t.equal(cvars.damageMeterEnabled, "0", "hidden")
+			t.ok(wow.printed[#wow.printed]:find("hidden", 1, true), "says so")
+			SlashCmdList.NRAKIT("dps")
+			t.equal(cvars.damageMeterEnabled, "1", "shown again")
+			SlashCmdList.NRAKIT("dps show")
+			t.equal(cvars.damageMeterEnabled, "1", "show keeps it shown")
+			SlashCmdList.NRAKIT("dps hide")
+			t.equal(cvars.damageMeterEnabled, "0", "hide")
+			-- Edit Mode set to show it in combat only: said when showing it.
+			rawset(DamageMeter, "visibility", Enum.DamageMeterVisibility.InCombat)
+			SlashCmdList.NRAKIT("dps")
+			t.ok(wow.printed[#wow.printed]:find("in combat only", 1, true), "visibility: " .. wow.printed[#wow.printed])
+			rawset(DamageMeter, "visibility", nil)
+			C_DamageMeter = { IsDamageMeterAvailable = function() return false end }
+			SlashCmdList.NRAKIT("dps")
+			t.equal(cvars.damageMeterEnabled, "1", "not available: left alone")
+			t.ok(wow.printed[#wow.printed]:find("isn't available", 1, true), "says so")
+			C_DamageMeter = nil
+			t.noErrors()
+		end)
 	end,
 }
