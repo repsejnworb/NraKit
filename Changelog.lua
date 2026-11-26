@@ -22,7 +22,7 @@ local _, ns = ...
 -- notes) and /commands are coloured. Write short: no brackets-and-semicolon chains.
 
 ns.changelog = {
-	{ version = "Unreleased", entries = {
+	{ version = "0.32.0", date = "2026-11-26", entries = {
 		{ "new", title = "Shortcuts", module = "shortcuts",
 			"Short commands for NraKit's everyday ones, each the same as its /nra command.",
 			points = {

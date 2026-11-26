@@ -1,10 +1,22 @@
-# NraKit 0.31.0
+# NraKit 0.32.0
 
 ### New
-- Cooldown Manager fade: the game's Cooldown Manager bars show in combat and fade out, animated, a while after it instead of just vanishing. Pick which bars, how long they stay and fade, and how faint they fade to; they also come back with a hostile target (fading right away when you drop it) and while the mouse is over one. Set the bars to Always in Edit Mode.
-- Warrior, in the new Classes section (Classes > Warrior in the NraKit window's sidebar shows just its settings). The rage bar of the Personal Resource Display shows a small arrow at how much rage you keep when you change stance, from Tactical Mastery and your ranks of Improved Tactical Mastery; it moves by itself when you learn it or change talents (arrow at the top, bottom or both, its size, and optionally shade the rage you keep). Overpower, Revenge, Victory Rush and Execute make their action buttons glow while you can use them, which the game doesn't show: bright means press it now, dim means it's up but you're short of rage or it's on cooldown. A thin gold bar drains as a proc runs out, turning orange with the glow pulsing at the end, and Victory Rush also counts down its seconds (its time comes from its buff; NraKit learns the others' the first time one runs out). Optionally a sound and an icon by the rage bar.
+- **Shortcuts**: Short commands for NraKit's everyday ones, each the same as its `/nra` command.
+  - **/remind, `/todo`, `/item`, `/dps`, `/shop`, `/bank`, `/goal`, `/note`, `/wish`, `/scan`** and **/done**.
+  - Only commands **no other addon or the game uses** are taken; an addon that takes one later gets it.
+  - `/nra` shortcuts lists them, and which are in use elsewhere.
+  - Turn each on or off. One whose feature is off isn't taken.
+- **Sell List**: What in your bags is worth selling, the most valuable first, so you don't have to hover every item.
+  - **Auction house and vendor prices** side by side; the better one is bright, and a stale auction price is marked.
+  - It **opens by itself beside the auction house** (a button there too), and optionally at **merchants**.
+  - There, **Alt+click** an item to put it in Auctionator's Selling tab, or click to pick it up.
+  - Split into **To Sell: Auction House** and **To Sell: Vendor**; right-click one for **Keep, don't list**.
+  - Says when a fresh scan **changed the prices**, with a refresh button; sorts by any column.
+  - *Tip: Auction prices come from **Auctionator**; without it, it's vendor prices.*
 
 ### Improved
-- Inventory Tracker: what you buy at the Auction House shows in your mail right away, before you visit the mailbox.
+- **What's New**: Easier to read: each new feature has its name, a one-line summary and bullet points, with key words picked out.
+- **Auctionator Prices**: Now in the new **Auction House** section, and the Inventory tab shows what each character's items are worth at the auction house.
+- **Settings**: Features are sorted into clearer sections: **Interface**, Classes, Quests, Bags & Items, Professions, **Auction House**, Mail, Trackers & Reminders, **Social** and **Tools**, a few have shorter names, and names and headings are in Title Case.
 
 Type /nra new in game to see what's new in every version.
