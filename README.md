@@ -270,7 +270,9 @@ the auction house, from Auctionator's last scan.
   out of Auctionator lists (an option).
 - Optionally shows the price per item too.
 
-<img width="249" height="248" alt="auctionatorWaylaid" src=".github/screenshots/auctionatorWaylaid.png" />
+<img width="779" height="546" alt="auctionatorNraKitShoppingList" src=".github/screenshots/auctionatorNraKitShoppingList.png" />
+<img width="328" height="354" alt="auctionatorRecipeCost" src=".github/screenshots/auctionatorRecipeCost.png" />
+<img width="327" height="189" alt="auctionatorWaylaid" src=".github/screenshots/auctionatorWaylaid.png" />
 
 ### Trackers & Reminders
 

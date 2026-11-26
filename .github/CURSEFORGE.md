@@ -145,6 +145,8 @@ Needs **Auctionator**. What things cost at the auction house, from Auctionator's
 - **Vendor items** (thread, dye, vials...) show the **vendor's price**, tagged "vendor": NraKit remembers what merchants you visit sell (Auctionator's vendor prices fill the gaps). They're left out of Auctionator lists (an option).
 - Optionally shows the price per item too.
 
+![auctionatorNraKitShoppingList](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/auctionatorNraKitShoppingList.png)
+![auctionatorRecipeCost](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/auctionatorRecipeCost.png)
 ![auctionatorWaylaid](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/auctionatorWaylaid.png)
 
 ## Trackers & Reminders
