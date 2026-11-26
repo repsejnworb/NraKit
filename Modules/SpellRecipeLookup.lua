@@ -5,6 +5,11 @@ local _, ns = ...
 -- Spells: their names are in the client (no server asked), so every spell ID is read once,
 -- in chunks across frames, the first time it's needed (Forever's spells go up to ~1.4 million,
 -- custom ones included: a few tenths of a second in all). Not saved: it's quick to read again.
+-- The game doesn't say which class a spell is (its skill line answers nothing for class spells),
+-- so each character's spellbook is remembered as you log in (its class tabs, not General:
+-- learned and future spells), account-wide in NraKitDB.spellClassData = { [CLASS] = { [id] = true } }.
+-- Spells you know (IsPlayerSpell: lower ranks too) are your class's as well. Classes you
+-- haven't logged in on aren't known; their spells show as "other".
 --
 -- Recipes: a profession's recipe is a spell the game gives a profession
 -- (C_TradeSkillUI.GetProfessionInfoByRecipeID), readable without the profession window,
@@ -57,6 +62,16 @@ local function ReadSpells()
 end
 spellReader:SetScript("OnUpdate", ReadSpells)
 
+-- Remember the spellbook at login, and when it changes (learning, a new level).
+local spellbookWatcher = CreateFrame("Frame")
+spellbookWatcher:RegisterEvent("PLAYER_LOGIN")
+spellbookWatcher:RegisterEvent("SPELLS_CHANGED")
+spellbookWatcher:SetScript("OnEvent", function()
+	if ns:IsModuleEnabled("itemLookup") then
+		spells.CollectSpellbook()
+	end
+end)
+
 -- Starts reading the spells (once).
 function spells.Start()
 	if spellCursor <= MAX_SPELL_ID then
@@ -76,20 +91,81 @@ function spells.Count()
 	return spellList and #spellList or 0
 end
 
--- Spells whose name contains query (lower-case): { { id, name, known }, ... }, best first
--- (yours, then names starting with it, then by name), at most `limit`; and how many matched.
-function spells.Search(query, limit)
+local function ClassData()
+	NraKitDB.spellClassData = NraKitDB.spellClassData or {}
+	return NraKitDB.spellClassData
+end
+
+-- Remembers this character's spellbook as its class's spells (class tabs, not General).
+function spells.CollectSpellbook()
+	local _, class = UnitClass("player")
+	if not class or type(C_SpellBook) ~= "table" or not C_SpellBook.GetNumSpellBookSkillLines then
+		return
+	end
+	local data = ClassData()
+	data[class] = data[class] or {}
+	local known = data[class]
+	local bank = Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Player or 0
+	for line = 2, C_SpellBook.GetNumSpellBookSkillLines() or 0 do -- 1 is General: racials, auto attack
+		local info = C_SpellBook.GetSpellBookSkillLineInfo(line)
+		if info and not info.isGuild and not info.shouldHide then
+			for slot = info.itemIndexOffset + 1, info.itemIndexOffset + info.numSpellBookItems do
+				local item = C_SpellBook.GetSpellBookItemInfo(slot, bank)
+				-- Spells you have and ones you'll learn (1 Spell, 2 FutureSpell).
+				if item and (item.itemType == 1 or item.itemType == 2) then
+					known[item.actionID] = true
+					if item.spellID then
+						known[item.spellID] = true
+					end
+				end
+			end
+		end
+	end
+end
+
+-- The classes whose spells are known (from your characters' spellbooks): { "WARRIOR", ... }.
+function spells.KnownClasses()
+	local list = {}
+	for class in pairs(ClassData()) do
+		table.insert(list, class)
+	end
+	table.sort(list)
+	return list
+end
+
+-- A spell's class (from the spellbooks), or nil.
+function spells.ClassOf(id, known)
+	if known then
+		return select(2, UnitClass("player"))
+	end
+	for class, ids in pairs(ClassData()) do
+		if ids[id] then
+			return class
+		end
+	end
+end
+
+-- Spells whose name contains query (lower-case), passing `filter` (nil: all; "mine": yours;
+-- a class like "WARRIOR"; "other": no class known): { { id, name, known, class }, ... }, best
+-- first (yours, your class's, other classes', the rest; then names starting with it, then by
+-- name), at most `limit`; and how many matched.
+function spells.Search(query, limit, filter)
+	local _, myClass = UnitClass("player")
 	local matches = {}
 	for _, spell in ipairs(spellList or {}) do
 		local at = spell.lower:find(query, 1, true)
 		if at then
-			table.insert(matches, { id = spell.id, name = spell.name, starts = at == 1,
-				known = IsPlayerSpell(spell.id) == true })
+			local known = IsPlayerSpell(spell.id) == true
+			local class = spells.ClassOf(spell.id, known)
+			if not filter or (filter == "mine" and known) or (filter == "other" and not class) or filter == class then
+				table.insert(matches, { id = spell.id, name = spell.name, starts = at == 1, known = known, class = class,
+					group = known and 1 or class == myClass and 2 or class and 3 or 4 })
+			end
 		end
 	end
 	table.sort(matches, function(a, b)
-		if a.known ~= b.known then
-			return a.known
+		if a.group ~= b.group then
+			return a.group < b.group
 		end
 		if a.starts ~= b.starts then
 			return a.starts

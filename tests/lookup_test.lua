@@ -2,7 +2,35 @@
 -- recipes found by their profession, with what a craft costs, sells for and earns.
 
 local SPELLS = { [100] = "Charge", [7370] = "Charge", [6673] = "Battle Shout", [3501] = "Green Iron Bracers",
-	[2580] = "Find Minerals" }
+	[2580] = "Find Minerals", [7384] = "Overpower", [133] = "Fireball", [6603] = "Auto Attack" }
+
+-- Your (warrior's) spellbook: General (Auto Attack: not a class spell), then Arms with Charge
+-- and Overpower (not learned yet: a future spell).
+local SPELLBOOK = {
+	{ name = "General", items = { { id = 6603, type = 1 } } },
+	{ name = "Arms", items = { { id = 100, type = 1 }, { id = 7384, type = 2 } } },
+}
+C_SpellBook = {
+	GetNumSpellBookSkillLines = function()
+		return #SPELLBOOK
+	end,
+	GetSpellBookSkillLineInfo = function(line)
+		local offset = 0
+		for index = 1, line - 1 do
+			offset = offset + #SPELLBOOK[index].items
+		end
+		return { name = SPELLBOOK[line].name, itemIndexOffset = offset, numSpellBookItems = #SPELLBOOK[line].items }
+	end,
+	GetSpellBookItemInfo = function(slot)
+		for _, line in ipairs(SPELLBOOK) do
+			if slot <= #line.items then
+				local item = line.items[slot]
+				return { actionID = item.id, spellID = item.id, itemType = item.type }
+			end
+			slot = slot - #line.items
+		end
+	end,
+}
 C_Spell.GetSpellName = function(id)
 	return SPELLS[id]
 end
@@ -56,7 +84,8 @@ Auctionator = { API = { v1 = {
 return {
 	enable = { "itemLookup" },
 	-- Found with the old filter (racials and all): found again.
-	db = { recipeLookupData = { build = "nil.nil", ids = { 2580, 3501 } } },
+	-- And a mage of yours has logged in before: Fireball is a mage spell.
+	db = { recipeLookupData = { build = "nil.nil", ids = { 2580, 3501 } }, spellClassData = { MAGE = { [133] = true } } },
 	run = function(t, ns, wow)
 		local function Settle()
 			for _ = 1, 40 do
@@ -83,6 +112,29 @@ return {
 			t.ok(matches[1].known and not matches[2].known, "yours is known")
 			local rows = Rows("spells")
 			t.equal(#rows, 2, "two rows")
+		end)
+
+		t.test("each spell's class: from your spellbooks, General left out", function()
+			local spells = ns.spellLookup
+			t.equal(spells.ClassOf(100, true), "WARRIOR", "your Charge")
+			t.equal(spells.ClassOf(7384), "WARRIOR", "Overpower: in your spellbook, not learned yet")
+			t.equal(spells.ClassOf(133), "MAGE", "Fireball: your mage's")
+			t.equal(spells.ClassOf(6603), nil, "Auto Attack (General): no class")
+			t.equal(spells.ClassOf(7370), nil, "a pet's or mob's Charge: no class")
+			t.equal(#spells.Search("charge", 10, "mine"), 1, "Mine: your Charge")
+			t.equal(#spells.Search("charge", 10, "other"), 1, "Other: the other Charge")
+			t.equal(spells.Search("", 10, "MAGE")[1].id, 133, "Mage: Fireball")
+		end)
+
+		t.test("class chips under the search box, and the class on each row", function()
+			t.ok(wow.click("Mage"), "a Mage chip (a class of yours)")
+			t.equal(NraKitDB.lookupSpellFilter, "MAGE", "filtering on it")
+			t.ok(wow.click("All"), "All")
+			local labels = {}
+			for _, row in ipairs(Rows("spells")) do
+				table.insert(labels, rawget(row.class, "text"))
+			end
+			t.equal(table.concat(labels, ","), "Warrior,other", "Charge: Warrior, then the other one: other")
 		end)
 
 		t.test("Shift-click links a spell in chat", function()

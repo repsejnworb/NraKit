@@ -38,6 +38,15 @@ local PROFESSION_ICONS = {
 	Fishing = "Trade_Fishing", Jewelcrafting = "INV_Misc_Gem_01", Inscription = "INV_Inscription_Tradeskill01",
 	Herbalism = "Trade_Herbalism", Skinning = "INV_Misc_Pelt_Wolf_01",
 }
+local function ClassName(class)
+	return LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[class]
+		or class:sub(1, 1) .. class:sub(2):lower()
+end
+
+local function ClassIcon(class)
+	return ICONS .. "ClassIcon_" .. class:sub(1, 1) .. class:sub(2):lower()
+end
+
 local function ProfessionIcon(name)
 	return ICONS .. (PROFESSION_ICONS[name] or "INV_Scroll_03")
 end
@@ -269,6 +278,7 @@ local function AcquireSpellRow(content)
 		row.subtext = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 		row.subtext:SetPoint("LEFT", row.name, "RIGHT", 8, 0)
 		row.known = Text(row, "GameFontHighlightSmall", "RIGHT", -90)
+		row.class = Text(row, "GameFontHighlightSmall", "RIGHT", -150)
 		row.spellID = Text(row, "GameFontDisableSmall", "RIGHT", -10)
 		return row
 	end)
@@ -352,7 +362,7 @@ local function RenderItems(content, width)
 end
 
 local function RenderSpells(content, width)
-	local matches, total = ns.spellLookup.Search(query, MAX_SHOWN)
+	local matches, total = ns.spellLookup.Search(query, MAX_SHOWN, NraKitDB.lookupSpellFilter)
 	for index, match in ipairs(matches) do
 		local row = AcquireSpellRow(content)
 		row.kind, row.id = "spells", match.id
@@ -365,6 +375,15 @@ local function RenderSpells(content, width)
 		local subtext = C_Spell.GetSpellSubtext and C_Spell.GetSpellSubtext(match.id)
 		row.subtext:SetText(subtext or "")
 		row.known:SetText(match.known and "|cff40c040Known|r" or "")
+		-- Its class, in the class colour: tells your Charge from a mob's.
+		local color = match.class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[match.class]
+		if match.class then
+			row.class:SetText(ClassName(match.class))
+			row.class:SetTextColor(color and color.r or 1, color and color.g or 1, color and color.b or 1)
+		else
+			row.class:SetText("other")
+			row.class:SetTextColor(unpack(UI.TEXT_DIM))
+		end
 		row.spellID:SetText(tostring(match.id))
 	end
 	return #matches, total, ROW_HEIGHT
@@ -409,56 +428,91 @@ local function RenderRecipes(content, width)
 	return #matches, total, RECIPE_ROW_HEIGHT
 end
 
--- Recipes: [ All ][ Blacksmithing ][ ... ] chips under the search box (yours first), wrapping
--- onto a second line if needed. Returns how much room they take (0 in other modes).
-local function LayoutProfessionChips(body, mode)
+-- The chips under the search box: what each mode can be narrowed to, as { value, label,
+-- icon, highlight }. Recipes: [ All ][ Blacksmithing ]... (yours first, in gold); Spells: [ All ]
+-- [ Mine ][ Warrior ]... (classes known from your characters' spellbooks, yours first) [ Other ].
+local FILTER_KEYS = { recipes = "lookupRecipeProfession", spells = "lookupSpellFilter" }
+
+local function ChipChoices(mode)
+	local choices = { { value = nil, label = "All", icon = ICONS .. "INV_Misc_Book_11" } }
+	if mode == "recipes" then
+		local professions, mine = ns.recipeLookup.Professions()
+		if #professions == 0 then
+			return nil
+		end
+		for _, name in ipairs(professions) do
+			table.insert(choices, { value = name, label = name, icon = ProfessionIcon(name), highlight = mine[name] })
+		end
+	elseif mode == "spells" then
+		local _, myClass = UnitClass("player")
+		table.insert(choices, { value = "mine", label = "Mine", icon = ICONS .. "INV_Misc_Book_09", highlight = true })
+		local classes = ns.spellLookup.KnownClasses()
+		table.sort(classes, function(a, b)
+			if (a == myClass) ~= (b == myClass) then
+				return a == myClass
+			end
+			return ClassName(a) < ClassName(b)
+		end)
+		for _, class in ipairs(classes) do
+			table.insert(choices, { value = class, label = ClassName(class), icon = ClassIcon(class), class = class })
+		end
+		table.insert(choices, { value = "other", label = "Other", icon = ICONS .. "INV_Misc_QuestionMark" })
+	else
+		return nil
+	end
+	return choices
+end
+
+-- Lays out the current mode's chips, wrapping onto more lines if needed. Returns how much
+-- room they take (0 in a mode without them).
+local function LayoutChips(body, mode)
 	for _, chip in ipairs(professionChips) do
 		chip:Hide()
 	end
-	if mode ~= "recipes" then
+	local choices = ChipChoices(mode)
+	if not choices then
 		return 0
 	end
-	local professions, mine = ns.recipeLookup.Professions()
-	if #professions == 0 then
-		return 0
-	end
-	-- A remembered profession that's gone (the list was made again): All.
-	local selected = NraKitDB.lookupRecipeProfession
+	-- A remembered choice that's gone (the list was made again): All.
+	local key = FILTER_KEYS[mode]
+	local selected = NraKitDB[key]
 	local exists = false
-	for _, name in ipairs(professions) do
-		exists = exists or name == selected
+	for _, choice in ipairs(choices) do
+		exists = exists or (choice.value ~= nil and choice.value == selected)
 	end
 	if not exists then
-		selected, NraKitDB.lookupRecipeProfession = nil, nil
-	end
-	local names = { "All" }
-	for _, name in ipairs(professions) do
-		table.insert(names, name)
+		selected, NraKitDB[key] = nil, nil
 	end
 	local x, y, maxX = PAD, -PAD - 68, body:GetWidth() - PAD
-	for index, name in ipairs(names) do
+	for index, choice in ipairs(choices) do
 		local chip = professionChips[index]
 		if not chip then
 			chip = UI.CreateFlatButton(body, "", CHIP_HEIGHT)
 			chip:SetScript("OnClick", function(self)
 				PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
-				NraKitDB.lookupRecipeProfession = self.profession
+				NraKitDB[FILTER_KEYS[Mode()]] = self.value
 				scroll:SetScroll(0)
 				Render()
 			end)
 			professionChips[index] = chip
 		end
-		chip.profession = index > 1 and name or nil
-		UI.SetButtonIcon(chip, index > 1 and ProfessionIcon(name) or (ICONS .. "INV_Misc_Book_11"), name, 14)
+		chip.value = choice.value
+		chip.profession = mode == "recipes" and choice.value or nil
+		UI.SetButtonIcon(chip, choice.icon, choice.label, 14)
 		if x + chip:GetWidth() > maxX then
 			x, y = PAD, y - CHIP_HEIGHT - 4
 		end
 		chip:ClearAllPoints()
 		chip:SetPoint("TOPLEFT", x, y)
-		chip:SetSelected(chip.profession == selected)
-		-- Your professions in gold, when not selected.
-		if mine[name] and chip.profession ~= selected then
-			chip.text:SetTextColor(unpack(UI.GOLD))
+		chip:SetSelected(choice.value == selected)
+		-- Yours in gold, a class in its colour, when not selected.
+		if choice.value ~= selected then
+			local color = choice.class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[choice.class]
+			if color then
+				chip.text:SetTextColor(color.r, color.g, color.b)
+			elseif choice.highlight then
+				chip.text:SetTextColor(unpack(UI.GOLD))
+			end
 		end
 		chip:Show()
 		x = x + chip:GetWidth() + 4
@@ -473,7 +527,7 @@ function Render()
 	end
 	local mode = Mode()
 	-- The list starts under the chips (Recipes) or right under the search box.
-	local top = TOP_HEIGHT + LayoutProfessionChips(frame.body, mode)
+	local top = TOP_HEIGHT + LayoutChips(frame.body, mode)
 	topLine:SetPoint("TOPLEFT", 0, -top)
 	topLine:SetPoint("TOPRIGHT", 0, -top)
 	scroll:SetPoint("TOPLEFT", 0, -top - 1)
@@ -672,7 +726,7 @@ local function CreateWindow()
 	-- click it to type. Enter (like Esc) gives the keys back to the game.
 	searchBox:HookScript("OnEnterPressed", searchBox.ClearFocus)
 	frame:HookScript("OnShow", function()
-		NraKitDB.lookupRecipeProfession = nil -- Recipes opens on All
+		NraKitDB.lookupRecipeProfession, NraKitDB.lookupSpellFilter = nil, nil -- the chips open on All
 		SetMode(Mode())
 	end)
 

@@ -27,7 +27,7 @@ ns.changelog = {
 		{ "improved", title = "Lookup", module = "itemLookup",
 			"Item Lookup is now **Lookup**, with **[ Items ][ Spells ][ Recipes ]** at its top.",
 			points = {
-				"**Spells**: every spell by name (/nra spell charge), yours first and marked Known; Shift-click links it.",
+				"**Spells**: every spell by name (/nra spell charge), with its **class**, yours first; filter by class. Shift-click links it.",
 				"**Recipes**: every profession recipe (/nra recipe bracers) with what it makes and needs; pick a **profession** with its button.",
 				"With prices: what a craft **costs**, what it **sells for** and the **profit**; sort by profit to see what's worth crafting.",
 				"Right-click a recipe for the shopping-list menu; hover for its tooltip with what you have.",
