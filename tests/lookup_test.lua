@@ -137,6 +137,22 @@ return {
 			t.equal(table.concat(labels, ","), "Warrior,other", "Charge: Warrior, then the other one: other")
 		end)
 
+		-- Regression: Mine or All with nothing typed showed nothing.
+		t.test("with nothing typed, Spells lists what its button picks", function()
+			local box = wow.findAll(function(frame)
+				return frame.kind == "EditBox" and wow.visible(frame) and rawget(frame, "parent") == _G.NraKitItemLookupFrame.body
+			end)[1]
+			box:SetText("")
+			t.ok(wow.click("Mine"), "Mine")
+			local rows = Rows("spells")
+			t.equal(#rows, 1, "your spell, with nothing typed")
+			t.equal(rows[1].id, 100, "your Charge")
+			t.ok(wow.click("All"), "All")
+			t.ok(#Rows("spells") > 1, "everything, yours first")
+			t.equal(ns.spellLookup.Search("", 10)[1].id, 100, "yours on top")
+			box:SetText("charge")
+		end)
+
 		t.test("Shift-click links a spell in chat", function()
 			local row = Rows("spells")[1]
 			IsModifiedClick = function(what)

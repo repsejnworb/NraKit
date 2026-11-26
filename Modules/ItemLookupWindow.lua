@@ -546,7 +546,9 @@ function Render()
 	local content = scroll.content
 	local width = content:GetWidth() - 2 * PAD
 
-	if query == "" and mode ~= "recipes" then
+	-- Items need a search (every item, unordered, says nothing); Spells and Recipes list all of
+	-- what their buttons pick (Spells: yours first).
+	if query == "" and mode == "items" then
 		for _, info in ipairs(MODES) do
 			if info.key == mode then
 				Message(content, info.empty)
