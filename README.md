@@ -44,6 +44,8 @@ Type `/nrakit` (or `/nra`) to open NraKit's window.
 - `/nra help` lists the chat commands; add `help` after one for details (e.g. `/nra goal help`).
 - `/nra preview` shows any of NraKit's on-screen messages (goal complete, quest reminders, alerts...)
   with made-up content, to see how they look (e.g. `/nra preview goal`).
+- `/nra debug` lists the features that can log what they do, to report a problem: `/nra debug sell`
+  turns one on, `/nra debug copy` shows the last lines in a box to copy, `/nra debug off` stops it.
 
 ### Sounds
 

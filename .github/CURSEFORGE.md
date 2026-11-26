@@ -375,6 +375,6 @@ NraKit's icon on screen, **wherever you drag it**.
 - Lock it, size it, or hide it in combat.
 
 ## Feedback and Bugs
-NraKit is a growing collection of small fixes. Found a bug or have an idea? **[Open an issue on GitHub](https://github.com/repsejnworb/NraKit/issues).**
+NraKit is a growing collection of small fixes. Found a bug or have an idea? **[Open an issue on GitHub](https://github.com/repsejnworb/NraKit/issues).** Something odd? `/nra debug` lists features that can log what they do; turn one on, try again, and `/nra debug copy` gives you the lines to paste in.
 
 Source code: [github.com/repsejnworb/NraKit](https://github.com/repsejnworb/NraKit) (MIT license)

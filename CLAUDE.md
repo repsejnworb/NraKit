@@ -65,6 +65,12 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   icon/atlas, detail, lines, duration, onClick, skipIfBusy }`); they stack, up to three at once (the newest at the top, pushing the others down), and more
   wait their turn (a big one first in line). `ns.arrival.Add{...}` adds a feature's part to the one message for
   entering a zone. Use it for any feature's on-screen message.
+- `Debug.lua` – debug logging for features (`ns:RegisterDebug(name, description)` at load, `ns:Debug(name, format, ...)`;
+  cheap when off). `/nra debug <name>` turns one on (saved, so it survives /reload; a chat line after login says so),
+  `/nra debug copy` shows the last 200 lines in a box to copy (chat copies badly). **Add debug lines where behaviour
+  depends on the game**: moving items, docking, secret-value checks, events Forever may not send, anything that has
+  failed silently in game. Then a report starts with "turn on `/nra debug <name>` and paste the copy box" instead of
+  rounds of `/run`. Pass format arguments, don't pre-build strings (they'd be built while off).
 - `ProcAlerts.lua` – proc alerts for any class (`ns.procAlerts`): spells usable for a moment that the game shows no glow for
   (Overpower, ...). A feature calls `ns.procAlerts.Register{ key, IsEnabled, spells = { { name, option } }, options = { countdown,
   icon, sound, soundChoice } }` and `ns.procAlerts.Refresh()` when its module or options change. Glows action buttons with

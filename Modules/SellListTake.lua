@@ -48,13 +48,12 @@ local REAGENT_BAG = Enum.BagIndex and Enum.BagIndex.ReagentBag or 5
 local KEYRING = Enum.BagIndex and Enum.BagIndex.Keyring or -1
 local KEY_CLASS = Enum.ItemClass and Enum.ItemClass.Key or 13
 
--- /nra sell debug: what taking does, in chat.
-local function Debug(...)
-	if sell.debug then
-		print("|cffff9933NraKit sell debug:|r", ...)
-	end
+-- /nra debug sell: what taking does (Debug.lua).
+ns:RegisterDebug("sell", "Sell List: taking from the bank and mail (bags chosen, each move, the game's errors)")
+
+local function Debug(text, ...)
+	ns:Debug("sell", text, ...)
 end
-sell.Debug = Debug
 
 -- Whether a bag is a profession bag (herbs, enchanting...), as Blizzard's bags tell: its type
 -- (GetContainerNumFreeSlots' bagFamily) can be 0 on some clients.
@@ -235,9 +234,9 @@ local function BankStep()
 		return Finish(string.format("Bags full: took %d of %d.", job.done, job.want))
 	end
 	local amount = math.min(remaining, source.count, room)
-	Debug(string.format("%s %d from bank %d:%d (stack %d) onto bag %d:%d (%s, %s)",
+	Debug("%s %d from bank %d:%d (stack %d) onto bag %d:%d (%s, %s)",
 		amount < source.count and "split" or "move", amount, source.bag, source.slot, source.count, bag, slot, into,
-		tostring(C_Container.GetBagName and C_Container.GetBagName(bag))))
+		tostring(C_Container.GetBagName and C_Container.GetBagName(bag)))
 	if amount < source.count then
 		C_Container.SplitContainerItem(source.bag, source.slot, amount)
 	else
@@ -246,7 +245,7 @@ local function BankStep()
 	C_Container.PickupContainerItem(bag, slot)
 	if GetCursorInfo() then
 		-- Refused ("That item doesn't go in that container"): back it goes; not that bag again.
-		Debug("refused by bag " .. bag .. ": putting it back, trying the next bag")
+		Debug("refused by bag %d: putting it back, trying the next bag", bag)
 		ClearCursor()
 		job.refused[bag] = true
 		return
@@ -273,7 +272,7 @@ local function MailStep()
 	if not FreeBagSlot(job.item.id) then
 		return Finish(string.format("Bags full: took %d of %d stacks.", job.done, job.want))
 	end
-	Debug(string.format("mail %d attachment %d", next.mail, next.attachment))
+	Debug("mail %d attachment %d", next.mail, next.attachment)
 	TakeInboxItem(next.mail, next.attachment)
 	job.done = job.done + 1
 	job.waiting = true
@@ -313,7 +312,7 @@ runner:RegisterEvent("BAG_UPDATE_DELAYED")
 local errors = CreateFrame("Frame")
 errors:RegisterEvent("UI_ERROR_MESSAGE")
 errors:SetScript("OnEvent", function(_, _, _, message)
-	Debug("game error:", tostring(message))
+	Debug("game error: " .. tostring(message))
 end)
 
 -- Takes from where the item is: `stacks` stacks (nil: all of it), or with `items`, that many
@@ -326,7 +325,9 @@ function sell.Take(item, stacks, items)
 	local want
 	if item.where == "bank" then
 		want = math.min(items or (stacks or math.huge) * maxStack, item.count)
-		Debug(select(2, BagsFor(item.id)))
+		if ns:IsDebugging("sell") then
+			Debug(select(2, BagsFor(item.id)))
+		end
 	else
 		want = math.min(stacks or math.huge, #item.attachments)
 	end

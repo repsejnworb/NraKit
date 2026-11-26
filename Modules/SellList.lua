@@ -780,8 +780,7 @@ function module:OnInitialize()
 	HookOpenMail()
 	ns:RegisterSlashCommand("sell", function(rest)
 		if rest:lower() == "debug" then
-			sell.debug = not sell.debug
-			ns:Print("Sell List debug " .. (sell.debug and "on: taking from the bank and mail is logged in chat." or "off."))
+			ns:SetDebug("sell", not ns:IsDebugging("sell")) -- (the same as /nra debug sell)
 			return
 		end
 		if not ns:IsModuleEnabled(module.key) then
@@ -791,7 +790,7 @@ function module:OnInitialize()
 		ns:OpenSellList()
 	end, {
 		summary = "The Sell List: what in your bags is worth selling",
-		usage = { "/nra sell - open the Sell List", "/nra sell debug - log taking from the bank and mail in chat (to report a problem)" },
+		usage = { "/nra sell - open the Sell List", "/nra sell debug - log taking from the bank and mail (the same as /nra debug sell)" },
 	})
 	self:OnEnabledChanged(ns:IsModuleEnabled(self.key))
 end
