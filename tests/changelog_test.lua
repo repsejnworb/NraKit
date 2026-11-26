@@ -131,6 +131,16 @@ return {
 
 		t.test("a feature with points is a title, summary, bullets and tip", function()
 			ns:OpenWhatsNew()
+			-- Open every version, whichever holds the feature.
+			for _ = 1, #ns.changelog do
+				local closed = wow.findAll(function(frame)
+					return wow.visible(frame) and rawget(frame, "version") and rawget(frame, "isOpen") == false
+				end)[1]
+				if not closed then
+					break
+				end
+				closed.scripts.OnClick(closed)
+			end
 			local function Visible(match)
 				return wow.findAll(function(frame)
 					return wow.visible(frame) and type(frame.text) == "string" and frame.text:find(match, 1, true)
