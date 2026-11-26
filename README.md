@@ -199,6 +199,9 @@ Item tooltips list **how many of the item each of your characters has, and where
 - Bags and equipment are tracked as they change. The bank and mailbox are read while open, so visit
   them once per character.
 - Items you mail to your own characters show up in their mail right away.
+- **Known recipes:** it remembers which recipes each character knows. A recipe (in your bags, at a
+  vendor, or a link in chat) says **"Known by: Angry Nra"**, so your bank alt can see your main
+  already has it (an option).
 - **Hover your gold** at the bottom of your bags to see the gold of each of your characters, and the
   total (an option).
 - `/nra inv` (or a key binding) opens the **inventory browser**:

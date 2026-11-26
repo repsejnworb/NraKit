@@ -109,6 +109,7 @@ Find out what to throw away when your bags are full.
 Where did I put that? **Item tooltips show how many each of your characters has**, and where: bags, bank, mail or equipped, plus a total.
 - Visit the bank and mailbox once on each character so they're known; after that they stay up to date.
 - Items you **mail to your own characters** show up on them right away.
+- **Known recipes:** a recipe (bags, vendor, chat link) says which of your characters **already know it**.
 - **Hover your gold** at the bottom of your bags to see every character's gold, and the total.
 - **Inventory browser** (**/nra inv** or a key binding): every character with level and gold, and their **bags, bank, mail and equipped** items as a bag-style grid or a list.
 - The browser has **search**, category filters (gear, consumables, trade goods, recipes, quest), how fresh each location is, and the **vendor value** of what's shown.

@@ -55,6 +55,12 @@ local module = {
 			default = true,
 		},
 		{
+			key = "inventoryTrackerRecipes",
+			name = "Remember known recipes",
+			description = "Remember which recipes each character knows, and show on recipes (in bags, at vendors, links in chat) which of your characters already know it: \"Known by: Angry Nra\".",
+			default = true,
+		},
+		{
 			key = "inventoryTrackerAllRealms",
 			name = "Characters on all realms",
 			description = "List characters on other realms too, not just this one.",
@@ -350,6 +356,73 @@ local function Holders(itemID)
 	return lines
 end
 
+---------------------------------------------------------------------------
+-- Known recipes
+---------------------------------------------------------------------------
+
+-- Remembers which recipes this character knows (each recipe checked: instant), once the
+-- recipes are known (Lookup finds them, once per game version).
+local function RecordRecipes()
+	if not ns:IsModuleEnabled(module.key) or not ns:GetOption("inventoryTrackerRecipes") or not ns.recipeLookup then
+		return
+	end
+	local ids = ns.recipeLookup.IDs()
+	if not ids then
+		ns.recipeLookup.WhenReady(RecordRecipes)
+		ns.recipeLookup.Start()
+		return
+	end
+	local known = {}
+	for _, id in ipairs(ids) do
+		if IsPlayerSpell(id) then
+			known[id] = true
+		end
+	end
+	GetMe().recipes = known
+	Changed()
+end
+
+-- "Known by: Angry Nra, Banker Nra" (class colours) for recipe IDs, or a line saying none of
+-- your characters do; nil if no character's recipes are remembered yet (nothing to say).
+local function KnownByLine(recipeIDs)
+	local names, anyRemembered = {}, false
+	for _, characters in pairs(ns:GetOption("inventoryTrackerAllRealms") and NraKitDB.inventory or { [realm] = GetRealmData(realm) }) do
+		for name, character in pairs(characters) do
+			if character.recipes then
+				anyRemembered = true
+				for _, id in ipairs(recipeIDs) do
+					if character.recipes[id] then
+						local r, g, b = ClassColor(character.class)
+						table.insert(names, string.format("|cff%02x%02x%02x%s|r", r * 255, g * 255, b * 255, name))
+						break
+					end
+				end
+			end
+		end
+	end
+	if #names > 0 then
+		table.sort(names)
+		return "Known by: " .. table.concat(names, ", ")
+	elseif anyRemembered then
+		return "|cff999999None of your characters know this recipe|r"
+	end
+end
+
+-- On a recipe item (by its name: the game doesn't tell which recipe it teaches) or a recipe
+-- link (enchant:<id>): which of your characters know it.
+local function AddKnownBy(tooltip, recipeIDs)
+	if not (recipeIDs and #recipeIDs > 0) or not ns:GetOption("inventoryTrackerRecipes") then
+		return
+	end
+	local line = KnownByLine(recipeIDs)
+	if line then
+		tooltip:AddLine(line, 1, 0.82, 0, true)
+		tooltip:Show()
+	end
+end
+
+local RECIPE_CLASS = Enum.ItemClass and Enum.ItemClass.Recipe or 9
+
 local function OnItemTooltip(tooltip, data)
 	if not ns:IsModuleEnabled(module.key) or not realm then
 		return
@@ -360,6 +433,9 @@ local function OnItemTooltip(tooltip, data)
 	local itemID = data and data.id
 	if not itemID or (issecretvalue and issecretvalue(itemID)) then
 		return
+	end
+	if ns.recipeLookup and select(6, C_Item.GetItemInfoInstant(itemID)) == RECIPE_CLASS then
+		AddKnownBy(tooltip, ns.recipeLookup.FromItemName(C_Item.GetItemNameByID(itemID)))
 	end
 
 	local lines = {}
@@ -611,6 +687,8 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 		OnAuctionBought(...)
 	elseif event == "PLAYER_MONEY" then
 		StoreMoney()
+	elseif event == "SPELLS_CHANGED" or event == "NEW_RECIPE_LEARNED" then
+		RecordRecipes()
 	elseif event == "PLAYER_LEVEL_UP" then
 		GetMe().level = ... -- UnitLevel can still say the old level here
 		Changed()
@@ -622,6 +700,7 @@ local EVENTS = {
 	"PLAYERREAGENTBANKSLOTS_CHANGED", "PLAYER_EQUIPMENT_CHANGED", "MAIL_INBOX_UPDATE",
 	"MAIL_SEND_SUCCESS", "MAIL_FAILED", "PLAYER_MONEY", "PLAYER_LEVEL_UP",
 	"COMMODITY_PURCHASE_SUCCEEDED", "COMMODITY_PURCHASE_FAILED", "AUCTION_HOUSE_PURCHASE_COMPLETED",
+	"SPELLS_CHANGED", "NEW_RECIPE_LEARNED",
 }
 
 local function IsEventValid(event)
@@ -661,6 +740,18 @@ function module:OnInitialize()
 		end)
 	end
 	TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, OnItemTooltip)
+	-- Recipe links (enchant:<id>, from chat or Lookup): which of your characters know it.
+	TooltipDataProcessor.AddTooltipPostCall(TooltipDataProcessor.AllTypes, function(tooltip)
+		if not ns:IsModuleEnabled(module.key) or not realm or (tooltip ~= GameTooltip and tooltip ~= ItemRefTooltip) then
+			return
+		end
+		local info = tooltip.GetPrimaryTooltipInfo and tooltip:GetPrimaryTooltipInfo()
+		local link = info and info.getterName == "GetHyperlink" and info.getterArgs and info.getterArgs[1]
+		local recipeID = type(link) == "string" and tonumber(link:match("^enchant:(%d+)"))
+		if recipeID then
+			AddKnownBy(tooltip, { recipeID })
+		end
+	end)
 	HookBagMoney()
 	self:OnEnabledChanged(ns:IsModuleEnabled(self.key))
 end

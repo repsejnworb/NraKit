@@ -41,6 +41,8 @@ local spellList -- { { id, name, lower }, ... } once read
 local classNames -- [CLASS] = { [lower-case name] = true }, from the spellbooks
 local recipeIndex = 1 -- next spell (in spellList) to check, while finding recipes
 local found -- recipe IDs found this time (while finding them)
+local readyCallbacks = {} -- run once the recipes are found (recipes.WhenReady)
+local byName -- [lower-case name] = { recipe ID, ... }, worked out when needed
 local spellCursor = 1
 local spellReader = CreateFrame("Frame")
 spellReader:Hide()
@@ -294,9 +296,14 @@ recipeFinder:SetScript("OnUpdate", function(self)
 		self:Hide()
 		local data = Data()
 		data.build, data.filter, data.ids = BuildKey(), FILTER_VERSION, found
-		found = nil
+		found, byName = nil, nil
 		if recipes.onReady then
 			recipes.onReady()
+		end
+		local callbacks = readyCallbacks
+		readyCallbacks = {}
+		for _, callback in ipairs(callbacks) do
+			callback()
 		end
 	end
 end)
@@ -350,6 +357,49 @@ function recipes.Get(id)
 	end
 	details[id] = recipe
 	return recipe
+end
+
+-- Functions to call once the recipes are known (now, if they already are).
+
+function recipes.WhenReady(callback)
+	if recipes.IDs() then
+		callback()
+	else
+		table.insert(readyCallbacks, callback)
+	end
+end
+
+-- Every recipe's ID, or nil until they're found.
+function recipes.IDs()
+	local data = Data()
+	return Saved(data) and data.ids or nil
+end
+
+-- The recipes with this name (lower-case), from the spell names: { id, ... } or nil.
+function recipes.ByName(lower)
+	local ids = recipes.IDs()
+	if not ids then
+		return nil
+	end
+	if not byName then
+		byName = {}
+		for _, id in ipairs(ids) do
+			local name = C_Spell.GetSpellName(id)
+			if name then
+				local key = name:lower()
+				byName[key] = byName[key] or {}
+				table.insert(byName[key], id)
+			end
+		end
+	end
+	return byName[lower]
+end
+
+-- The recipes a recipe item teaches, from its name ("Recipe: Clam Chowder", "Plans: ...",
+-- "Formula: ..."): the game gives such items a generic "Learning" spell, not the recipe.
+function recipes.FromItemName(name)
+	local recipe = name and name:match("^[^:]+:%s*(.+)$")
+	return recipe and recipes.ByName(recipe:lower()) or nil
 end
 
 function recipes.Count()
