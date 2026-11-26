@@ -42,7 +42,7 @@ local TALENT_RAGE_PER_RANK = 5
 local SLIDE_SECONDS = 0.4
 local FADE_SECONDS = 0.4
 local ARROW_SIZE = 10
-local ARROW_OFFSET_Y = -9.5
+local ARROW_OFFSET_Y = -4
 
 local mark = {}
 ns.tacticalMastery = mark
@@ -118,7 +118,8 @@ local function EnsureOverlay()
 	local fill = overlay:GetStatusBarTexture()
 
 	-- A small metal arrow inside the bar, at its top, pointing down at the mark. The arrow is
-	-- drawn in the upper part of its picture, hence the offset (measured in game).
+	-- drawn in the upper part of its picture: measured from screenshots, this offset puts its
+	-- top on the first row inside the bar's border.
 	overlay.arrow = overlay:CreateTexture(nil, "OVERLAY")
 	overlay.arrow:SetTexture("Interface\\Buttons\\Arrow-Down-Up")
 	overlay.arrow:SetSize(ARROW_SIZE, ARROW_SIZE)
