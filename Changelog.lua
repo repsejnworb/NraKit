@@ -23,7 +23,7 @@ local _, ns = ...
 
 ns.changelog = {
 	{ version = "Unreleased", entries = {
-		{ "improved", title = "Sell List", "**Bank** and **Mail** switches at its top list what's in your bank and mailbox too, mixed in by value but marked. At the bank or mailbox (a **NraKit Sell List** button there opens it beside them), **click one to take it** into your bags; it asks how many stacks." },
+		{ "improved", title = "Sell List", "**Bank** and **Mail** switches at its top list what's in your bank and mailbox too, mixed in by value but marked. At the bank or mailbox (a **NraKit Sell List** button there opens it beside them), **click one to take it** into your bags; it asks how many stacks. Pick where it opens by itself in its **Automatically Open At** menu: the auction house, merchants, the bank and the mailbox." },
 		{ "fixed", title = "Inventory Tracker", "Items in a cash-on-delivery mail no longer count as yours before you've paid for them." },
 	} },
 	{ version = "0.32.0", date = "2026-11-26", entries = {

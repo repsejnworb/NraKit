@@ -56,19 +56,32 @@ local module = {
 		},
 		{
 			key = "sellListAutoOpen",
-			header = "At the Auction House",
-			name = "Open the list at the auction house",
-			description = "The Sell List opens by itself, beside the auction house, when you open it. Also a switch at the top of the list.",
+			header = "Automatically Open At",
+			name = "The auction house",
+			description = "The Sell List opens by itself beside the auction house when you open it. (Also in the list's \"Automatically Open At\" menu.)",
 			default = true,
 		},
 		{
 			key = "sellListMerchantOpen",
-			name = "Open the list at merchants",
-			description = "The Sell List also opens by itself beside a merchant's window, with what sells best to a vendor first. Click an item, then click the merchant's window to sell it.",
+			name = "Merchants",
+			description = "The Sell List opens by itself beside a merchant's window, with what sells best to a vendor first. Click an item, then click the merchant's window to sell it.",
+			default = false,
+		},
+		{
+			key = "sellListBankOpen",
+			name = "The bank",
+			description = "The Sell List opens by itself beside your bank, with what's in it listed to take out.",
+			default = false,
+		},
+		{
+			key = "sellListMailOpen",
+			name = "The mailbox",
+			description = "The Sell List opens by itself beside the mailbox, with what's in your mail listed to take.",
 			default = false,
 		},
 		{
 			key = "sellListAHButton",
+			header = "Buttons and Docking",
 			name = "Button on the auction house",
 			description = "A \"NraKit Sell List\" button at the top of the auction house window.",
 			default = true,
@@ -561,12 +574,24 @@ local DOCKS = {
 	{ open = function() return sell.IsPlaceOpen("mail") end, frame = MailDock },
 }
 
+-- Where the list opens by itself (the "Automatically Open At" options): place -> option.
+sell.AUTO_OPEN = {
+	{ key = "ah", option = "sellListAutoOpen", label = "Auction House" },
+	{ key = "merchant", option = "sellListMerchantOpen", label = "Merchants" },
+	{ key = "bank", option = "sellListBankOpen", label = "Bank" },
+	{ key = "mail", option = "sellListMailOpen", label = "Mailbox" },
+}
+
 -- Coming and going: the bank and mailbox windows showing or hiding (whatever events the client
--- sends), so leaving can't be missed.
-local function Arrive(where)
+-- sends), so leaving can't be missed. Arriving with the window shown can open the list.
+local function Arrive(where, shown)
 	placeOpen[where] = true
 	CreatePlaceButtons()
 	Changed()
+	if shown and ns:GetOption(where == "bank" and "sellListBankOpen" or "sellListMailOpen")
+		and not (sell.IsWindowShown and sell.IsWindowShown()) then
+		ns:OpenSellList()
+	end
 end
 
 local function Leave(where)
@@ -590,7 +615,7 @@ local function HookPlaces()
 			placesHooked[where] = true
 			frame:HookScript("OnShow", function()
 				if ns:IsModuleEnabled(module.key) then
-					Arrive(where)
+					Arrive(where, true)
 				end
 			end)
 			frame:HookScript("OnHide", function()

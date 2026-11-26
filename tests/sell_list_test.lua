@@ -236,14 +236,23 @@ return {
 			AuctionHouseFrame:Show()
 			t.ok(_G.NraKitSellListFrame:IsShown(), "opened by itself")
 			t.ok(ns.UI.IsDocked(), "beside the auction house")
-			local check = wow.findAll(function(frame)
-				local label = rawget(frame, "Text")
-				return wow.visible(frame) and label and label.text == "Open by itself at the auction house"
+			-- "Automatically Open At": a menu of places to tick.
+			local button = wow.findAll(function(frame)
+				local text = rawget(frame, "text")
+				return wow.visible(frame) and text and type(text.text) == "string" and text.text:find("Automatically Open At", 1, true)
 			end)[1]
-			t.ok(check and check:GetChecked(), "a switch at the top of the list, on")
-			check:SetChecked(false)
-			check.scripts.OnClick(check)
-			t.equal(NraKitDB.sellListAutoOpen, false, "turned off from the list")
+			t.ok(button and button.text.text:find("Auction House", 1, true), "says where: Auction House")
+			local menu
+			MenuUtil.CreateContextMenu = function(owner, generator)
+				menu = wow.newMenu()
+				generator(owner, menu)
+			end
+			button.scripts.OnClick(button)
+			local ah = wow.menuEntry(menu.entries, "Auction House")
+			t.ok(ah and ah.isSelected(), "Auction House ticked")
+			t.ok(wow.menuEntry(menu.entries, "Bank") and not wow.menuEntry(menu.entries, "Bank").isSelected(), "Bank not")
+			ah.onClick()
+			t.equal(NraKitDB.sellListAutoOpen, false, "untick it")
 			wow.fire("AUCTION_HOUSE_CLOSED")
 			AuctionHouseFrame:Hide()
 			AuctionHouseFrame:Show()
@@ -262,6 +271,17 @@ return {
 			wow.fire("AUCTION_HOUSE_SHOW")
 			t.ok(sell.IsOpen("vendor"), "back at the auction house: as you left it")
 			wow.fire("AUCTION_HOUSE_CLOSED")
+		end)
+
+		t.test("ticking the bank opens it there by itself", function()
+			ns:SetSetting("sellListBankOpen", true)
+			_G.NraKitSellListFrame:Hide()
+			BankFrame:Show()
+			t.ok(_G.NraKitSellListFrame:IsShown() and ns.UI.DockAnchor() == BankFrame, "opened beside the bank")
+			wow.fire("BANKFRAME_CLOSED")
+			BankFrame:Hide()
+			t.ok(not _G.NraKitSellListFrame:IsShown(), "and closed with it")
+			ns:SetSetting("sellListBankOpen", false)
 		end)
 
 		t.test("at merchants (an option) it docks there, vendor group first", function()

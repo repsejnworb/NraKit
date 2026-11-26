@@ -50,7 +50,7 @@ local PLACES = {
 		away = "in your mail: collect it first", here = "in your mail: click to take it" },
 }
 
-local frame, scroll, footerText, footerNote, refreshButton, autoOpenCheck, merchantOpenCheck
+local frame, scroll, footerText, footerNote, refreshButton, autoOpenButton
 local placeChips = {} -- the Bank and Mail switches
 local sortTitles = {}
 local shownItems = {} -- the items on screen, to notice when their auction prices change
@@ -352,8 +352,15 @@ function Render()
 	end
 	pool:ReleaseAll()
 	UpdateSortTitles()
-	autoOpenCheck:SetChecked(ns:GetOption("sellListAutoOpen"))
-	merchantOpenCheck:SetChecked(ns:GetOption("sellListMerchantOpen"))
+	-- "Automatically Open At: Auction House, Bank"
+	local places = {}
+	for _, place in ipairs(sell.AUTO_OPEN) do
+		if ns:GetOption(place.option) then
+			table.insert(places, place.label)
+		end
+	end
+	autoOpenButton.text:SetText("Automatically Open At:  |cffffffff" .. (#places > 0 and table.concat(places, ", ") or "Nowhere") .. "|r")
+	autoOpenButton:SetWidth(autoOpenButton.text:GetStringWidth() + 32)
 	local content = scroll.content
 	local width = content:GetWidth() - 2 * PAD
 	local groups = sell.Collect()
@@ -469,24 +476,31 @@ local function CreateWindow()
 	toolbar:SetPoint("TOPRIGHT")
 	toolbar:SetHeight(TOOLBAR_HEIGHT)
 	UI.AddLine(toolbar, "BOTTOM")
-	local function Switch(text, key, anchor)
-		local check = CreateFrame("CheckButton", nil, toolbar, "UICheckButtonTemplate")
-		check:SetSize(22, 22)
-		if anchor then
-			check:SetPoint("LEFT", anchor.Text, "RIGHT", 18, -1)
-		else
-			check:SetPoint("LEFT", PAD, 0)
-		end
-		check.Text:SetFontObject("GameFontHighlightSmall")
-		check.Text:SetText(text)
-		check:SetHitRectInsets(0, -(check.Text:GetStringWidth() + 4), 0, 0)
-		check:SetScript("OnClick", function(self)
-			ns:SetSetting(key, self:GetChecked() and true or false)
+	-- "Automatically Open At: Auction House": a menu of places to tick.
+	autoOpenButton = UI.CreateFlatButton(toolbar, "", 22)
+	autoOpenButton:SetPoint("LEFT", PAD, 0)
+	autoOpenButton.arrow = autoOpenButton:CreateTexture(nil, "ARTWORK")
+	autoOpenButton.arrow:SetTexture("Interface\\Buttons\\Arrow-Down-Up")
+	autoOpenButton.arrow:SetSize(10, 10)
+	autoOpenButton.text:ClearAllPoints()
+	autoOpenButton.text:SetPoint("LEFT", 10, 0)
+	autoOpenButton.arrow:SetPoint("LEFT", autoOpenButton.text, "RIGHT", 4, -2)
+	autoOpenButton:SetScript("OnClick", function(self)
+		MenuUtil.CreateContextMenu(self, function(_, root)
+			root:CreateTitle("Automatically Open At")
+			for _, place in ipairs(sell.AUTO_OPEN) do
+				root:CreateCheckbox(place.label, function()
+					return ns:GetOption(place.option) == true
+				end, function()
+					ns:SetSetting(place.option, not ns:GetOption(place.option))
+				end)
+			end
 		end)
-		return check
-	end
-	autoOpenCheck = Switch("Open by itself at the auction house", "sellListAutoOpen")
-	merchantOpenCheck = Switch("At merchants", "sellListMerchantOpen", autoOpenCheck)
+	end)
+	autoOpenButton:SetScript("OnEnter", function(self)
+		UI.ShowTooltip(self, "Automatically Open At", "Where the Sell List opens by itself, beside the window there.")
+	end)
+	autoOpenButton:SetScript("OnLeave", GameTooltip_Hide)
 
 	-- Bank and Mail: list those too (Inventory Tracker's data), right of the switches.
 	local anchor
