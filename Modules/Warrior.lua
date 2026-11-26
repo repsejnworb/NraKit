@@ -2,15 +2,15 @@ local _, ns = ...
 
 -- Warrior: QoL for warriors (the Classes section has one module per class).
 --
--- Tactical Mastery mark: the rage bar in the Personal Resource Display gets a tick where
--- the rage you keep when changing stance ends.
+-- Tactical Mastery mark: the rage bar in the Personal Resource Display gets a small arrow
+-- where the rage you keep when changing stance ends.
 --
 -- On Forever, the Tactical Mastery passive (1310185, "You retain up to 10 Rage when you
 -- change Stances") keeps 10, and the Improved Tactical Mastery talent (12295, "an
 -- additional 15") adds 5 per rank (Wowhead: 5/10/15). The rank is read from the active
--- talent loadout, so learning the passive, respeccing or switching loadouts moves the tick.
+-- talent loadout, so learning the passive, respeccing or switching loadouts moves the arrow.
 --
--- The tick is NraKit's own bar on top of the rage bar; the rage bar itself is never changed.
+-- The mark is NraKit's own bar on top of the rage bar; the rage bar itself is never changed.
 
 local module = {
 	key = "warrior",
@@ -22,14 +22,14 @@ local module = {
 		{
 			key = "warriorTacticalMastery",
 			name = "Tactical Mastery mark",
-			description = "The rage bar of the Personal Resource Display shows a mark at how much rage you keep when you change stance (Tactical Mastery, plus Improved Tactical Mastery's ranks). It follows what you've learned and your talents by itself.",
+			description = "The rage bar of the Personal Resource Display shows a small arrow at how much rage you keep when you change stance (Tactical Mastery, plus Improved Tactical Mastery's ranks). It follows what you've learned and your talents by itself.",
 			default = true,
 		},
 		{
 			key = "warriorTacticalMasteryShade",
 			parent = "warriorTacticalMastery",
 			name = "Shade the rage you keep",
-			description = "Also lightly shade the bar up to the mark, not just the mark itself.",
+			description = "Also lightly shade the bar up to the mark, not just the arrow.",
 			default = false,
 		},
 	},
@@ -41,6 +41,7 @@ local TALENT_SPELL = 12295 -- Improved Tactical Mastery: 5 more per rank
 local TALENT_RAGE_PER_RANK = 5
 local SLIDE_SECONDS = 0.4
 local FADE_SECONDS = 0.4
+local ARROW_SIZE = 10
 
 local mark = {}
 ns.tacticalMastery = mark
@@ -75,9 +76,9 @@ function mark.Retained()
 	return PASSIVE_RAGE + TALENT_RAGE_PER_RANK * mark.TalentRank()
 end
 
-local overlay -- on the rage bar: { tick, shade }
+local overlay -- on the rage bar: its fill is the shade, with the arrow
 local retained = 0
-local shownRage -- where the tick is drawn now, in rage (slides to the target)
+local shownRage -- where the arrow is drawn now, in rage (slides to the target)
 
 local function PowerBar()
 	local frame = PersonalResourceDisplayFrame
@@ -95,7 +96,7 @@ end
 
 -- Max rage is a secret value, so Lua can't work out where on the bar the mark goes. A bar
 -- can take secrets though: the mark is NraKit's own bar over the rage bar, 0 to max rage,
--- filled to the rage kept, and the tick sits at the end of its fill.
+-- filled to the rage kept, and the arrow sits at the end of its fill.
 local function Draw(rage)
 	overlay:SetMinMaxValues(0, UnitPowerMax("player", Enum.PowerType.Rage))
 	overlay:SetValue(rage)
@@ -115,17 +116,11 @@ local function EnsureOverlay()
 	overlay:Hide()
 	local fill = overlay:GetStatusBarTexture()
 
-	overlay.tick = overlay:CreateTexture(nil, "OVERLAY")
-	overlay.tick:SetColorTexture(1, 0.95, 0.75, 0.95)
-	overlay.tick:SetWidth(2)
-	overlay.tick:SetPoint("TOP", fill, "TOPRIGHT")
-	overlay.tick:SetPoint("BOTTOM", fill, "BOTTOMRIGHT")
-
-	overlay.glow = overlay:CreateTexture(nil, "ARTWORK")
-	overlay.glow:SetColorTexture(1, 0.85, 0.4, 0.3)
-	overlay.glow:SetWidth(6)
-	overlay.glow:SetPoint("TOP", overlay.tick, "TOP")
-	overlay.glow:SetPoint("BOTTOM", overlay.tick, "BOTTOM")
+	-- A small metal arrow on the bar's top edge, pointing down at the mark.
+	overlay.arrow = overlay:CreateTexture(nil, "OVERLAY")
+	overlay.arrow:SetTexture("Interface\\Buttons\\Arrow-Down-Up")
+	overlay.arrow:SetSize(ARROW_SIZE, ARROW_SIZE)
+	overlay.arrow:SetPoint("CENTER", fill, "TOPRIGHT", 0, ARROW_SIZE / 4)
 
 	-- Slides when the amount changes, fades in and out when the mark comes and goes.
 	overlay:SetScript("OnUpdate", function(self, elapsed)

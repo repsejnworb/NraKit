@@ -98,9 +98,9 @@ Alerts you when a **mob or player from your list** shows up.
 
 #### Warrior
 
-**Tactical Mastery mark:** the rage bar of the **Personal Resource Display** shows a mark at how much rage you **keep when you
+**Tactical Mastery mark:** the rage bar of the **Personal Resource Display** shows a small arrow at how much rage you **keep when you
 change stance**: 10 from Tactical Mastery, plus 5 per rank of Improved Tactical Mastery. It follows what you've
-learned and your talents by itself. Optionally shade the bar up to the mark.
+learned and your talents by itself. Optionally shade the bar up to the arrow.
 
 ### Quests
 
