@@ -229,7 +229,44 @@ function prices.HaveText(itemID, need)
 	elseif have >= need then
 		colour = HAVE_ELSEWHERE
 	end
-	return string.format("  |c%shave %d|r", colour, have), have
+	return string.format("  |c%shave %d|r", colour, have), have, colour == HAVE_HERE
+end
+
+local WHERE_MAX = 4
+
+-- Where you have an item: "You 3 (Bags 2, Bank 1), Bankalt 12" (others in class colours, at
+-- most WHERE_MAX, then "+2 more"). nil if you have none.
+function prices.WhereText(itemID)
+	local have, holders = prices.Have(itemID)
+	if have == 0 then
+		return nil
+	end
+	if not holders then
+		-- Without Inventory Tracker: your bags and bank.
+		local bags = C_Item.GetItemCount(itemID) or 0
+		local parts = {}
+		if bags > 0 then
+			table.insert(parts, "Bags " .. bags)
+		end
+		if have > bags then
+			table.insert(parts, "Bank " .. (have - bags))
+		end
+		return string.format("You %d (%s)", have, table.concat(parts, ", "))
+	end
+	local parts = {}
+	for index, holder in ipairs(holders) do
+		if index > WHERE_MAX then
+			table.insert(parts, "+" .. (#holders - WHERE_MAX) .. " more")
+			break
+		end
+		if holder.isMe then
+			table.insert(parts, string.format("You %d (%s)", holder.total, holder.where))
+		else
+			local r, g, b = ns.inventory.ClassColor(holder.class)
+			table.insert(parts, string.format("|cff%02x%02x%02x%s|r %d", r * 255, g * 255, b * 255, holder.label, holder.total))
+		end
+	end
+	return table.concat(parts, ", ")
 end
 
 local function AddPriceLines(tooltip, priced, cheapest)
@@ -240,9 +277,12 @@ local function AddPriceLines(tooltip, priced, cheapest)
 		if entry.vendor then
 			left = left .. VENDOR_TAG
 		end
+		local where
 		if showHave then
-			local text, have = prices.HaveText(entry.itemID, entry.count)
+			local text, have, inBags = prices.HaveText(entry.itemID, entry.count)
 			left, entry.have = left .. text, have
+			-- Where they are, when there's something to fetch.
+			where = not inBags and prices.WhereText(entry.itemID)
 		end
 		if not entry.total then
 			tooltip:AddDoubleLine(left, "no price", 0.6, 0.6, 0.6, 0.6, 0.6, 0.6)
@@ -256,6 +296,9 @@ local function AddPriceLines(tooltip, priced, cheapest)
 			else
 				tooltip:AddDoubleLine(left, right, 1, 1, 1, 1, 1, 1)
 			end
+		end
+		if where then
+			tooltip:AddLine("      " .. where, 0.6, 0.6, 0.6)
 		end
 	end
 end

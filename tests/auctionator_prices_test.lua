@@ -322,14 +322,15 @@ return {
 			local lines = RecipeTooltip("enchant:" .. RECIPE)
 			t.equal(lines[2], "Cost of one craft", "heading")
 			t.equal(lines[3], "6 Iron Bar  |cff999999have 3|r: 1g 20s 0c", "6 Iron Bar, 3 of them yours (not enough: grey)")
-			t.equal(lines[4], "1 Green Dye |cff999999vendor|r  |cff999999have 0|r: 0g 0s 50c", "the vendor's price, tagged")
-			t.equal(lines[5], "Total: 1g 20s 50c", "total")
-			t.equal(lines[6], "To buy: 0g 60s 50c", "what's missing: 3 bars and the dye")
-			t.equal(#lines, 6, "the optional reagent left out")
+			t.equal(lines[4], "      You 3 (Bags 2, Bank 1)", "where they are (not enough in your bags)")
+			t.equal(lines[5], "1 Green Dye |cff999999vendor|r  |cff999999have 0|r: 0g 0s 50c", "the vendor's price, tagged; none, so no where")
+			t.equal(lines[6], "Total: 1g 20s 50c", "total")
+			t.equal(lines[7], "To buy: 0g 60s 50c", "what's missing: 3 bars and the dye")
+			t.equal(#lines, 7, "the optional reagent left out")
 			ahPrices[IRON_BAR] = nil
 			lines = RecipeTooltip("enchant:" .. RECIPE)
 			t.equal(lines[3], "6 Iron Bar  |cff999999have 3|r: no price", "unscanned")
-			t.equal(lines[5], "Total: 0g 0s 50c+", "a total that's missing something says so")
+			t.equal(lines[6], "Total: 0g 0s 50c+", "a total that's missing something says so")
 			ahPrices[IRON_BAR] = 2000
 			t.equal(#RecipeTooltip("item:" .. IRON_BAR), 0, "not a recipe: nothing")
 			ns:SetSetting("auctionatorRecipes", false)
@@ -345,6 +346,7 @@ return {
 			items[GREEN_DYE].bags = 1
 			lines = RecipeTooltip("enchant:" .. RECIPE)
 			t.ok(lines[3]:find("|cff4cff4chave 10|r", 1, true), "enough in your bags: green: " .. lines[3])
+			t.equal(lines[4], "1 Green Dye |cff999999vendor|r  |cff4cff4chave 1|r: 0g 0s 50c", "green: no where line")
 			t.equal(lines[6], "To buy: nothing, you have it all", "nothing to buy")
 			ns:SetSetting("auctionatorHave", false)
 			lines = RecipeTooltip("enchant:" .. RECIPE)
@@ -352,6 +354,27 @@ return {
 			t.equal(#lines, 5, "and no To buy")
 			ns:SetSetting("auctionatorHave", true)
 			items[IRON_BAR].bags, items[IRON_BAR].bank, items[GREEN_DYE].bags = 2, 1, 0
+		end)
+
+		t.test("where: with Inventory Tracker, you first then your other characters, a few at most", function()
+			NraKitDB.inventoryTracker = true
+			local holders = function()
+				return {
+					{ label = "Nra Kit", isMe = true, total = 3, where = "Bags 2, Bank 1" },
+					{ label = "Bankalt", class = "MAGE", total = 12 },
+					{ label = "Twink", class = "MAGE", total = 2 },
+					{ label = "Alt3", class = "MAGE", total = 1 },
+					{ label = "Alt4", class = "MAGE", total = 1 },
+					{ label = "Alt5", class = "MAGE", total = 1 },
+				}
+			end
+			local saved = ns.inventory.Holders
+			ns.inventory.Holders = holders
+			local lines = RecipeTooltip("enchant:" .. RECIPE)
+			t.ok(lines[3]:find("|cffffd100have 20|r", 1, true), "all yours counted, enough elsewhere: yellow: " .. lines[3])
+			t.equal(lines[4], "      You 3 (Bags 2, Bank 1), |cffffffffBankalt|r 12, |cffffffffTwink|r 2, |cffffffffAlt3|r 1, +2 more", "where")
+			ns.inventory.Holders = saved
+			NraKitDB.inventoryTracker = false
 		end)
 
 		local function RightClickLink(link, button)

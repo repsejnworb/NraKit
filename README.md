@@ -251,8 +251,9 @@ the auction house, from Auctionator's last scan.
   each reagent and the total.
 - **How many you have** of each reagent, on recipes and crates: on all your characters (with
   Inventory Tracker; else your bags and bank), **green** when your bags hold enough, **yellow** when
-  you have enough elsewhere (bank, other characters), grey if not. A recipe also says what's left
-  **to buy**.
+  you have enough elsewhere (bank, other characters), grey if not. When they aren't all in your
+  bags, a line under it says **where**: "You 3 (Bags 2, Bank 1), Bankalt 12". A recipe also says
+  what's left **to buy**.
 - **Shopping lists:** right-click a recipe link in chat or a recipe in your profession window (or
   use the **Shopping list** button by its reagents) for:
   - **Create shopping list for this recipe**: an Auctionator list named after the recipe, with one
