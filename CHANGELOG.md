@@ -1,22 +1,13 @@
-# NraKit 0.32.0
+# NraKit 0.33.0
 
 ### New
-- **Shortcuts**: Short commands for NraKit's everyday ones, each the same as its `/nra` command.
-  - **/remind, `/todo`, `/item`, `/dps`, `/shop`, `/bank`, `/goal`, `/note`, `/wish`, `/scan`** and **/done**.
-  - Only commands **no other addon or the game uses** are taken; an addon that takes one later gets it.
-  - `/nra` shortcuts lists them, and which are in use elsewhere.
-  - Turn each on or off. One whose feature is off isn't taken.
-- **Sell List**: What in your bags is worth selling, the most valuable first, so you don't have to hover every item.
-  - **Auction house and vendor prices** side by side; the better one is bright, and a stale auction price is marked.
-  - It **opens by itself beside the auction house** (a button there too), and optionally at **merchants**.
-  - There, **Alt+click** an item to put it in Auctionator's Selling tab, or click to pick it up.
-  - Split into **To Sell: Auction House** and **To Sell: Vendor**; right-click one for **Keep, don't list**.
-  - Says when a fresh scan **changed the prices**, with a refresh button; sorts by any column.
-  - *Tip: Auction prices come from **Auctionator**; without it, it's vendor prices.*
+- **/nra debug**: For reporting a problem: turn on a feature's log (`/nra` debug sell), try again, and `/nra` debug copy gives you the lines to paste.
 
 ### Improved
-- **What's New**: Easier to read: each new feature has its name, a one-line summary and bullet points, with key words picked out.
-- **Auctionator Prices**: Now in the new **Auction House** section, and the Inventory tab shows what each character's items are worth at the auction house.
-- **Settings**: Features are sorted into clearer sections: **Interface**, Classes, Quests, Bags & Items, Professions, **Auction House**, Mail, Trackers & Reminders, **Social** and **Tools**, a few have shorter names, and names and headings are in Title Case.
+- **Sell List**: **Bank** and **Mail** switches at its top list what's in your bank and mailbox too, mixed in by value but marked (and a **Bags** switch). At the bank or mailbox it lists **just what's there**; the switches are for that visit. At the bank or mailbox (a **NraKit Sell List** button there opens it beside them), **click one to take it** into your bags; it asks how many stacks. Pick where it opens by itself in its **Automatically Open At** menu: the auction house, merchants, the bank and the mailbox.
+
+### Fixed
+- **Inventory Tracker**: Items in a cash-on-delivery mail no longer count as yours before you've paid for them.
+- **Windows**: NraKit's windows no longer cover the game's pop-ups, like the bank's "clean up" question.
 
 Type /nra new in game to see what's new in every version.
