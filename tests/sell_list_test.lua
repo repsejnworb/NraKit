@@ -470,8 +470,10 @@ return {
 			end
 			sell.AskTake(bars, UIParent)
 			local prompt = sell.Prompt()
-			prompt.unitButton.scripts.OnClick(prompt.unitButton)
-			t.equal(prompt.unit, "items", "switched to items")
+			t.ok(prompt.stacksButton.isSelected and not prompt.itemsButton.isSelected, "[ Items ][ Stacks ]: Stacks lit to start")
+			prompt.itemsButton.scripts.OnClick(prompt.itemsButton)
+			t.equal(prompt.unit, "items", "Items clicked: counting in items")
+			t.ok(prompt.itemsButton.isSelected and not prompt.stacksButton.isSelected, "Items lit, Stacks not")
 			t.equal(prompt.amount, 40, "the same amount: 2 stacks = 40 items")
 			for _ = 1, 15 do
 				prompt.minus.scripts.OnClick(prompt.minus)

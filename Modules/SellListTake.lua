@@ -211,7 +211,7 @@ end
 
 -- The panel stands out from the list: darker, an orange line on top, a shadow around it.
 local PROMPT_BG = { 0.04, 0.04, 0.05, 0.98 }
-local PROMPT_WIDTH, PROMPT_HEIGHT = 360, 150
+local PROMPT_WIDTH, PROMPT_HEIGHT = 390, 150
 
 local prompt
 
@@ -236,8 +236,14 @@ local function UpdatePrompt()
 	local item = prompt.item
 	local stacks, items = Amounts()
 	prompt.amountText:SetText(tostring(prompt.amount))
-	prompt.unitButton.text:SetText(prompt.unit == "items" and "Items" or "Stacks")
-	prompt.unitButton:SetShown(item.where == "bank") -- mail can't be split: stacks only
+	-- [ Items ][ Stacks ]: the one in use lit, the other plain. Mail can't be split: stacks only.
+	prompt.itemsButton:SetSelected(prompt.unit == "items")
+	prompt.stacksButton:SetSelected(prompt.unit == "stacks")
+	local canSplit = item.where == "bank"
+	prompt.itemsButton:SetEnabled(canSplit)
+	if not canSplit then
+		prompt.itemsButton.text:SetTextColor(unpack(UI.TEXT_DIM))
+	end
 	if prompt.unit == "items" then
 		prompt.detail:SetText(string.format("(%s)", Plural(stacks, "stack", "stacks")))
 	else
@@ -259,17 +265,14 @@ local function SetAmount(amount)
 	UpdatePrompt()
 end
 
--- Switches between stacks and items, keeping about the same amount.
-local function ToggleUnit()
-	local stacks, items = Amounts()
-	if prompt.unit == "items" then
-		prompt.unit = "stacks"
-		prompt.amount = stacks
-	else
-		prompt.unit = "items"
-		prompt.amount = items
+-- Counts in "items" or "stacks", keeping about the same amount.
+local function SetUnit(unit)
+	if unit == prompt.unit then
+		return
 	end
-	SetAmount(prompt.amount)
+	local stacks, items = Amounts()
+	prompt.unit = unit
+	SetAmount(unit == "items" and items or stacks)
 end
 
 local function TakeChosen()
@@ -330,17 +333,34 @@ local function CreatePrompt()
 	prompt.plus:SetScript("OnClick", function()
 		SetAmount(prompt.amount + (IsShiftKeyDown() and 10 or 1))
 	end)
-	-- Stacks or Items: click to switch.
-	prompt.unitButton = UI.CreateFlatButton(prompt, "Stacks", 22)
-	prompt.unitButton:SetWidth(64)
-	prompt.unitButton:SetPoint("LEFT", prompt.plus, "RIGHT", 8, 0)
-	prompt.unitButton:SetScript("OnClick", ToggleUnit)
-	prompt.unitButton:SetScript("OnEnter", function(self)
-		UI.ShowTooltip(self, "Stacks or items", "Click to count in the other.")
+	-- [ Items ][ Stacks ] side by side: which one the amount counts in, both always in view.
+	prompt.itemsButton = UI.CreateFlatButton(prompt, "Items", 22)
+	prompt.itemsButton:SetWidth(54)
+	prompt.itemsButton:SetPoint("LEFT", prompt.plus, "RIGHT", 10, 0)
+	prompt.itemsButton:SetMotionScriptsWhileDisabled(true)
+	prompt.itemsButton:SetScript("OnClick", function()
+		SetUnit("items")
 	end)
-	prompt.unitButton:SetScript("OnLeave", GameTooltip_Hide)
+	prompt.itemsButton:SetScript("OnEnter", function(self)
+		if self:IsEnabled() then
+			UI.ShowTooltip(self, "Count in items", "Take an exact number of items (part of a stack is split off).")
+		else
+			UI.ShowTooltip(self, "Count in items", "Mail comes a whole stack at a time: it can't be split.")
+		end
+	end)
+	prompt.itemsButton:SetScript("OnLeave", GameTooltip_Hide)
+	prompt.stacksButton = UI.CreateFlatButton(prompt, "Stacks", 22)
+	prompt.stacksButton:SetWidth(58)
+	prompt.stacksButton:SetPoint("LEFT", prompt.itemsButton, "RIGHT", 1, 0)
+	prompt.stacksButton:SetScript("OnClick", function()
+		SetUnit("stacks")
+	end)
+	prompt.stacksButton:SetScript("OnEnter", function(self)
+		UI.ShowTooltip(self, "Count in stacks", "Take whole stacks.")
+	end)
+	prompt.stacksButton:SetScript("OnLeave", GameTooltip_Hide)
 	prompt.detail = prompt:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	prompt.detail:SetPoint("LEFT", prompt.unitButton, "RIGHT", 8, 0)
+	prompt.detail:SetPoint("LEFT", prompt.stacksButton, "RIGHT", 8, 0)
 	prompt.detail:SetTextColor(unpack(UI.TEXT_DIM))
 
 	prompt.roomText = prompt:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")

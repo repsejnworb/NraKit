@@ -510,6 +510,7 @@ function UI.CreateFlatButton(parent, label, height)
 	button:SetWidth(button.text:GetStringWidth() + 20)
 
 	function button:SetSelected(on)
+		self.isSelected = on and true or false
 		if on then
 			self.bg:SetColorTexture(UI.ACCENT[1], UI.ACCENT[2], UI.ACCENT[3], 0.25)
 			self.text:SetTextColor(unpack(UI.GOLD))
