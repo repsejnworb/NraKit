@@ -425,6 +425,7 @@ function Render()
 	for _, chip in ipairs(placeChips) do
 		chip:SetSelected(chip.where == "bags" and sell.ShowsBags() or chip.where ~= "bags" and sell.Shows(chip.where))
 		local available = chip.where == "bags" or ns:IsModuleEnabled("inventoryTracker") or sell.IsPlaceOpen(chip.where)
+			or sell.AtBankOrMailbox()
 		chip:SetEnabled(available)
 		chip:SetAlpha(available and 1 or 0.5)
 	end
@@ -530,23 +531,19 @@ local function CreateWindow()
 		chip:SetMotionScriptsWhileDisabled(true)
 		chip:SetScript("OnClick", function(self)
 			PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
-			if self.where == "bags" then
-				sell.ToggleBags()
-			else
-				ns:SetSetting(self.where == "bank" and "sellListBank" or "sellListMail", not sell.Shows(self.where))
-			end
+			sell.Toggle(self.where)
 		end)
 		chip:SetScript("OnEnter", function(self)
 			local title = "Show your " .. self.where
-			if self.where == "bags" then
-				UI.ShowTooltip(self, title, sell.AtBankOrMailbox()
-					and "Hidden at the bank and mailbox, to see what to take out. Click to show them for now."
-					or "List what's in your bags.")
+			if sell.AtBankOrMailbox() then
+				local here = sell.IsPlaceOpen("bank") and "bank" or "mailbox"
+				UI.ShowTooltip(self, title, "At the " .. here .. " the list shows just what's there. Click to "
+					.. (sell.ShowsBags() and self.where == "bags" or self.where ~= "bags" and sell.Shows(self.where) and "hide" or "show")
+					.. " your " .. self.where .. " for this visit; your settings come back when you leave.")
 				return
 			end
-			if sell.IsPlaceOpen(self.where) then
-				UI.ShowTooltip(self, title, "You're at your " .. (self.where == "bank" and "bank" or "mailbox")
-					.. ": it's always listed here, to take from. This switch is for when you're away.")
+			if self.where == "bags" then
+				UI.ShowTooltip(self, title, "List what's in your bags.")
 				return
 			end
 			if not ns:IsModuleEnabled("inventoryTracker") then

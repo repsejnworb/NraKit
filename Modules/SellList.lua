@@ -329,41 +329,53 @@ function sell.LastSeen(where)
 	return me and me.seen and me.seen[where]
 end
 
--- Whether your bags are listed: the Bags switch, but at the bank or mailbox they're hidden
--- (you're there to take things out), unless you show them for that visit.
-local bagsThisVisit = false
+-- What's listed: your bags, bank and mail (the Bags, Bank and Mail switches). Away, those are
+-- your settings. At the bank or mailbox the list focuses on that place: only it is listed, and
+-- the switches change what's shown for that visit only (`visit`), back to your settings when
+-- you leave.
+local visit -- { bags, bank, mail } while you're at the bank or mailbox
+
+local SWITCH_OPTIONS = { bags = "sellListBags", bank = "sellListBank", mail = "sellListMail" }
 
 function sell.AtBankOrMailbox()
 	return sell.IsPlaceOpen("bank") or sell.IsPlaceOpen("mail")
 end
 
-function sell.ShowsBags()
-	if sell.AtBankOrMailbox() then
-		return bagsThisVisit
+-- Whether a source is switched on ("bags", "bank", "mail"): for this visit, or your setting.
+local function SwitchedOn(where)
+	if visit and sell.AtBankOrMailbox() then
+		return visit[where] == true
 	end
-	return ns:GetOption("sellListBags") ~= false
+	local value = ns:GetOption(SWITCH_OPTIONS[where])
+	if where == "bags" then
+		return value ~= false
+	end
+	return value == true
 end
 
--- The Bags switch: for this visit at the bank or mailbox, else the setting.
-function sell.ToggleBags()
-	if sell.AtBankOrMailbox() then
-		bagsThisVisit = not bagsThisVisit
+function sell.ShowsBags()
+	return SwitchedOn("bags")
+end
+
+-- Whether the bank or mail is listed: read live while you're there, else as Inventory Tracker
+-- last saw it.
+function sell.Shows(where)
+	if not SwitchedOn(where) then
+		return false
+	end
+	return sell.IsPlaceOpen(where) or ns:IsModuleEnabled("inventoryTracker")
+end
+
+-- A switch clicked: for this visit at the bank or mailbox, else the setting.
+function sell.Toggle(where)
+	if visit and sell.AtBankOrMailbox() then
+		visit[where] = not visit[where]
 		if sell.onChanged then
 			sell.onChanged()
 		end
 	else
-		ns:SetSetting("sellListBags", not sell.ShowsBags())
+		ns:SetSetting(SWITCH_OPTIONS[where], not SwitchedOn(where))
 	end
-end
-
--- Whether the bank or mail is listed: always while you're there (read live, to take from),
--- else when its switch is on and Inventory Tracker remembers it.
-function sell.Shows(where)
-	if sell.IsPlaceOpen(where) then
-		return true
-	end
-	return ns:GetOption(where == "bank" and "sellListBank" or "sellListMail") == true
-		and ns:IsModuleEnabled("inventoryTracker")
 end
 
 local SORTS = {
@@ -620,6 +632,10 @@ sell.AUTO_OPEN = {
 -- Coming and going: the bank and mailbox windows showing or hiding (whatever events the client
 -- sends), so leaving can't be missed. Arriving with the window shown can open the list.
 local function Arrive(where, shown)
+	if not placeOpen[where] then
+		-- Focus on this place: only it is listed, for this visit.
+		visit = { bags = false, bank = where == "bank", mail = where == "mail" }
+	end
 	placeOpen[where] = true
 	CreatePlaceButtons()
 	Changed()
@@ -634,7 +650,9 @@ local function Leave(where)
 		return
 	end
 	placeOpen[where] = false
-	bagsThisVisit = false
+	if not (placeOpen.bank or placeOpen.mail) then
+		visit = nil
+	end
 	local anchor = ns.UI.DockAnchor()
 	if anchor and (anchor == _G[PLACE_FRAMES[where]] or (where == "mail" and anchor == OpenMailFrame)) then
 		ns.UI.Undock()

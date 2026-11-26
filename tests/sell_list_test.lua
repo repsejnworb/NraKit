@@ -501,7 +501,7 @@ return {
 			BankFrame:Show()
 			wow.fire("BANKFRAME_OPENED")
 			t.equal(BagRows(), 0, "at the bank: hidden")
-			sell.ToggleBags()
+			sell.Toggle("bags")
 			t.ok(BagRows() > 0, "shown for this visit")
 			t.equal(NraKitDB.sellListBags, true, "the setting untouched")
 			wow.fire("BANKFRAME_CLOSED")
@@ -511,10 +511,44 @@ return {
 			t.equal(BagRows(), 0, "the next visit: hidden again")
 			wow.fire("BANKFRAME_CLOSED")
 			BankFrame:Hide()
-			sell.ToggleBags()
+			sell.Toggle("bags")
 			t.equal(NraKitDB.sellListBags, false, "away, the switch is the setting")
 			t.equal(BagRows(), 0, "bags off")
-			sell.ToggleBags()
+			sell.Toggle("bags")
+		end)
+
+		t.test("at the bank or mailbox only that place is listed; switches are for the visit", function()
+			ns:SetSetting("sellListMail", true) -- your setting: mail on
+			local function Sources()
+				local found = {}
+				for _, list in ipairs({ sell.Collect().ah, sell.Collect().vendor }) do
+					for _, item in ipairs(list) do
+						found[item.where or "bags"] = true
+					end
+				end
+				return found
+			end
+			CONTAINERS[6] = { { itemID = 1010, stackCount = 1 } }
+			INBOX = { { cod = 0, items = { { itemID = 1009, stackCount = 20 } } } }
+			BankFrame:Show()
+			wow.fire("BANKFRAME_OPENED")
+			local at = Sources()
+			t.ok(at.bank and not at.mail and not at.bags, "at the bank: just the bank")
+			sell.Toggle("mail")
+			t.ok(Sources().mail, "mail shown for this visit")
+			wow.fire("BANKFRAME_CLOSED")
+			BankFrame:Hide()
+			t.equal(NraKitDB.sellListMail, true, "your settings untouched")
+			MailFrame:Show()
+			wow.fire("MAIL_SHOW")
+			at = Sources()
+			t.ok(at.mail and not at.bank and not at.bags, "at the mailbox: just the mail")
+			wow.fire("MAIL_CLOSED")
+			MailFrame:Hide()
+			at = Sources()
+			t.ok(at.bags, "away: your settings again (bags on)")
+			ns:SetSetting("sellListMail", false)
+			CONTAINERS[6], INBOX = {}, {}
 		end)
 
 		t.test("bags too full for it all: Take All says how many fit", function()
