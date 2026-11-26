@@ -55,6 +55,7 @@ local pool = UI.CreatePool()
 local query = ""
 local shownIDs = {} -- [id] = true for the item rows on screen
 local renderPending = false
+local Render -- (defined below; the chips' clicks call it)
 
 local function Mode()
 	return NraKitDB.lookupMode or "items"
@@ -421,7 +422,15 @@ local function LayoutProfessionChips(body, mode)
 	if #professions == 0 then
 		return 0
 	end
+	-- A remembered profession that's gone (the list was made again): All.
 	local selected = NraKitDB.lookupRecipeProfession
+	local exists = false
+	for _, name in ipairs(professions) do
+		exists = exists or name == selected
+	end
+	if not exists then
+		selected, NraKitDB.lookupRecipeProfession = nil, nil
+	end
 	local names = { "All" }
 	for _, name in ipairs(professions) do
 		table.insert(names, name)
@@ -457,7 +466,7 @@ local function LayoutProfessionChips(body, mode)
 	return -y - (PAD + 68) + CHIP_HEIGHT + 8
 end
 
-local function Render()
+function Render()
 	renderPending = false
 	if not (frame and frame:IsShown()) then
 		return
@@ -663,6 +672,7 @@ local function CreateWindow()
 	-- click it to type. Enter (like Esc) gives the keys back to the game.
 	searchBox:HookScript("OnEnterPressed", searchBox.ClearFocus)
 	frame:HookScript("OnShow", function()
+		NraKitDB.lookupRecipeProfession = nil -- Recipes opens on All
 		SetMode(Mode())
 	end)
 
