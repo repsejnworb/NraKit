@@ -153,6 +153,36 @@ return {
 			box:SetText("charge")
 		end)
 
+		t.test("more than a page: pages in the footer", function()
+			-- 250 more spells named "Charge ...".
+			for id = 20001, 20250 do
+				SPELLS[id] = "Charge " .. id
+			end
+			ns.spellLookup.Reset()
+			ns:RunSlashCommand("spell charge")
+			for _ = 1, 40 do
+				wow.advance(0.1)
+			end
+			t.equal(#Rows("spells"), 100, "a page of 100")
+			t.ok(wow.click("3"), "page 3")
+			t.equal(#Rows("spells"), 52, "the last 52 (252 Charges)")
+			t.ok(wow.click("<"), "back a page")
+			t.equal(#Rows("spells"), 100, "page 2")
+			local box = wow.findAll(function(frame)
+				return frame.kind == "EditBox" and wow.visible(frame) and rawget(frame, "parent") == _G.NraKitItemLookupFrame.body
+			end)[1]
+			box:SetText("charge 2001")
+			t.equal(#Rows("spells"), 10, "a new search: page 1, all on it")
+			for id = 20001, 20250 do
+				SPELLS[id] = nil
+			end
+			ns.spellLookup.Reset()
+			box:SetText("charge")
+			for _ = 1, 40 do
+				wow.advance(0.1)
+			end
+		end)
+
 		t.test("Shift-click links a spell in chat", function()
 			local row = Rows("spells")[1]
 			IsModifiedClick = function(what)

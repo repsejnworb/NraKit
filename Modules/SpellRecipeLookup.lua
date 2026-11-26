@@ -79,6 +79,12 @@ function spells.Start()
 	end
 end
 
+-- Reads the spells again from the start (for tests).
+function spells.Reset()
+	spellList, spellCursor = nil, 1
+	spells.Start()
+end
+
 -- { read, total } while reading, nil once done.
 function spells.Progress()
 	if spellCursor > MAX_SPELL_ID then

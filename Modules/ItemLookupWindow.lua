@@ -20,7 +20,7 @@ local RECIPE_ROW_HEIGHT = 38
 local TOP_HEIGHT = 80
 local CHIP_HEIGHT = 20 -- the Recipes mode's profession chips, under the search box
 local FOOTER_HEIGHT = 28
-local MAX_SHOWN = 200
+local PAGE_SIZE = 100 -- rows per page; the footer has the pages
 local MAX_REAGENT_ICONS = 6
 
 local ICONS = "Interface\\Icons\\"
@@ -64,7 +64,19 @@ local pool = UI.CreatePool()
 local query = ""
 local shownIDs = {} -- [id] = true for the item rows on screen
 local renderPending = false
-local Render -- (defined below; the chips' clicks call it)
+local Render, UpdatePager -- (defined below; clicks call them)
+local page = 1 -- the page shown; back to 1 whenever what's listed changes
+
+-- The page's part of all the matches (clamping the page to the last one).
+local function PageOf(matches)
+	local pages = math.max(1, math.ceil(#matches / PAGE_SIZE))
+	page = math.max(1, math.min(page, pages))
+	local slice = {}
+	for index = (page - 1) * PAGE_SIZE + 1, math.min(page * PAGE_SIZE, #matches) do
+		table.insert(slice, matches[index])
+	end
+	return slice
+end
 
 local function Mode()
 	return NraKitDB.lookupMode or "items"
@@ -335,7 +347,8 @@ local function Message(content, text)
 end
 
 local function RenderItems(content, width)
-	local matches, total = ns.itemLookup.Search(query, MAX_SHOWN)
+	local all, total = ns.itemLookup.Search(query, math.huge)
+	local matches = PageOf(all)
 	for index, match in ipairs(matches) do
 		shownIDs[match.id] = true
 		local row = AcquireItemRow(content)
@@ -362,7 +375,8 @@ local function RenderItems(content, width)
 end
 
 local function RenderSpells(content, width)
-	local matches, total = ns.spellLookup.Search(query, MAX_SHOWN, NraKitDB.lookupSpellFilter)
+	local all, total = ns.spellLookup.Search(query, math.huge, NraKitDB.lookupSpellFilter)
+	local matches = PageOf(all)
 	for index, match in ipairs(matches) do
 		local row = AcquireSpellRow(content)
 		row.kind, row.id = "spells", match.id
@@ -390,7 +404,8 @@ local function RenderSpells(content, width)
 end
 
 local function RenderRecipes(content, width)
-	local matches, total = ns.recipeLookup.Search(query, MAX_SHOWN, RecipeSort(), NraKitDB.lookupRecipeProfession)
+	local all, total = ns.recipeLookup.Search(query, math.huge, RecipeSort(), NraKitDB.lookupRecipeProfession)
+	local matches = PageOf(all)
 	for index, recipe in ipairs(matches) do
 		local row = AcquireRecipeRow(content)
 		row.kind, row.id, row.recipeName = "recipes", recipe.id, recipe.name
@@ -426,6 +441,89 @@ local function RenderRecipes(content, width)
 		end
 	end
 	return #matches, total, RECIPE_ROW_HEIGHT
+end
+
+-- The pages, in the footer: [ < ] [ 1 ] ... [ 4 ] [ 5 ] [ 6 ] ... [ 28 ] [ > ] (the first, the
+-- ones around this one, the last). The hint shows instead while it all fits on one page.
+local pager -- { frame, buttons = {}, gaps = {} }
+local PAGE_BUTTON = 22
+
+local function PageNumbers(pages)
+	local numbers, last = {}, 0
+	for number = 1, pages do
+		if number == 1 or number == pages or math.abs(number - page) <= 2 then
+			if number > last + 1 then
+				table.insert(numbers, false) -- a gap: "..."
+			end
+			table.insert(numbers, number)
+			last = number
+		end
+	end
+	return numbers
+end
+
+function UpdatePager(pages)
+	pager.frame:SetShown(pages > 1)
+	hint:SetShown(pages <= 1)
+	for _, button in ipairs(pager.buttons) do
+		button:Hide()
+	end
+	for _, gap in ipairs(pager.gaps) do
+		gap:Hide()
+	end
+	if pages <= 1 then
+		return
+	end
+	local items = { "<" }
+	for _, number in ipairs(PageNumbers(pages)) do
+		table.insert(items, number)
+	end
+	table.insert(items, ">")
+	local anchor
+	local buttonIndex, gapIndex, width = 0, 0, 0
+	for _, item in ipairs(items) do
+		local widget
+		if item == false then
+			gapIndex = gapIndex + 1
+			widget = pager.gaps[gapIndex]
+			if not widget then
+				widget = pager.frame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+				widget:SetText("...")
+				pager.gaps[gapIndex] = widget
+			end
+		else
+			buttonIndex = buttonIndex + 1
+			widget = pager.buttons[buttonIndex]
+			if not widget then
+				widget = UI.CreateFlatButton(pager.frame, "", 20)
+				widget:SetScript("OnClick", function(self)
+					PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+					page = self.target
+					scroll:SetScroll(0)
+					Render()
+				end)
+				pager.buttons[buttonIndex] = widget
+			end
+			widget.text:SetText(item == "<" and "<" or item == ">" and ">" or tostring(item))
+			widget:SetWidth(math.max(PAGE_BUTTON, widget.text:GetStringWidth() + 14))
+			widget.target = item == "<" and math.max(1, page - 1) or item == ">" and math.min(pages, page + 1) or item
+			widget:SetSelected(item == page)
+			widget:SetEnabled(not ((item == "<" and page == 1) or (item == ">" and page == pages)))
+			widget:SetAlpha(widget:IsEnabled() and 1 or 0.4)
+		end
+		widget:ClearAllPoints()
+		if anchor then
+			widget:SetPoint("LEFT", anchor, "RIGHT", 3, 0)
+			width = width + 3
+		else
+			widget:SetPoint("LEFT", pager.frame, "LEFT", 0, 0)
+		end
+		widget:Show()
+		width = width + (widget.GetStringWidth and widget:GetStringWidth() or widget:GetWidth())
+		anchor = widget
+	end
+	-- As wide as its buttons, so it ends at the footer's right edge.
+	pager.frame:SetWidth(width)
 end
 
 -- The chips under the search box: what each mode can be narrowed to, as { value, label,
@@ -491,6 +589,7 @@ local function LayoutChips(body, mode)
 			chip:SetScript("OnClick", function(self)
 				PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
 				NraKitDB[FILTER_KEYS[Mode()]] = self.value
+				page = 1
 				scroll:SetScroll(0)
 				Render()
 			end)
@@ -574,11 +673,13 @@ function Render()
 	end
 	content:SetHeight(PAD * 2 + shown * rowHeight)
 	scroll:SetScroll(scroll:GetVerticalScroll())
-	if total > shown then
-		footerLeft:SetText(string.format("Showing %d of %d matches: type more to narrow it down.", shown, total))
+	if total > PAGE_SIZE then
+		local first = (page - 1) * PAGE_SIZE + 1
+		footerLeft:SetText(string.format("%s-%s of %s", Number(first), Number(first + shown - 1), Number(total)))
 	else
 		footerLeft:SetText(total == 1 and "1 match" or (total .. " matches"))
 	end
+	UpdatePager(math.ceil(total / PAGE_SIZE))
 end
 
 -- Re-render once, soon: names arrive in bursts.
@@ -598,6 +699,7 @@ local function SetMode(mode)
 	elseif mode == "recipes" then
 		ns.recipeLookup.Start()
 	end
+	page = 1
 	scroll:SetScroll(0)
 	Render()
 end
@@ -643,6 +745,7 @@ local function CreateWindow()
 		end
 		button:SetScript("OnClick", function(self)
 			NraKitDB.lookupRecipeSort = self.sort
+			page = 1
 			scroll:SetScroll(0)
 			Render()
 		end)
@@ -656,6 +759,7 @@ local function CreateWindow()
 
 	searchBox = UI.CreateSearchBox(body, 260, function(text)
 		query = text
+		page = 1
 		scroll:SetScroll(0)
 		Render()
 	end)
@@ -723,6 +827,11 @@ local function CreateWindow()
 	footerLeft:SetPoint("LEFT", PAD, 0)
 	hint = footer:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	hint:SetPoint("RIGHT", -PAD, 0)
+	-- The pages, right-aligned (sized to its buttons as it's filled).
+	pager = { frame = CreateFrame("Frame", nil, footer), buttons = {}, gaps = {} }
+	pager.frame:SetSize(1, 20)
+	pager.frame:SetPoint("RIGHT", -PAD, 0)
+	pager.frame:Hide()
 
 	-- The search box never takes the keyboard by itself (you may be moving or fighting):
 	-- click it to type. Enter (like Esc) gives the keys back to the game.
