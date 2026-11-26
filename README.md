@@ -300,6 +300,8 @@ item. A tab in the NraKit window (`/nra sell`).
   sorts by **any column**. The footer says what it's all worth.
 - Without Auctionator it still works, on vendor prices.
 
+<img width="1558" height="592" alt="sellListAH" src=".github/screenshots/sellListAH.png" />
+
 #### Auctionator Prices
 
 Needs **[Auctionator](https://www.curseforge.com/wow/addons/auctionator)**. What things cost at
@@ -338,6 +340,7 @@ the auction house, from Auctionator's last scan.
 <img width="779" height="546" alt="auctionatorNraKitShoppingList" src=".github/screenshots/auctionatorNraKitShoppingList.png" />
 <img width="328" height="354" alt="auctionatorRecipeCost" src=".github/screenshots/auctionatorRecipeCost.png" />
 <img width="327" height="189" alt="auctionatorWaylaid" src=".github/screenshots/auctionatorWaylaid.png" />
+<img width="217" height="233" alt="sellValuePerCharacterInventory" src=".github/screenshots/sellValuePerCharacterInventory.png" />
 
 ### Mail
 

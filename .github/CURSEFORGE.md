@@ -166,6 +166,8 @@ With a **fishing pole in your main hand**, **double right-click** the world to c
 - Optionally also **opens at merchants**, docked beside them with the vendor group first.
 - Leaves out junk below a **minimum**, optionally lists your **bank**, sorts by **any column**.
 
+![sellListAH](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/sellListAH.png)
+
 ### Auctionator Prices
 Needs **Auctionator**. What things cost at the auction house, from Auctionator's last scan.
 - **Waylaid Crates:** a crate's tooltip shows **what each bundle it takes costs**, with the **cheapest in green**. An Auctionator shopping list, **"Waylaid Crates"**, holds every bundle of the crates in your bags, in the amounts they need. It's rewritten when your crates change, but not while the auction house is open. `/nra crates check` compares NraKit's crate list with the game's own tooltips (after a patch, say).
@@ -180,6 +182,7 @@ Needs **Auctionator**. What things cost at the auction house, from Auctionator's
 ![auctionatorNraKitShoppingList](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/auctionatorNraKitShoppingList.png)
 ![auctionatorRecipeCost](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/auctionatorRecipeCost.png)
 ![auctionatorWaylaid](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/auctionatorWaylaid.png)
+![sellValuePerCharacterInventory](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/sellValuePerCharacterInventory.png)
 
 ## Mail
 
