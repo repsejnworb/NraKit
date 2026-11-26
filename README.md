@@ -477,7 +477,7 @@ left. It turns green (with a sound) when Camp Benefits is ready.
 #### Farm Goals
 
 Set goals and track them in a small movable window: progress bar, amount gained, **rate per hour** and
-**time left**. Item goals also show what they're **worth** and your **gold per hour** ("18/h · ~38g/h"),
+**time left**. Item goals also show what they're **worth** and your **gold per hour** ("18/h · 38g/h"),
 at the auction house with Auctionator, else at a vendor.
 
 **Goals you can set:** "loot 4000 Silk Cloth", "reach level 40", "gain 50,000 XP", "earn 100 gold",

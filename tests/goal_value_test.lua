@@ -40,12 +40,17 @@ return {
 	enable = { "farmGoals", "sellList" },
 	run = function(t, ns, wow)
 		local goal = ns.goals.AddGoal({ type = "item", itemID = MITHRIL, target = 40 })
+		-- The text without colour codes.
+		local function Plain(text)
+			return (tostring(text):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
+		end
 
 		t.test("an item goal shows gold per hour", function()
 			goal.gained, goal.active = 32, 6400 -- 18 an hour
-			local rate = ns.goals.DescribeRate(goal)
+			local rate = Plain(ns.goals.DescribeRate(goal))
 			t.ok(rate:find("18/h", 1, true), "items per hour: " .. rate)
-			t.ok(rate:find("~38g/h", 1, true), "and gold per hour (18 x 2g 13s): " .. rate)
+			t.ok(rate:find("38g/h", 1, true), "and gold per hour (18 x 2g 13s), rounded: " .. rate)
+			t.ok(not rate:find("~38", 1, true), "no \"~\" (the game font draws it as a squiggle)")
 		end)
 
 		t.test("its items are kept apart on the Sell List while you're farming them", function()
@@ -63,7 +68,7 @@ return {
 			wow.fire("CHAT_MSG_LOOT", "You receive loot: " .. MITHRIL_LINK .. "x8.")
 			ns.toast.Show = show
 			t.ok(goal.completed, "done")
-			t.ok(shown and shown.detail:find("worth ~85g", 1, true), "worth ~85g (40 x 2g 13s): " .. tostring(shown and shown.detail))
+			t.ok(shown and Plain(shown.detail):find("worth 85g", 1, true), "worth 85g (40 x 2g 13s): " .. tostring(shown and shown.detail))
 			local groups = ns.sellList.Collect()
 			t.equal(#groups.goals, 0, "no longer apart")
 			t.equal(#groups.ah, 1, "To Sell: Auction House")
@@ -72,9 +77,9 @@ return {
 		t.test("with the option off, no worth is shown", function()
 			local running = ns.goals.AddGoal({ type = "item", itemID = MITHRIL, target = 100 })
 			running.gained, running.active = 10, 3600
-			t.ok(ns.goals.DescribeRate(running):find("g/h", 1, true), "on: gold per hour")
+			t.ok(Plain(ns.goals.DescribeRate(running)):find("g/h", 1, true), "on: gold per hour")
 			ns:SetSetting("farmGoalsValue", false)
-			t.ok(not ns.goals.DescribeRate(running):find("g/h", 1, true), "off: none")
+			t.ok(not Plain(ns.goals.DescribeRate(running)):find("g/h", 1, true), "off: none")
 			ns:SetSetting("farmGoalsValue", true)
 			t.noErrors()
 		end)

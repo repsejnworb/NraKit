@@ -289,13 +289,22 @@ local function FormatGold(copper)
 	return rest .. "c"
 end
 
--- "~68g", "~4s": a rough worth.
-local function RoughMoney(copper)
-	local gold = math.floor(copper / 10000 + 0.5)
-	if gold >= 1 then
-		return "~" .. FormatNumber(gold) .. "g"
+-- A worth, rounded (it's an estimate): to the gold, or to the silver under 1g.
+local function Rounded(copper)
+	if copper >= 10000 then
+		return math.floor(copper / 10000 + 0.5) * 10000
 	end
-	return "~" .. math.max(math.floor(copper / 100 + 0.5), 1) .. "s"
+	return math.max(math.floor(copper / 100 + 0.5), 1) * 100
+end
+
+-- "68g", "4s" in gold: for the tracker's lines. (No "~": the game font draws it as a squiggle.)
+local function RoughMoney(copper)
+	return "|cffffd100" .. FormatGold(Rounded(copper)) .. "|r"
+end
+
+-- The same with the game's coin icons: for tooltips and messages.
+local function RoughCoins(copper)
+	return GetMoneyString and GetMoneyString(Rounded(copper), true) or FormatGold(Rounded(copper))
 end
 
 -- What one of an item goal's items is worth: the auction house price (Auctionator, as the Sell
@@ -544,33 +553,46 @@ end
 local function GetProgress(goal)
 	return TYPES[goal.type].progress(goal)
 end
+-- The parts of a goal's rate: gained ("+312 looted"), per hour ("820/h"), gold per hour
+-- (worth of the item goal's per hour, "38g/h"), time left ("3h 22m"); nil where there isn't one.
+local function RateParts(goal)
+	local goalType = TYPES[goal.type]
+	local format = goalType.format
+	local gained = goal.gained or 0
+	local parts = { gained = "+" .. format(gained) .. (goalType.gainedSuffix or "") }
+	local active = goal.active or 0
+	if active >= 60 and gained > 0 then
+		local perHour = gained / active * 3600
+		parts.perHour = format(perHour) .. "/h"
+		local each = ItemWorth(goal)
+		if each then
+			parts.goldPerHour = RoughMoney(perHour * each) .. "|cffffd100/h|r"
+		end
+		local _, _, remaining = GetProgress(goal)
+		if remaining > 0 then
+			parts.left = FormatDuration(remaining / perHour * 3600)
+		end
+	end
+	return parts
+end
 
--- "+312 looted · 820/h · ~3h 22m left"
+-- "+312 looted · 820/h · 38g/h · ~3h 22m left"
 local function DescribeRate(goal)
 	if goal.completed then
 		return "Done in " .. FormatDuration(goal.active or 0)
 	end
-	local goalType = TYPES[goal.type]
-	local format = goalType.format
-	local gained = goal.gained or 0
-	local parts = { "+" .. format(gained) .. (goalType.gainedSuffix or "") }
-	local active = goal.active or 0
-	if active >= 60 and gained > 0 then
-		local perHour = gained / active * 3600
-		table.insert(parts, format(perHour) .. "/h")
-		local each = ItemWorth(goal)
-		if each then
-			table.insert(parts, RoughMoney(perHour * each) .. "/h")
-		end
-		local _, _, remaining = GetProgress(goal)
-		if remaining > 0 then
-			table.insert(parts, "~" .. FormatDuration(remaining / perHour * 3600) .. " left")
+	local rate = RateParts(goal)
+	local parts = { rate.gained, rate.perHour, rate.goldPerHour, rate.left and ("~" .. rate.left .. " left") }
+	local shown = {}
+	for index = 1, 4 do
+		if parts[index] then
+			table.insert(shown, parts[index])
 		end
 	end
 	if goal.paused then
-		table.insert(parts, "paused")
+		table.insert(shown, "paused")
 	end
-	return table.concat(parts, "  ·  ")
+	return table.concat(shown, "  ·  ")
 end
 
 ------------------------------------------------------------------------------
@@ -590,7 +612,7 @@ local function ShowToast(goal, detail, count)
 		detail = "in " .. FormatDuration(goal.active or 0)
 		local each = ItemWorth(goal)
 		if each then
-			detail = detail .. "  ·  worth " .. RoughMoney(each * goal.target)
+			detail = detail .. "  ·  worth " .. RoughCoins(each * goal.target)
 		end
 	end
 	ns.toast.Show({
@@ -1041,22 +1063,38 @@ local function ShowGoalTooltip(widget)
 	else
 		GameTooltip_SetTitle(GameTooltip, (Describe(goal)))
 	end
-	local _, value = GetProgress(goal)
 	GameTooltip:AddDoubleLine("Progress", ProgressWithPercent(goal), 1, 0.82, 0, 1, 1, 1)
-	GameTooltip:AddLine(DescribeRate(goal), 0.8, 0.8, 0.8, true)
+	-- Label and value, like the rest of the tooltip: the gold per hour stands out.
+	if goal.completed then
+		GameTooltip:AddDoubleLine("Done in", FormatDuration(goal.active or 0), 1, 0.82, 0, 0.3, 0.85, 0.3)
+	else
+		local rate = RateParts(goal)
+		GameTooltip:AddDoubleLine(goal.type == "item" and "Looted" or "Gained", (rate.gained:gsub(" looted$", "")), 1, 0.82, 0, 1, 1, 1)
+		if rate.perHour then
+			GameTooltip:AddDoubleLine("Rate", rate.perHour .. (rate.goldPerHour and ("  ·  " .. rate.goldPerHour) or ""),
+				1, 0.82, 0, 1, 1, 1)
+		end
+		if rate.left then
+			GameTooltip:AddDoubleLine("Time left", rate.left, 1, 0.82, 0, 1, 1, 1)
+		end
+		if goal.paused then
+			GameTooltip:AddDoubleLine("Paused", "", 1, 0.82, 0, 1, 1, 1)
+		end
+	end
 	if goal.start and goal.start > 0 then
 		GameTooltip:AddDoubleLine("Started from", TYPES[goal.type].format(goal.start), 1, 0.82, 0, 1, 1, 1)
 	end
 	GameTooltip:AddDoubleLine("Running for", FormatDuration(goal.active or 0), 1, 0.82, 0, 1, 1, 1)
+	-- What it's worth (the price of one is already in the tooltip, Auctionator's or the vendor's).
 	local each, where, age = ItemWorth(goal)
 	if each then
 		local have = (goal.start or 0) + (goal.gained or 0)
-		GameTooltip:AddDoubleLine("Worth", string.format("%s now  ·  %s at %s", RoughMoney(each * have),
-			RoughMoney(each * goal.target), FormatNumber(goal.target)), 1, 0.82, 0, 1, 1, 1)
-		local stale = age and age > 3
-		GameTooltip:AddDoubleLine(where == "ah" and "Auction house, each" or "Vendor, each",
-			FormatGold(each) .. (stale and string.format("  (price %d days old)", age) or ""),
-			1, 0.82, 0, stale and 1 or 1, stale and 0.6 or 1, stale and 0.2 or 1)
+		local at = where == "ah" and " (auction house)" or " (vendor)"
+		GameTooltip:AddDoubleLine("Worth now" .. at, RoughCoins(each * have), 1, 0.82, 0, 1, 1, 1)
+		GameTooltip:AddDoubleLine("Worth at " .. FormatNumber(goal.target), RoughCoins(each * goal.target), 1, 0.82, 0, 1, 1, 1)
+		if age and age > 3 then
+			GameTooltip:AddLine(string.format("Auction price %d days old: it may have changed.", age), 1, 0.6, 0.2, true)
+		end
 	end
 	if goal.completed then
 		GameTooltip:AddLine("Click to clear it (it goes to the history). Right-click to go again.", 0.3, 0.85, 0.3, true)
