@@ -35,13 +35,33 @@ function whatsNew.Entries()
 end
 
 -- Changelog text for the game: **words** brighter (lines can't switch font, but can switch
--- colour), /commands gold.
+-- colour), /commands gold ("/nra shop" as a whole). Colours don't nest in WoW, so commands
+-- inside **...** stay bright with the rest of it.
 local BRIGHT, COMMAND = "|cffffffff", "|cffffd100"
 
-function whatsNew.Markup(text)
-	text = (text or ""):gsub("%*%*(.-)%*%*", BRIGHT .. "%1|r")
-	text = (" " .. text):gsub("([%s%(])(/%a[%w]*)", "%1" .. COMMAND .. "%2|r")
+local function Commands(text)
+	text = (" " .. text):gsub("([%s%(])/nra (%a+)", function(before, name)
+		if ns:IsSlashCommand(name) then
+			return before .. COMMAND .. "/nra " .. name .. "|r"
+		end
+	end)
+	text = text:gsub("([%s%(])(/%a[%w]*)", "%1" .. COMMAND .. "%2|r")
 	return (text:sub(2))
+end
+
+function whatsNew.Markup(text)
+	local parts, rest = {}, text or ""
+	while true do
+		local first, last, inner = rest:find("%*%*(.-)%*%*")
+		if not first then
+			break
+		end
+		table.insert(parts, Commands(rest:sub(1, first - 1)))
+		table.insert(parts, BRIGHT .. inner .. "|r")
+		rest = rest:sub(last + 1)
+	end
+	table.insert(parts, Commands(rest))
+	return table.concat(parts)
 end
 
 function whatsNew.UnseenCount()

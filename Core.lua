@@ -164,6 +164,11 @@ function ns:RegisterSlashCommand(name, handler, help)
 	end
 end
 
+-- Whether "/nra <name>" is a command (What's new colours "/nra shop" as one).
+function ns:IsSlashCommand(name)
+	return slashCommands[name:lower()] ~= nil
+end
+
 -- "/nra goal level <n> - reach a level" -> command in gold, description in white.
 local function PrintUsageLine(line)
 	local command, description = line:match("^(.-) %- (.+)$")

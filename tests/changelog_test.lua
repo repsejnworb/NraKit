@@ -95,7 +95,12 @@ return {
 
 		t.test("**words** stand out and /commands are gold", function()
 			t.equal(whatsNew.Markup("Type **this** or /nra new (or /goal)."),
-				"Type |cffffffffthis|r or |cffffd100/nra|r new (or |cffffd100/goal|r).", "marked up")
+				"Type |cffffffffthis|r or |cffffd100/nra new|r (or |cffffd100/goal|r).", "marked up, /nra new as one")
+			t.equal(whatsNew.Markup("its /nra command"), "its |cffffd100/nra|r command",
+				"a word after /nra that isn't one of its commands stays out")
+			-- Regression: colours don't nest, so gold commands inside a highlight broke it up.
+			t.equal(whatsNew.Markup("**/remind, /todo** and /done."), "|cffffffff/remind, /todo|r and |cffffd100/done|r.",
+				"commands inside a highlight stay bright")
 			t.equal(whatsNew.Markup("and/or"), "and/or", "a slash inside a word is left alone")
 		end)
 

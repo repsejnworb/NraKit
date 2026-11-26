@@ -110,6 +110,7 @@ local function AcquireText(font)
 	end)
 	text:SetWidth(0)
 	text:SetWordWrap(true)
+	text:SetSpacing(0)
 	text:SetTextColor(1, 1, 1)
 	return text
 end
@@ -539,7 +540,8 @@ end
 local SUMMARY_COLOR = { 0.93, 0.93, 0.93 }
 local POINT_COLOR = { 0.74, 0.74, 0.74 }
 local TIP_COLOR = { 0.95, 0.82, 0.5 }
-local TIP_ICON = "|TInterface\\Common\\help-i:16:16:0:-1|t "
+local TIP_ICON = "|TInterface\\Common\\help-i:18:18:0:1|t "
+local LINE_SPACING = 2 -- between the wrapped lines of a summary, point or tip
 local SEEN_BAR = { 1, 1, 1, 0.12 }
 
 -- One changelog entry; returns the y below it. A feature with points (or a tip) is a block:
@@ -563,6 +565,7 @@ local function AddEntry(entry, x, y, width)
 		local text = AcquireText("GameFontHighlight")
 		text:SetWidth(width - 40 - controls)
 		text:SetText((entry.title and ("|cffffd100" .. entry.title .. "|r   ") or "") .. markup(entry.text))
+		text:SetSpacing(LINE_SPACING)
 		text:SetTextColor(unpack(unseen and { 1, 1, 1 } or TEXT))
 		text:SetPoint("TOPLEFT", content, "TOPLEFT", x + 26, y)
 		local height = text:GetStringHeight()
@@ -590,6 +593,7 @@ local function AddEntry(entry, x, y, width)
 		local summary = AcquireText("GameFontHighlight")
 		summary:SetWidth(textWidth)
 		summary:SetText(markup(entry.text))
+		summary:SetSpacing(LINE_SPACING)
 		summary:SetTextColor(unpack(SUMMARY_COLOR))
 		summary:SetPoint("TOPLEFT", content, "TOPLEFT", textX, y)
 		y = y - summary:GetStringHeight() - 7
@@ -603,6 +607,7 @@ local function AddEntry(entry, x, y, width)
 		local text = AcquireText("GameFontHighlight")
 		text:SetWidth(textWidth - 18)
 		text:SetText(markup(point))
+		text:SetSpacing(LINE_SPACING)
 		text:SetTextColor(unpack(POINT_COLOR))
 		text:SetPoint("TOPLEFT", content, "TOPLEFT", textX + 18, y)
 		y = y - text:GetStringHeight() - 5
@@ -612,6 +617,7 @@ local function AddEntry(entry, x, y, width)
 		local tip = AcquireText("GameFontHighlight")
 		tip:SetWidth(textWidth)
 		tip:SetText(TIP_ICON .. markup(entry.tip))
+		tip:SetSpacing(LINE_SPACING)
 		tip:SetTextColor(unpack(TIP_COLOR))
 		tip:SetPoint("TOPLEFT", content, "TOPLEFT", textX, y - 2)
 		y = y - tip:GetStringHeight() - 7
