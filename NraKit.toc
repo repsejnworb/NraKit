@@ -63,6 +63,7 @@ Modules\MicroMenuNotifications.lua
 Modules\WowheadLink.lua
 Modules\InspectAnything.lua
 Modules\ItemLookup.lua
+Modules\SpellRecipeLookup.lua
 Modules\ItemLookupWindow.lua
 Modules\DamageMeterLook.lua
 Modules\CooldownManagerFade.lua

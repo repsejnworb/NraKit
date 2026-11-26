@@ -1,0 +1,274 @@
+local _, ns = ...
+
+-- Lookup's spells and recipes (the window is ItemLookupWindow.lua; items are ItemLookup.lua).
+--
+-- Spells: their names are in the client (no server asked), so every spell ID is read once,
+-- in chunks across frames, the first time it's needed (Forever's spells go up to ~1.4 million,
+-- custom ones included: a few tenths of a second in all). Not saved: it's quick to read again.
+--
+-- Recipes: a profession's recipe is a spell the game gives a profession
+-- (C_TradeSkillUI.GetProfessionInfoByRecipeID), readable without the profession window,
+-- along with what it makes and needs (GetRecipeSchematic). The spells are checked once per
+-- game version, in the background, and the recipe IDs saved (NraKitDB.recipeLookupData =
+-- { build, ids = { recipeID, ... } }). Enchants make no item: they have no output.
+
+local MAX_SPELL_ID = 1500000
+local SPELL_CHUNK = 50000 -- spell IDs read per frame
+local RECIPE_CHUNK = 1500 -- spells checked for a profession per frame
+
+local spells = {}
+ns.spellLookup = spells
+local recipes = {}
+ns.recipeLookup = recipes
+
+local function BuildKey()
+	local version, build = GetBuildInfo()
+	return tostring(version) .. "." .. tostring(build)
+end
+
+---------------------------------------------------------------------------
+-- Spells
+---------------------------------------------------------------------------
+
+local spellList -- { { id, name, lower }, ... } once read
+local spellCursor = 1
+local spellReader = CreateFrame("Frame")
+spellReader:Hide()
+
+local function ReadSpells()
+	spellList = spellList or {}
+	local last = math.min(spellCursor + SPELL_CHUNK - 1, MAX_SPELL_ID)
+	for id = spellCursor, last do
+		local name = C_Spell.GetSpellName(id)
+		if name and name ~= "" then
+			table.insert(spellList, { id = id, name = name, lower = name:lower() })
+		end
+	end
+	spellCursor = last + 1
+	if spellCursor > MAX_SPELL_ID then
+		spellReader:Hide()
+		if spells.onReady then
+			spells.onReady()
+		end
+		if recipes.Start then
+			recipes.Start()
+		end
+	end
+end
+spellReader:SetScript("OnUpdate", ReadSpells)
+
+-- Starts reading the spells (once).
+function spells.Start()
+	if spellCursor <= MAX_SPELL_ID then
+		spellReader:Show()
+	end
+end
+
+-- { read, total } while reading, nil once done.
+function spells.Progress()
+	if spellCursor > MAX_SPELL_ID then
+		return nil
+	end
+	return { read = spellCursor - 1, total = MAX_SPELL_ID }
+end
+
+function spells.Count()
+	return spellList and #spellList or 0
+end
+
+-- Spells whose name contains query (lower-case): { { id, name, known }, ... }, best first
+-- (yours, then names starting with it, then by name), at most `limit`; and how many matched.
+function spells.Search(query, limit)
+	local matches = {}
+	for _, spell in ipairs(spellList or {}) do
+		local at = spell.lower:find(query, 1, true)
+		if at then
+			table.insert(matches, { id = spell.id, name = spell.name, starts = at == 1,
+				known = IsPlayerSpell(spell.id) == true })
+		end
+	end
+	table.sort(matches, function(a, b)
+		if a.known ~= b.known then
+			return a.known
+		end
+		if a.starts ~= b.starts then
+			return a.starts
+		end
+		if a.name ~= b.name then
+			return a.name < b.name
+		end
+		return a.id < b.id
+	end)
+	local total = #matches
+	for index = total, limit + 1, -1 do
+		matches[index] = nil
+	end
+	return matches, total
+end
+
+---------------------------------------------------------------------------
+-- Recipes
+---------------------------------------------------------------------------
+
+local recipeIndex = 1 -- next spell (in spellList) to check, while finding recipes
+local found -- recipe IDs found this time
+local details = {} -- recipeID -> its details, read once
+local recipeFinder = CreateFrame("Frame")
+recipeFinder:Hide()
+
+local function Data()
+	NraKitDB.recipeLookupData = NraKitDB.recipeLookupData or {}
+	return NraKitDB.recipeLookupData
+end
+
+local function IsRecipe(id)
+	local info = C_TradeSkillUI.GetProfessionInfoByRecipeID(id)
+	return info ~= nil and info.professionName ~= nil and info.professionName ~= ""
+end
+
+recipeFinder:SetScript("OnUpdate", function(self)
+	if InCombatLockdown() then
+		return
+	end
+	local last = math.min(recipeIndex + RECIPE_CHUNK - 1, #spellList)
+	for index = recipeIndex, last do
+		local id = spellList[index].id
+		if IsRecipe(id) then
+			table.insert(found, id)
+		end
+	end
+	recipeIndex = last + 1
+	if recipeIndex > #spellList then
+		self:Hide()
+		local data = Data()
+		data.build, data.ids = BuildKey(), found
+		found = nil
+		if recipes.onReady then
+			recipes.onReady()
+		end
+	end
+end)
+
+-- Finds the recipes (once per game version; needs the spells read first).
+function recipes.Start()
+	local data = Data()
+	if data.build == BuildKey() and data.ids then
+		return
+	end
+	if not spellList or spells.Progress() then
+		spells.Start() -- finding recipes follows
+		return
+	end
+	if not found then
+		found, recipeIndex = {}, 1
+		recipeFinder:Show()
+	end
+end
+
+-- { checked, total } while finding them, nil once known.
+function recipes.Progress()
+	local data = Data()
+	if data.build == BuildKey() and data.ids then
+		return nil
+	end
+	if found then
+		return { checked = recipeIndex - 1, total = #spellList }
+	end
+	return { checked = 0, total = 0 }
+end
+
+-- A recipe's details: { id, name, lower, profession, output (item ID or nil), quantity,
+-- reagents = { { count, itemID }, ... } }.
+function recipes.Get(id)
+	local recipe = details[id]
+	if recipe then
+		return recipe
+	end
+	local schematic = C_TradeSkillUI.GetRecipeSchematic(id, false)
+	local info = C_TradeSkillUI.GetProfessionInfoByRecipeID(id)
+	local name = schematic and schematic.name or C_Spell.GetSpellName(id) or ("Recipe " .. id)
+	recipe = { id = id, name = name, lower = name:lower(), profession = info and info.professionName or "",
+		output = schematic and schematic.outputItemID, reagents = {} }
+	recipe.quantity = schematic and (schematic.quantityMin or schematic.quantityMax) or 1
+	for _, slot in ipairs(schematic and schematic.reagentSlotSchematics or {}) do
+		local reagent = slot.reagents and slot.reagents[1]
+		if reagent and reagent.itemID and slot.required ~= false then
+			table.insert(recipe.reagents, { count = slot.quantityRequired or 1, itemID = reagent.itemID })
+		end
+	end
+	details[id] = recipe
+	return recipe
+end
+
+function recipes.Count()
+	local ids = Data().ids
+	return ids and #ids or 0
+end
+
+-- What a recipe is worth: cost of one craft (reagents: vendor price if a vendor sells it, else
+-- the auction house's), what it makes sells for (auction house, else vendor; times how many
+-- it makes), profit; nil where unknown. `missing` = reagents without a price.
+function recipes.Value(recipe)
+	local prices, sell = ns.auctionator, ns.sellList
+	local cost, missing = 0, 0
+	for _, reagent in ipairs(recipe.reagents) do
+		local unit = prices and prices.Unit and prices.Unit(reagent.itemID)
+		if unit then
+			cost = cost + unit * reagent.count
+		else
+			missing = missing + 1
+		end
+	end
+	local sells
+	if recipe.output then
+		local each = sell and sell.AuctionPrice and sell.AuctionPrice(recipe.output)
+		if not each or each <= 0 then
+			each = select(11, C_Item.GetItemInfo(recipe.output))
+		end
+		if each and each > 0 then
+			sells = each * (recipe.quantity or 1)
+		end
+	end
+	local profit = sells and missing == 0 and (sells - cost) or nil
+	return cost, sells, profit, missing
+end
+
+-- Recipes whose name or profession contains query (lower-case; "" for all): their details,
+-- sorted by `sort` ("name", or "profit": most first), at most `limit`; and how many matched.
+function recipes.Search(query, limit, sort)
+	local matches = {}
+	for _, id in ipairs(Data().ids or {}) do
+		local recipe = recipes.Get(id)
+		if query == "" or recipe.lower:find(query, 1, true) or recipe.profession:lower():find(query, 1, true) then
+			table.insert(matches, recipe)
+		end
+	end
+	if sort == "profit" then
+		for _, recipe in ipairs(matches) do
+			local _, _, profit = recipes.Value(recipe)
+			recipe.sortProfit = profit or -math.huge
+		end
+		table.sort(matches, function(a, b)
+			if a.sortProfit ~= b.sortProfit then
+				return a.sortProfit > b.sortProfit
+			end
+			return a.name < b.name
+		end)
+	else
+		table.sort(matches, function(a, b)
+			local aStarts, bStarts = query ~= "" and a.lower:find(query, 1, true) == 1, query ~= "" and b.lower:find(query, 1, true) == 1
+			if aStarts ~= bStarts then
+				return aStarts
+			end
+			if a.name ~= b.name then
+				return a.name < b.name
+			end
+			return a.id < b.id
+		end)
+	end
+	local total = #matches
+	for index = total, limit + 1, -1 do
+		matches[index] = nil
+	end
+	return matches, total
+end

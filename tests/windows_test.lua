@@ -30,7 +30,7 @@ return {
 			t.ok(Tab("inventory"), "Inventory tab")
 			t.ok(Tab("notes"), "Notes tab")
 			t.ok(Tab("goals"), "Goals tab while Farm Goals is off")
-			t.ok(Tab("items"), "Items tab while Item Lookup is off")
+			t.ok(Tab("items"), "Lookup tab while Lookup is off")
 		end)
 
 		t.test("a tab whose feature is off says what it does and turns it on", function()
@@ -40,9 +40,9 @@ return {
 			t.ok(wow.findAll(function(frame)
 				return wow.visible(frame) and frame.text == ns.modules.farmGoals.description
 			end)[1], "its description")
-			t.ok(wow.click("Items"), "another off tab")
+			t.ok(wow.click("Lookup"), "another off tab")
 			t.ok(NraKitFeatureOffFrame:IsShown(), "still the page")
-			t.ok(wow.click("Turn on Item Lookup"), "turn-on button")
+			t.ok(wow.click("Turn on Lookup"), "turn-on button")
 			t.equal(NraKitDB.itemLookup, true, "turned on")
 			t.ok(NraKitItemLookupFrame:IsShown(), "its window opens")
 			t.ok(not NraKitFeatureOffFrame:IsShown(), "in place of the page")

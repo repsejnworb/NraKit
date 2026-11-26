@@ -24,6 +24,14 @@ local _, ns = ...
 ns.changelog = {
 	{ version = "Unreleased", entries = {
 		{ "improved", title = "Farm Goals", "Item goals show what they're worth at the auction house (Auctionator, else a vendor) and **gold per hour**: \"18/h · 38g/h\". The finished message says what the goal is worth." },
+		{ "improved", title = "Lookup", module = "itemLookup",
+			"Item Lookup is now **Lookup**, with **[ Items ][ Spells ][ Recipes ]** at its top.",
+			points = {
+				"**Spells**: every spell by name (/nra spell charge), yours first and marked Known; Shift-click links it.",
+				"**Recipes**: every profession recipe (/nra recipe bracers) with its profession, what it makes and needs.",
+				"With prices: what a craft **costs**, what it **sells for** and the **profit**; sort by profit to see what's worth crafting.",
+				"Right-click a recipe for the shopping-list menu; hover for its tooltip with what you have.",
+			} },
 		{ "improved", title = "Sell List", "Items you're still farming for a Farm Goal stay in their own folded group until the goal is done, so you don't sell what you're collecting." },
 	} },
 	{ version = "0.34.0", date = "2026-11-26", entries = {

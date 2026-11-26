@@ -1,24 +1,52 @@
 local _, ns = ...
 
--- The Item Lookup window (/nra item <name>): a search box, a bar showing how complete the
--- list of names is (with Pause / Resume, or Check again once it's done), and the matching items (icon, name in its quality colour, type, required
--- level, and how many your characters have if Inventory Tracker is on). Hover for the
--- tooltip; Shift-click links an item in chat, Ctrl-click previews it, right-click adds it to
--- the wishlist (while Wishlist is on). The list of names is ItemLookup.lua's.
+-- The Lookup window (the "Lookup" tab): [ Items ][ Spells ][ Recipes ] at the top, one at a
+-- time, a search box, and the matches. /nra item, /nra spell, /nra recipe open it in that mode.
+--
+--   Items    every item in the game (ItemLookup.lua learns their names in the background):
+--            icon, name in its quality colour, type, required level, how many you have.
+--            Shift-click links, Ctrl-click previews, right-click for the wishlist.
+--   Spells   every spell (SpellRecipeLookup.lua): yours first, with "Known". Shift-click links.
+--   Recipes  every profession recipe: its profession, what it makes and needs, and with prices
+--            (Auctionator, else vendors) the cost of one craft, what it sells for and the profit;
+--            sorted by name or profit. Hover shows the recipe's own tooltip (with NraKit's cost
+--            and have lines); right-click for the shopping-list menu.
 
 local UI = ns.UI
 local WIDTH, HEIGHT = UI.WINDOW_WIDTH, UI.WINDOW_HEIGHT
 local PAD = UI.PAD
 local ROW_HEIGHT = 30
-local TOP_HEIGHT = 48
+local RECIPE_ROW_HEIGHT = 38
+local TOP_HEIGHT = 80
 local FOOTER_HEIGHT = 28
 local MAX_SHOWN = 200
+local MAX_REAGENT_ICONS = 6
 
-local frame, searchBox, progressBar, progressButton, scroll, footerLeft
+local MODES = {
+	{ key = "items", label = "Items", empty = "Type part of an item's name above." },
+	{ key = "spells", label = "Spells", empty = "Type part of a spell's name above." },
+	{ key = "recipes", label = "Recipes" },
+}
+local HINTS = {
+	items = "Shift-click to link in chat, Ctrl-click to preview",
+	spells = "Shift-click to link in chat, right-click for more",
+	recipes = "Shift-click to link in chat, right-click for shopping lists",
+}
+
+local frame, searchBox, progressBar, progressButton, scroll, footerLeft, hint, sortLabel
+local modeButtons, sortButtons = {}, {}
 local pool = UI.CreatePool()
 local query = ""
-local shownIDs = {} -- [id] = true for the rows on screen
+local shownIDs = {} -- [id] = true for the item rows on screen
 local renderPending = false
+
+local function Mode()
+	return NraKitDB.lookupMode or "items"
+end
+
+local function RecipeSort()
+	return NraKitDB.lookupRecipeSort or "name"
+end
 
 local function QualityColor(quality)
 	local color = quality and ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality]
@@ -48,29 +76,58 @@ local function Number(value)
 	return BreakUpLargeNumbers and BreakUpLargeNumbers(value) or tostring(value)
 end
 
--- The progress bar's text and fill, and the button next to it.
+local function Money(copper)
+	return GetMoneyString and GetMoneyString(math.floor(math.abs(copper)), true) or tostring(copper)
+end
+
+-- The progress bar: how complete the current mode's list is, and the button next to it
+-- (items only: pause or check again).
 local function UpdateProgress()
-	local progress = ns.itemLookup.Progress()
-	local text, button
-	if progress.done then
-		text = string.format("All %s known item names learned", Number(progress.named))
-		button = "Check again"
-	elseif progress.total then
-		text = string.format("%s %s of %s item names", progress.paused and "Paused:" or "Learning", Number(progress.named),
-			Number(progress.total))
-		button = progress.paused and "Resume" or "Pause"
+	local mode, text, button, fraction, color = Mode(), nil, nil, 1, { 0.3, 0.6, 0.3 }
+	if mode == "items" then
+		local progress = ns.itemLookup.Progress()
+		if progress.done then
+			text = string.format("All %s known item names learned", Number(progress.named))
+			button = "Check again"
+		elseif progress.total then
+			text = string.format("%s %s of %s item names", progress.paused and "Paused:" or "Learning", Number(progress.named),
+				Number(progress.total))
+			button = progress.paused and "Resume" or "Pause"
+			fraction = progress.named / math.max(progress.total, 1)
+			color = progress.paused and UI.GREY or UI.ACCENT
+		else
+			text = progress.paused and string.format("Paused: %s item names", Number(progress.named)) or "Finding the game's items..."
+			button = progress.paused and "Resume" or "Pause"
+			fraction, color = 0, progress.paused and UI.GREY or UI.ACCENT
+		end
+	elseif mode == "spells" then
+		local progress = ns.spellLookup.Progress()
+		if progress then
+			text = "Reading the game's spells..."
+			fraction, color = progress.read / progress.total, UI.ACCENT
+		else
+			text = string.format("%s spells", Number(ns.spellLookup.Count()))
+		end
 	else
-		text = progress.paused and string.format("Paused: %s item names", Number(progress.named)) or "Finding the game's items..."
-		button = progress.paused and "Resume" or "Pause"
+		local progress = ns.spellLookup.Progress() and { checked = 0, total = 1 } or ns.recipeLookup.Progress()
+		if progress then
+			text = "Finding the game's recipes (once per game version)..."
+			fraction, color = progress.checked / math.max(progress.total, 1), UI.ACCENT
+		else
+			text = string.format("%s recipes  ·  %s", Number(ns.recipeLookup.Count()),
+				ns.sellList and ns.sellList.HasAuctionator() and "prices from Auctionator" or "vendor prices (Auctionator adds auction prices)")
+		end
 	end
 	progressBar.text:SetText(text)
-	progressBar:SetMinMaxValues(0, math.max(progress.total or 1, 1))
-	progressBar:SetValue(progress.done and math.max(progress.total or 1, 1) or progress.named)
-	local color = progress.done and { 0.3, 0.6, 0.3 } or progress.paused and UI.GREY or UI.ACCENT
+	progressBar:SetMinMaxValues(0, 1)
+	progressBar:SetValue(fraction)
 	progressBar:SetStatusBarColor(color[1], color[2], color[3], 0.8)
-	progressButton.action = button
-	progressButton.text:SetText(button)
-	progressButton:SetWidth(progressButton.text:GetStringWidth() + 20)
+	progressButton:SetShown(button ~= nil)
+	if button then
+		progressButton.action = button
+		progressButton.text:SetText(button)
+		progressButton:SetWidth(progressButton.text:GetStringWidth() + 20)
+	end
 end
 
 local BUTTON_TIPS = {
@@ -83,63 +140,154 @@ local BUTTON_TIPS = {
 -- Rows
 ------------------------------------------------------------------------------
 
+local function InsertLink(link)
+	if link and ChatEdit_InsertLink then
+		ChatEdit_InsertLink(link)
+	end
+end
+
 local function OnRowEnter(self)
 	GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-	GameTooltip:SetItemByID(self.itemID)
+	if self.kind == "spells" then
+		GameTooltip:SetSpellByID(self.id)
+	elseif self.kind == "recipes" then
+		-- The recipe's own tooltip, with NraKit's cost and have lines (Auctionator Prices).
+		GameTooltip:SetHyperlink("enchant:" .. self.id)
+	else
+		GameTooltip:SetItemByID(self.id)
+	end
 	GameTooltip:Show()
 end
 
--- Right-click: add it to (or take it off) your wishlist, while Wishlist is on.
-local function OpenRowMenu(row)
-	ns.wishlist.OpenItemMenu(row, row.itemID, function()
-		ns.wishlist.SetStar(row, row.itemID, row.icon)
+local function OpenMenu(row)
+	MenuUtil.CreateContextMenu(row, function(_, root)
+		if row.kind == "recipes" then
+			root:CreateTitle(row.recipeName or "Recipe")
+			if ns.auctionator and ns.auctionator.FillRecipeMenu then
+				ns.auctionator.FillRecipeMenu(root, row.id)
+			end
+			root:CreateButton("Copy Wowhead link", function()
+				ns.wowheadLink.Show("spell", row.id)
+			end)
+		else
+			root:CreateTitle(C_Spell.GetSpellName(row.id) or "Spell")
+			root:CreateButton("Copy Wowhead link", function()
+				ns.wowheadLink.Show("spell", row.id)
+			end)
+		end
 	end)
 end
 
--- Shift-click links it in chat, Ctrl-click previews it, like bag items.
 local function OnRowClick(self, button)
-	if button == "RightButton" then
-		if ns:IsModuleEnabled("wishlist") then
-			OpenRowMenu(self)
+	if self.kind == "items" then
+		if button == "RightButton" then
+			if ns:IsModuleEnabled("wishlist") then
+				ns.wishlist.OpenItemMenu(self, self.id, function()
+					ns.wishlist.SetStar(self, self.id, self.icon)
+				end)
+			end
+			return
+		end
+		local link = select(2, C_Item.GetItemInfo(self.id))
+		if link then
+			HandleModifiedItemClick(link)
 		end
 		return
 	end
-	local link = select(2, C_Item.GetItemInfo(self.itemID))
-	if link then
-		HandleModifiedItemClick(link)
+	if button == "RightButton" then
+		OpenMenu(self)
+	elseif IsModifiedClick("CHATLINK") then
+		local link = self.kind == "recipes" and C_TradeSkillUI.GetRecipeLink and C_TradeSkillUI.GetRecipeLink(self.id)
+		InsertLink(link or C_Spell.GetSpellLink(self.id))
 	end
 end
 
-local function AcquireRow(content)
-	return pool:Acquire("row", function()
-		local row = CreateFrame("Button", nil, content)
-		row:SetHeight(ROW_HEIGHT)
-		row:SetScript("OnEnter", OnRowEnter)
-		row:SetScript("OnLeave", GameTooltip_Hide)
-		row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-		row:SetScript("OnClick", OnRowClick)
-		row.bg = row:CreateTexture(nil, "BACKGROUND")
-		row.bg:SetAllPoints()
-		local highlight = row:CreateTexture(nil, "HIGHLIGHT")
-		highlight:SetColorTexture(1, 1, 1, 0.08)
-		highlight:SetAllPoints()
-		row.icon = row:CreateTexture(nil, "ARTWORK")
-		row.icon:SetSize(24, 24)
-		row.icon:SetPoint("LEFT", 6, 0)
-		row.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-		row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+local function NewRow(content, height)
+	local row = CreateFrame("Button", nil, content)
+	row:SetHeight(height)
+	row:SetScript("OnEnter", OnRowEnter)
+	row:SetScript("OnLeave", GameTooltip_Hide)
+	row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	row:SetScript("OnClick", OnRowClick)
+	row.bg = row:CreateTexture(nil, "BACKGROUND")
+	row.bg:SetAllPoints()
+	local highlight = row:CreateTexture(nil, "HIGHLIGHT")
+	highlight:SetColorTexture(1, 1, 1, 0.08)
+	highlight:SetAllPoints()
+	row.icon = row:CreateTexture(nil, "ARTWORK")
+	row.icon:SetSize(24, 24)
+	row.icon:SetPoint("LEFT", 6, 0)
+	row.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+	row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	row.name:SetJustifyH("LEFT")
+	row.name:SetWordWrap(false)
+	return row
+end
+
+local function Text(row, font, point, x)
+	local text = row:CreateFontString(nil, "OVERLAY", font)
+	text:SetPoint(point, x, 0)
+	text:SetJustifyH(point == "RIGHT" and "RIGHT" or "LEFT")
+	text:SetWordWrap(false)
+	return text
+end
+
+local function AcquireItemRow(content)
+	return pool:Acquire("item", function()
+		local row = NewRow(content, ROW_HEIGHT)
 		row.name:SetPoint("LEFT", row.icon, "RIGHT", 8, 0)
-		row.name:SetJustifyH("LEFT")
-		row.name:SetWordWrap(false)
-		row.kind = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-		row.kind:SetJustifyH("LEFT")
-		row.kind:SetWordWrap(false)
-		row.owned = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-		row.owned:SetPoint("RIGHT", -10, 0)
-		row.owned:SetJustifyH("RIGHT")
-		row.level = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-		row.level:SetPoint("RIGHT", -90, 0)
-		row.level:SetJustifyH("RIGHT")
+		row.type = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+		row.type:SetJustifyH("LEFT")
+		row.type:SetWordWrap(false)
+		row.owned = Text(row, "GameFontHighlightSmall", "RIGHT", -10)
+		row.level = Text(row, "GameFontDisableSmall", "RIGHT", -90)
+		return row
+	end)
+end
+
+local function AcquireSpellRow(content)
+	return pool:Acquire("spell", function()
+		local row = NewRow(content, ROW_HEIGHT)
+		row.name:SetPoint("LEFT", row.icon, "RIGHT", 8, 0)
+		row.subtext = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+		row.subtext:SetPoint("LEFT", row.name, "RIGHT", 8, 0)
+		row.known = Text(row, "GameFontHighlightSmall", "RIGHT", -90)
+		row.spellID = Text(row, "GameFontDisableSmall", "RIGHT", -10)
+		return row
+	end)
+end
+
+-- Columns of a recipe row, from its right edge: { right offset, width }.
+local PROFIT_RIGHT, PROFIT_WIDTH = -8, 96
+local SELLS_RIGHT, SELLS_WIDTH = -110, 96
+local COST_RIGHT, COST_WIDTH = -212, 96
+
+local function AcquireRecipeRow(content)
+	return pool:Acquire("recipe", function()
+		local row = NewRow(content, RECIPE_ROW_HEIGHT)
+		row.icon:SetSize(28, 28)
+		row.name:SetPoint("TOPLEFT", row.icon, "TOPRIGHT", 8, 1)
+		row.name:SetPoint("RIGHT", row, "RIGHT", COST_RIGHT - COST_WIDTH - 8, 0)
+		row.profession = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+		row.profession:SetPoint("BOTTOMLEFT", row.icon, "BOTTOMRIGHT", 8, -1)
+		row.reagents = {}
+		for index = 1, MAX_REAGENT_ICONS do
+			local icon = row:CreateTexture(nil, "ARTWORK")
+			icon:SetSize(14, 14)
+			icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+			row.reagents[index] = icon
+		end
+		local function Column(right, width)
+			local text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+			text:SetPoint("RIGHT", right, 0)
+			text:SetWidth(width)
+			text:SetJustifyH("RIGHT")
+			text:SetWordWrap(false)
+			return text
+		end
+		row.cost = Column(COST_RIGHT, COST_WIDTH)
+		row.sells = Column(SELLS_RIGHT, SELLS_WIDTH)
+		row.profit = Column(PROFIT_RIGHT, PROFIT_WIDTH)
 		return row
 	end)
 end
@@ -159,35 +307,12 @@ local function Message(content, text)
 	message:SetPoint("RIGHT", content, "RIGHT", -PAD, 0)
 end
 
-local function Render()
-	renderPending = false
-	if not (frame and frame:IsShown()) then
-		return
-	end
-	UpdateProgress()
-	pool:ReleaseAll()
-	wipe(shownIDs)
-	local content = scroll.content
-	local width = content:GetWidth() - 2 * PAD
-
-	if query == "" then
-		Message(content, "Type part of an item's name above.")
-		content:SetHeight(60)
-		footerLeft:SetText("")
-		return
-	end
+local function RenderItems(content, width)
 	local matches, total = ns.itemLookup.Search(query, MAX_SHOWN)
-	if total == 0 then
-		Message(content, string.format("No items match \"%s\".", query))
-		content:SetHeight(60)
-		footerLeft:SetText("")
-		return
-	end
-
 	for index, match in ipairs(matches) do
 		shownIDs[match.id] = true
-		local row = AcquireRow(content)
-		row.itemID = match.id
+		local row = AcquireItemRow(content)
+		row.kind, row.id, row.itemID = "items", match.id, match.id
 		row:SetWidth(width)
 		row:SetPoint("TOPLEFT", content, "TOPLEFT", PAD, -PAD - (index - 1) * ROW_HEIGHT)
 		row.bg:SetColorTexture(1, 1, 1, index % 2 == 0 and 0.03 or 0)
@@ -196,9 +321,9 @@ local function Render()
 		row.name:SetText(match.name)
 		row.name:SetTextColor(QualityColor(match.quality))
 		row.name:SetWidth(width * 0.45)
-		row.kind:SetText(itemSubType and itemSubType ~= itemType and (itemType .. " - " .. itemSubType) or itemType or "")
-		row.kind:SetPoint("LEFT", row, "LEFT", 38 + width * 0.45 + 12, 0)
-		row.kind:SetWidth(width * 0.3)
+		row.type:SetText(itemSubType and itemSubType ~= itemType and (itemType .. " - " .. itemSubType) or itemType or "")
+		row.type:SetPoint("LEFT", row, "LEFT", 38 + width * 0.45 + 12, 0)
+		row.type:SetWidth(width * 0.3)
 		-- The required level needs the item loaded; it shows up when it arrives.
 		local _, _, _, _, minLevel = C_Item.GetItemInfo(match.id)
 		row.level:SetText(minLevel and minLevel > 1 and ("Level " .. minLevel) or "")
@@ -206,11 +331,116 @@ local function Render()
 		row.owned:SetText(owned > 0 and ("|cff40c040You have " .. owned .. "|r") or "")
 		ns.wishlist.SetStar(row, match.id, row.icon)
 	end
-	content:SetHeight(PAD * 2 + #matches * ROW_HEIGHT)
-	scroll:SetScroll(scroll:GetVerticalScroll())
+	return #matches, total, ROW_HEIGHT
+end
 
-	if total > #matches then
-		footerLeft:SetText(string.format("Showing %d of %d matches: type more to narrow it down.", #matches, total))
+local function RenderSpells(content, width)
+	local matches, total = ns.spellLookup.Search(query, MAX_SHOWN)
+	for index, match in ipairs(matches) do
+		local row = AcquireSpellRow(content)
+		row.kind, row.id = "spells", match.id
+		row:SetWidth(width)
+		row:SetPoint("TOPLEFT", content, "TOPLEFT", PAD, -PAD - (index - 1) * ROW_HEIGHT)
+		row.bg:SetColorTexture(1, 1, 1, index % 2 == 0 and 0.03 or 0)
+		row.icon:SetTexture(C_Spell.GetSpellTexture(match.id) or 134400)
+		row.name:SetText(match.name)
+		row.name:SetTextColor(match.known and 1 or 0.85, match.known and 0.82 or 0.85, match.known and 0 or 0.85)
+		local subtext = C_Spell.GetSpellSubtext and C_Spell.GetSpellSubtext(match.id)
+		row.subtext:SetText(subtext or "")
+		row.known:SetText(match.known and "|cff40c040Known|r" or "")
+		row.spellID:SetText(tostring(match.id))
+	end
+	return #matches, total, ROW_HEIGHT
+end
+
+local function RenderRecipes(content, width)
+	local matches, total = ns.recipeLookup.Search(query, MAX_SHOWN, RecipeSort())
+	for index, recipe in ipairs(matches) do
+		local row = AcquireRecipeRow(content)
+		row.kind, row.id, row.recipeName = "recipes", recipe.id, recipe.name
+		row:SetWidth(width)
+		row:SetPoint("TOPLEFT", content, "TOPLEFT", PAD, -PAD - (index - 1) * RECIPE_ROW_HEIGHT)
+		row.bg:SetColorTexture(1, 1, 1, index % 2 == 0 and 0.03 or 0)
+		local icon = recipe.output and select(5, C_Item.GetItemInfoInstant(recipe.output)) or C_Spell.GetSpellTexture(recipe.id)
+		row.icon:SetTexture(icon or 134400)
+		row.name:SetText(recipe.name .. ((recipe.quantity or 1) > 1 and (" |cff999999x" .. recipe.quantity .. "|r") or ""))
+		row.name:SetTextColor(QualityColor(recipe.output and select(3, C_Item.GetItemInfo(recipe.output)) or 1))
+		row.profession:SetText(recipe.profession)
+		-- The reagents as small icons after the profession.
+		local anchor = row.profession
+		for slot, reagentIcon in ipairs(row.reagents) do
+			local reagent = recipe.reagents[slot]
+			reagentIcon:ClearAllPoints()
+			if reagent then
+				reagentIcon:SetTexture(select(5, C_Item.GetItemInfoInstant(reagent.itemID)) or 134400)
+				reagentIcon:SetPoint("LEFT", anchor, "RIGHT", slot == 1 and 10 or 3, 0)
+				reagentIcon:Show()
+				anchor = reagentIcon
+			else
+				reagentIcon:Hide()
+			end
+		end
+		local cost, sells, profit, missing = ns.recipeLookup.Value(recipe)
+		row.cost:SetText(#recipe.reagents == 0 and "" or (Money(cost) .. (missing > 0 and " |cffff9933+?|r" or "")))
+		row.sells:SetText(sells and Money(sells) or "|cff666666-|r")
+		if profit then
+			row.profit:SetText((profit < 0 and "|cffff5050-" or "|cff40c040") .. Money(profit) .. "|r")
+		else
+			row.profit:SetText("|cff666666-|r")
+		end
+	end
+	return #matches, total, RECIPE_ROW_HEIGHT
+end
+
+local function Render()
+	renderPending = false
+	if not (frame and frame:IsShown()) then
+		return
+	end
+	local mode = Mode()
+	for _, button in ipairs(modeButtons) do
+		button:SetSelected(button.mode == mode)
+	end
+	for _, button in ipairs(sortButtons) do
+		button:SetShown(mode == "recipes")
+		button:SetSelected(button.sort == RecipeSort())
+	end
+	sortLabel:SetShown(mode == "recipes")
+	hint:SetText(HINTS[mode] .. (mode == "items" and ns:IsModuleEnabled("wishlist") and ", right-click for your wishlist" or ""))
+	UpdateProgress()
+	pool:ReleaseAll()
+	wipe(shownIDs)
+	local content = scroll.content
+	local width = content:GetWidth() - 2 * PAD
+
+	if query == "" and mode ~= "recipes" then
+		for _, info in ipairs(MODES) do
+			if info.key == mode then
+				Message(content, info.empty)
+			end
+		end
+		content:SetHeight(60)
+		footerLeft:SetText("")
+		return
+	end
+	local shown, total, rowHeight
+	if mode == "spells" then
+		shown, total, rowHeight = RenderSpells(content, width)
+	elseif mode == "recipes" then
+		shown, total, rowHeight = RenderRecipes(content, width)
+	else
+		shown, total, rowHeight = RenderItems(content, width)
+	end
+	if total == 0 then
+		Message(content, query == "" and "No recipes yet." or string.format("Nothing matches \"%s\".", query))
+		content:SetHeight(60)
+		footerLeft:SetText("")
+		return
+	end
+	content:SetHeight(PAD * 2 + shown * rowHeight)
+	scroll:SetScroll(scroll:GetVerticalScroll())
+	if total > shown then
+		footerLeft:SetText(string.format("Showing %d of %d matches: type more to narrow it down.", shown, total))
 	else
 		footerLeft:SetText(total == 1 and "1 match" or (total .. " matches"))
 	end
@@ -225,23 +455,78 @@ local function RequestRender()
 	C_Timer.After(0.5, Render)
 end
 
+-- Switches mode (and starts reading spells or finding recipes when they're needed).
+local function SetMode(mode)
+	NraKitDB.lookupMode = mode
+	if mode == "spells" then
+		ns.spellLookup.Start()
+	elseif mode == "recipes" then
+		ns.recipeLookup.Start()
+	end
+	scroll:SetScroll(0)
+	Render()
+end
+
 ------------------------------------------------------------------------------
 -- Window
 ------------------------------------------------------------------------------
 
 local function CreateWindow()
-	frame = UI.CreateWindow("NraKitItemLookupFrame", "Items", WIDTH, HEIGHT, 0, "items")
+	frame = UI.CreateWindow("NraKitItemLookupFrame", "Lookup", WIDTH, HEIGHT, 0, "items")
 	local body = frame.body
+
+	-- [ Items ][ Spells ][ Recipes ]: one at a time.
+	local anchor
+	for _, info in ipairs(MODES) do
+		local button = UI.CreateFlatButton(body, info.label, 24)
+		button:SetWidth(button.text:GetStringWidth() + 28)
+		button.mode = info.key
+		if anchor then
+			button:SetPoint("LEFT", anchor, "RIGHT", 1, 0)
+		else
+			button:SetPoint("TOPLEFT", PAD, -PAD)
+		end
+		button:SetScript("OnClick", function(self)
+			PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+			SetMode(self.mode)
+		end)
+		anchor = button
+		table.insert(modeButtons, button)
+	end
+	-- Recipes: sort by name or by profit.
+	sortLabel = body:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+	local previous
+	for index, info in ipairs({ { "profit", "Profit" }, { "name", "Name" } }) do
+		local button = UI.CreateFlatButton(body, info[2], 22)
+		button:SetWidth(button.text:GetStringWidth() + 22)
+		button.sort = info[1]
+		if previous then
+			button:SetPoint("RIGHT", previous, "LEFT", -1, 0)
+		else
+			button:SetPoint("TOPRIGHT", -PAD, -PAD - 1)
+		end
+		button:SetScript("OnClick", function(self)
+			NraKitDB.lookupRecipeSort = self.sort
+			scroll:SetScroll(0)
+			Render()
+		end)
+		previous = button
+		table.insert(sortButtons, button)
+		if index == 2 then
+			sortLabel:SetPoint("RIGHT", button, "LEFT", -8, 0)
+		end
+	end
+	sortLabel:SetText("Sort by")
 
 	searchBox = UI.CreateSearchBox(body, 260, function(text)
 		query = text
 		scroll:SetScroll(0)
 		Render()
 	end)
-	searchBox:SetPoint("TOPLEFT", PAD + 6, -PAD - 1)
+	searchBox:SetPoint("TOPLEFT", PAD + 6, -PAD - 37)
 
 	progressButton = UI.CreateFlatButton(body, "Pause", 22)
-	progressButton:SetPoint("TOPRIGHT", -PAD, -PAD)
+	progressButton:SetPoint("TOPRIGHT", -PAD, -PAD - 36)
 	progressButton:SetScript("OnClick", function(self)
 		if self.action == "Check again" then
 			ns.itemLookup.CheckAgain()
@@ -262,7 +547,7 @@ local function CreateWindow()
 	-- A thin line under the text, so the text sits on the dark window, not on the fill.
 	progressBar:SetHeight(3)
 	progressBar:SetPoint("LEFT", searchBox, "RIGHT", 16, -9)
-	progressBar:SetPoint("RIGHT", progressButton, "LEFT", -12, -9)
+	progressBar:SetPoint("RIGHT", body, "RIGHT", -110, 0)
 	local barBg = progressBar:CreateTexture(nil, "BACKGROUND")
 	barBg:SetAllPoints()
 	barBg:SetColorTexture(1, 1, 1, 0.08)
@@ -300,49 +585,62 @@ local function CreateWindow()
 	UI.AddLine(footer, "TOP")
 	footerLeft = footer:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	footerLeft:SetPoint("LEFT", PAD, 0)
-	local hint = footer:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+	hint = footer:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	hint:SetPoint("RIGHT", -PAD, 0)
 
 	-- The search box never takes the keyboard by itself (you may be moving or fighting):
 	-- click it to type. Enter (like Esc) gives the keys back to the game.
 	searchBox:HookScript("OnEnterPressed", searchBox.ClearFocus)
 	frame:HookScript("OnShow", function()
-		hint:SetText(ns:IsModuleEnabled("wishlist") and "Shift-click to link in chat, Ctrl-click to preview, right-click for your wishlist"
-			or "Shift-click to link in chat, Ctrl-click to preview")
-		Render()
+		SetMode(Mode())
 	end)
 
 	-- A new name that matches, or a shown item finishing loading (its level), redraws.
 	ns.itemLookup.onStored = function(itemID, name)
-		if not (frame:IsShown() and query ~= "") then
+		if not (frame:IsShown() and query ~= "" and Mode() == "items") then
 			return
 		end
 		if not itemID or shownIDs[itemID] or (name and name:lower():find(query, 1, true)) then
 			RequestRender()
 		end
 	end
+	-- Spells read, recipes found (once each): show them.
+	ns.spellLookup.onReady = Render
+	ns.recipeLookup.onReady = Render
 end
 
--- Opens the window, searching for `text` if given (toggles it when there's none).
-function ns:OpenItemLookup(text)
+-- Opens the window in `mode` ("items", "spells", "recipes"; default: the last one), searching
+-- for `text` if given; without text it toggles (the same mode) or switches.
+function ns:OpenLookup(mode, text)
 	if not frame then
 		CreateWindow()
 	end
 	text = text and strtrim(text) or ""
+	local switching = mode and mode ~= Mode()
+	if mode then
+		NraKitDB.lookupMode = mode
+	end
 	if text ~= "" then
 		searchBox:SetText(text)
 		searchBox:ClearFocus()
 		frame:Show()
-		Render()
+		SetMode(Mode())
+	elseif switching and frame:IsShown() then
+		SetMode(Mode())
 	else
 		frame:SetShown(not frame:IsShown())
 	end
 end
 
+-- (Items: the name it always had.)
+function ns:OpenItemLookup(text)
+	ns:OpenLookup("items", text)
+end
+
 UI.RegisterTab({
-	key = "items", label = "Items", menuLabel = "Item Lookup", order = 5, frameName = "NraKitItemLookupFrame",
+	key = "items", label = "Lookup", menuLabel = "Lookup", order = 5, frameName = "NraKitItemLookupFrame",
 	open = function()
-		ns:OpenItemLookup()
+		ns:OpenLookup()
 	end,
 	module = "itemLookup",
 })

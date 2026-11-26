@@ -345,8 +345,12 @@ Type **/leave** (with nothing after it) or **/leavegroup** to leave your party, 
 
 ## Tools
 
-### Item Lookup
-**Search every item in the game by name.** **/nra item nightbl** opens an **Items** tab listing every item whose name contains it, best matches first, with icon, type, required level and how many your characters have (with Inventory Tracker).
+### Lookup
+**Look up every item, spell and profession recipe by name**, in the **Lookup** tab: **[ Items ][ Spells ][ Recipes ]** at its top, and **/nra item**, **/nra spell**, **/nra recipe** to open it in that mode.
+- **Spells:** every spell, yours first and marked **Known**; **Shift+click** links it in chat.
+- **Recipes:** every profession recipe with what it makes and needs, and with prices what a craft **costs**, **sells for** and the **profit** (sort by Profit to see what's worth crafting). Right-click for the shopping-list menu.
+
+**Items:** **/nra item nightbl** lists every item whose name contains it, best matches first, with icon, type, required level and how many your characters have (with Inventory Tracker).
 - Hover for the tooltip, **Shift+click** to link it in chat, **Ctrl+click** to preview it, **right-click** to add it to your **Wishlist** (while that's on).
 - The game can't search items by name, so NraKit learns the names in the background, a few dozen a second (paused in combat). It takes a few minutes, once per game version; searching works right away and finds more as it fills.
 - A **progress bar** in the tab shows how far it is, with **Pause / Resume**, and **Check again** once it's done.
@@ -364,7 +368,7 @@ Hover an **item, spell, NPC, quest, achievement or currency** and press **Ctrl+C
 ![wowheadlink](https://raw.githubusercontent.com/repsejnworb/NraKit/main/.github/screenshots/wowheadlink.png)
 
 ### Shortcuts
-Short commands for NraKit's everyday ones, each the same as its `/nra` command: **`/remind`, `/todo`, `/item`, `/dps`, `/shop`, `/bank`, `/goal`, `/note`, `/wish`, `/scan` and `/done`**.
+Short commands for NraKit's everyday ones, each the same as its `/nra` command: **`/remind`, `/todo`, `/item`, `/spell`, `/recipe`, `/dps`, `/shop`, `/bank`, `/goal`, `/note`, `/wish`, `/scan` and `/done`**.
 - NraKit **only takes ones nobody else uses**: a command another addon, the game or an emote already has is left alone, and an addon that takes one later gets it. `/nra` always works.
 - `/nra shortcuts` lists them, and which are in use elsewhere (and by what).
 - Each can be turned off, and one whose feature is off isn't taken.

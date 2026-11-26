@@ -21,8 +21,8 @@ local _, ns = ...
 local module = {
 	key = "itemLookup",
 	section = "Tools",
-	name = "Item Lookup",
-	description = "Search every item in the game by name: /nra item nightbl lists the matching items in a window, with their tooltips. The list of names fills in by itself in the background (a few minutes, once per game version).",
+	name = "Lookup",
+	description = "Look up every item, spell and profession recipe in the game by name, in the Lookup tab: /nra item nightbl, /nra spell charge, /nra recipe bracers. Recipes show what they need and, with prices, what a craft costs, sells for and earns. Item names fill in by themselves in the background (a few minutes, once per game version).",
 	default = false,
 }
 
@@ -304,22 +304,39 @@ local function Stop()
 end
 
 function module:OnInitialize()
-	local help = {
-		summary = "Item Lookup: search every item in the game by name",
-		usage = {
-			"/nra item <name> - list the items whose name contains it (also /nra items)",
-			"/nra item - open the item lookup window",
-		},
-	}
-	local function OnSlashCommand(input)
+	local function Command(mode, summary, what)
+		local help = {
+			summary = summary,
+			usage = {
+				string.format("/nra %s <name> - look up the %s whose name contains it", mode == "items" and "item" or mode:sub(1, -2), what),
+				string.format("/nra %s - open Lookup on %s", mode == "items" and "item" or mode:sub(1, -2), what),
+			},
+		}
+		return function(input)
+			if not ns:IsModuleEnabled(module.key) then
+				ns:Print("Turn on Lookup first (/nra).")
+				return
+			end
+			ns:OpenLookup(mode, input)
+		end, help
+	end
+	for _, entry in ipairs({
+		{ "items", "Lookup: search every item in the game by name", "items", { "item", "items" } },
+		{ "spells", "Lookup: search every spell by name, and link it", "spells", { "spell", "spells" } },
+		{ "recipes", "Lookup: search every profession recipe, with what it costs and earns", "recipes", { "recipe", "recipes" } },
+	}) do
+		local handler, help = Command(entry[1], entry[2], entry[3])
+		for _, name in ipairs(entry[4]) do
+			ns:RegisterSlashCommand(name, handler, help)
+		end
+	end
+	ns:RegisterSlashCommand("lookup", function(input)
 		if not ns:IsModuleEnabled(module.key) then
-			ns:Print("Turn on Item Lookup first (/nra).")
+			ns:Print("Turn on Lookup first (/nra).")
 			return
 		end
-		ns:OpenItemLookup(input)
-	end
-	ns:RegisterSlashCommand("item", OnSlashCommand, help)
-	ns:RegisterSlashCommand("items", OnSlashCommand, help)
+		ns:OpenLookup(nil, input)
+	end, { summary = "Lookup: items, spells and recipes", usage = { "/nra lookup [name] - open Lookup where you left it" } })
 	self:OnEnabledChanged(ns:IsModuleEnabled(self.key))
 end
 

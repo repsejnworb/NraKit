@@ -30,6 +30,8 @@ local SHORTCUTS = {
 	{ "remind", "remind", "reminders" },
 	{ "todo", "todo", "reminders" },
 	{ "item", "item", "itemLookup" },
+	{ "spell", "spell", "itemLookup" },
+	{ "recipe", "recipe", "itemLookup" },
 	{ "dps", "dps", nil },
 	{ "shop", "shop", "auctionatorPrices" },
 	{ "bank", "bank", "inventoryTracker" },

@@ -608,16 +608,27 @@ Type `/leave` (with nothing after it) or `/leavegroup` to leave your party, raid
 
 ### Tools
 
-#### Item Lookup
+#### Lookup
 
-**Search every item in the game by name.** `/nra item nightbl` opens an Items tab listing the matches
-(icon, type, required level, how many your characters have).
+**Look up every item, spell and profession recipe in the game by name**, in the **Lookup** tab, with
+**[ Items ][ Spells ][ Recipes ]** at its top. `/nra item nightbl`, `/nra spell charge` and
+`/nra recipe bracers` open it in that mode (`/nra lookup` where you left it).
+
+- **Spells:** every spell, yours first and marked **Known**, with its rank. Hover for its tooltip,
+  **Shift+click** to link it in chat.
+- **Recipes:** every profession recipe with its profession, what it makes and its reagents. With
+  prices (Auctionator, else vendors): what one craft **costs**, what it **sells for** and the
+  **profit**; sort by **Profit** to see what's worth crafting. Hover for the recipe's tooltip with
+  what you have and where; right-click for the shopping-list menu. Found once per game version.
+
+**Items:** `/nra item nightbl` lists the matching items (icon, type, required level, how many your
+characters have).
 
 - Hover for the tooltip, **Shift+click** to link, **Ctrl+click** to preview, **right-click** to add it
   to your Wishlist (while that's on).
 - The game can't search items by name, so the names are learned in the background: a few dozen a
   second, paused in combat, a few minutes once per game version.
-- A progress bar in the tab has Pause / Resume, and Check again once it's done.
+- A progress bar in the Items mode has Pause / Resume, and Check again once it's done.
 - Undiscovered items are also checked for again daily.
 
 <img width="1301" height="759" alt="itemLookup" src=".github/screenshots/itemLookup.png" />
@@ -637,7 +648,7 @@ and the box closes.
 
 #### Shortcuts
 
-Short commands for NraKit's everyday ones, each the same as its `/nra` command: **`/remind`, `/todo`, `/item`,
+Short commands for NraKit's everyday ones, each the same as its `/nra` command: **`/remind`, `/todo`, `/item`, `/spell`, `/recipe`,
 `/dps`, `/shop`, `/bank`, `/goal`, `/note`, `/wish`, `/scan` and `/done`**.
 
 - NraKit **only takes ones nobody else uses**: a command another addon, the game or an emote already has is left
