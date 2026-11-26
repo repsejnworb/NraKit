@@ -232,16 +232,44 @@ local function OnSendMail(recipient)
 	pendingMail = { realm = realm, name = storedName, items = items }
 end
 
--- Bought at the Auction House: it comes by mail. An item (not a commodity) is one
--- auction; the game doesn't say how many it held, so it counts as 1 until the mailbox is read.
-local function OnPurchased(itemID, quantity)
-	if not itemID then
-		return
-	end
+-- Bought at the Auction House: it comes by mail. The game's "purchased" events don't fire
+-- on Forever, and the ones that do don't say what was bought, so the AH's buy calls note it
+-- and the confirming event adds it. An item auction (not a commodity) counts as 1: the game
+-- doesn't say how many it held. The mailbox corrects it when it's read.
+local buyingCommodity -- { itemID, quantity }, until the purchase succeeds or fails
+local buyingAuctions = {} -- [auctionID] = itemID, until the purchase completes
+
+local function AddToMyMail(itemID, quantity)
 	local me = GetMe()
 	me.mail = me.mail or {}
 	me.mail[itemID] = (me.mail[itemID] or 0) + math.max(quantity or 1, 1)
 	Changed()
+end
+
+local function OnBuyCommodity(itemID, quantity)
+	buyingCommodity = itemID and { itemID = itemID, quantity = quantity } or nil
+end
+
+local function OnCommodityBought()
+	if buyingCommodity then
+		AddToMyMail(buyingCommodity.itemID, buyingCommodity.quantity)
+	end
+	buyingCommodity = nil
+end
+
+local function OnPlaceBid(auctionID)
+	local info = auctionID and C_AuctionHouse.GetAuctionInfoByID(auctionID)
+	if info and info.itemKey and info.itemKey.itemID then
+		buyingAuctions[auctionID] = info.itemKey.itemID
+	end
+end
+
+local function OnAuctionBought(auctionID)
+	local itemID = auctionID and buyingAuctions[auctionID]
+	if itemID then
+		buyingAuctions[auctionID] = nil
+		AddToMyMail(itemID, 1)
+	end
 end
 
 local function OnMailSent()
@@ -561,8 +589,12 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 		OnMailSent()
 	elseif event == "MAIL_FAILED" then
 		pendingMail = nil
-	elseif event == "COMMODITY_PURCHASED" or event == "ITEM_PURCHASED" then
-		OnPurchased(...)
+	elseif event == "COMMODITY_PURCHASE_SUCCEEDED" then
+		OnCommodityBought()
+	elseif event == "COMMODITY_PURCHASE_FAILED" then
+		buyingCommodity = nil
+	elseif event == "AUCTION_HOUSE_PURCHASE_COMPLETED" then
+		OnAuctionBought(...)
 	elseif event == "PLAYER_MONEY" then
 		StoreMoney()
 	elseif event == "PLAYER_LEVEL_UP" then
@@ -575,7 +607,7 @@ local EVENTS = {
 	"BAG_UPDATE_DELAYED", "BANKFRAME_OPENED", "BANKFRAME_CLOSED", "PLAYERBANKSLOTS_CHANGED",
 	"PLAYERREAGENTBANKSLOTS_CHANGED", "PLAYER_EQUIPMENT_CHANGED", "MAIL_INBOX_UPDATE",
 	"MAIL_SEND_SUCCESS", "MAIL_FAILED", "PLAYER_MONEY", "PLAYER_LEVEL_UP",
-	"COMMODITY_PURCHASED", "ITEM_PURCHASED",
+	"COMMODITY_PURCHASE_SUCCEEDED", "COMMODITY_PURCHASE_FAILED", "AUCTION_HOUSE_PURCHASE_COMPLETED",
 }
 
 local function IsEventValid(event)
@@ -602,6 +634,18 @@ function module:OnInitialize()
 			OnSendMail(recipient)
 		end
 	end)
+	if type(C_AuctionHouse) == "table" then
+		hooksecurefunc(C_AuctionHouse, "ConfirmCommoditiesPurchase", function(itemID, quantity)
+			if ns:IsModuleEnabled(module.key) then
+				OnBuyCommodity(itemID, quantity)
+			end
+		end)
+		hooksecurefunc(C_AuctionHouse, "PlaceBid", function(auctionID)
+			if ns:IsModuleEnabled(module.key) then
+				OnPlaceBid(auctionID)
+			end
+		end)
+	end
 	TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, OnItemTooltip)
 	HookBagMoney()
 	self:OnEnabledChanged(ns:IsModuleEnabled(self.key))

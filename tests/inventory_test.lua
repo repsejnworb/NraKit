@@ -1,7 +1,7 @@
 -- Inventory Tracker and names: characters are "Firstname Surname", two of yours can share a
 -- first name, and data saved by older versions under the first name alone moves over.
 
--- You're "Nra Kit". hooksecurefunc really hooks here (for SendMail).
+-- You're "Nra Kit". hooksecurefunc really hooks here (for SendMail and the AH's buy calls).
 local unitName = UnitName
 UnitName = function(unit)
 	if unit == "player" then
@@ -9,15 +9,28 @@ UnitName = function(unit)
 	end
 	return unitName(unit)
 end
-hooksecurefunc = function(name, hook)
-	local original = _G[name]
+hooksecurefunc = function(target, name, hook)
+	if type(target) ~= "table" then
+		target, name, hook = _G, target, name
+	end
+	local original = rawget(target, name)
 	if original then
-		_G[name] = function(...)
+		target[name] = function(...)
 			original(...)
 			hook(...)
 		end
 	end
 end
+-- The auction house: auction 77 is one Linen Cloth.
+C_AuctionHouse = {
+	ConfirmCommoditiesPurchase = function() end,
+	PlaceBid = function() end,
+	GetAuctionInfoByID = function(auctionID)
+		if auctionID == 77 then
+			return { itemKey = { itemID = 2589 } }
+		end
+	end,
+}
 local attached = {}
 function SendMail() end
 GetSendMailItem = function(index)
@@ -101,11 +114,25 @@ return {
 		end)
 
 		t.test("what you buy at the Auction House is in your mail right away", function()
-			local before = (characters["Nra Kit"].mail or {})[LINEN] or 0
-			wow.fire("COMMODITY_PURCHASED", LINEN, 20)
-			t.equal(characters["Nra Kit"].mail[LINEN], before + 20, "a commodity, with its quantity")
-			wow.fire("ITEM_PURCHASED", 2589)
-			t.equal(characters["Nra Kit"].mail[LINEN], before + 21, "an item auction counts as one")
+			local function Mailed()
+				return (characters["Nra Kit"].mail or {})[LINEN] or 0
+			end
+			local before = Mailed()
+			C_AuctionHouse.ConfirmCommoditiesPurchase(LINEN, 20)
+			t.equal(Mailed(), before, "not until the purchase succeeds")
+			wow.fire("COMMODITY_PURCHASE_SUCCEEDED")
+			t.equal(Mailed(), before + 20, "a commodity, with its quantity")
+			C_AuctionHouse.ConfirmCommoditiesPurchase(LINEN, 5)
+			wow.fire("COMMODITY_PURCHASE_FAILED")
+			wow.fire("COMMODITY_PURCHASE_SUCCEEDED")
+			t.equal(Mailed(), before + 20, "a failed purchase isn't counted")
+			C_AuctionHouse.PlaceBid(77, 100)
+			wow.fire("AUCTION_HOUSE_PURCHASE_COMPLETED", 78)
+			t.equal(Mailed(), before + 20, "another auction's completion isn't this one")
+			wow.fire("AUCTION_HOUSE_PURCHASE_COMPLETED", 77)
+			t.equal(Mailed(), before + 21, "an item auction counts as one")
+			wow.fire("AUCTION_HOUSE_PURCHASE_COMPLETED", 77)
+			t.equal(Mailed(), before + 21, "and only once")
 		end)
 
 		t.test("mail finds a character still saved under its first name", function()
