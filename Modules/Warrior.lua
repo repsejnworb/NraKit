@@ -10,7 +10,7 @@ local _, ns = ...
 -- additional 15") adds 5 per rank (Wowhead: 5/10/15). The rank is read from the active
 -- talent loadout, so learning the passive, respeccing or switching loadouts moves the tick.
 --
--- The tick is NraKit's own frame on top of the bar; the bar itself is never changed.
+-- The tick is NraKit's own bar on top of the rage bar; the rage bar itself is never changed.
 
 local module = {
 	key = "warrior",
@@ -77,7 +77,7 @@ end
 
 local overlay -- on the rage bar: { tick, shade }
 local retained = 0
-local shownX -- where the tick is drawn now (slides to the target)
+local shownRage -- where the tick is drawn now, in rage (slides to the target)
 
 local function PowerBar()
 	local frame = PersonalResourceDisplayFrame
@@ -89,23 +89,17 @@ local function IsWarriorRage()
 	return class == "WARRIOR" and UnitPowerType("player") == Enum.PowerType.Rage
 end
 
--- Where the mark should be, in pixels from the bar's left, or nil for no mark.
-local function TargetX()
-	local bar = PowerBar()
-	if not bar or retained <= 0 or not IsWarriorRage() then
-		return nil
-	end
-	local _, max = bar:GetMinMaxValues()
-	if not max or (issecretvalue and issecretvalue(max)) or max <= 0 then
-		return nil
-	end
-	return bar:GetWidth() * math.min(retained / max, 1)
+local function WantMark()
+	return retained > 0 and PowerBar() ~= nil and IsWarriorRage()
 end
 
-local function Draw(x)
-	overlay.tick:SetPoint("CENTER", overlay, "LEFT", x, 0)
-	overlay.shade:SetWidth(math.max(x, 0.01))
-	overlay.shade:SetShown(ns:GetOption("warriorTacticalMasteryShade"))
+-- Max rage is a secret value, so Lua can't work out where on the bar the mark goes. A bar
+-- can take secrets though: the mark is NraKit's own bar over the rage bar, 0 to max rage,
+-- filled to the rage kept, and the tick sits at the end of its fill.
+local function Draw(rage)
+	overlay:SetMinMaxValues(0, UnitPowerMax("player", Enum.PowerType.Rage))
+	overlay:SetValue(rage)
+	overlay:SetStatusBarColor(1, 1, 1, ns:GetOption("warriorTacticalMasteryShade") and 0.12 or 0)
 end
 
 local function EnsureOverlay()
@@ -113,22 +107,19 @@ local function EnsureOverlay()
 	if overlay or not bar then
 		return overlay
 	end
-	overlay = CreateFrame("Frame", nil, bar)
+	overlay = CreateFrame("StatusBar", nil, bar)
 	overlay:SetAllPoints(bar)
 	overlay:SetFrameLevel(bar:GetFrameLevel() + 5)
+	overlay:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
 	overlay:SetAlpha(0)
 	overlay:Hide()
-
-	overlay.shade = overlay:CreateTexture(nil, "ARTWORK")
-	overlay.shade:SetColorTexture(1, 1, 1, 0.12)
-	overlay.shade:SetPoint("TOPLEFT")
-	overlay.shade:SetPoint("BOTTOMLEFT")
+	local fill = overlay:GetStatusBarTexture()
 
 	overlay.tick = overlay:CreateTexture(nil, "OVERLAY")
 	overlay.tick:SetColorTexture(1, 0.95, 0.75, 0.95)
 	overlay.tick:SetWidth(2)
-	overlay.tick:SetPoint("TOP")
-	overlay.tick:SetPoint("BOTTOM")
+	overlay.tick:SetPoint("TOP", fill, "TOPRIGHT")
+	overlay.tick:SetPoint("BOTTOM", fill, "BOTTOMRIGHT")
 
 	overlay.glow = overlay:CreateTexture(nil, "ARTWORK")
 	overlay.glow:SetColorTexture(1, 0.85, 0.4, 0.3)
@@ -138,25 +129,24 @@ local function EnsureOverlay()
 
 	-- Slides when the amount changes, fades in and out when the mark comes and goes.
 	overlay:SetScript("OnUpdate", function(self, elapsed)
-		local target = TargetX()
 		local alpha = self:GetAlpha()
-		if target then
-			if not shownX then
-				shownX = target
+		if WantMark() then
+			if not shownRage then
+				shownRage = retained
 			end
-			local step = math.max(math.abs(target - shownX), 1) * elapsed / SLIDE_SECONDS
-			if math.abs(target - shownX) <= step then
-				shownX = target
+			local step = math.max(math.abs(retained - shownRage), 1) * elapsed / SLIDE_SECONDS
+			if math.abs(retained - shownRage) <= step then
+				shownRage = retained
 			else
-				shownX = shownX + (target > shownX and step or -step)
+				shownRage = shownRage + (retained > shownRage and step or -step)
 			end
-			Draw(shownX)
+			Draw(shownRage)
 			self:SetAlpha(math.min(1, alpha + elapsed / FADE_SECONDS))
 		else
 			alpha = math.max(0, alpha - elapsed / FADE_SECONDS)
 			self:SetAlpha(alpha)
 			if alpha == 0 then
-				shownX = nil
+				shownRage = nil
 				self:Hide()
 			end
 		end
@@ -170,15 +160,15 @@ local function Update()
 	else
 		retained = mark.Retained()
 	end
-	if EnsureOverlay() and (TargetX() or overlay:IsShown()) then
+	if EnsureOverlay() and (WantMark() or overlay:IsShown()) then
 		overlay:Show()
 	end
 end
 mark.Update = Update
 
--- Where the mark is drawn now, and how visible (for tests).
+-- Where the mark is drawn now (in rage), and how visible (for tests).
 function mark.Shown()
-	return shownX, overlay and overlay:IsShown() and overlay:GetAlpha() or 0
+	return shownRage, overlay and overlay:IsShown() and overlay:GetAlpha() or 0
 end
 
 local eventFrame = CreateFrame("Frame")

@@ -1,13 +1,8 @@
 -- Warrior, Tactical Mastery mark: a tick on the warrior's rage bar (Personal Resource Display) at the
 -- rage kept on changing stance: 10 with the passive, 5 more per Improved Tactical Mastery rank.
 
--- The Personal Resource Display's rage bar: 200 pixels wide, 0 to 100 rage.
-local powerBar = CreateFrame("StatusBar")
-powerBar:SetWidth(200)
-rawset(powerBar, "GetMinMaxValues", function()
-	return 0, 100
-end)
-PersonalResourceDisplayFrame = { PowerBar = powerBar }
+-- The Personal Resource Display's rage bar.
+PersonalResourceDisplayFrame = { PowerBar = CreateFrame("StatusBar") }
 
 Enum.PowerType = Enum.PowerType or {}
 Enum.PowerType.Rage = 1
@@ -67,7 +62,7 @@ return {
 			wow.fire("SPELLS_CHANGED")
 			wow.advance(0.2)
 			local x, alpha = mark.Shown()
-			t.equal(x, 20, "10 of 100 rage on a 200 pixel bar")
+			t.equal(x, 10, "at 10 rage")
 			t.ok(alpha > 0 and alpha < 1, "fading in")
 			wow.advance(1)
 			t.equal(select(2, mark.Shown()), 1, "shown")
@@ -79,12 +74,30 @@ return {
 			t.equal(mark.Retained(), 25, "10 + 3 x 5")
 			wow.advance(0.2)
 			local x = mark.Shown()
-			t.ok(x > 20 and x < 50, "sliding: " .. tostring(x))
+			t.ok(x > 10 and x < 25, "sliding: " .. tostring(x))
 			wow.advance(1)
-			t.equal(mark.Shown(), 50, "at 25 rage")
+			t.equal(mark.Shown(), 25, "at 25 rage")
 			rank = 1
 			wow.fire("TRAIT_CONFIG_UPDATED")
 			t.equal(mark.Retained(), 15, "respecced to rank 1")
+		end)
+
+		t.test("max rage is secret: the bar gets it as is, no maths on it", function()
+			local maxGiven
+			local overlay = wow.frames[#wow.frames]
+			for _, frame in ipairs(wow.frames) do
+				if rawget(frame, "parent") == PersonalResourceDisplayFrame.PowerBar then
+					overlay = frame
+				end
+			end
+			rawset(overlay, "SetMinMaxValues", function(_, _, max)
+				maxGiven = max
+			end)
+			UnitPowerMax = function()
+				return "secret max"
+			end
+			wow.advance(0.1)
+			t.equal(maxGiven, "secret max", "passed straight to the bar")
 		end)
 
 		t.test("turned off, the mark fades away", function()
