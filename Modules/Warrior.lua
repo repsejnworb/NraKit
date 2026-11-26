@@ -11,12 +11,14 @@ local _, ns = ...
 -- talent loadout, so learning the passive, respeccing or switching loadouts moves the arrow.
 --
 -- The mark is NraKit's own bar over the rage bar; the rage bar itself is never changed.
+--
+-- Proc alerts (Overpower, Revenge, Victory Rush) are in WarriorProcs.lua.
 
 local module = {
 	key = "warrior",
 	section = "Classes",
 	name = "Warrior",
-	description = "Small things for warriors: a mark on your rage bar where the rage you keep on changing stance ends.",
+	description = "Small things for warriors: a mark on your rage bar where the rage you keep on changing stance ends, and a glow when Overpower, Revenge or Victory Rush can be used.",
 	default = false,
 	options = {
 		{
@@ -32,6 +34,90 @@ local module = {
 			description = "Also lightly shade the bar up to the mark, not just the arrow.",
 			default = false,
 		},
+		{
+			key = "warriorTacticalMasteryPosition",
+			parent = "warriorTacticalMastery",
+			type = "choice",
+			name = "Arrow",
+			description = "Where the arrow sits: inside the bar at its top (pointing down), at its bottom (pointing up), or both.",
+			default = "top",
+			choices = {
+				{ "top", "Top" },
+				{ "bottom", "Bottom" },
+				{ "both", "Top and bottom" },
+			},
+		},
+		{
+			key = "warriorTacticalMasterySize",
+			parent = "warriorTacticalMastery",
+			type = "number",
+			name = "Arrow size",
+			description = "How big the arrow is.",
+			default = 1,
+			min = 0.5,
+			max = 2,
+			step = 0.1,
+			format = function(value)
+				return math.floor(value * 100 + 0.5) .. "%"
+			end,
+		},
+		{
+			key = "warriorProcs",
+			header = "Proc alerts",
+			name = "Glow when a proc can be used",
+			description = "Your action button glows (like the game's own proc glow) while Overpower, Revenge or Victory Rush can be used, which the game doesn't show for them.",
+			default = true,
+		},
+		{
+			key = "warriorProcOverpower",
+			parent = "warriorProcs",
+			name = "Overpower",
+			description = "After your target dodges (Battle Stance).",
+			default = true,
+		},
+		{
+			key = "warriorProcRevenge",
+			parent = "warriorProcs",
+			name = "Revenge",
+			description = "After you block, dodge or parry (Defensive Stance).",
+			default = true,
+		},
+		{
+			key = "warriorProcVictoryRush",
+			parent = "warriorProcs",
+			name = "Victory Rush",
+			description = "After you kill an enemy that gives experience or honor.",
+			default = true,
+		},
+		{
+			key = "warriorProcCountdown",
+			parent = "warriorProcs",
+			name = "Countdown",
+			description = "A ring on the glow counts down how long the proc lasts. NraKit learns each one's time the first time it runs out unused, so the ring shows from then on.",
+			default = true,
+		},
+		{
+			key = "warriorProcIcon",
+			parent = "warriorProcs",
+			name = "Icon by the rage bar",
+			description = "Also show the proc's icon next to the Personal Resource Display's rage bar, for when you don't watch your action bars.",
+			default = false,
+		},
+		{
+			key = "warriorProcSound",
+			parent = "warriorProcs",
+			name = "Sound",
+			description = "Play a sound when a proc can be used.",
+			default = false,
+		},
+		{
+			key = "warriorProcSoundChoice",
+			parent = "warriorProcSound",
+			type = "sound",
+			name = "Sound",
+			description = "Which sound to play when a proc can be used.",
+			default = "kit:MAP_PING",
+		},
 	},
 }
 
@@ -42,6 +128,9 @@ local TALENT_RAGE_PER_RANK = 5
 local SLIDE_SECONDS = 0.4
 local FADE_SECONDS = 0.4
 local ARROW_SIZE = 10
+-- The arrow is drawn in the upper part of its picture: measured from screenshots, at 100%
+-- this offset puts its top on the first row inside the bar's border. It scales with the
+-- arrow, and the bottom arrow (the picture flipped) mirrors it.
 local ARROW_OFFSET_Y = -4
 
 local mark = {}
@@ -104,6 +193,21 @@ local function Draw(rage)
 	overlay:SetStatusBarColor(1, 1, 1, ns:GetOption("warriorTacticalMasteryShade") and 0.12 or 0)
 end
 
+-- The arrows' place and size, from the options.
+local function PlaceArrows()
+	local scale = ns:GetValue("warriorTacticalMasterySize") or 1
+	local size, offset = ARROW_SIZE * scale, ARROW_OFFSET_Y * scale
+	local position = ns:GetValue("warriorTacticalMasteryPosition") or "top"
+	overlay.top:SetSize(size, size)
+	overlay.top:ClearAllPoints()
+	overlay.top:SetPoint("CENTER", overlay.fill, "TOPRIGHT", 0, offset)
+	overlay.top:SetShown(position ~= "bottom")
+	overlay.bottom:SetSize(size, size)
+	overlay.bottom:ClearAllPoints()
+	overlay.bottom:SetPoint("CENTER", overlay.fill, "BOTTOMRIGHT", 0, -offset)
+	overlay.bottom:SetShown(position ~= "top")
+end
+
 local function EnsureOverlay()
 	local bar = PowerBar()
 	if overlay or not bar then
@@ -117,13 +221,13 @@ local function EnsureOverlay()
 	overlay:Hide()
 	local fill = overlay:GetStatusBarTexture()
 
-	-- A small metal arrow inside the bar, at its top, pointing down at the mark. The arrow is
-	-- drawn in the upper part of its picture: measured from screenshots, this offset puts its
-	-- top on the first row inside the bar's border.
-	overlay.arrow = overlay:CreateTexture(nil, "OVERLAY")
-	overlay.arrow:SetTexture("Interface\\Buttons\\Arrow-Down-Up")
-	overlay.arrow:SetSize(ARROW_SIZE, ARROW_SIZE)
-	overlay.arrow:SetPoint("CENTER", fill, "TOPRIGHT", 0, ARROW_OFFSET_Y)
+	-- Small metal arrows inside the bar pointing at the mark: down from the top, up from the bottom.
+	overlay.top = overlay:CreateTexture(nil, "OVERLAY")
+	overlay.top:SetTexture("Interface\\Buttons\\Arrow-Down-Up")
+	overlay.bottom = overlay:CreateTexture(nil, "OVERLAY")
+	overlay.bottom:SetTexture("Interface\\Buttons\\Arrow-Down-Up")
+	overlay.bottom:SetTexCoord(0, 1, 1, 0)
+	overlay.fill = fill
 
 	-- Slides when the amount changes, fades in and out when the mark comes and goes.
 	overlay:SetScript("OnUpdate", function(self, elapsed)
@@ -158,8 +262,11 @@ local function Update()
 	else
 		retained = mark.Retained()
 	end
-	if EnsureOverlay() and (WantMark() or overlay:IsShown()) then
-		overlay:Show()
+	if EnsureOverlay() then
+		PlaceArrows()
+		if WantMark() or overlay:IsShown() then
+			overlay:Show()
+		end
 	end
 end
 mark.Update = Update
@@ -167,6 +274,11 @@ mark.Update = Update
 -- Where the mark is drawn now (in rage), and how visible (for tests).
 function mark.Shown()
 	return shownRage, overlay and overlay:IsShown() and overlay:GetAlpha() or 0
+end
+
+-- The arrows (for tests).
+function mark.Arrows()
+	return overlay and overlay.top, overlay and overlay.bottom
 end
 
 local eventFrame = CreateFrame("Frame")
@@ -202,10 +314,12 @@ function module:OnEnabledChanged(enabled)
 		eventFrame:UnregisterEvent("UNIT_DISPLAYPOWER")
 	end
 	Update()
+	ns.warriorProcs.SetEnabled(enabled)
 end
 
 function module:OnOptionChanged()
 	Update()
+	ns.warriorProcs.Refresh()
 end
 
 ns:RegisterModule(module)

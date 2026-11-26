@@ -18,7 +18,7 @@ local _, ns = ...
 ns.changelog = {
 	{ version = "Unreleased", entries = {
 		{ "new", "Cooldown Manager fade: the game's Cooldown Manager bars show in combat and fade out, animated, a while after it instead of just vanishing. Pick which bars, how long they stay and fade, and how faint they fade to; they also come back with a hostile target (fading right away when you drop it) and while the mouse is over one. Set the bars to Always in Edit Mode.", module = "cooldownManagerFade" },
-		{ "new", "Warrior, in the new Classes section: the rage bar of the Personal Resource Display shows a small arrow at how much rage you keep when you change stance, from Tactical Mastery and your ranks of Improved Tactical Mastery. It moves by itself when you learn it or change talents; optionally shade the rage you keep.", module = "warrior" },
+		{ "new", "Warrior, in the new Classes section. The rage bar of the Personal Resource Display shows a small arrow at how much rage you keep when you change stance, from Tactical Mastery and your ranks of Improved Tactical Mastery; it moves by itself when you learn it or change talents (arrow at the top, bottom or both, its size, and optionally shade the rage you keep). Overpower, Revenge and Victory Rush make their action buttons glow while you can use them, which the game doesn't show, dimmed while you're short of rage, with a countdown ring (NraKit learns how long each lasts), and optionally a sound and an icon by the rage bar.", module = "warrior" },
 		{ "improved", "Inventory Tracker: what you buy at the Auction House shows in your mail right away, before you visit the mailbox." },
 	} },
 	{ version = "0.30.0", date = "2026-11-26", entries = {

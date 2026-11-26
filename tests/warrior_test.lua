@@ -4,6 +4,23 @@
 -- The Personal Resource Display's rage bar.
 PersonalResourceDisplayFrame = { PowerBar = CreateFrame("StatusBar") }
 
+-- Procs: Overpower is spell 7384 in action slot 5 (ActionButton5). Usable is as set here.
+local usable = {} -- spellID -> "up" | "rage" (short of rage) | nil
+C_Spell.GetSpellInfo = function(name)
+	local ids = { Overpower = 7384, Revenge = 6572 }
+	return ids[name] and { spellID = ids[name] }
+end
+C_Spell.IsSpellUsable = function(spellID)
+	return usable[spellID] == "up", usable[spellID] == "rage"
+end
+C_ActionBar = {
+	FindSpellActionButtons = function(spellID)
+		return spellID == 7384 and { 5 } or {}
+	end,
+}
+local button = CreateFrame("CheckButton", "ActionButton5")
+rawset(button, "action", 5)
+
 Enum.PowerType = Enum.PowerType or {}
 Enum.PowerType.Rage = 1
 UnitPowerType = function()
@@ -98,6 +115,82 @@ return {
 			end
 			wow.advance(0.1)
 			t.equal(maxGiven, "secret max", "passed straight to the bar")
+		end)
+
+		t.test("the arrows: top, bottom or both, and their size", function()
+			local top, bottom = mark.Arrows()
+			t.ok(top:IsShown() and not bottom:IsShown(), "top by default")
+			ns:SetSetting("warriorTacticalMasteryPosition", "both")
+			t.ok(top:IsShown() and bottom:IsShown(), "both")
+			ns:SetSetting("warriorTacticalMasteryPosition", "bottom")
+			t.ok(not top:IsShown() and bottom:IsShown(), "bottom")
+			ns:SetSetting("warriorTacticalMasterySize", 1.5)
+			t.equal(bottom:GetWidth(), 15, "bigger")
+			ns:SetSetting("warriorTacticalMasterySize", 1)
+			ns:SetSetting("warriorTacticalMasteryPosition", "top")
+		end)
+
+		local procs = ns.warriorProcs
+		local function Glow()
+			for _, frame in ipairs(wow.frames) do
+				if rawget(frame, "parent") == button and frame.alert then
+					return frame
+				end
+			end
+		end
+
+		t.test("a proc lights its action button, with a sound if you want one", function()
+			ns:SetSetting("warriorProcSound", true)
+			ns:SetSetting("warriorProcSoundChoice", "kit:READY_CHECK")
+			local sounds = #wow.played
+			usable[7384] = "up"
+			wow.fire("SPELL_UPDATE_USABLE")
+			t.equal(procs.State("Overpower"), "up", "Overpower is up")
+			t.equal(#wow.played, sounds + 1, "a sound")
+			wow.advance(0.5)
+			t.ok(Glow() and Glow():IsShown(), "the button glows")
+			t.equal(Glow():GetAlpha(), 1, "brightly")
+		end)
+
+		t.test("short of rage, the glow dims instead of going", function()
+			usable[7384] = "rage"
+			wow.fire("UNIT_POWER_FREQUENT", "player")
+			t.equal(procs.State("Overpower"), "dim", "still up")
+			wow.advance(1)
+			t.equal(Glow():GetAlpha(), 0.4, "dimmed")
+			usable[7384] = "up"
+			wow.fire("UNIT_POWER_FREQUENT", "player")
+			wow.advance(1)
+			t.equal(Glow():GetAlpha(), 1, "bright again")
+		end)
+
+		t.test("a proc that runs out unused teaches its time; a used one doesn't", function()
+			wow.advance(2) -- up for 4.5 seconds now
+			usable[7384] = nil
+			wow.fire("SPELL_UPDATE_USABLE")
+			t.equal(procs.State("Overpower"), nil, "gone")
+			t.equal(procs.Window("Overpower"), 4.5, "learned: 4.5 seconds")
+			wow.advance(1)
+			t.ok(not Glow():IsShown(), "the glow faded away")
+
+			usable[7384] = "up"
+			wow.fire("SPELL_UPDATE_USABLE")
+			wow.advance(6)
+			wow.fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast", 7384)
+			usable[7384] = nil
+			wow.fire("SPELL_UPDATE_USABLE")
+			t.equal(procs.Window("Overpower"), 4.5, "used after 6: not its time")
+		end)
+
+		t.test("a proc that's turned off doesn't glow", function()
+			ns:SetSetting("warriorProcOverpower", false)
+			usable[7384] = "up"
+			wow.fire("SPELL_UPDATE_USABLE")
+			t.equal(procs.State("Overpower"), nil, "off")
+			ns:SetSetting("warriorProcOverpower", true)
+			t.equal(procs.State("Overpower"), "up", "back on")
+			usable[7384] = nil
+			wow.fire("SPELL_UPDATE_USABLE")
 		end)
 
 		t.test("turned off, the mark fades away", function()
