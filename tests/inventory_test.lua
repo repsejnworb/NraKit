@@ -1,4 +1,4 @@
--- Inventory Tracker and names: characters are "Firstname Surname", two of yours can share a
+-- Inventory tracker and names: characters are "Firstname Surname", two of yours can share a
 -- first name, and data saved by older versions under the first name alone moves over.
 
 -- You're "Nra Kit". hooksecurefunc really hooks here (for SendMail and the AH's buy calls).

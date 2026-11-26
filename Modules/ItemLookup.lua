@@ -20,7 +20,7 @@ local _, ns = ...
 
 local module = {
 	key = "itemLookup",
-	section = "Utilities",
+	section = "Tools",
 	name = "Item lookup",
 	description = "Search every item in the game by name: /nra item nightbl lists the matching items in a window, with their tooltips. The list of names fills in by itself in the background (a few minutes, once per game version).",
 	default = false,

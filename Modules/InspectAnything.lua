@@ -34,7 +34,7 @@ local _, ns = ...
 
 local module = {
 	key = "inspectAnything",
-	section = "Utilities",
+	section = "Social",
 	name = "Inspect anything",
 	description = "One key (Key Bindings > NraKit) inspects your target (or what's under the mouse when you have none), in a window like the inspect window that stays open until you close it: players with their gear (it loads after combat if needed), and NPCs as a 3D model you can turn, move and zoom.",
 	default = false,

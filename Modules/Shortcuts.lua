@@ -18,7 +18,7 @@ local _, ns = ...
 
 local module = {
 	key = "shortcuts",
-	section = "Utilities",
+	section = "Tools",
 	name = "Shortcuts",
 	description = "Short commands for NraKit's everyday ones: /remind for /nra remind, /goal for /nra goal and so on. Only ones no other addon (or the game) uses: those are left alone, and /nra always works. /nra shortcuts lists them and which are in use elsewhere.",
 	default = false,

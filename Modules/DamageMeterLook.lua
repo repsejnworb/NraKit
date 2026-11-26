@@ -16,7 +16,7 @@ local _, ns = ...
 
 local module = {
 	key = "damageMeterLook",
-	section = "Utilities",
+	section = "Interface",
 	name = "Damage meter look",
 	description = "A clean, flat look for the game's damage meter: a thin header with small buttons, flat bars and outlined text. Size, style and colours stay in Edit Mode.",
 	default = false,

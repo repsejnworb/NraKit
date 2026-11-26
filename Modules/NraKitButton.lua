@@ -59,7 +59,7 @@ end
 
 local module = {
 	key = "nraButton",
-	section = "Utilities",
+	section = "Tools",
 	name = "NraKit button",
 	description = "NraKit's icon on screen, wherever you drag it. A badge counts what's waiting for you, like due reminders. Pick what left-click and shift-click do; right-click is NraKit's menu.",
 	default = false,

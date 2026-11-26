@@ -63,7 +63,7 @@ local module = {
 		{
 			key = "auctionatorHave",
 			name = "Show how many you have",
-			description = "In tooltips, how many of each reagent you have on all your characters (with Inventory Tracker on; else in your bags and bank): green if your bags hold enough, yellow if you have enough elsewhere (bank, other characters), grey if not. A recipe also shows what's left to buy.",
+			description = "In tooltips, how many of each reagent you have on all your characters (with Inventory tracker on; else in your bags and bank): green if your bags hold enough, yellow if you have enough elsewhere (bank, other characters), grey if not. A recipe also shows what's left to buy.",
 			default = true,
 		},
 		{
@@ -242,7 +242,7 @@ function prices.WhereText(itemID)
 		return nil
 	end
 	if not holders then
-		-- Without Inventory Tracker: your bags and bank.
+		-- Without Inventory tracker: your bags and bank.
 		local bags = C_Item.GetItemCount(itemID) or 0
 		local parts = {}
 		if bags > 0 then
@@ -625,7 +625,7 @@ function shopping.Clear()
 	ShoppingChanged()
 end
 
--- How many you have: the total over your characters (Inventory Tracker's data, with who has
+-- How many you have: the total over your characters (Inventory tracker's data, with who has
 -- how many: { { label, class, total, where }, ... }), or your bags and bank without it.
 function prices.Have(itemID)
 	if ns.inventory and ns.inventory.Holders and ns:IsModuleEnabled("inventoryTracker") then

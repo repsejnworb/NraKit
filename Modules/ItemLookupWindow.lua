@@ -2,7 +2,7 @@ local _, ns = ...
 
 -- The Item lookup window (/nra item <name>): a search box, a bar showing how complete the
 -- list of names is (with Pause / Resume, or Check again once it's done), and the matching items (icon, name in its quality colour, type, required
--- level, and how many your characters have if Inventory Tracker is on). Hover for the
+-- level, and how many your characters have if Inventory tracker is on). Hover for the
 -- tooltip; Shift-click links an item in chat, Ctrl-click previews it, right-click adds it to
 -- the wishlist (while Wishlist is on). The list of names is ItemLookup.lua's.
 
@@ -28,7 +28,7 @@ local function QualityColor(quality)
 	return 1, 1, 1
 end
 
--- How many of the item your characters have (Inventory Tracker), or 0.
+-- How many of the item your characters have (Inventory tracker), or 0.
 local function Owned(itemID)
 	if not ns:IsModuleEnabled("inventoryTracker") then
 		return 0

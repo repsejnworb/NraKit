@@ -1,4 +1,4 @@
--- Unit Scanner alerts for players labelled Kill on sight (Player notes), with an empty scan list.
+-- Unit scanner alerts for players labelled Kill on sight (Player notes), with an empty scan list.
 
 return {
 	enable = { "playerNotes", "unitScanner" },
@@ -44,7 +44,7 @@ return {
 			ns:SetSetting("playerNotesScanHostile", true)
 		end)
 
-		t.test("the option is greyed out without Unit Scanner", function()
+		t.test("the option is greyed out without Unit scanner", function()
 			ns:SetSetting("unitScanner", false)
 			ns:OpenSettings("player notes", "playerNotes")
 			local check
@@ -57,7 +57,7 @@ return {
 			t.ok(not check:IsEnabled(), "greyed out")
 			ns:SetSetting("unitScanner", true)
 			ns:OpenSettings("player notes", "playerNotes")
-			t.ok(check:IsEnabled(), "enabled again with Unit Scanner on")
+			t.ok(check:IsEnabled(), "enabled again with Unit scanner on")
 		end)
 	end,
 }

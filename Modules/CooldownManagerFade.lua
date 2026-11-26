@@ -12,7 +12,7 @@ local _, ns = ...
 
 local module = {
 	key = "cooldownManagerFade",
-	section = "Utilities",
+	section = "Interface",
 	name = "Cooldown Manager fade",
 	description = "The game's Cooldown Manager bars show in combat and fade out a while after it (animated), instead of just vanishing. Set the bars to \"Always\" in Edit Mode: one set to \"In combat\" is hidden by the game before it can fade.",
 	default = false,

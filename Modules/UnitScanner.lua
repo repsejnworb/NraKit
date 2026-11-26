@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Unit Scanner: alerts you when a unit from your own list shows up nearby.
+-- Unit scanner: alerts you when a unit from your own list shows up nearby.
 --
 -- Addons can no longer probe for units by name (the old unitscan TargetUnit trick
 -- is protected), so we only look at units the client already gives us: nameplates
@@ -28,8 +28,8 @@ local MarkerLabel
 
 local module = {
 	key = "unitScanner",
-	section = "Units & Nameplates",
-	name = "Unit Scanner",
+	section = "Trackers & Reminders",
+	name = "Unit scanner",
 	description = "Alerts you when a mob or player from your list shows up nearby (nameplate range, mouseover, targets and minimap markers). Manage the list with /nra scan: target a unit and type /nra scan, or /nra scan <name or NPC ID>, /nra scan list, /nra scan remove <# or name>.",
 	default = false,
 	options = {
@@ -291,7 +291,7 @@ local BUTTON_SIZE = 36
 local BUTTON_POSITION_KEY = "unitScanButtonPosition"
 local DEFAULT_BUTTON_POSITION = { "CENTER", 0, 240 }
 
-_G["BINDING_NAME_CLICK " .. BUTTON_NAME .. ":LeftButton"] = "Target the unit Unit Scanner found"
+_G["BINDING_NAME_CLICK " .. BUTTON_NAME .. ":LeftButton"] = "Target the unit Unit scanner found"
 
 local targetButton
 -- Secure attributes, Show and Hide can't change in combat; these wait for REGEN_ENABLED.
@@ -367,7 +367,7 @@ local function CreateTargetButton()
 	end)
 	button:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
-		GameTooltip:AddLine("Unit Scanner")
+		GameTooltip:AddLine("Unit scanner")
 		GameTooltip:AddLine("Click to target: " .. (self.name or "?"), 1, 1, 1)
 		GameTooltip:AddLine("Right-click to dismiss, Shift-drag to move.", 0.7, 0.7, 0.7)
 		local key = GetBindingKey("CLICK " .. BUTTON_NAME .. ":LeftButton")
@@ -441,7 +441,7 @@ local function Alert(entry, source)
 end
 
 -- /nra preview scan: the alert's text and sound, for a made-up find.
-ns:RegisterPreview("scan", "Unit Scanner: the alert when a unit is found (text and sound)", function()
+ns:RegisterPreview("scan", "Unit scanner: the alert when a unit is found (text and sound)", function()
 	if ns:GetOption("unitScanSound") then
 		ns.sounds.PlayOption("unitScanSoundChoice", "kit:RAID_WARNING")
 	end
@@ -583,7 +583,7 @@ local USAGE = {
 	"/nra scan clear - empty the list",
 }
 
-local HELP = { summary = "Unit Scanner: the list of mobs and players to look for", usage = USAGE }
+local HELP = { summary = "Unit scanner: the list of mobs and players to look for", usage = USAGE }
 
 local function PrintUsage()
 	ns:PrintCommandHelp("scan")
@@ -591,7 +591,7 @@ end
 
 local function WarnIfInactive()
 	if not ns:IsModuleEnabled(module.key) then
-		ns:Print("Unit Scanner is turned off. Turn it on in /nra to start scanning.")
+		ns:Print("Unit scanner is turned off. Turn it on in /nra to start scanning.")
 	elseif GetCVar("nameplateShowEnemies") == "0" and not ns:UnitScanWantsEnemyNameplates() then
 		ns:Print("Enemy nameplates are off, so only mouseover, targets and minimap markers are scanned.")
 	end

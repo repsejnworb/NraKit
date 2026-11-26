@@ -8,8 +8,8 @@ local _, ns = ...
 
 local module = {
 	key = "leaveGroup",
-	section = "Utilities",
-	name = "/leave leaves your group",
+	section = "Social",
+	name = "Leave group with /leave",
 	description = "Type /leave (with nothing after it) or /leavegroup to leave your party, raid or instance group. /leave <channel> still leaves a chat channel.",
 	default = false,
 }

@@ -6,7 +6,7 @@ local _, ns = ...
 -- New goal form: pick a type (Item, Level, XP, Gold). An item can be dropped on the
 -- slot, shift-clicked while the name box has focus, or typed. Item and gold goals can
 -- start from what you already have: tick bags, bank, mail and other characters (the
--- last two need Inventory Tracker's data) and the starting count updates live.
+-- last two need Inventory tracker's data) and the starting count updates live.
 -- "Edit" fills the same form with an existing goal (type fixed) to fix its target,
 -- item, starting count or sounds without recreating it.
 --
@@ -678,7 +678,7 @@ function UpdateForm()
 	form.startText:ClearAllPoints()
 	form.startText:SetPoint("TOPLEFT", lastSeed, "BOTTOMLEFT", 2, -24)
 	if holdings and not holdings.trackerOn then
-		form.othersText:SetText("Turn on Inventory Tracker to include mail and other characters.")
+		form.othersText:SetText("Turn on Inventory tracker to include mail and other characters.")
 	else
 		form.othersText:SetText(table.concat(others, "  ·  "))
 	end

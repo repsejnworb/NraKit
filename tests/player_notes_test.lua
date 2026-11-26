@@ -1,5 +1,5 @@
 -- Player notes: names, labels, tags, the chat command, tooltip, right-click menu, warnings,
--- the window, and Unit Scanner alerts for Hostile players.
+-- the window, and Unit scanner alerts for Hostile players.
 
 return {
 	enable = { "playerNotes" },

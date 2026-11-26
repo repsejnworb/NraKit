@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Inventory Tracker: remembers what each of your characters has in their bags,
+-- Inventory tracker: remembers what each of your characters has in their bags,
 -- bank, mailbox and equipped, and lists it in item tooltips ("Bob: 12 (Bags 5,
 -- Bank 7)"). Hovering your gold in the bags lists every character's gold (an option).
 --
@@ -25,7 +25,7 @@ local _, ns = ...
 local module = {
 	key = "inventoryTracker",
 	section = "Bags & Items",
-	name = "Inventory Tracker",
+	name = "Inventory tracker",
 	description = "Item tooltips show how many of the item each of your characters has, and where (bags, bank, mail, equipped). Visit the bank and the mailbox once on each character so they're known. /nra inv opens a browser of every character's bags, bank and mail.",
 	default = false,
 	options = {
@@ -536,7 +536,7 @@ local function OnSlashCommand(input)
 		ListCharacters()
 		print("  /nra inv forget <first name> <surname> - remove a character (e.g. a deleted one)")
 	elseif not ns:IsModuleEnabled(module.key) then
-		ns:Print("Turn on Inventory Tracker first (/nra).")
+		ns:Print("Turn on Inventory tracker first (/nra).")
 	else
 		ns:OpenInventoryBrowser()
 	end

@@ -15,7 +15,7 @@ local _, ns = ...
 
 local module = {
 	key = "microMenuNotifications",
-	section = "Utilities",
+	section = "Interface",
 	name = "Hide micro menu notifications",
 	description = "Hides the blue notification dot on micro menu buttons that keep showing it.",
 	default = false,

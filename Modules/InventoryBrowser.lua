@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Inventory browser (/nra inv): a window over Inventory Tracker's data.
+-- Inventory browser (/nra inv): a window over Inventory tracker's data.
 --
 -- Sidebar: "All characters", then each character (class colour, level, gold); right-
 -- click one to forget it. Top: location tabs (All, Bags, Bank, Mail, Equipped), a
@@ -723,7 +723,7 @@ end
 
 function ns:OpenInventoryBrowser()
 	if not ns:IsModuleEnabled("inventoryTracker") then
-		ns:Print("Turn on Inventory Tracker first (/nra).")
+		ns:Print("Turn on Inventory tracker first (/nra).")
 		return
 	end
 	if not frame then

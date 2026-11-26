@@ -32,6 +32,7 @@ ns.changelog = {
 				"Turn each on or off. One whose feature is off isn't taken.",
 			} },
 		{ "improved", title = "What's new", "Easier to read: each new feature has its name, a one-line summary and bullet points, with key words picked out." },
+		{ "improved", title = "Settings", "Features are sorted into clearer sections: **Interface**, Classes, Quests, Bags & Items, Professions, Mail, Trackers & Reminders, **Social** and **Tools**, and a few have shorter names." },
 	} },
 	{ version = "0.31.0", date = "2026-11-26", entries = {
 		{ "new", title = "Cooldown Manager fade", module = "cooldownManagerFade",

@@ -472,7 +472,7 @@ local function AddTypedNote()
 end
 
 local TONE_HELP = {
-	hostile = "Warnings when they join your group, invite, whisper or trade you, and Unit Scanner alerts when they're nearby.",
+	hostile = "Warnings when they join your group, invite, whisper or trade you, and Unit scanner alerts when they're nearby.",
 	caution = "Warnings when they join your group, invite, whisper or trade you.",
 	neutral = "Shown in their tooltip.",
 	friendly = "Shown in their tooltip, with a rating if you give them one (the stars next to Liked).",
@@ -842,7 +842,7 @@ local EMPTY_TEXT = table.concat({
 	"",
 	"|cffffd100From chat:|r /nra note Bob Stone kos #ninjalooter stole my node  (or /nra note kos ... for your target).",
 	"",
-	"Their label and latest note show in their tooltip. Players labelled Avoid or Kill on sight warn you when they join your group, invite, whisper or trade you, and Unit Scanner alerts you when a Kill on sight player is nearby.",
+	"Their label and latest note show in their tooltip. Players labelled Avoid or Kill on sight warn you when they join your group, invite, whisper or trade you, and Unit scanner alerts you when a Kill on sight player is nearby.",
 }, "\n")
 
 local function CreateEmptyPage(body)

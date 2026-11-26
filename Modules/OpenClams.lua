@@ -1,6 +1,6 @@
 local _, ns = ...
 
--- Open Clams: a button in the bag's money row (bottom left) that opens the next clam (or any
+-- Open clams: a button in the bag's money row (bottom left) that opens the next clam (or any
 -- other "Right Click to Open" item) in your bags, one per click. It shows the next
 -- item's icon and how many are left. Also bindable to a key.
 --
@@ -13,7 +13,7 @@ local _, ns = ...
 local module = {
 	key = "openClams",
 	section = "Bags & Items",
-	name = "Open Clams",
+	name = "Open clams",
 	description = "Adds a button at the bottom left of your bags, next to your money, that opens the next clam or other openable container in your bags, one per click. You can also bind it to a key under Key Bindings > NraKit.",
 	default = false,
 	options = {
@@ -236,7 +236,7 @@ end
 
 local function ShowTooltip(self)
 	GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-	GameTooltip_SetTitle(GameTooltip, "Open Clams")
+	GameTooltip_SetTitle(GameTooltip, "Open clams")
 	if nextItem then
 		GameTooltip_AddNormalLine(GameTooltip, "Click to open: " .. (nextItem.link or ""))
 		GameTooltip_AddNormalLine(GameTooltip, string.format("%d left to open.", totalCount))

@@ -115,7 +115,7 @@ local function OnHaveEnter(self)
 			GameTooltip:AddDoubleLine(holder.label, string.format("%d (%s)", holder.total, holder.where), r, g, b, 1, 1, 1)
 		end
 	else
-		GameTooltip_AddNormalLine(GameTooltip, "In your bags and bank. Turn on Inventory Tracker to count all your characters.", true)
+		GameTooltip_AddNormalLine(GameTooltip, "In your bags and bank. Turn on Inventory tracker to count all your characters.", true)
 	end
 	GameTooltip:Show()
 end

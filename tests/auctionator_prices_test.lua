@@ -356,7 +356,7 @@ return {
 			items[IRON_BAR].bags, items[IRON_BAR].bank, items[GREEN_DYE].bags = 2, 1, 0
 		end)
 
-		t.test("where: with Inventory Tracker, you first then your other characters, a few at most", function()
+		t.test("where: with Inventory tracker, you first then your other characters, a few at most", function()
 			NraKitDB.inventoryTracker = true
 			local holders = function()
 				return {
@@ -464,7 +464,7 @@ return {
 			ns:SetSetting("auctionatorShopping", true)
 		end)
 
-		t.test("how many you have: bags and bank without Inventory Tracker", function()
+		t.test("how many you have: bags and bank without Inventory tracker", function()
 			t.equal(prices.Have(IRON_BAR), 3, "2 + 1")
 		end)
 
