@@ -10,7 +10,7 @@ local _, ns = ...
 -- (C_TradeSkillUI.GetProfessionInfoByRecipeID), readable without the profession window,
 -- along with what it makes and needs (GetRecipeSchematic). The spells are checked once per
 -- game version, in the background, and the recipe IDs saved (NraKitDB.recipeLookupData =
--- { build, ids = { recipeID, ... } }). Enchants make no item: they have no output.
+-- { build, filter, ids = { recipeID, ... } }). Enchants make no item: they have no output.
 
 local MAX_SPELL_ID = 1500000
 local SPELL_CHUNK = 50000 -- spell IDs read per frame
@@ -121,9 +121,24 @@ local function Data()
 	return NraKitDB.recipeLookupData
 end
 
+-- A real profession recipe: its skill line is one of the professions (info.profession is set
+-- only for those: racial skills, Lockpicking, Riding, Poisons, test lines have none), and it
+-- makes something or needs reagents (an enchant: reagents, no item), unlike "Find Herbs".
 local function IsRecipe(id)
 	local info = C_TradeSkillUI.GetProfessionInfoByRecipeID(id)
-	return info ~= nil and info.professionName ~= nil and info.professionName ~= ""
+	if not (info and info.profession ~= nil and info.professionName and info.professionName ~= "") then
+		return false
+	end
+	local schematic = C_TradeSkillUI.GetRecipeSchematic(id, false)
+	return schematic ~= nil and (schematic.outputItemID ~= nil or #(schematic.reagentSlotSchematics or {}) > 0)
+end
+recipes.IsRecipe = IsRecipe
+
+-- Saved recipe lists made with another filter are found again (bump when IsRecipe changes).
+local FILTER_VERSION = 2
+
+local function Saved(data)
+	return data.build == BuildKey() and data.filter == FILTER_VERSION and data.ids ~= nil
 end
 
 recipeFinder:SetScript("OnUpdate", function(self)
@@ -141,7 +156,7 @@ recipeFinder:SetScript("OnUpdate", function(self)
 	if recipeIndex > #spellList then
 		self:Hide()
 		local data = Data()
-		data.build, data.ids = BuildKey(), found
+		data.build, data.filter, data.ids = BuildKey(), FILTER_VERSION, found
 		found = nil
 		if recipes.onReady then
 			recipes.onReady()
@@ -152,7 +167,7 @@ end)
 -- Finds the recipes (once per game version; needs the spells read first).
 function recipes.Start()
 	local data = Data()
-	if data.build == BuildKey() and data.ids then
+	if Saved(data) then
 		return
 	end
 	if not spellList or spells.Progress() then
@@ -168,7 +183,7 @@ end
 -- { checked, total } while finding them, nil once known.
 function recipes.Progress()
 	local data = Data()
-	if data.build == BuildKey() and data.ids then
+	if Saved(data) then
 		return nil
 	end
 	if found then

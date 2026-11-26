@@ -21,8 +21,17 @@ ChatEdit_InsertLink = function(link)
 end
 
 -- One recipe: Green Iron Bracers (Blacksmithing), 6 Copper Bar + 1 Green Dye.
+-- 2580 is a skill line's spell that isn't a profession (like a racial), and 2581 is a
+-- profession's spell that isn't a recipe ("Find Herbs": no reagents, makes nothing).
+SPELLS[2581] = "Find Herbs"
 C_TradeSkillUI.GetProfessionInfoByRecipeID = function(id)
-	return id == 3501 and { professionName = "Blacksmithing" } or nil
+	if id == 3501 then
+		return { professionName = "Blacksmithing", profession = 1 }
+	elseif id == 2580 then
+		return { professionName = "Racial - Troll" } -- no profession
+	elseif id == 2581 then
+		return { professionName = "Herbalism", profession = 4 }
+	end
 end
 C_TradeSkillUI.GetRecipeSchematic = function(id)
 	if id == 3501 then
@@ -46,6 +55,8 @@ Auctionator = { API = { v1 = {
 
 return {
 	enable = { "itemLookup" },
+	-- Found with the old filter (racials and all): found again.
+	db = { recipeLookupData = { build = "nil.nil", ids = { 2580, 3501 } } },
 	run = function(t, ns, wow)
 		local function Settle()
 			for _ = 1, 40 do
@@ -87,7 +98,12 @@ return {
 		t.test("Recipes: found by profession, with cost, sells for and profit", function()
 			ns:RunSlashCommand("recipe bracers")
 			Settle()
-			t.equal(ns.recipeLookup.Count(), 1, "one recipe (the other spells have no profession)")
+			-- Regression: racial skills, Lockpicking, Riding... showed as professions.
+			t.equal(ns.recipeLookup.Count(), 1, "one recipe: not the racial skill's spell, nor Find Herbs")
+			t.ok(not ns.recipeLookup.IsRecipe(2580), "a racial skill isn't a profession")
+			t.ok(not ns.recipeLookup.IsRecipe(2581), "a profession spell that makes nothing isn't a recipe")
+			local professions = ns.recipeLookup.Professions()
+			t.equal(table.concat(professions, ","), "Blacksmithing", "the only profession chip")
 			local recipe = ns.recipeLookup.Get(3501)
 			t.equal(recipe.profession, "Blacksmithing", "its profession")
 			t.equal(#recipe.reagents, 2, "its reagents")
