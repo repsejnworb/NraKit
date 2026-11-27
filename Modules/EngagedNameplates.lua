@@ -142,18 +142,23 @@ local function HasThreatOn(unit, mob)
 	return IsSecret(status) or status ~= nil
 end
 
+-- The group's unit tokens, made once (not two new strings per member, per plate, per update).
+local RAID, RAID_PETS, PARTY, PARTY_PETS = {}, {}, {}, {}
+for i = 1, 40 do
+	RAID[i], RAID_PETS[i] = "raid" .. i, "raidpet" .. i
+end
+for i = 1, 4 do
+	PARTY[i], PARTY_PETS[i] = "party" .. i, "partypet" .. i
+end
+
 local function IsEngagedWithGroup(mob)
+	local units, pets, count = PARTY, PARTY_PETS, GetNumSubgroupMembers()
 	if IsInRaid() then
-		for i = 1, GetNumGroupMembers() do
-			if HasThreatOn("raid" .. i, mob) or HasThreatOn("raidpet" .. i, mob) then
-				return true
-			end
-		end
-	else
-		for i = 1, GetNumSubgroupMembers() do
-			if HasThreatOn("party" .. i, mob) or HasThreatOn("partypet" .. i, mob) then
-				return true
-			end
+		units, pets, count = RAID, RAID_PETS, GetNumGroupMembers()
+	end
+	for i = 1, math.min(count, #units) do
+		if HasThreatOn(units[i], mob) or HasThreatOn(pets[i], mob) then
+			return true
 		end
 	end
 	return false
@@ -179,6 +184,10 @@ local function ShouldShowFullPlate(unit, unitFrame)
 	return false
 end
 
+-- Bumped when a look option changes: overlays restyle once, not on every update.
+local styleVersion = 0
+local ApplyStyle -- (below)
+
 local function GetOverlay(plate)
 	local overlay = overlays[plate]
 	if not overlay then
@@ -192,6 +201,21 @@ end
 
 local function StyleOverlay(overlay, unit)
 	local text = overlay.text
+	if overlay.styled ~= styleVersion then
+		overlay.styled = styleVersion
+		ApplyStyle(overlay, text)
+	end
+	-- Values may be secret; FontStrings accept those, we just never compare them.
+	text:SetText(UnitName(unit))
+	local tapped = UnitIsTapDenied(unit)
+	if not IsSecret(tapped) and tapped then
+		text:SetTextColor(TAPPED_COLOR.r, TAPPED_COLOR.g, TAPPED_COLOR.b)
+	else
+		text:SetTextColor(UnitSelectionColor(unit))
+	end
+end
+
+function ApplyStyle(overlay, text)
 	local flags = ns:GetOption("engagedNameplatesNameOutline") and "OUTLINE" or ""
 	text:SetFont(UNIT_NAME_FONT, ns:GetValue("engagedNameplatesNameSize") or 11, flags)
 	if ns:GetOption("engagedNameplatesNameShadow") then
@@ -205,15 +229,6 @@ local function StyleOverlay(overlay, unit)
 	text:ClearAllPoints()
 	-- The bottom of the plate sits just above the unit's head.
 	text:SetPoint("BOTTOM", overlay, "BOTTOM", 0, ns:GetValue("engagedNameplatesNameOffset") or 0)
-
-	-- Values may be secret; FontStrings accept those, we just never compare them.
-	text:SetText(UnitName(unit))
-	local tapped = UnitIsTapDenied(unit)
-	if not IsSecret(tapped) and tapped then
-		text:SetTextColor(TAPPED_COLOR.r, TAPPED_COLOR.g, TAPPED_COLOR.b)
-	else
-		text:SetTextColor(UnitSelectionColor(unit))
-	end
 end
 
 local function HideOverlay(plate)
@@ -258,8 +273,11 @@ local function UpdatePlate(unit)
 end
 
 local function UpdateAllPlates()
+	-- Hidden ones whose plate went away (the plates below cover the rest).
 	for unit in pairs(hiddenFrames) do
-		UpdatePlate(unit)
+		if not C_NamePlate.GetNamePlateForUnit(unit) then
+			UpdatePlate(unit)
+		end
 	end
 	for _, plate in pairs(C_NamePlate.GetNamePlates()) do
 		local unit = plate.unitToken
@@ -359,13 +377,32 @@ function ns:RefreshEngagedNameplateCVars()
 	UpdateAllPlates()
 end
 
+-- Threat and the group change many times a second in a group fight: every plate is looked at
+-- once a frame at most. Plates just added are looked at again next frame (Blizzard's driver
+-- may not have attached its UnitFrame yet).
+local allPending = false
+local addedPending = {}
+local nextFrame = CreateFrame("Frame")
+nextFrame:Hide()
+nextFrame:SetScript("OnUpdate", function(self)
+	self:Hide()
+	if allPending then
+		allPending = false
+		wipe(addedPending)
+		UpdateAllPlates()
+	else
+		for unit in pairs(addedPending) do
+			addedPending[unit] = nil
+			UpdatePlate(unit)
+		end
+	end
+end)
+
 local function OnEvent(_, event, unit)
 	if event == "NAME_PLATE_UNIT_ADDED" then
 		UpdatePlate(unit)
-		-- In case Blizzard's driver hasn't attached its UnitFrame to the plate yet.
-		C_Timer.After(0, function()
-			UpdatePlate(unit)
-		end)
+		addedPending[unit] = true
+		nextFrame:Show()
 	elseif event == "NAME_PLATE_UNIT_REMOVED" then
 		RestorePlate(unit)
 	elseif event == "UNIT_THREAT_LIST_UPDATE" or event == "UNIT_NAME_UPDATE" or event == "UNIT_FACTION" then
@@ -383,11 +420,11 @@ local function OnEvent(_, event, unit)
 		UpdateAllPlates()
 	elseif event == "CVAR_UPDATE" then
 		OnCVarUpdate(unit)
-	elseif event == "PLAYER_TARGET_CHANGED" or event == "PLAYER_FOCUS_CHANGED" then
-		-- Wait a frame so Blizzard's plates have updated their isTarget/isFocus flags.
-		C_Timer.After(0, UpdateAllPlates)
 	else
-		UpdateAllPlates()
+		-- Target and focus: a frame later anyway, so Blizzard's plates have updated their
+		-- isTarget/isFocus flags.
+		allPending = true
+		nextFrame:Show()
 	end
 end
 
@@ -434,6 +471,7 @@ function module:OnEnabledChanged(enabled)
 end
 
 function module:OnOptionChanged(key)
+	styleVersion = styleVersion + 1
 	if key == "engagedNameplatesCombatToggle" or key == "engagedNameplatesFarScale" then
 		ApplyCVars()
 	end

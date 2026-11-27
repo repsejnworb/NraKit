@@ -139,6 +139,7 @@ local function Glyph(state, button, text, icon)
 	end
 	if glyph.text then
 		glyph.text:SetText(text)
+		glyph.open = nil -- the minimize glyph is set again on the next look
 	end
 	HideArt(button, glyph.icon)
 	glyph.highlight:SetAlpha(1)
@@ -232,20 +233,30 @@ end
 -- What fades in on hover: the buttons, the session name and the title's arrow. The title stays.
 -- Checked against their actual alpha every time, not a remembered state: something can show
 -- them again after we hid them (it did, right after loading).
+-- (Runs every frame: no new tables or strings.)
+local function Fade(control, alpha)
+	if control and math.abs(control:GetAlpha() - alpha) > 0.01 then
+		control:SetAlpha(alpha)
+	end
+end
+
 local function UpdateHover(window, state)
 	local shown = not ns:GetOption("damageMeterLookHover") or window:IsMouseOver()
 		or (EditModeManagerFrame and EditModeManagerFrame:IsShown())
 	local alpha = shown and 1 or 0
-	for _, control in pairs({ window.SessionDropdown, window.SettingsDropdown, window.MinimizeButton, state.arrow }) do
-		if math.abs(control:GetAlpha() - alpha) > 0.01 then
-			control:SetAlpha(alpha)
-		end
-	end
+	Fade(window.SessionDropdown, alpha)
+	Fade(window.SettingsDropdown, alpha)
+	Fade(window.MinimizeButton, alpha)
+	Fade(state.arrow, alpha)
 	-- Minimized or not.
 	local glyph = window.MinimizeButton and state.glyphs[window.MinimizeButton]
 	local container = window.MinimizeContainer
 	if glyph and container then
-		glyph.text:SetText(container:IsShown() and "-" or "+")
+		local open = container:IsShown()
+		if glyph.open ~= open then
+			glyph.open = open
+			glyph.text:SetText(open and "-" or "+")
+		end
 	end
 end
 

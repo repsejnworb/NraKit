@@ -680,6 +680,23 @@ return {
 			wow.fire("ZONE_CHANGED_NEW_AREA")
 		end)
 
+		-- Regression: deleted while counting down, it stayed counting forever, the list redrawing
+		-- 4 times a second until /reload.
+		t.test("a zone to-do deleted while it counts down stops counting", function()
+			wow.data.zone = "Ironforge"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+			SlashCmdList.NRAKIT("todo in ironforge: sell the ore")
+			local todo = Mine("sell the ore")
+			wow.data.zone = "Dun Morogh"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+			t.ok(reminders.LeftAgo(todo) ~= nil, "counting down")
+			reminders.Remove(todo.id)
+			wow.advance(0.3)
+			t.equal(reminders.LeftAgo(todo), nil, "forgotten")
+			wow.data.zone = "Elwynn Forest"
+			wow.fire("ZONE_CHANGED_NEW_AREA")
+		end)
+
 		t.test("arriving where you have a reminder and a to-do: both in the message, under REMINDERS & TO-DO", function()
 			local show, shown = ns.toast.Show, nil
 			ns.toast.Show = function(spec)

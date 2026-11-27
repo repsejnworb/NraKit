@@ -30,15 +30,24 @@ local hookedBars = {}
 -- we touched them, so we can put it back when the unit becomes an NPC.
 local originalStates = {}
 
+-- Each class's colour, read once: C_ClassColor makes a new table per call, and bars update on
+-- every health change.
+local classColors = {}
+
 local function GetUnitClassColor(unit)
 	local _, classFile = UnitClass(unit)
 	if not classFile then
 		return nil
 	end
-	if C_ClassColor and C_ClassColor.GetClassColor then
-		return C_ClassColor.GetClassColor(classFile)
+	local color = classColors[classFile]
+	if not color then
+		if C_ClassColor and C_ClassColor.GetClassColor then
+			color = C_ClassColor.GetClassColor(classFile)
+		end
+		color = color or RAID_CLASS_COLORS and RAID_CLASS_COLORS[classFile]
+		classColors[classFile] = color
 	end
-	return RAID_CLASS_COLORS and RAID_CLASS_COLORS[classFile]
+	return color
 end
 
 local function SetBarColor(bar, color)

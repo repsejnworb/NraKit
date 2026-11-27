@@ -810,7 +810,9 @@ function reminders.CheckLeaving()
 	local zones, now = CurrentZones(), GetTime()
 	local delay = ns:GetValue("remindersZoneLeaveDelay") or 10
 	local changed = false
+	local listed = {}
 	for _, reminder in ipairs(reminders.List()) do
+		listed[reminder] = true
 		if reminder.state == "due" and reminder.quiet and reminder.kind == "zone" and reminder.zone and not reminder.stay then
 			if zones[reminder.zone:lower()] then
 				leaving[reminder] = nil
@@ -826,6 +828,13 @@ function reminders.CheckLeaving()
 				end
 			end
 		else
+			leaving[reminder] = nil
+		end
+	end
+	-- Deleted (or moved to another character) while counting down: forget it, or the list
+	-- kept redrawing 4 times a second until /reload.
+	for reminder in pairs(leaving) do
+		if not listed[reminder] then
 			leaving[reminder] = nil
 		end
 	end
@@ -1210,6 +1219,7 @@ local function FillRow(row, reminder, withNote, withTag)
 	row.canMove = reminder.state == "due"
 	local done = reminder.state == "done"
 	row.check:SetChecked(done)
+	row.withTag = withTag
 	row.text:SetText((withTag and reminders.Tag(reminder) or "") .. reminder.text)
 	row.text:SetAlpha(done and 0.45 or 1)
 	if withNote then
@@ -1644,7 +1654,12 @@ local function CreateTracker()
 		if next(leaving) and self.leaveClock >= 0.25 then
 			self.leaveClock = 0
 			reminders.CheckLeaving()
-			RefreshTracker()
+			-- Just the counting rows' tags (the whole list redraws when one leaves it).
+			for _, row in ipairs(self.rows) do
+				if row:IsShown() and row.reminder and leaving[row.reminder] and row.withTag then
+					row.text:SetText(reminders.Tag(row.reminder) .. row.reminder.text)
+				end
+			end
 		end
 		local over = self:IsMouseOver() or self.header:IsMouseOver()
 		if self.headerHidden then -- shown while the mouse is over the list (or on it)
