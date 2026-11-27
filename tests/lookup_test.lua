@@ -117,6 +117,20 @@ return {
 			t.equal(#rows, 2, "two rows")
 		end)
 
+		t.test("a number finds spells by ID: that one first, then IDs starting with it", function()
+			local matches = ns.spellLookup.Search("7370", 10)
+			t.equal(#matches, 1, "one spell has that ID")
+			t.equal(matches[1].name, "Charge", "Charge, though it's not yours")
+			matches = ns.spellLookup.Search("73", 10)
+			local ids = {}
+			for _, match in ipairs(matches) do
+				t.ok(tostring(match.id):sub(1, 2) == "73", match.id .. " starts with 73")
+				ids[match.id] = true
+			end
+			t.ok(ids[7369] and ids[7370], "both 7369 and 7370")
+			t.equal(ns.spellLookup.Search(" 100 ", 10)[1].id, 100, "spaces around it are fine")
+		end)
+
 		t.test("each spell's class: from your spellbooks, General left out", function()
 			local spells = ns.spellLookup
 			t.equal(spells.ClassOf(100, true), "WARRIOR", "your Charge")

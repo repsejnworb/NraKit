@@ -211,22 +211,32 @@ end
 -- name), at most `limit`; and how many matched.
 function spells.Search(query, limit, filter)
 	local _, myClass = UnitClass("player")
+	-- A number finds spells by ID too: that one first, then IDs starting with it.
+	local number = query:match("^%s*(%d+)%s*$")
 	local matches = {}
 	for _, spell in ipairs(spellList or {}) do
 		local at = spell.lower:find(query, 1, true)
-		if at then
+		local byID = number and tostring(spell.id):sub(1, #number) == number
+		if at or byID then
 			local known = IsPlayerSpell(spell.id) == true
 			local class = spells.ClassOf(spell.id, known, spell.lower)
 			local mine = known and class ~= nil and class == myClass -- your class's, and you know it
 			if not filter or (filter == "mine" and mine) or (filter == "other" and not class) or filter == class then
 				table.insert(matches, { id = spell.id, name = spell.name, starts = at == 1, known = known, class = class,
-					group = mine and 1 or class == myClass and 2 or class and 3 or 4 })
+					group = mine and 1 or class == myClass and 2 or class and 3 or 4,
+					exact = byID and #tostring(spell.id) == #number, byID = byID })
 			end
 		end
 	end
 	table.sort(matches, function(a, b)
+		if a.exact ~= b.exact then
+			return a.exact
+		end
 		if a.group ~= b.group then
 			return a.group < b.group
+		end
+		if a.byID and b.byID then
+			return a.id < b.id
 		end
 		if a.starts ~= b.starts then
 			return a.starts

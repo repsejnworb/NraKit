@@ -619,7 +619,7 @@ Type `/leave` (with nothing after it) or `/leavegroup` to leave your party, raid
 **[ Items ][ Spells ][ Recipes ]** at its top. `/nra item nightbl`, `/nra spell charge` and
 `/nra recipe bracers` open it in that mode (`/nra lookup` where you left it).
 
-- **Spells:** every spell, yours first and marked **Known**, with its rank and its **class** in its
+- **Spells:** every spell by name or **ID** (a number lists that spell first), yours first and marked **Known**, with its rank and its **class** in its
   colour, so your Charge stands apart from mobs' Charges. Buttons under the search box pick **Mine**,
   a **class** or **Other**. Classes are learned from your characters' spellbooks as you log in on
   them. Hover for its tooltip, **Shift+click** to link it in chat.

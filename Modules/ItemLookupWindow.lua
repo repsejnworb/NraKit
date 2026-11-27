@@ -52,7 +52,7 @@ local function ProfessionIcon(name)
 end
 local HINTS = {
 	items = "Shift-click to link in chat, Ctrl-click to preview",
-	spells = "Shift-click to link in chat, right-click for more",
+	spells = "Type a name or a spell ID. Shift-click to link in chat, right-click for more",
 	recipes = "Shift-click to link in chat, right-click for shopping lists",
 }
 
