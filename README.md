@@ -368,8 +368,8 @@ the auction house, from Auctionator's last scan.
 Helpers for the mailbox. Each one is an option, and all are on once you turn Mail on.
 
 - **Open selected mail:** a checkbox on each mail in your inbox. Tick some and the Open All button
-  turns into "Open Selected (N)" and only opens those. The selection is cleared when you close the
-  mailbox.
+  turns into "Open Selected (N)" and only opens those. **Shift-click** a checkbox to tick every mail
+  from the one you clicked before. The selection is cleared when you close the mailbox.
 - **Open All menu:** an arrow next to Open All with more ways to open, each showing how many mails and
   how much gold first:
   - **Collect auction gold** (sales and outbid refunds);

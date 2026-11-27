@@ -194,7 +194,7 @@ Needs **Auctionator**. What things cost at the auction house, from Auctionator's
 
 Helpers for the mailbox, each one an option (all on once you turn **Mail** on).
 
-**Open selected mail**: a **checkbox on each mail** in your inbox. Tick the ones you want and the **Open All** button becomes **Open Selected**, opening only those.
+**Open selected mail**: a **checkbox on each mail** in your inbox. Tick the ones you want and the **Open All** button becomes **Open Selected**, opening only those. **Shift-click** ticks a whole range.
 
 **Open All menu**: an **arrow next to Open All** with more ways to open, each showing how many mails and how much gold first:
 - **Collect auction gold** (sales and outbid refunds)
