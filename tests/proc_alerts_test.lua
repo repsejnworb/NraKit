@@ -106,6 +106,19 @@ return {
 			wow.fire("SPELL_UPDATE_USABLE")
 		end)
 
+		-- Regression: the fader ran every frame for every character, a new table each frame.
+		t.test("with nothing glowing, nothing runs every frame", function()
+			for _ = 1, 20 do
+				wow.advance(0.1)
+			end
+			t.ok(not alerts.Busy(), "resting once the glow faded")
+			usable[14251] = true
+			wow.fire("SPELL_UPDATE_USABLE")
+			t.ok(alerts.Busy(), "running while one is up")
+			usable[14251] = nil
+			wow.fire("SPELL_UPDATE_USABLE")
+		end)
+
 		t.test("an untimed spell glows but has no bar and teaches no time", function()
 			usable[9999] = true
 			wow.fire("SPELL_UPDATE_USABLE")

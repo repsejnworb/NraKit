@@ -145,8 +145,17 @@ local ARROW_OFFSET_Y = -4
 local mark = {}
 ns.tacticalMastery = mark
 
--- The talent's rank in the active loadout (0 if not taken).
+-- The talent's rank in the active loadout (0 if not taken). Read once and kept until the
+-- talents change: walking the tree on every stance change built hundreds of tables.
+local talentRank
 function mark.TalentRank()
+	if talentRank == nil then
+		talentRank = mark.ReadTalentRank()
+	end
+	return talentRank
+end
+
+function mark.ReadTalentRank()
 	if type(C_ClassTalents) ~= "table" or type(C_Traits) ~= "table" then
 		return 0
 	end
@@ -321,6 +330,10 @@ local eventFrame = CreateFrame("Frame")
 eventFrame:SetScript("OnEvent", function(_, event, addonName)
 	if event == "ADDON_LOADED" and addonName ~= "Blizzard_PersonalResourceDisplay" then
 		return
+	end
+	if event == "TRAIT_CONFIG_UPDATED" or event == "ACTIVE_PLAYER_SPECIALIZATION_CHANGED"
+		or event == "PLAYER_ENTERING_WORLD" then
+		talentRank = nil
 	end
 	Update()
 end)

@@ -99,6 +99,22 @@ return {
 			t.equal(mark.Retained(), 15, "respecced to rank 1")
 		end)
 
+		-- Regression: every stance change walked the whole talent tree (hundreds of tables).
+		t.test("changing stance doesn't read the talents again", function()
+			local reads = 0
+			local read = mark.ReadTalentRank
+			mark.ReadTalentRank = function()
+				reads = reads + 1
+				return read()
+			end
+			wow.fire("UPDATE_SHAPESHIFT_FORM")
+			wow.fire("UNIT_MAXPOWER", "player")
+			t.equal(reads, 0, "kept")
+			wow.fire("TRAIT_CONFIG_UPDATED")
+			t.equal(reads, 1, "read when the talents change")
+			mark.ReadTalentRank = read
+		end)
+
 		t.test("max rage is secret: the bar gets it as is, no maths on it", function()
 			local maxGiven
 			local overlay = wow.frames[#wow.frames]

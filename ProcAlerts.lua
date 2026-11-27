@@ -66,12 +66,14 @@ local glows = {} -- button -> our frame over it
 local icons = {} -- spell name -> our icon by the power bar
 
 local function Windows()
-	NraKitDB.procAlertWindows = NraKitDB.procAlertWindows or {}
-	-- Measured by the first, warrior-only version.
-	for name, seconds in pairs(NraKitDB.warriorProcWindows or {}) do
-		NraKitDB.procAlertWindows[name] = math.max(NraKitDB.procAlertWindows[name] or 0, seconds)
+	if not NraKitDB.procAlertWindows or NraKitDB.warriorProcWindows then
+		NraKitDB.procAlertWindows = NraKitDB.procAlertWindows or {}
+		-- Measured by the first, warrior-only version.
+		for name, seconds in pairs(NraKitDB.warriorProcWindows or {}) do
+			NraKitDB.procAlertWindows[name] = math.max(NraKitDB.procAlertWindows[name] or 0, seconds)
+		end
+		NraKitDB.warriorProcWindows = nil
 	end
-	NraKitDB.warriorProcWindows = nil
 	return NraKitDB.procAlertWindows
 end
 
@@ -89,12 +91,23 @@ local function Secret(value)
 	return issecretvalue ~= nil and issecretvalue(value)
 end
 
+-- Spell IDs by name (read again when the spellbook changes: a new rank is a new ID); false
+-- for one you don't have.
+local spellIDs = {}
+
 local function SpellID(name)
+	local cached = spellIDs[name]
+	if cached ~= nil then
+		return cached or nil
+	end
 	local info = C_Spell.GetSpellInfo(name)
 	local spellID = info and info.spellID
 	if not spellID or Secret(spellID) then
+		-- A secret one isn't kept: it may be readable next time.
+		spellIDs[name] = not spellID and false or nil
 		return nil
 	end
+	spellIDs[name] = spellID
 	return spellID
 end
 
@@ -176,8 +189,11 @@ local function Icon(name, spellID)
 	return icon
 end
 
+local fader -- fades glows and icons (below): runs only while one is shown or a proc is up
+
 -- Shows a glow or icon: the start of Blizzard's animation the first time, then its loop.
 local function Show(frame, state, since, window)
+	fader:Show()
 	frame.fadeTo = state == "up" and 1 or DIM_ALPHA
 	if not frame:IsShown() then
 		frame:SetAlpha(0)
@@ -347,6 +363,9 @@ local function Check(redraw)
 	if changed then
 		Draw()
 	end
+	if AnyUp() then
+		fader:Show() -- looks again now and then while one is up
+	end
 end
 
 ---------------------------------------------------------------------------
@@ -381,7 +400,9 @@ eventFrame:SetScript("OnEvent", function(_, event, unit, _, spellID)
 		end
 		return
 	end
-	if event == "SPELL_UPDATE_COOLDOWN" then
+	if event == "SPELLS_CHANGED" then
+		wipe(spellIDs)
+	elseif event == "SPELL_UPDATE_COOLDOWN" then
 		ReadCooldowns()
 	end
 	Check(not USABLE_EVENTS[event])
@@ -390,19 +411,24 @@ end)
 -- Fades every glow and icon to where it's going, and looks again now and then while a
 -- proc is up.
 local sinceCheck = 0
-local fader = CreateFrame("Frame")
-fader:SetScript("OnUpdate", function(_, elapsed)
+local FADED = { glows, icons }
+fader = CreateFrame("Frame")
+fader:Hide()
+fader:SetScript("OnUpdate", function(self, elapsed)
+	local up = AnyUp()
 	sinceCheck = sinceCheck + elapsed
 	if sinceCheck >= CHECK_EVERY then
 		sinceCheck = 0
-		if AnyUp() then
+		if up then
 			Check()
 		end
 	end
 	local step = elapsed / FADE_SECONDS
 	local now = GetTime()
-	for _, list in ipairs({ glows, icons }) do
+	local anyShown = false
+	for _, list in ipairs(FADED) do
 		for _, frame in pairs(list) do
+			anyShown = anyShown or frame:IsShown()
 			if frame:IsShown() and frame.endsAt then
 				local left = math.max(0, frame.endsAt - now)
 				frame.timer:SetValue(left / frame.window)
@@ -435,6 +461,11 @@ fader:SetScript("OnUpdate", function(_, elapsed)
 				end
 			end
 		end
+	end
+	-- Nothing to fade and no proc to look at: rest until one shows (not every frame for
+	-- every character, class feature or not).
+	if not anyShown and not up then
+		self:Hide()
 	end
 end)
 
@@ -474,6 +505,11 @@ end
 function alerts.Refresh()
 	Listen()
 	Check(true)
+end
+
+-- Whether the fader runs (tests: it rests while nothing glows).
+function alerts.Busy()
+	return fader:IsShown()
 end
 
 function alerts.Register(set)
