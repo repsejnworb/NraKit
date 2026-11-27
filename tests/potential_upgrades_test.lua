@@ -97,5 +97,25 @@ return {
 			t.ok(not verdict:find("Clear", 1, true), "never clear")
 			t.noErrors()
 		end)
+
+		-- Regression: every item the game loaded (the auction house, chat links) threw away
+		-- every verdict and judged all bag items again.
+		t.test("an unrelated item loading keeps the verdicts", function()
+			equipped = { [INVSLOT_FINGER1] = band, [INVSLOT_FINGER2] = root }
+			Verdict(ruin)
+			local reads = 0
+			local getStats = C_Item.GetItemStats
+			C_Item.GetItemStats = function(...)
+				reads = reads + 1
+				return getStats(...)
+			end
+			wow.fire("GET_ITEM_INFO_RECEIVED", 99999, true)
+			rawset(GameTooltip, "link", ruin)
+			for _, call in ipairs(wow.tooltipCalls) do
+				call.callback(GameTooltip, {})
+			end
+			t.equal(reads, 0, "judged from the cache")
+			C_Item.GetItemStats = getStats
+		end)
 	end,
 }

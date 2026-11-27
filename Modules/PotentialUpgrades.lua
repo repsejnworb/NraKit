@@ -306,10 +306,12 @@ local function GetEquippedStats(equipLoc, slots, metrics)
 end
 
 local cache = {}
+local loading = {} -- [itemID] = true: items judged before their data had loaded (judged again when it has)
 
 -- Returns result ("clear", "likely", "later" or nil) and a short delta description.
--- tooltipData is optional (bag items pass theirs so the exact item state is used).
-local function Evaluate(link, tooltipData)
+-- bag and slot are optional (bag items read their own tooltip so the exact item state is used;
+-- only when not judged already).
+local function Evaluate(link, bag, slot)
 	if not link then
 		return nil
 	end
@@ -318,6 +320,12 @@ local function Evaluate(link, tooltipData)
 	end
 
 	local _, _, _, _, minLevel, _, _, _, equipLoc = C_Item.GetItemInfo(link)
+	if not equipLoc then
+		local itemID = C_Item.GetItemInfoInstant(link)
+		if itemID then
+			loading[itemID] = true
+		end
+	end
 	local slots = equipLoc and SLOTS[equipLoc]
 	if not slots then
 		if equipLoc then
@@ -334,7 +342,8 @@ local function Evaluate(link, tooltipData)
 		end
 	end
 
-	local blockedByOther, blockedByLevel, effectLines = ReadTooltip(tooltipData or C_TooltipInfo.GetHyperlink(link))
+	local tooltipData = bag and C_TooltipInfo.GetBagItem(bag, slot) or C_TooltipInfo.GetHyperlink(link)
+	local blockedByOther, blockedByLevel, effectLines = ReadTooltip(tooltipData)
 	if blockedByOther then
 		cache[link] = {}
 		return nil
@@ -475,7 +484,7 @@ local function UpdateBags()
 			local bag, slot = itemButton:GetBagID(), itemButton:GetID()
 			local link = C_Container.GetContainerItemLink(bag, slot)
 			if link then
-				result = Evaluate(link, C_TooltipInfo.GetBagItem(bag, slot))
+				result = Evaluate(link, bag, slot)
 			end
 		end
 		SetArrow(itemButton, result, itemButton.icon or itemButton.Icon)
@@ -552,11 +561,31 @@ local function InvalidateAndRefresh()
 end
 
 local eventFrame = CreateFrame("Frame")
-eventFrame:SetScript("OnEvent", function(_, event)
+-- Whether you wear this item (its data loading changes every comparison with that slot).
+local function IsWorn(itemID)
+	for slot = INVSLOT_FIRST_EQUIPPED or 1, INVSLOT_LAST_EQUIPPED or 19 do
+		if GetInventoryItemID("player", slot) == itemID then
+			return true
+		end
+	end
+	return false
+end
+
+eventFrame:SetScript("OnEvent", function(_, event, itemID)
 	if event == "BAG_UPDATE_DELAYED" then
 		QueueRefresh()
+	elseif event == "GET_ITEM_INFO_RECEIVED" then
+		-- Fires for every item the game loads (the auction house, chat links, loot): only one
+		-- we're waiting for, or one you wear, matters. (Judging everything again for each kept
+		-- NraKit busy at the auction house.)
+		if itemID and loading[itemID] then
+			loading[itemID] = nil
+			QueueRefresh()
+		elseif itemID and IsWorn(itemID) then
+			InvalidateAndRefresh()
+		end
 	else
-		-- Equipment, level or newly loaded item data changes the comparisons.
+		-- Equipment or level changes the comparisons.
 		InvalidateAndRefresh()
 	end
 end)

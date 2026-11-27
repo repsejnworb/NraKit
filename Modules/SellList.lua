@@ -204,9 +204,12 @@ end
 -- Prices an item { id, link, count }: fills name, quality, icon, each (auction), age, ahTotal,
 -- vendorEach, vendorTotal, value (the better), best ("ah" or "vendor"), disenchant. Returns
 -- false while the client hasn't loaded the item yet.
+local loading = {} -- [itemID] = true: asked to load, for the list (the window redraws when one arrives)
+
 local function Price(item)
 	local name, _, quality, _, _, _, _, _, equipLoc, icon, vendorEach, _, _, bindType = C_Item.GetItemInfo(item.link or item.id)
 	if not name then
+		loading[item.id] = true
 		C_Item.RequestLoadItemDataByID(item.id)
 		return false
 	end
@@ -744,6 +747,16 @@ function ns:OpenSellList()
 	end
 end
 
+-- Whether an item that just loaded is one the list was waiting for (forgets it). The game
+-- loads items all the time at the auction house: only these are worth redrawing for.
+function sell.Loaded(itemID)
+	if itemID and loading[itemID] then
+		loading[itemID] = nil
+		return true
+	end
+	return false
+end
+
 -- Redraws the list (if it's open): what's in a place changed, or you came or went.
 function Changed()
 	if sell.onChanged then
@@ -783,7 +796,13 @@ eventFrame:SetScript("OnEvent", function(_, event, addonName)
 	elseif event == "MAIL_CLOSED" then
 		Leave("mail")
 	elseif event == "MAIL_INBOX_UPDATE" then
-		Changed()
+		-- Comes often (each mail opened): a redraw soon, not one per update.
+		if sell.onContentsChanged then
+			sell.onContentsChanged()
+		end
+		if sell.onPlaceChanged then
+			sell.onPlaceChanged()
+		end
 	end
 end)
 

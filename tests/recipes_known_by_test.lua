@@ -55,6 +55,20 @@ return {
 			t.equal(me.recipes[3504], nil, "not the coif")
 		end)
 
+		t.test("SPELLS_CHANGED (zoning, stances...) doesn't check every recipe again", function()
+			local checks = 0
+			local isPlayerSpell = IsPlayerSpell
+			IsPlayerSpell = function(id)
+				checks = checks + 1
+				return isPlayerSpell(id)
+			end
+			wow.fire("SPELLS_CHANGED")
+			t.equal(checks, 0, "recorded once this session")
+			wow.fire("NEW_RECIPE_LEARNED", 3504)
+			t.equal(checks, 2, "learning one checks them again")
+			IsPlayerSpell = isPlayerSpell
+		end)
+
 		t.test("a recipe item says who knows it (matched by name)", function()
 			local text = TooltipText(Enum.TooltipDataType.Item, { id = PLANS })
 			t.ok(text:find("Known by: " .. me, 1, true), "Known by: you")
@@ -75,6 +89,16 @@ return {
 			t.equal(TooltipText(Enum.TooltipDataType.Item, { id = PLANS }):find("Known by", 1, true), nil, "no line")
 			ns:SetSetting("inventoryTrackerRecipes", true)
 			t.noErrors()
+		end)
+
+		t.test("recipes found for this (Lookup closed) let go of the spell list", function()
+			NraKitDB.recipeLookupData = nil
+			wow.fire("NEW_RECIPE_LEARNED", 3504)
+			for _ = 1, 200 do
+				wow.advance(0.02)
+			end
+			t.ok(NraKitDB.recipeLookupData and NraKitDB.recipeLookupData.ids, "the recipes were found")
+			t.equal(ns.spellLookup.Count(), 0, "and the spell list (tens of MB) let go")
 		end)
 	end,
 }

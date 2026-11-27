@@ -257,6 +257,20 @@ return {
 			_G.NraKitSellListFrame:Hide()
 		end)
 
+		-- Regression: every item the game loaded (constant at the auction house) rebuilt the
+		-- whole list, up to 5 times a second.
+		t.test("only items the list waits for redraw it when they load", function()
+			ITEMS[1099] = nil
+			table.insert(BAG, { itemID = 1099, stackCount = 1 })
+			BAG_SIZE[0] = #BAG
+			sell.Collect()
+			t.ok(not sell.Loaded(4242), "an item loading at the auction house: nothing to do")
+			t.ok(sell.Loaded(1099), "one in your bags that hadn't loaded: redraw")
+			t.ok(not sell.Loaded(1099), "once")
+			table.remove(BAG)
+			BAG_SIZE[0] = #BAG
+		end)
+
 		t.test("the window lists them, with totals", function()
 			ns:OpenSellList()
 			t.ok(_G.NraKitSellListFrame:IsShown(), "open")

@@ -362,16 +362,25 @@ end
 
 -- Remembers which recipes this character knows (each recipe checked: instant), once the
 -- recipes are known (Lookup finds them, once per game version).
+local waitingForRecipes = false
+local recipesRecorded = false -- this session (SPELLS_CHANGED comes often: zoning, stances...)
 local function RecordRecipes()
 	if not ns:IsModuleEnabled(module.key) or not ns:GetOption("inventoryTrackerRecipes") or not ns.recipeLookup then
 		return
 	end
 	local ids = ns.recipeLookup.IDs()
 	if not ids then
-		ns.recipeLookup.WhenReady(RecordRecipes)
+		if not waitingForRecipes then
+			waitingForRecipes = true
+			ns.recipeLookup.WhenReady(function()
+				waitingForRecipes = false
+				RecordRecipes()
+			end)
+		end
 		ns.recipeLookup.Start()
 		return
 	end
+	recipesRecorded = true
 	local known = {}
 	for _, id in ipairs(ids) do
 		if IsPlayerSpell(id) then
@@ -687,7 +696,12 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 		OnAuctionBought(...)
 	elseif event == "PLAYER_MONEY" then
 		StoreMoney()
-	elseif event == "SPELLS_CHANGED" or event == "NEW_RECIPE_LEARNED" then
+	elseif event == "SPELLS_CHANGED" then
+		-- Once, after logging in (the spellbook is read by then); learning and unlearning after.
+		if not recipesRecorded then
+			RecordRecipes()
+		end
+	elseif event == "NEW_RECIPE_LEARNED" or event == "SKILL_LINES_CHANGED" then
 		RecordRecipes()
 	elseif event == "PLAYER_LEVEL_UP" then
 		GetMe().level = ... -- UnitLevel can still say the old level here
@@ -700,7 +714,7 @@ local EVENTS = {
 	"PLAYERREAGENTBANKSLOTS_CHANGED", "PLAYER_EQUIPMENT_CHANGED", "MAIL_INBOX_UPDATE",
 	"MAIL_SEND_SUCCESS", "MAIL_FAILED", "PLAYER_MONEY", "PLAYER_LEVEL_UP",
 	"COMMODITY_PURCHASE_SUCCEEDED", "COMMODITY_PURCHASE_FAILED", "AUCTION_HOUSE_PURCHASE_COMPLETED",
-	"SPELLS_CHANGED", "NEW_RECIPE_LEARNED",
+	"SPELLS_CHANGED", "NEW_RECIPE_LEARNED", "SKILL_LINES_CHANGED",
 }
 
 local function IsEventValid(event)

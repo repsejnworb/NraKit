@@ -639,7 +639,11 @@ local function CreateWindow()
 	footerNote:SetJustifyH("RIGHT")
 
 	local events = CreateFrame("Frame", nil, frame)
-	events:SetScript("OnEvent", RequestRender)
+	events:SetScript("OnEvent", function(_, event, itemID)
+		if event == "BAG_UPDATE_DELAYED" or sell.Loaded(itemID) then
+			RequestRender()
+		end
+	end)
 	frame:HookScript("OnShow", function()
 		for _, event in ipairs({ "BAG_UPDATE_DELAYED", "ITEM_DATA_LOAD_RESULT", "GET_ITEM_INFO_RECEIVED" }) do
 			events:RegisterEvent(event)
@@ -665,6 +669,7 @@ local function CreateWindow()
 		end
 	end)
 	sell.onChanged = Render
+	sell.onContentsChanged = RequestRender
 	sell.onTakeStatus = function()
 		if frame:IsShown() then
 			UpdateFooterNote()

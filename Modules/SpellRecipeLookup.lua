@@ -315,6 +315,12 @@ recipeFinder:SetScript("OnUpdate", function(self)
 		for _, callback in ipairs(callbacks) do
 			callback()
 		end
+		-- Found for something else (known recipes): let go of the spell list (tens of MB)
+		-- unless Lookup is showing it.
+		local window = _G.NraKitItemLookupFrame
+		if not (window and window:IsShown()) then
+			spells.Release()
+		end
 	end
 end)
 
