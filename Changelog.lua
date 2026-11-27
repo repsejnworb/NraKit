@@ -22,7 +22,7 @@ local _, ns = ...
 -- notes) and /commands are coloured. Write short: no brackets-and-semicolon chains.
 
 ns.changelog = {
-	{ version = "Unreleased", entries = {
+	{ version = "0.35.0", date = "2026-11-27", entries = {
 		{ "improved", title = "Inventory Tracker", "Remembers which recipes each of your characters knows: a recipe (in your bags, at a vendor, a link in chat) says **Known by** which of them, so your bank alt can see your main already has it." },
 		{ "improved", title = "Farm Goals", "Item goals show what they're worth at the auction house (Auctionator, else a vendor) and **gold per hour**: \"18/h · 38g/h\". The finished message says what the goal is worth." },
 		{ "improved", title = "Lookup", module = "itemLookup",
