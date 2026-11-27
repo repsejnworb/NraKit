@@ -286,7 +286,7 @@ rank).
 item. A tab in the NraKit window (`/nra sell`).
 
 - **Vendor and auction house prices side by side** (auction prices from Auctionator), for each item
-  and the whole stack. The better of the two is bright; "a vendor pays more" says when to vendor.
+  and the whole stack. The better of the two is bright. Short tags under the name (In Mail, 6 Days Old, Disenchant) are spelled out when you hover the item.
 - A **Gain** column: how much more the auction house pays than a vendor. The auction house group is
   ranked by it, so 20s that a vendor pays 1c for comes before 40s that a vendor pays 39s for.
 - An auction price **more than 3 days old** is marked, so you don't undercut yourself on old data.

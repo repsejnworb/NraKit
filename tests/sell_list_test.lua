@@ -244,6 +244,19 @@ return {
 			BAG_SIZE[0] = #BAG
 		end)
 
+		t.test("short tags under the name, spelled out in the tooltip", function()
+			ns:OpenSellList()
+			local groups = sell.Collect()
+			local meat = groups.vendor[2]
+			t.equal(meat.name, "Wolf Meat", "a vendor pays more for it")
+			t.equal(sell.NoteText(meat), "", "no tag: its group and bright vendor price say it")
+			t.ok(sell.NoteLines(meat)[1][1]:find("A vendor pays more", 1, true), "the tooltip says it, with prices")
+			t.ok(sell.NoteText(groups.ah[3]):find("6 Days Old", 1, true), "an old auction price")
+			t.ok(sell.NoteLines(groups.ah[3])[1][1]:find("6 days ago", 1, true), "spelled out")
+			t.equal(sell.NoteText(groups.vendor[1]), "Soulbound", "soulbound")
+			_G.NraKitSellListFrame:Hide()
+		end)
+
 		t.test("the window lists them, with totals", function()
 			ns:OpenSellList()
 			t.ok(_G.NraKitSellListFrame:IsShown(), "open")

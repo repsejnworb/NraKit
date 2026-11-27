@@ -26,8 +26,8 @@ local TOP_HEIGHT = 30
 local FOOTER_HEIGHT = 36
 
 -- Columns, from the right edge of a row: { right offset, width }.
-local GAIN_RIGHT, GAIN_WIDTH = -8, 96
-local AH_RIGHT, AH_WIDTH = -112, 110
+local AH_RIGHT, AH_WIDTH = -8, 110
+local GAIN_RIGHT, GAIN_WIDTH = -126, 96
 local VENDOR_RIGHT, VENDOR_WIDTH = -230, 96
 local EACH_RIGHT, EACH_WIDTH = -334, 96
 local COUNT_RIGHT, COUNT_WIDTH = -438, 50
@@ -47,9 +47,9 @@ local MERCHANT_ORDER = { "vendor", "ah", "goals", "kept" }
 -- their own (the bank warm, like a vault; mail cool blue). At the bank or mailbox: click to take.
 local PLACES = {
 	bank = { label = "Bank", icon = "Interface\\Minimap\\Tracking\\Banker", tint = { 1, 0.7, 0.25, 0.08 }, color = "ffd9a54c",
-		away = "in your bank: take it out to sell it", here = "in your bank: click to take it" },
+		tag = "In Bank" },
 	mail = { label = "Mail", icon = "Interface\\Minimap\\Tracking\\Mailbox", tint = { 0.35, 0.55, 1, 0.08 }, color = "ff66a6ff",
-		away = "in your mail: collect it first", here = "in your mail: click to take it" },
+		tag = "In Mail" },
 }
 
 local frame, scroll, footerText, footerNote, refreshButton, autoOpenButton
@@ -60,7 +60,7 @@ local pricesChanged = false
 local pool = UI.CreatePool()
 local renderPending = false
 
-local Render, UpdateFooterNote
+local Render, UpdateFooterNote, NoteLines
 
 local function MakeLabel(parent, text, font)
 	local label = parent:CreateFontString(nil, "OVERLAY", font or "GameFontHighlight")
@@ -141,8 +141,8 @@ local function OnRowEnter(self)
 	else
 		GameTooltip:SetItemByID(item.id)
 	end
-	if item.age and item.age > sell.STALE_DAYS then
-		GameTooltip:AddLine(string.format("Auction price last seen %d days ago: it may have changed.", item.age), 1, 0.6, 0.2, true)
+	for _, line in ipairs(NoteLines(item)) do
+		GameTooltip:AddLine(line[1], line[2], line[3], line[4], true)
 	end
 	if item.bag and sell.IsAuctionHouseOpen() then
 		GameTooltip:AddLine("Click to pick it up, then drop it in the auction house's sell slot.", 0.5, 0.5, 0.5, true)
@@ -207,28 +207,50 @@ local function AcquireRow(content)
 end
 
 -- The small line under an item's name: why its value is what it is.
+-- The short tags under an item's name ("In Mail  ·  6 Days Old"); the row's tooltip spells
+-- them out (NoteLines).
 local function NoteText(item)
 	local parts = {}
 	if item.where then
 		local place = PLACES[item.where]
-		table.insert(parts, "|c" .. place.color .. (sell.IsPlaceOpen(item.where) and place.here or place.away) .. "|r")
+		table.insert(parts, "|c" .. place.color .. place.tag .. "|r")
 	end
-	if item.best == "vendor" and item.ahTotal then
-		table.insert(parts, "|cffffd100a vendor pays more|r")
-	elseif item.best == "vendor" and sell.HasAuctionator() and not item.bound then
-		table.insert(parts, "no auction price")
+	if item.best == "vendor" and not item.ahTotal and sell.HasAuctionator() and not item.bound then
+		table.insert(parts, "No AH Price")
 	end
 	if item.bound then
-		table.insert(parts, "soulbound")
+		table.insert(parts, "Soulbound")
 	end
 	if item.best == "ah" and item.age and item.age > sell.STALE_DAYS then
-		table.insert(parts, string.format("|cffff9933price %d days old|r", item.age))
+		table.insert(parts, string.format("|cffff9933%d Days Old|r", item.age))
 	end
 	if item.disenchant then
-		table.insert(parts, "disenchants for ~" .. Money(item.disenchant))
+		table.insert(parts, "Disenchant ~" .. Money(item.disenchant))
 	end
 	return table.concat(parts, "  ·  ")
 end
+sell.NoteText = NoteText
+
+-- What the tags mean, in full: { text, r, g, b } lines for the row's tooltip.
+function NoteLines(item)
+	local lines = {}
+	local function Add(text, r, g, b)
+		table.insert(lines, { text, r or 0.8, g or 0.8, b or 0.8 })
+	end
+	if item.best == "vendor" and item.ahTotal then
+		Add(string.format("A vendor pays more: %s, the auction house %s.", Money(item.vendorTotal), Money(item.ahTotal)))
+	elseif item.best == "vendor" and sell.HasAuctionator() and not item.bound then
+		Add("No auction price: Auctionator hasn't seen it at the auction house.")
+	end
+	if item.age and item.age > sell.STALE_DAYS then
+		Add(string.format("Auction price last seen %d days ago: it may have changed.", item.age), 1, 0.6, 0.2)
+	end
+	if item.disenchant then
+		Add("Disenchants for about " .. Money(item.disenchant) .. ".")
+	end
+	return lines
+end
+sell.NoteLines = NoteLines
 
 local function FillRow(row, item, index)
 	row.item = item
