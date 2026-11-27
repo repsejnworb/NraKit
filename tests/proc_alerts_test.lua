@@ -119,6 +119,26 @@ return {
 			wow.fire("SPELL_UPDATE_USABLE")
 		end)
 
+		t.test("rage and health changes are looked at once a frame", function()
+			local checks = 0
+			local isUsable = C_Spell.IsSpellUsable
+			C_Spell.IsSpellUsable = function(...)
+				checks = checks + 1
+				return isUsable(...)
+			end
+			for _ = 1, 20 do
+				wow.fire("UNIT_POWER_FREQUENT", "player")
+				wow.fire("UNIT_HEALTH", "target")
+			end
+			t.equal(checks, 0, "not on each")
+			wow.advance(0.01)
+			local once = checks
+			t.ok(once > 0, "looked at")
+			wow.advance(0.01)
+			t.equal(checks, once, "once")
+			C_Spell.IsSpellUsable = isUsable
+		end)
+
 		t.test("an untimed spell glows but has no bar and teaches no time", function()
 			usable[9999] = true
 			wow.fire("SPELL_UPDATE_USABLE")

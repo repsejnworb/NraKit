@@ -664,6 +664,17 @@ end)
 -- Lifecycle
 ---------------------------------------------------------------------------
 
+-- The bank's slots change one event per slot (a stack moved is two, sorting is dozens): the
+-- bank is read once, the next frame.
+local bankScan = CreateFrame("Frame")
+bankScan:Hide()
+bankScan:SetScript("OnUpdate", function(self)
+	self:Hide()
+	if bankOpen then
+		ScanBags("bank")
+	end
+end)
+
 local eventFrame = CreateFrame("Frame")
 eventFrame:SetScript("OnEvent", function(_, event, ...)
 	if event == "BAG_UPDATE_DELAYED" then
@@ -678,7 +689,7 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 		bankOpen = false
 	elseif event == "PLAYERBANKSLOTS_CHANGED" or event == "PLAYERREAGENTBANKSLOTS_CHANGED" then
 		if bankOpen then
-			ScanBags("bank")
+			bankScan:Show()
 		end
 	elseif event == "PLAYER_EQUIPMENT_CHANGED" then
 		ScanEquipped()

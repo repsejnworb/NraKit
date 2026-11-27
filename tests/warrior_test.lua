@@ -171,6 +171,7 @@ return {
 		t.test("short of rage, the glow dims instead of going", function()
 			usable[7384] = "rage"
 			wow.fire("UNIT_POWER_FREQUENT", "player")
+			wow.advance(0.01) -- (looked at once a frame)
 			t.equal(procs.State("Overpower"), "dim", "still up")
 			wow.advance(1)
 			t.equal(Glow():GetAlpha(), 0.4, "dimmed")

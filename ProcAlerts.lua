@@ -392,6 +392,15 @@ local function ReadCooldowns()
 	end
 end
 
+-- Rage and the target's health change many times a second in combat: looked at once a frame.
+local checkSoon = CreateFrame("Frame")
+checkSoon:Hide()
+checkSoon:SetScript("OnUpdate", function(self)
+	self:Hide()
+	Check()
+end)
+local FREQUENT = { UNIT_POWER_FREQUENT = true, UNIT_HEALTH = true }
+
 local eventFrame = CreateFrame("Frame")
 eventFrame:SetScript("OnEvent", function(_, event, unit, _, spellID)
 	if event == "UNIT_SPELLCAST_SUCCEEDED" then
@@ -400,7 +409,10 @@ eventFrame:SetScript("OnEvent", function(_, event, unit, _, spellID)
 		end
 		return
 	end
-	if event == "SPELLS_CHANGED" then
+	if FREQUENT[event] then
+		checkSoon:Show()
+		return
+	elseif event == "SPELLS_CHANGED" then
 		wipe(spellIDs)
 	elseif event == "SPELL_UPDATE_COOLDOWN" then
 		ReadCooldowns()

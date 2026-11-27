@@ -158,6 +158,8 @@ end
 
 -- Builds the shown items: { id, count, icon, category, name, link, quality, price, owners }.
 -- owners: list of { character, total, parts = { "Bags 5", ... } }.
+local loading = {} -- [itemID] = true: shown without its name yet (redrawn when it loads)
+
 local function CollectItems(characters)
 	local byID, items = {}, {}
 	for _, character in ipairs(characters) do
@@ -196,6 +198,7 @@ local function CollectItems(characters)
 			item.name, item.link, item.quality, item.price = name, link, quality, price
 		else
 			missing = true
+			loading[item.id] = true
 			C_Item.RequestLoadItemDataByID(item.id)
 		end
 		table.sort(item.owners, function(a, b)
@@ -770,7 +773,13 @@ local function CreateBrowser()
 	frame:HookScript("OnHide", function(self)
 		self:UnregisterEvent("GET_ITEM_INFO_RECEIVED")
 	end)
-	frame:SetScript("OnEvent", RequestRender)
+	-- Only items it's waiting for: the game loads items all the time (the auction house, chat).
+	frame:SetScript("OnEvent", function(_, _, itemID)
+		if itemID and loading[itemID] then
+			loading[itemID] = nil
+			RequestRender()
+		end
+	end)
 	ns.inventory.onChanged = RequestRender
 
 	-- Start on the character you're playing.

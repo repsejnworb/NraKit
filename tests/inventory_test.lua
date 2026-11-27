@@ -199,5 +199,26 @@ return {
 			t.ok(characters["Nra Kit"], "you're still there")
 			t.noErrors()
 		end)
+
+		-- Regression: every bank slot event read the whole bank (sorting sends dozens).
+		t.test("a burst of bank slot changes reads the bank once", function()
+			local reads = 0
+			local numSlots = C_Container.GetContainerNumSlots
+			C_Container.GetContainerNumSlots = function(...)
+				reads = reads + 1
+				return numSlots(...)
+			end
+			wow.fire("BANKFRAME_OPENED")
+			local once = reads
+			reads = 0
+			for slot = 1, 20 do
+				wow.fire("PLAYERBANKSLOTS_CHANGED", slot)
+			end
+			t.equal(reads, 0, "not on each")
+			wow.advance(0.1)
+			t.equal(reads, once, "once, the next frame")
+			wow.fire("BANKFRAME_CLOSED")
+			C_Container.GetContainerNumSlots = numSlots
+		end)
 	end,
 }
