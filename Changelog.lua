@@ -23,6 +23,7 @@ local _, ns = ...
 
 ns.changelog = {
 	{ version = "Unreleased", entries = {
+		{ "improved", title = "Lookup", "Remembers the page you were on: go to another tab or mode and back, and you're on the same page, scrolled where you left it." },
 		{ "fixed", title = "NraKit", "Uses less memory and CPU: Potential Upgrades, the Sell List, Proc Alerts, Reminders, nameplates, health bar colours and more no longer redo their work on every event, and the game's spell list is let go of once your known recipes are saved." },
 	} },
 	{ version = "0.35.0", date = "2026-11-27", entries = {

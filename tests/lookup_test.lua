@@ -205,6 +205,18 @@ return {
 			t.ok(wow.click("1"), "page 1")
 			ns.spellLookup.Search = search
 			t.equal(searches, 0, "paging reuses the search")
+			-- Coming back: the page you were on, though the list was let go of meanwhile.
+			t.ok(wow.click("3"), "page 3")
+			_G.NraKitItemLookupFrame:Hide()
+			t.equal(ns.spellLookup.Count(), 0, "closed: the spell list let go of")
+			_G.NraKitItemLookupFrame:Show()
+			for _ = 1, 40 do
+				wow.advance(0.1) -- (read again)
+			end
+			t.equal(#Rows("spells"), 52, "back on page 3")
+			ns:OpenLookup("recipes")
+			ns:OpenLookup("spells")
+			t.equal(#Rows("spells"), 52, "another mode and back: still page 3")
 			local box = wow.findAll(function(frame)
 				return frame.kind == "EditBox" and wow.visible(frame) and rawget(frame, "parent") == _G.NraKitItemLookupFrame.body
 			end)[1]

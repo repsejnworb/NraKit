@@ -765,3 +765,163 @@ function UI.CreateScrollArea(parent)
 	end)
 	return scroll
 end
+
+---------------------------------------------------------------------------
+-- Pages: a long list a page at a time, and where you were in it
+---------------------------------------------------------------------------
+
+-- A pager for a footer: [ < ] [ 1 ] ... [ 4 ] [ 5 ] [ 6 ] ... [ 28 ] [ > ] (the first, the ones
+-- around this one, the last). < and > stay put: the numbers sit in fixed slots between them,
+-- wide enough for four digits. It also remembers where you were in each list you name, so
+-- leaving one (another tab, mode or filter) and coming back opens on the same page and scroll,
+-- with nothing kept but the page number: the list is searched again.
+--
+--   local pager = UI.CreatePager(footer, pageSize, function() Render() end) -- a page clicked
+--   pager:Open("spells")                     -- showing this list (again): back where you were
+--   local rows = pager:Slice(all, key)       -- this page's part; key says which list it is
+--   ... draw rows ...
+--   pager:Update(#all, scroll)               -- the buttons (hidden on one page), the scroll
+--   pager:Leave(scroll)                      -- leaving it: remember the scroll
+--   pager:Reset()                            -- what's listed changed: page 1
+local PAGE_SLOTS = 9 -- 1, ..., 4 5 6 7 8, ..., 28
+local SLOT_WIDTH, ARROW_WIDTH, SLOT_GAP = 34, 24, 2
+
+local Pager = {}
+Pager.__index = Pager
+
+function UI.CreatePager(parent, pageSize, onPage)
+	local pager = setmetatable({ size = pageSize, page = 1, places = {}, slots = {} }, Pager)
+	pager.frame = CreateFrame("Frame", nil, parent)
+	pager.frame:SetSize(ARROW_WIDTH * 2 + PAGE_SLOTS * (SLOT_WIDTH + SLOT_GAP) + SLOT_GAP, 20)
+	pager.frame:Hide()
+	local function Button(label, width)
+		local button = UI.CreateFlatButton(pager.frame, label, 20)
+		button:SetWidth(width)
+		button:SetScript("OnClick", function(self)
+			PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+			pager.page = self.target
+			pager.toTop = true
+			onPage(pager.page)
+		end)
+		return button
+	end
+	pager.prev = Button("<", ARROW_WIDTH)
+	pager.prev:SetPoint("LEFT", pager.frame, "LEFT")
+	pager.next = Button(">", ARROW_WIDTH)
+	pager.next:SetPoint("RIGHT", pager.frame, "RIGHT")
+	for slot = 1, PAGE_SLOTS do
+		local button = Button("", SLOT_WIDTH)
+		button:SetPoint("LEFT", pager.frame, "LEFT", ARROW_WIDTH + SLOT_GAP + (slot - 1) * (SLOT_WIDTH + SLOT_GAP), 0)
+		button.gap = pager.frame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+		button.gap:SetPoint("CENTER", button)
+		button.gap:SetText("...")
+		pager.slots[slot] = button
+	end
+	return pager
+end
+
+-- Showing the list called `name` (again): page 1 unless its last place is for the same list
+-- (the key Slice is given next), then that page and scroll.
+function Pager:Open(name)
+	self.name, self.page, self.toTop = name, 1, true
+	self.restoring = self.places[name]
+end
+
+-- What's listed changed (a search, a filter): page 1, at the top.
+function Pager:Reset()
+	self.page, self.toTop, self.restoring = 1, true, nil
+end
+
+-- This page's part of all (clamping the page to the last one). key names the list (its search,
+-- filter and sort): a place is only restored onto the same list.
+function Pager:Slice(all, key)
+	if #all == 0 then
+		return {} -- nothing (yet: it may be loading): keep the place to go back to
+	end
+	local restoring = self.restoring
+	if restoring then
+		self.restoring = nil
+		if restoring.key == key then
+			self.page, self.restoreScroll = restoring.page, restoring.scroll
+		end
+	end
+	local pages = math.max(1, math.ceil(#all / self.size))
+	self.page = math.max(1, math.min(self.page, pages))
+	if self.name then
+		local place = self.places[self.name] or {}
+		self.places[self.name] = place
+		place.key, place.page = key, self.page
+	end
+	local slice = {}
+	for index = (self.page - 1) * self.size + 1, math.min(self.page * self.size, #all) do
+		table.insert(slice, all[index])
+	end
+	return slice
+end
+
+-- The index of this page's first row (for "101-200 of 2,345").
+function Pager:First()
+	return (self.page - 1) * self.size + 1
+end
+
+-- Leaving the list: remembers how far down it you'd scrolled.
+function Pager:Leave(scroll)
+	local place = self.name and self.places[self.name]
+	if place and scroll then
+		place.scroll = scroll:GetVerticalScroll()
+	end
+end
+
+local function PageNumbers(page, pages)
+	local numbers, last = {}, 0
+	for number = 1, pages do
+		if number == 1 or number == pages or math.abs(number - page) <= 2 then
+			if number > last + 1 then
+				table.insert(numbers, false) -- a gap: "..."
+			end
+			table.insert(numbers, number)
+			last = number
+		end
+	end
+	return numbers
+end
+
+-- Draws the buttons for total rows (hidden while they fit on one page) and puts scroll (a
+-- UI.CreateScrollArea) where it belongs: the top of a new page, or where you were. Returns the
+-- number of pages.
+function Pager:Update(total, scroll)
+	local page, pages = self.page, math.max(1, math.ceil(total / self.size))
+	if scroll then
+		if self.restoreScroll then
+			scroll:SetScroll(self.restoreScroll)
+		elseif self.toTop then
+			scroll:SetScroll(0)
+		else
+			scroll:SetScroll(scroll:GetVerticalScroll())
+		end
+	end
+	self.restoreScroll, self.toTop = nil, false
+	self.frame:SetShown(pages > 1)
+	if pages <= 1 then
+		return pages
+	end
+	self.prev.target, self.next.target = math.max(1, page - 1), math.min(pages, page + 1)
+	self.prev:SetEnabled(page > 1)
+	self.prev:SetAlpha(page > 1 and 1 or 0.4)
+	self.next:SetEnabled(page < pages)
+	self.next:SetAlpha(page < pages and 1 or 0.4)
+	local numbers = PageNumbers(page, pages)
+	for slot, button in ipairs(self.slots) do
+		local number = numbers[slot]
+		button.gap:SetShown(number == false)
+		if number then
+			button.text:SetText(tostring(number))
+			button.target = number
+			button:SetSelected(number == page)
+			button:Show()
+		else
+			button:Hide()
+		end
+	end
+	return pages
+end

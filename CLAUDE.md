@@ -61,6 +61,9 @@ A World of Warcraft **Forever** addon: a collection of small, independent QoL fe
   menuLabel, order, frameName, open, module }` gives the tab strip, one-open-at-a-time, a shared position and an
   entry in the addon button's right-click menu. Tabs always show; while `module` is off the tab is dimmed and opens a
   shared "feature is off" page (name, description, turn-on button) instead of the window. Add window OnShow/OnHide handlers with `HookScript`, not `SetScript`.
+  Long lists go a page at a time with `UI.CreatePager(footer, pageSize, onPage)`: page buttons, and back on the same
+  page and scroll when you return to the same list (another tab or mode) while only the page number is kept (see Lookup).
+  Use it for any new paged list.
 - `Toast.lua` – NraKit's messages in the middle of the screen (`ns.toast.Show{ style = "big"|"small", heading, text,
   icon/atlas, detail, lines, duration, onClick, skipIfBusy }`); they stack, up to three at once (the newest at the top, pushing the others down), and more
   wait their turn (a big one first in line). `ns.arrival.Add{...}` adds a feature's part to the one message for
