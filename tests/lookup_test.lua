@@ -300,5 +300,19 @@ return {
 			t.equal(#matches, 1, "by profession name")
 			t.noErrors()
 		end)
+
+		t.test("Recipes keep their search while items load (prices read item info)", function()
+			ns:RunSlashCommand("recipe bracers")
+			local searches = 0
+			local search = ns.recipeLookup.Search
+			ns.recipeLookup.Search = function(...)
+				searches = searches + 1
+				return search(...)
+			end
+			wow.fire("GET_ITEM_INFO_RECEIVED", 2840, true)
+			ns:RunSlashCommand("recipe bracers")
+			t.equal(searches, 0, "not searched again")
+			ns.recipeLookup.Search = search
+		end)
 	end,
 }

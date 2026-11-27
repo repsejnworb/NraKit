@@ -63,7 +63,8 @@ local function Store(itemID)
 		return false
 	end
 	local data = Data()
-	if not data.names[itemID] then
+	local isNew = not data.names[itemID]
+	if isNew then
 		named = named + 1
 	end
 	if data.failed[itemID] then
@@ -79,7 +80,7 @@ local function Store(itemID)
 		lowerNames[itemID] = nil
 	end
 	if lookup.onStored then
-		lookup.onStored(itemID, name, changed)
+		lookup.onStored(itemID, name, changed, isNew)
 	end
 	return true
 end
@@ -257,45 +258,71 @@ end
 -- Items whose name contains query (lower-case): { { id, name, quality }, ... }, best
 -- first (names starting with it, then by quality and name), at most `limit`; and how
 -- many matched in all.
+-- The match for one item ({ id, name, quality, starts, exact, byID }), or nil. A number
+-- (`number`, from the query) finds items by ID too.
+local function MatchOf(itemID, name, query, number)
+	local lower = lowerNames[itemID]
+	if not lower then
+		lower = name:lower()
+		lowerNames[itemID] = lower
+	end
+	local at = lower:find(query, 1, true)
+	local byID = number and tostring(itemID):sub(1, #number) == number
+	if at or byID then
+		return { id = itemID, name = name, quality = Data().quality[itemID] or 1, starts = at == 1,
+			exact = byID and #tostring(itemID) == #number, byID = byID }
+	end
+end
+
+-- Best first: the exact ID, IDs starting with it (by ID), names starting with it, then by
+-- quality and name.
+local function Better(a, b)
+	if a.exact ~= b.exact then
+		return a.exact
+	end
+	if a.byID ~= b.byID then
+		return a.byID
+	end
+	if a.byID then
+		return a.id < b.id
+	end
+	if a.starts ~= b.starts then
+		return a.starts
+	end
+	if a.quality ~= b.quality then
+		return a.quality > b.quality
+	end
+	if a.name ~= b.name then
+		return a.name < b.name
+	end
+	return a.id < b.id
+end
+
+local function Number(query)
+	return query:match("^%s*(%d+)%s*$")
+end
+
+-- The match for one item newly named, to add to a search already made (nil: not a match).
+function lookup.Match(itemID, query)
+	local name = Data().names[itemID]
+	return name and MatchOf(itemID, name, query, Number(query))
+end
+
+-- Sorts matches (a search's, with matches added) best first.
+function lookup.Sort(matches)
+	table.sort(matches, Better)
+end
+
 function lookup.Search(query, limit)
-	local data = Data()
-	-- A number finds items by ID too: that one first, then IDs starting with it.
-	local number = query:match("^%s*(%d+)%s*$")
+	local number = Number(query)
 	local matches = {}
-	for itemID, name in pairs(data.names) do
-		local lower = lowerNames[itemID]
-		if not lower then
-			lower = name:lower()
-			lowerNames[itemID] = lower
-		end
-		local at = lower:find(query, 1, true)
-		local byID = number and tostring(itemID):sub(1, #number) == number
-		if at or byID then
-			table.insert(matches, { id = itemID, name = name, quality = data.quality[itemID] or 1, starts = at == 1,
-				exact = byID and #tostring(itemID) == #number, byID = byID })
+	for itemID, name in pairs(Data().names) do
+		local match = MatchOf(itemID, name, query, number)
+		if match then
+			table.insert(matches, match)
 		end
 	end
-	table.sort(matches, function(a, b)
-		if a.exact ~= b.exact then
-			return a.exact
-		end
-		if a.byID ~= b.byID then
-			return a.byID
-		end
-		if a.byID then
-			return a.id < b.id
-		end
-		if a.starts ~= b.starts then
-			return a.starts
-		end
-		if a.quality ~= b.quality then
-			return a.quality > b.quality
-		end
-		if a.name ~= b.name then
-			return a.name < b.name
-		end
-		return a.id < b.id
-	end)
+	table.sort(matches, Better)
 	local total = #matches
 	for index = total, limit + 1, -1 do
 		matches[index] = nil

@@ -124,7 +124,7 @@ return {
 			t.noErrors()
 		end)
 
-		t.test("a shown item loading doesn't search again; a new matching name does", function()
+		t.test("a shown item loading or a new name doesn't search again; a new match is added", function()
 			local searches = 0
 			local search = lookup.Search
 			lookup.Search = function(...)
@@ -141,7 +141,17 @@ return {
 			loaded[6949] = true
 			wow.fire("GET_ITEM_INFO_RECEIVED", 6949, true)
 			SlashCmdList.NRAKIT("item nightbl")
-			t.equal(searches, 1, "a new name that matches: searched again")
+			t.equal(searches, 0, "a new name that matches: added, not searched again (the scan names dozens a second)")
+			local rows = wow.findAll(function(frame)
+				return wow.visible(frame) and rawget(frame, "itemID") ~= nil
+			end)
+			t.equal(#rows, 2, "it's listed")
+			t.equal(select(2, search("nightbl", 10)), 2, "as a new search would")
+			ITEMS[6950] = { name = "Copper Ore" }
+			loaded[6950] = true
+			wow.fire("GET_ITEM_INFO_RECEIVED", 6950, true)
+			SlashCmdList.NRAKIT("item nightbl")
+			t.equal(searches, 0, "a new name that doesn't match: nothing")
 			lookup.Search = search
 		end)
 
