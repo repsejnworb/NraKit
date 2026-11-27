@@ -126,17 +126,33 @@ local function MakeText(justify)
 	return text
 end
 
+-- The time text ("3/5  1:20", or just one of them), made only when what it says changes: this
+-- runs every frame.
+local shownStacks, shownSeconds = false, false
+local function SetTime(stacks, seconds)
+	seconds = seconds and math.ceil(math.max(seconds, 0))
+	if stacks == shownStacks and seconds == shownSeconds then
+		return
+	end
+	shownStacks, shownSeconds = stacks, seconds
+	local count = stacks and string.format("%d/%d", stacks, WELL_RESTED_GOAL)
+	if count and seconds then
+		bar.time:SetText(count .. "  " .. FormatTime(seconds))
+	else
+		bar.time:SetText(count or FormatTime(seconds or 0))
+	end
+end
+
 local function OnUpdateBag(now)
 	local interval = resting.interval or StackInterval()
-	local count = string.format("%d/%d", resting.stacks, WELL_RESTED_GOAL)
 	if interval and interval > 0 then
 		local into = math.min((now - resting.changedAt) / interval, 0.99)
 		bar.track:SetValue((resting.stacks + into) / WELL_RESTED_GOAL)
 		local left = interval * (WELL_RESTED_GOAL - resting.stacks) - (now - resting.changedAt)
-		bar.time:SetText(count .. "  " .. FormatTime(left))
+		SetTime(resting.stacks, left)
 	else
 		bar.track:SetValue(resting.stacks / WELL_RESTED_GOAL)
-		bar.time:SetText(count)
+		SetTime(resting.stacks, nil)
 	end
 end
 
@@ -148,7 +164,7 @@ local function OnUpdate()
 		local total = resting.finish - resting.start
 		local progress = total > 0 and (now - resting.start) / total or 1
 		bar.track:SetValue(math.min(math.max(progress, 0), 1))
-		bar.time:SetText(FormatTime(resting.finish - now))
+		SetTime(nil, resting.finish - now)
 	elseif doneAt then
 		local fade = now - doneAt - DONE_SHOW_SECONDS
 		if fade >= FADE_SECONDS then
@@ -258,6 +274,7 @@ local function ShowDone(text, silent)
 	bar.title:SetText(text or DONE_TEXT)
 	bar.title:SetTextColor(unpack(DONE_COLOR))
 	bar.time:SetText("")
+	shownStacks, shownSeconds = false, false
 	bar.track:SetValue(1)
 	bar.track:SetStatusBarColor(unpack(DONE_COLOR))
 	bar.spark:Hide()

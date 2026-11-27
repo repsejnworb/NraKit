@@ -169,21 +169,31 @@ local function ItemName(itemID)
 	return C_Item.GetItemNameByID(itemID) or ("item " .. itemID)
 end
 
--- Saves the open profession's learned recipes for this character (used by tooltips).
-local function SaveRecipes()
+-- Saves the open profession's learned recipes for this character (used by tooltips): when the
+-- window opens, you learn a recipe, or your skill goes up (the colours change). Not after every
+-- craft: the list updates after each one, and that read every recipe twice a second.
+local savedAtSkill = {} -- [profession] = skill level last saved at (this session)
+local function SaveRecipes(force)
 	if not C_TradeSkillUI.IsTradeSkillReady() or C_TradeSkillUI.IsTradeSkillLinked()
 		or C_TradeSkillUI.IsTradeSkillGuild() or C_TradeSkillUI.IsNPCCrafting() then
 		return
 	end
-	local profession = C_TradeSkillUI.GetBaseProfessionInfo().profession
+	local base = C_TradeSkillUI.GetBaseProfessionInfo()
+	local profession = base.profession
 	if not profession then
 		return
 	end
+	if not force and base.skillLevel ~= nil and savedAtSkill[profession] == base.skillLevel then
+		return
+	end
+	savedAtSkill[profession] = base.skillLevel
+	local before = CharacterRecipes()[profession] or {}
 	local saved = {}
 	for _, recipeID in ipairs(C_TradeSkillUI.GetAllRecipeIDs()) do
 		local info = C_TradeSkillUI.GetRecipeInfo(recipeID)
 		if info and info.learned and not info.isRecraft then
-			local reagents = ReadReagents(recipeID)
+			-- A recipe's reagents never change: read once.
+			local reagents = before[recipeID] and before[recipeID].reagents or ReadReagents(recipeID)
 			if reagents and #reagents > 0 then
 				saved[recipeID] = {
 					name = info.name,
@@ -435,14 +445,18 @@ end
 ---------------------------------------------------------------------------
 
 local saveQueued = false
+local saveForced = false
 local refreshQueued = false
 
-local function QueueSave()
+local function QueueSave(force)
+	saveForced = saveForced or force == true
 	if not saveQueued then
 		saveQueued = true
 		C_Timer.After(0.5, function()
 			saveQueued = false
-			SaveRecipes()
+			local forced = saveForced
+			saveForced = false
+			SaveRecipes(forced)
 		end)
 	end
 end
@@ -463,7 +477,10 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1)
 		if arg1 == "Blizzard_ProfessionsTemplates" or arg1 == "Blizzard_Professions" then
 			HookRecipeList()
 		end
-	elseif event == "TRADE_SKILL_SHOW" or event == "TRADE_SKILL_LIST_UPDATE" then
+	elseif event == "TRADE_SKILL_SHOW" or event == "NEW_RECIPE_LEARNED" then
+		QueueSave(true)
+		QueueRefresh()
+	elseif event == "TRADE_SKILL_LIST_UPDATE" then
 		QueueSave()
 		QueueRefresh()
 	elseif event == "MERCHANT_SHOW" or event == "MERCHANT_UPDATE" then
@@ -488,6 +505,7 @@ function module:OnEnabledChanged(enabled)
 		end
 		eventFrame:RegisterEvent("TRADE_SKILL_SHOW")
 		eventFrame:RegisterEvent("TRADE_SKILL_LIST_UPDATE")
+		eventFrame:RegisterEvent("NEW_RECIPE_LEARNED")
 		eventFrame:RegisterEvent("MERCHANT_SHOW")
 		eventFrame:RegisterEvent("MERCHANT_UPDATE")
 		eventFrame:RegisterEvent("BAG_UPDATE_DELAYED")

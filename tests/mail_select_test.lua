@@ -141,5 +141,20 @@ return {
 			TakeInboxItem(1)
 			t.equal(Opened(), "4", "still the fourth mail, now third in the inbox")
 		end)
+
+		t.test("with the option off, Open All doesn't read the inbox for it", function()
+			ns:SetSetting("openSelectedMail", false)
+			local reads = 0
+			local header = GetInboxHeaderInfo
+			GetInboxHeaderInfo = function(...)
+				reads = reads + 1
+				return header(...)
+			end
+			TakeInboxItem(1)
+			Opened()
+			t.equal(reads, 0, "nothing read")
+			GetInboxHeaderInfo = header
+			ns:SetSetting("openSelectedMail", true)
+		end)
 	end,
 }

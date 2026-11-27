@@ -56,29 +56,36 @@ local function LinesUp(list, now, offset)
 	return true
 end
 
-local function Without(list, position)
-	local copy = {}
-	for i, entry in ipairs(list) do
-		if i ~= position then
-			table.insert(copy, entry)
+-- Whether list lines up with now when the entry at `skip` is left out.
+local function LinesUpWithout(list, now, skip)
+	local j = 0
+	for position, entry in ipairs(list) do
+		if position ~= skip then
+			j = j + 1
+			if not (now[j] and Same(entry, now[j])) then
+				return false
+			end
 		end
 	end
-	return copy
+	return true
 end
 
 -- Our list after one mail went: the one last taken from if that lines up, else the first that does.
 local function RemoveOne(list, now)
-	if touched and list[touched] then
-		local rest = Without(list, touched)
-		if LinesUp(rest, now, 0) then
-			return rest
+	local gone
+	if touched and list[touched] and LinesUpWithout(list, now, touched) then
+		gone = touched
+	else
+		for position = 1, #list do
+			if LinesUpWithout(list, now, position) then
+				gone = position
+				break
+			end
 		end
 	end
-	for position = 1, #list do
-		local rest = Without(list, position)
-		if LinesUp(rest, now, 0) then
-			return rest
-		end
+	if gone then
+		table.remove(list, gone)
+		return list
 	end
 end
 
@@ -179,7 +186,9 @@ end
 
 local function UpdateCheckboxes()
 	local enabled = ns.mail.IsOn(feature.key)
-	Sync()
+	if enabled then
+		Sync()
+	end
 	for i = 1, INBOXITEMS_TO_DISPLAY do
 		local checkbox = checkboxes[i]
 		local button = _G["MailItem" .. i .. "Button"]
@@ -256,19 +265,23 @@ local function WrapOpenAll()
 	-- those, also once the last of them is gone.
 	local selective = false
 	OpenAllMail.ShouldSkipCurrentMail = function(self, ...)
-		local entry = EntryAt(self.mailIndex)
 		if IsActive() then
 			selective = not self:IsEnabled()
 		end
-		if (selective or IsActive()) and not (entry and entry.selected) then
-			return true
+		if selective or IsActive() then
+			local entry = EntryAt(self.mailIndex)
+			if not (entry and entry.selected) then
+				return true
+			end
 		end
 		return original(self, ...)
 	end
 	-- After a run (finished, bags full or mailbox closed), drop what was opened.
 	hooksecurefunc(OpenAllMail, "StopOpening", function()
 		selective = false
-		Prune()
+		if ns.mail.IsOn(feature.key) then
+			Prune()
+		end
 		UpdateCheckboxes()
 	end)
 end

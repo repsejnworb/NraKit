@@ -44,6 +44,33 @@ return {
 		end
 
 		-- Regression: with Camp Benefits from an earlier rest, getting up early said "Camp Benefits ready".
+		-- Regression: the time was written (a new string) every frame.
+		t.test("the time text is written only when the second changes", function()
+			SitDown()
+			Bar()
+			local timeText
+			for _, frame in ipairs(wow.frames) do
+				if rawget(frame, "time") and rawget(frame, "track") then
+					timeText = rawget(frame, "time")
+				end
+			end
+			local writes = 0
+			local setText = timeText.SetText
+			rawset(timeText, "SetText", function(self, ...)
+				writes = writes + 1
+				return setText(self, ...)
+			end)
+			for _ = 1, 5 do
+				wow.advance(0.1)
+			end
+			t.ok(writes <= 1, "at most once in half a second: " .. writes)
+			wow.advance(1)
+			t.ok(writes >= 1, "a new second, written")
+			rawset(timeText, "SetText", nil)
+			Set(WELCOMING_CAMPFIRE, nil) -- up early
+			wow.advance(10)
+		end)
+
 		t.test("getting up early hides the bar, even with Camp Benefits from before", function()
 			auras[CAMP_BENEFITS] = { duration = 7200, expirationTime = GetTime() + 3600 }
 			SitDown()
