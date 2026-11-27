@@ -254,6 +254,8 @@ end
 -- many matched in all.
 function lookup.Search(query, limit)
 	local data = Data()
+	-- A number finds items by ID too: that one first, then IDs starting with it.
+	local number = query:match("^%s*(%d+)%s*$")
 	local matches = {}
 	for itemID, name in pairs(data.names) do
 		local lower = lowerNames[itemID]
@@ -262,11 +264,22 @@ function lookup.Search(query, limit)
 			lowerNames[itemID] = lower
 		end
 		local at = lower:find(query, 1, true)
-		if at then
-			table.insert(matches, { id = itemID, name = name, quality = data.quality[itemID] or 1, starts = at == 1 })
+		local byID = number and tostring(itemID):sub(1, #number) == number
+		if at or byID then
+			table.insert(matches, { id = itemID, name = name, quality = data.quality[itemID] or 1, starts = at == 1,
+				exact = byID and #tostring(itemID) == #number, byID = byID })
 		end
 	end
 	table.sort(matches, function(a, b)
+		if a.exact ~= b.exact then
+			return a.exact
+		end
+		if a.byID ~= b.byID then
+			return a.byID
+		end
+		if a.byID then
+			return a.id < b.id
+		end
 		if a.starts ~= b.starts then
 			return a.starts
 		end

@@ -630,7 +630,7 @@ Type `/leave` (with nothing after it) or `/leavegroup` to leave your party, raid
   what you have and where; right-click for the shopping-list menu. Found once per game version.
 
 **Items:** `/nra item nightbl` lists the matching items (icon, type, required level, how many your
-characters have).
+characters have, item ID). A number finds items by **ID** (`/nra item 2589`), that one first.
 
 - Hover for the tooltip, **Shift+click** to link, **Ctrl+click** to preview, **right-click** to add it
   to your Wishlist (while that's on).

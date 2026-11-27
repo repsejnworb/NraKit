@@ -26,9 +26,9 @@ ns.changelog = {
 		{ "improved", title = "Inventory Tracker", "Remembers which recipes each of your characters knows: a recipe (in your bags, at a vendor, a link in chat) says **Known by** which of them, so your bank alt can see your main already has it." },
 		{ "improved", title = "Farm Goals", "Item goals show what they're worth at the auction house (Auctionator, else a vendor) and **gold per hour**: \"18/h · 38g/h\". The finished message says what the goal is worth." },
 		{ "improved", title = "Lookup", module = "itemLookup",
-			"Item Lookup is now **Lookup**, with **[ Items ][ Spells ][ Recipes ]** at its top.",
+			"Item Lookup is now **Lookup**, with **[ Items ][ Spells ][ Recipes ]** at its top. Items and spells are found by name or **ID**.",
 			points = {
-				"**Spells**: every spell by name or ID (/nra spell charge), with its **class**, yours first; filter by class. Shift-click links it.",
+				"**Spells**: every spell (/nra spell charge), with its **class**, yours first; filter by class. Shift-click links it.",
 				"**Recipes**: every profession recipe (/nra recipe bracers) with what it makes and needs; pick a **profession** with its button.",
 				"With prices: what a craft **costs**, what it **sells for** and the **profit**; sort by profit to see what's worth crafting.",
 				"Right-click a recipe for the shopping-list menu; hover for its tooltip with what you have.",

@@ -352,7 +352,7 @@ Type **/leave** (with nothing after it) or **/leavegroup** to leave your party, 
 - **Spells:** every spell by name or **ID**, yours first and marked **Known**, with its **class** (learned from your characters' spellbooks); filter by **Mine**, a class or Other. **Shift+click** links it in chat.
 - **Recipes:** every profession recipe (pick a **profession** with its button) with what it makes and needs, and with prices what a craft **costs**, **sells for** and the **profit** (sort by Profit to see what's worth crafting). Right-click for the shopping-list menu.
 
-**Items:** **/nra item nightbl** lists every item whose name contains it, best matches first, with icon, type, required level and how many your characters have (with Inventory Tracker).
+**Items:** **/nra item nightbl** lists every item whose name contains it, best matches first, with icon, type, required level, how many your characters have (with Inventory Tracker) and its item ID. A number finds items by **ID**.
 - Hover for the tooltip, **Shift+click** to link it in chat, **Ctrl+click** to preview it, **right-click** to add it to your **Wishlist** (while that's on).
 - The game can't search items by name, so NraKit learns the names in the background, a few dozen a second (paused in combat). It takes a few minutes, once per game version; searching works right away and finds more as it fills.
 - A **progress bar** in the tab shows how far it is, with **Pause / Resume**, and **Check again** once it's done.

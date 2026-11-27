@@ -51,7 +51,7 @@ local function ProfessionIcon(name)
 	return ICONS .. (PROFESSION_ICONS[name] or "INV_Scroll_03")
 end
 local HINTS = {
-	items = "Shift-click to link in chat, Ctrl-click to preview",
+	items = "Type a name or an item ID. Shift-click to link in chat, Ctrl-click to preview",
 	spells = "Type a name or a spell ID. Shift-click to link in chat, right-click for more",
 	recipes = "Shift-click to link in chat, right-click for shopping lists",
 }
@@ -295,8 +295,9 @@ local function AcquireItemRow(content)
 		row.type = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 		row.type:SetJustifyH("LEFT")
 		row.type:SetWordWrap(false)
-		row.owned = Text(row, "GameFontHighlightSmall", "RIGHT", -10)
-		row.level = Text(row, "GameFontDisableSmall", "RIGHT", -90)
+		row.idText = Text(row, "GameFontDisableSmall", "RIGHT", -10)
+		row.owned = Text(row, "GameFontHighlightSmall", "RIGHT", -64)
+		row.level = Text(row, "GameFontDisableSmall", "RIGHT", -146)
 		return row
 	end)
 end
@@ -383,12 +384,13 @@ local function RenderItems(content, width)
 		row.name:SetWidth(width * 0.45)
 		row.type:SetText(itemSubType and itemSubType ~= itemType and (itemType .. " - " .. itemSubType) or itemType or "")
 		row.type:SetPoint("LEFT", row, "LEFT", 38 + width * 0.45 + 12, 0)
-		row.type:SetWidth(width * 0.3)
+		row.type:SetWidth(width * 0.22)
 		-- The required level needs the item loaded; it shows up when it arrives.
 		local _, _, _, _, minLevel = C_Item.GetItemInfo(match.id)
 		row.level:SetText(minLevel and minLevel > 1 and ("Level " .. minLevel) or "")
 		local owned = Owned(match.id)
 		row.owned:SetText(owned > 0 and ("|cff40c040You have " .. owned .. "|r") or "")
+		row.idText:SetText(tostring(match.id))
 		ns.wishlist.SetStar(row, match.id, row.icon)
 	end
 	return #matches, total, ROW_HEIGHT

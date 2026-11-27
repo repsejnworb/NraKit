@@ -94,6 +94,13 @@ return {
 			t.equal(select(2, lookup.Search("hidden", 10)), 0, "undiscovered items aren't listed")
 		end)
 
+		t.test("a number finds items by ID: that one first, then IDs starting with it", function()
+			t.equal(Names(lookup.Search("4306", 10)), "Silk Cloth", "by its ID")
+			t.equal(Names(lookup.Search("2", 10)), "Linen Cloth", "IDs starting with it (20000 and up have no name yet)")
+			t.equal(Names(lookup.Search("4", 10)), "Silk Cloth", "4306")
+			t.equal(lookup.Search("10000", 10)[1].name, "Bolt of Linen Cloth", "the exact ID first")
+		end)
+
 		t.test("items the game loads anyway are added", function()
 			ITEMS[6948] = { name = "Hearthstone" }
 			loaded[6948] = true
@@ -113,6 +120,7 @@ return {
 			t.equal(#rows, 1, "one row")
 			t.equal(rows[1].itemID, 300000, "Nightblade")
 			t.equal(rows[1].level:GetText(), "Level 60", "required level")
+			t.equal(rows[1].idText:GetText(), "300000", "its item ID")
 			t.noErrors()
 		end)
 
