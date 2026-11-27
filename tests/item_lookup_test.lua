@@ -124,6 +124,27 @@ return {
 			t.noErrors()
 		end)
 
+		t.test("a shown item loading doesn't search again; a new matching name does", function()
+			local searches = 0
+			local search = lookup.Search
+			lookup.Search = function(...)
+				searches = searches + 1
+				return search(...)
+			end
+			SlashCmdList.NRAKIT("item nightbl")
+			searches = 0
+			loaded[300000] = true
+			wow.fire("GET_ITEM_INFO_RECEIVED", 300000, true) -- paging loads every item shown
+			SlashCmdList.NRAKIT("item nightbl")
+			t.equal(searches, 0, "the search is kept (paging through \"m\" searched again for each item)")
+			ITEMS[6949] = { name = "Nightblade Shard" }
+			loaded[6949] = true
+			wow.fire("GET_ITEM_INFO_RECEIVED", 6949, true)
+			SlashCmdList.NRAKIT("item nightbl")
+			t.equal(searches, 1, "a new name that matches: searched again")
+			lookup.Search = search
+		end)
+
 		t.test("the window's bar: Check again asks right away for items without a name", function()
 			t.ok(wow.click("Check again"), "Check again shown when done")
 			t.ok(requested[20000] == nil, "nothing asked yet: it waits for the next frame")

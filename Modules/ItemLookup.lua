@@ -70,11 +70,16 @@ local function Store(itemID)
 		data.failed[itemID] = nil
 		failedCount = failedCount - 1
 	end
-	data.names[itemID] = name
-	data.quality[itemID] = quality ~= 1 and quality or nil -- most items are common
-	lowerNames[itemID] = nil
+	quality = quality ~= 1 and quality or nil -- most items are common
+	-- Items shown in Lookup load as you page through them: those are known already.
+	local changed = data.names[itemID] ~= name or data.quality[itemID] ~= quality
+	if changed then
+		data.names[itemID] = name
+		data.quality[itemID] = quality
+		lowerNames[itemID] = nil
+	end
 	if lookup.onStored then
-		lookup.onStored(itemID, name)
+		lookup.onStored(itemID, name, changed)
 	end
 	return true
 end

@@ -865,13 +865,17 @@ local function CreateWindow()
 		SetMode(Mode())
 	end)
 
-	-- A new name that matches, or a shown item finishing loading (its level), redraws.
-	ns.itemLookup.onStored = function(itemID, name)
+	-- A new name that matches searches again; a shown item finishing loading (its level) only
+	-- redraws the page. (Paging loads every item shown: searching again for each, a search
+	-- like "m" built tens of thousands of tables a second.)
+	ns.itemLookup.onStored = function(itemID, name, changed)
 		if not (frame:IsShown() and query ~= "" and Mode() == "items") then
 			return
 		end
-		if not itemID or shownIDs[itemID] or (name and name:lower():find(query, 1, true)) then
-			Forget() -- a new match: search again
+		if not itemID or (changed and name and name:lower():find(query, 1, true)) then
+			Forget()
+			RequestRender()
+		elseif shownIDs[itemID] then
 			RequestRender()
 		end
 	end
